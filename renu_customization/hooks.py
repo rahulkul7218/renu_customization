@@ -1,5 +1,5 @@
 app_name = "renu_customization"
-app_title = "Renu Factory Automation Pvt Ltd"
+app_title = "Renu Customization"
 app_publisher = "Assimilate Technologies Pvt Ltd"
 app_description = "For renu actory automation"
 app_email = "info@assimilatetechnologies.com"
@@ -242,3 +242,39 @@ app_license = "mit"
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
 
+after_migrate = [
+    "renu_customization.patches.v_0.add_business_fields_to_item.execute",
+    "renu_customization.patches.v_0.addbusiness_region_field_on_customer.execute",
+    "renu_customization.patches.v_0.add_supplier_code_field_on_supplier.execute",
+    "renu_customization.patches.v_0.add_business_unit_field_on_sales_invoice_item.execute",
+    "renu_customization.patches.v_0.add_customer_field_on_customer.execute",
+    "renu_customization.patches.v_0.add_under_development_checkbox_on_item.execute",
+    "renu_customization.patches.v_0.add_designation_field_on_customer.execute",
+    "renu_customization.patches.v_0.add_model_name_field_on_item.execute",
+    "renu_customization.patches.v_0.add_business_region_name_on_customer.execute",
+    "renu_customization.patches.v_0.make_mandatory_fields_on_item.execute",
+    "renu_customization.patches.v_0.add_business_group_field_on_item.execute",
+    "renu_customization.patches.v_0.make_field_mandatory_on_address.execute",
+    "renu_customization.patches.v_0.add_district_fileld_on_address.execute",
+    "renu_customization.patches.v_0.make_fields_unmandatory_on_customer.execute"
+    
+
+    
+    
+    
+
+
+]
+
+doctype_js = {
+
+    "Customer": ["public/js/fetched_from_business_code.js",
+    "public/js/make_fields_mandatory.js"],
+    "Item":"public/js/when_under_development_check_disable_checkbox_checked.js",
+    "Address":"public/js/make_mandatory_fields_on_address.js"
+
+    
+    
+    
+    
+}
