@@ -9,8 +9,8 @@ def execute():
                 label="Designation",
                 fieldtype="Link",
                 options="Designation",
-                insert_after="account_manager",
-                reqd=1
+                insert_after="account_manager"
+                
             )
         ]
     }

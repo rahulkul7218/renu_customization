@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:name1",
  "creation": "2025-09-10 18:35:32.816774",
@@ -19,7 +20,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-10 18:41:00.783799",
+ "modified": "2025-09-12 09:42:15.552172",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "Business Group",
