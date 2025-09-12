@@ -257,7 +257,8 @@ after_migrate = [
     "renu_customization.patches.v_0.make_field_mandatory_on_address.execute",
     "renu_customization.patches.v_0.add_district_fileld_on_address.execute",
     "renu_customization.patches.v_0.make_fields_unmandatory_on_customer.execute",
-    "renu_customization.patches.v_0.allow_data_import_for_all_doctypes.execute"
+    "renu_customization.patches.v_0.allow_data_import_for_all_doctypes.execute",
+    "renu_customization.patches.v_0.add_payment_term_code_field_on_payment_terms.execute"
     
 
     
