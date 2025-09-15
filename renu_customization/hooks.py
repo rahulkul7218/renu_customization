@@ -257,8 +257,9 @@ after_migrate = [
     "renu_customization.patches.v_0.make_field_mandatory_on_address.execute",
     "renu_customization.patches.v_0.add_district_fileld_on_address.execute",
     "renu_customization.patches.v_0.make_fields_unmandatory_on_customer.execute",
-    "renu_customization.patches.v_0.allow_data_import_for_all_doctypes.execute",
-    "renu_customization.patches.v_0.add_payment_term_code_field_on_payment_terms.execute"
+    "renu_customization.patches.v_0.add_payment_term_code_field_on_payment_terms.execute",
+    "renu_customization.patches.v_0.add_po_no_field_on_purchase_receipt.execute",
+    "renu_customization.patches.v_0.purchase_receipt_item_checkbox_checked.execute"
     
 
     
@@ -267,13 +268,15 @@ after_migrate = [
 
 
 ]
+#  "renu_customization.patches.v_0.allow_data_import_for_all_doctypes.execute",
 
 doctype_js = {
 
     "Customer": ["public/js/fetched_from_business_code.js",
     "public/js/make_fields_mandatory.js"],
     "Item":"public/js/when_under_development_check_disable_checkbox_checked.js",
-    "Address":"public/js/make_mandatory_fields_on_address.js"
+    "Address":"public/js/make_mandatory_fields_on_address.js",
+    "Purchase Receipt":"public/js/upload_bulk_serial_no.js"
 
     
     
