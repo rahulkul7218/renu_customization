@@ -11,148 +11,94 @@
 
 // frappe.ui.form.on("Purchase Receipt", {
 //     refresh(frm) {
-//         if (!frm.is_new()) {
-//             frm.add_custom_button("Upload Serials", () => {
-//                 load_xlsx(() => {
-//                     // ❌ Strict stop if system PO No not set
-//                     if (!frm.doc.po_no) {
-//                         frappe.msgprint({
-//                             title: "Validation Failed",
-//                             message: "Document PO No is missing. Cannot upload serials.",
-//                             indicator: "red"
-//                         });
-//                         return;
-//                     }
+//         frm.add_custom_button("Upload Serials", () => {
+//             load_xlsx(() => {
+//                 let input = document.createElement("input");
+//                 input.type = "file";
+//                 input.accept = "*/*";
 
-//                     let input = document.createElement("input");
-//                     input.type = "file";
-//                     input.accept = "*/*";
+//                 input.onchange = (e) => {
+//                     let file = e.target.files[0];
+//                     let reader = new FileReader();
 
-//                     input.onchange = (e) => {
-//                         let file = e.target.files[0];
-//                         let reader = new FileReader();
+//                     reader.onload = function(e) {
+//                         try {
+//                             let data = new Uint8Array(e.target.result);
+//                             let workbook = XLSX.read(data, { type: "array" });
+//                             let sheetName = workbook.SheetNames[0];
+//                             let sheet = workbook.Sheets[sheetName];
 
-//                         reader.onload = function(e) {
-//                             try {
-//                                 let data = new Uint8Array(e.target.result);
-//                                 let workbook = XLSX.read(data, { type: "array" });
-//                                 let sheetName = workbook.SheetNames[0];
-//                                 let sheet = workbook.Sheets[sheetName];
+//                             let rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-//                                 let rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-//                                 let current_item = null;
-//                                 let serial_map = {};
-//                                 let receipt_items = new Set(frm.doc.items.map(i => i.item_code));
-//                                 let uploaded_items = new Set();
+//                             // ✅ Clear existing items
+//                             frm.clear_table("items");
 
-//                                 for (let idx = 1; idx < rows.length; idx++) {
-//                                     let r = rows[idx];
-//                                     let item_code = r[0] ? r[0].toString().trim() : "";
-//                                     let serial_no = r[1] ? r[1].toString().trim() : "";
-//                                     let po_no = r[2] ? r[2].toString().trim() : "";
+//                             let serial_map = {};
 
-//                                     if (item_code) {
-//                                         current_item = item_code;
-//                                         uploaded_items.add(item_code);
+//                             for (let idx = 1; idx < rows.length; idx++) {
+//                                 let r = rows[idx];
 
-//                                         if (!receipt_items.has(item_code)) {
-//                                             frappe.msgprint({
-//                                                 title: "Validation Failed",
-//                                                 message: `Row ${idx + 1}: Item <b>${item_code}</b> not found in Purchase Receipt`,
-//                                                 indicator: "red"
-//                                             });
-//                                             return;
-//                                         }
-//                                     }
+//                                 let item_code = r[0] ? r[0].toString().trim() : "";
+//                                 let qty       = r[1] ? parseFloat(r[1]) : 0;   // Accepted Quantity
+//                                 let serial_no = r[2] ? r[2].toString().trim() : "";
+//                                 let uom       = r[3] ? r[3].toString().trim() : "";
+//                                 let po_no     = r[4] ? r[4].toString().trim() : "";  // ✅ PO No column
 
-//                                     // ❌ Stop if PO No missing in sheet row
-//                                     if (!po_no) {
-//                                         frappe.msgprint({
-//                                             title: "Validation Failed",
-//                                             message: `Row ${idx + 1}: PO No missing in uploaded sheet.`,
-//                                             indicator: "red"
-//                                         });
-//                                         return;
-//                                     }
+//                                 if (!item_code) continue;
 
-//                                     // ❌ Stop if PO mismatch
-//                                     if (po_no !== frm.doc.po_no) {
-//                                         frappe.msgprint({
-//                                             title: "Validation Failed",
-//                                             message: `Row ${idx + 1}: PO No is mismatch. Document PO No = <b>${frm.doc.po_no}</b>, Uploaded PO No = <b>${po_no}</b>`,
-//                                             indicator: "red"
-//                                         });
-//                                         return;
-//                                     }
-
-//                                     if (current_item && serial_no) {
-//                                         if (!serial_map[current_item]) {
-//                                             serial_map[current_item] = [];
-//                                         }
-//                                         serial_map[current_item].push(serial_no);
-//                                     }
+//                                 if (!serial_map[item_code]) {
+//                                     serial_map[item_code] = {
+//                                         qty: 0,
+//                                         serials: [],
+//                                         uom: uom
+//                                     };
 //                                 }
 
-//                                 // ❌ Stop if any PR item missing in upload
-//                                 for (let item_code of receipt_items) {
-//                                     if (!uploaded_items.has(item_code)) {
-//                                         frappe.msgprint({
-//                                             title: "Validation Failed",
-//                                             message: `Item <b>${item_code}</b> from Purchase Receipt is missing in uploaded file`,
-//                                             indicator: "red"
-//                                         });
-//                                         return;
-//                                     }
+//                                 // ✅ Add qty directly from column
+//                                 serial_map[item_code].qty += qty;
+
+//                                 if (serial_no) {
+//                                     serial_map[item_code].serials.push(serial_no);
 //                                 }
 
-//                                 // --- SERIAL QTY VALIDATION ---
-//                                 for (let item of frm.doc.items) {
-//                                     if (item.item_code && serial_map[item.item_code]) {
-//                                         let qty = parseFloat(item.qty);
-//                                         let count = serial_map[item.item_code].length;
-//                                         if (qty !== count) {
-//                                             frappe.msgprint({
-//                                                 title: "Validation Failed",
-//                                                 message: `${item.item_code} → Qty = ${qty}, Serials uploaded = ${count}`,
-//                                                 indicator: "red"
-//                                             });
-//                                             return;
-//                                         }
-//                                     }
+//                                 // Keep latest UOM if available
+//                                 if (uom) serial_map[item_code].uom = uom;
+
+//                                 // ✅ Set PO No at header level (first non-empty value)
+//                                 if (po_no && !frm.doc.po_no) {
+//                                     frm.set_value("po_no", po_no);
 //                                 }
-
-//                                 // --- ASSIGN SERIALS ---
-//                                 Object.keys(serial_map).forEach(item_code => {
-//                                     let serials = serial_map[item_code];
-//                                     frm.doc.items.forEach(item => {
-//                                         if (item.item_code === item_code) {
-//                                             item.serial_no = serials.join("\n");
-//                                         }
-//                                     });
-//                                 });
-
-//                                 frm.refresh_field("items");
-//                                 frappe.msgprint("Serials imported successfully!");
-//                             } catch (err) {
-//                                 frappe.msgprint({
-//                                     title: "Error",
-//                                     message: "Could not read Excel file. Please check format.",
-//                                     indicator: "red"
-//                                 });
-//                                 console.error(err);
 //                             }
-//                         };
 
-//                         reader.readAsArrayBuffer(file);
+//                             // ✅ Add items into child table
+//                             Object.keys(serial_map).forEach(item_code => {
+//                                 let item_row = frm.add_child("items");
+//                                 item_row.item_code = item_code;
+//                                 item_row.qty = serial_map[item_code].qty; 
+//                                 item_row.serial_no = serial_map[item_code].serials.join("\n");
+//                                 item_row.uom = serial_map[item_code].uom || "";
+//                             });
+
+//                             frm.refresh_field("items");
+//                             frappe.msgprint("Items, serials, UOM, and PO No imported successfully!");
+//                         } catch (err) {
+//                             frappe.msgprint({
+//                                 title: "Error",
+//                                 message: "Could not read Excel file. Please check format.",
+//                                 indicator: "red"
+//                             });
+//                             console.error(err);
+//                         }
 //                     };
 
-//                     input.click();
-//                 });
+//                     reader.readAsArrayBuffer(file);
+//                 };
+
+//                 input.click();
 //             });
-//         }
+//         }, __("Get Items From"));
 //     }
 // });
-
 
 function load_xlsx(callback) {
     if (typeof XLSX !== "undefined") {
@@ -167,146 +113,109 @@ function load_xlsx(callback) {
 
 frappe.ui.form.on("Purchase Receipt", {
     refresh(frm) {
-        if (!frm.is_new()) {
-            frm.add_custom_button("Upload Serials", () => {
-                load_xlsx(() => {
-                    // ❌ Strict stop if system PO No not set
-                    if (!frm.doc.po_no) {
-                        frappe.msgprint({
-                            title: "Validation Failed",
-                            message: "Document PO No is missing. Cannot upload serials.",
-                            indicator: "red"
-                        });
-                        return;
-                    }
+        frm.add_custom_button("Upload Serials", () => {
+            load_xlsx(() => {
+                let input = document.createElement("input");
+                input.type = "file";
+                input.accept = "*/*";
 
-                    let input = document.createElement("input");
-                    input.type = "file";
-                    input.accept = "*/*";
+                input.onchange = (e) => {
+                    let file = e.target.files[0];
+                    let reader = new FileReader();
 
-                    input.onchange = (e) => {
-                        let file = e.target.files[0];
-                        let reader = new FileReader();
+                    reader.onload = function(e) {
+                        try {
+                            let data = new Uint8Array(e.target.result);
+                            let workbook = XLSX.read(data, { type: "array" });
+                            let sheetName = workbook.SheetNames[0];
+                            let sheet = workbook.Sheets[sheetName];
 
-                        reader.onload = function(e) {
-                            try {
-                                let data = new Uint8Array(e.target.result);
-                                let workbook = XLSX.read(data, { type: "array" });
-                                let sheetName = workbook.SheetNames[0];
-                                let sheet = workbook.Sheets[sheetName];
+                            let rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-                                // ✅ Read sheet using headers
-                                let rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+                            // ✅ Clear existing items
+                            frm.clear_table("items");
 
-                                let current_item = null;
-                                let serial_map = {};
-                                let receipt_items = new Set(frm.doc.items.map(i => i.item_code));
-                                let uploaded_items = new Set();
+                            let serial_map = {};
+                            let excel_po_no = "";
 
-                                for (let idx = 0; idx < rows.length; idx++) {
-                                    let r = rows[idx];
-                                    let item_code = (r["Item Code"] || "").toString().trim();
-                                    let serial_no = (r["Serial No"] || "").toString().trim();
-                                    let po_no     = (r["PO NO"] || "").toString().trim();
+                            for (let idx = 1; idx < rows.length; idx++) {
+                                let r = rows[idx];
 
-                                    if (item_code) {
-                                        current_item = item_code;
-                                        uploaded_items.add(item_code);
+                                let item_code = r[0] ? r[0].toString().trim() : "";
+                                let qty       = r[1] ? parseFloat(r[1]) : 0;
+                                let serial_no = r[2] ? r[2].toString().trim() : "";
+                                let uom       = r[3] ? r[3].toString().trim() : "";
+                                let po_no     = r[4] ? r[4].toString().trim() : "";  // ✅ PO No column
 
-                                        if (!receipt_items.has(item_code)) {
-                                            frappe.msgprint({
-                                                title: "Validation Failed",
-                                                message: `Row ${idx + 2}: Item <b>${item_code}</b> not found in Purchase Receipt`,
-                                                indicator: "red"
-                                            });
-                                            return;
-                                        }
-                                    }
+                                if (!item_code) continue;
 
-                                    // ❌ Stop if PO No missing in sheet row
-                                    if (!po_no) {
+                                if (!serial_map[item_code]) {
+                                    serial_map[item_code] = {
+                                        qty: 0,
+                                        serials: [],
+                                        uom: uom
+                                    };
+                                }
+
+                                serial_map[item_code].qty += qty;
+                                if (serial_no) serial_map[item_code].serials.push(serial_no);
+                                if (uom) serial_map[item_code].uom = uom;
+
+                                if (po_no && !excel_po_no) {
+                                    excel_po_no = po_no;
+                                }
+                            }
+
+                            // ✅ Now validate PO No before adding items
+                            if (excel_po_no) {
+                                frappe.db.exists("Purchase Order", excel_po_no).then(exists => {
+                                    if (!exists) {
                                         frappe.msgprint({
-                                            title: "Validation Failed",
-                                            message: `Row ${idx + 2}: PO No missing in uploaded sheet.`,
+                                            title: "Invalid PO No",
+                                            message: `The PO No <b>${excel_po_no}</b> does not exist in the system.`,
                                             indicator: "red"
                                         });
                                         return;
                                     }
 
-                                    // ❌ Stop if PO mismatch
-                                    if (po_no !== frm.doc.po_no) {
-                                        frappe.msgprint({
-                                            title: "Validation Failed",
-                                            message: `Row ${idx + 2}: PO No is mismatch. Document PO No = <b>${frm.doc.po_no}</b>, Uploaded PO No = <b>${po_no}</b>`,
-                                            indicator: "red"
-                                        });
-                                        return;
-                                    }
+                                    // ✅ Set PO No at header level
+                                    frm.set_value("po_no", excel_po_no);
 
-                                    if (current_item && serial_no) {
-                                        if (!serial_map[current_item]) {
-                                            serial_map[current_item] = [];
-                                        }
-                                        serial_map[current_item].push(serial_no);
-                                    }
-                                }
-
-                                // ❌ Stop if any PR item missing in upload
-                                for (let item_code of receipt_items) {
-                                    if (!uploaded_items.has(item_code)) {
-                                        frappe.msgprint({
-                                            title: "Validation Failed",
-                                            message: `Item <b>${item_code}</b> from Purchase Receipt is missing in uploaded file`,
-                                            indicator: "red"
-                                        });
-                                        return;
-                                    }
-                                }
-
-                                // --- SERIAL QTY VALIDATION ---
-                                for (let item of frm.doc.items) {
-                                    if (item.item_code && serial_map[item.item_code]) {
-                                        let qty = parseFloat(item.qty);
-                                        let count = serial_map[item.item_code].length;
-                                        if (qty !== count) {
-                                            frappe.msgprint({
-                                                title: "Validation Failed",
-                                                message: `${item.item_code} → Qty = ${qty}, Serials uploaded = ${count}`,
-                                                indicator: "red"
-                                            });
-                                            return;
-                                        }
-                                    }
-                                }
-
-                                // --- ASSIGN SERIALS ---
-                                Object.keys(serial_map).forEach(item_code => {
-                                    let serials = serial_map[item_code];
-                                    frm.doc.items.forEach(item => {
-                                        if (item.item_code === item_code) {
-                                            item.serial_no = serials.join("\n");
-                                        }
+                                    // ✅ Add items into child table
+                                    Object.keys(serial_map).forEach(item_code => {
+                                        let item_row = frm.add_child("items");
+                                        item_row.item_code = item_code;
+                                        item_row.qty = serial_map[item_code].qty;
+                                        item_row.serial_no = serial_map[item_code].serials.join("\n");
+                                        item_row.uom = serial_map[item_code].uom || "";
                                     });
-                                });
 
-                                frm.refresh_field("items");
-                                frappe.msgprint("✅ Serials imported successfully!");
-                            } catch (err) {
+                                    frm.refresh_field("items");
+                                    frappe.msgprint("Items, serials, UOM, and PO No imported successfully!");
+                                });
+                            } else {
                                 frappe.msgprint({
-                                    title: "Error",
-                                    message: "Could not read Excel file. Please check format.",
+                                    title: "Missing PO No",
+                                    message: "No PO No found in the Excel sheet.",
                                     indicator: "red"
                                 });
-                                console.error(err);
                             }
-                        };
 
-                        reader.readAsArrayBuffer(file);
+                        } catch (err) {
+                            frappe.msgprint({
+                                title: "Error",
+                                message: "Could not read Excel file. Please check format.",
+                                indicator: "red"
+                            });
+                            console.error(err);
+                        }
                     };
 
-                    input.click();
-                });
+                    reader.readAsArrayBuffer(file);
+                };
+
+                input.click();
             });
-        }
+        }, __("Get Items From"));
     }
 });
