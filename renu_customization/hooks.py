@@ -259,11 +259,9 @@ after_migrate = [
     "renu_customization.patches.v_0.make_fields_unmandatory_on_customer.execute",
     "renu_customization.patches.v_0.add_payment_term_code_field_on_payment_terms.execute",
     "renu_customization.patches.v_0.add_po_no_field_on_purchase_receipt.execute",
-    "renu_customization.patches.v_0.purchase_receipt_item_checkbox_checked.execute"
-    
-
-    
-    
+    "renu_customization.patches.v_0.purchase_receipt_item_checkbox_checked.execute",
+    "renu_customization.patches.v_0.create_role_profiles_with_roles.execute",
+    "renu_customization.patches.v_0.create_module_profiles.execute"
     
 
 
