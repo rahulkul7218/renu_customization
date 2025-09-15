@@ -24,3 +24,6 @@ renu_customization.patches.v_0.add_po_no_field_on_purchase_receipt
 renu_customization.patches.v_0.purchase_receipt_item_checkbox_checked
 renu_customization.patches.v_0.create_role_profiles_with_roles
 renu_customization.patches.v_0.create_module_profiles
+renu_customization.patches.v_0.add_dropdown_field_on_sales_invoice
+renu_customization.patches.v_0.make_item_name_unmandatory_on_purchase_receipt
+
