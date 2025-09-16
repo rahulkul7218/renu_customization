@@ -262,8 +262,20 @@ after_migrate = [
     "renu_customization.patches.v_0.purchase_receipt_item_checkbox_checked.execute",
     "renu_customization.patches.v_0.create_role_profiles_with_roles.execute",
     "renu_customization.patches.v_0.create_module_profiles.execute",
-    "renu_customization.patches.v_0.add_dropdown_field_on_sales_invoice.execute",
-    "renu_customization.patches.v_0.make_item_name_unmandatory_on_purchase_receipt.execute"
+    "renu_customization.patches.v_0.make_item_name_unmandatory_on_purchase_receipt.execute",
+    "renu_customization.patches.v_0.add_invoice_type_field_on_sales_order.execute",
+    "renu_customization.patches.v_0.add-sales_order_field_on_picklist.execute",
+    "renu_customization.patches.v_0.add_picklist_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.add_delivery_note_field_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.add_invoice_type_field_fetched_from_sales_order.execute",
+    "renu_customization.patches.v_0.add_invoice_type_fetched_from_picklist.execute",
+    "renu_customization.patches.v_0.add_invoice_type_field_salesinvoice_fetched_from_delivery_note.execute",
+    "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
+    "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
+    "renu_customization.patches.v_0.document_namirule_if_invoicetype_is_repairdomestic.execute",
+    "renu_customization.patches.v_0.add_naming_series_if_invoice_type_repair_export.execute",
+    "renu_customization.patches.v_0.add_naming_series_invoicetype_engg_ser_domestic.execute",
+    "renu_customization.patches.v_0.naming_series_invoice_type_engin_ser_export.execute",
     
 
 
@@ -276,10 +288,19 @@ doctype_js = {
     "public/js/make_fields_mandatory.js"],
     "Item":"public/js/when_under_development_check_disable_checkbox_checked.js",
     "Address":"public/js/make_mandatory_fields_on_address.js",
-    "Purchase Receipt":"public/js/upload_bulk_serial_no.js"
+    "Purchase Receipt":"public/js/upload_bulk_serial_no.js",
+    "Delivery Note":"public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js"
 
     
     
     
     
 }
+
+doc_events = {
+    "Document Naming Rule": {
+        "after_insert": "renu_customization.api.update_background_prefix_1.set_prefix_digits"
+    }
+}
+
+
