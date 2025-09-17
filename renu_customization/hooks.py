@@ -302,8 +302,7 @@ doctype_js = {
 
 doc_events = {
     "Document Naming Rule": {
-        "after_insert": "renu_customization.api.update_background_prefix_1.set_prefix_digits",
-        "after_insert": "renu_customization.api.update_prefix_on_delivery_note.set_prefix_digit"
+        "after_insert": "renu_customization.api.update_background_prefix_1.set_prefix_digits"
     }
 }
 
