@@ -15,8 +15,6 @@ def execute():
                 "",  # 👈 Blank option (default)
                 "Product Domestic",
                 "Product Export",
-                "Repair Domestic",
-                "Repair Export",
                 "Engineering Service Domestic",
                 "Engineering Service Export"
             ]),
