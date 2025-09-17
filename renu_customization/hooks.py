@@ -274,7 +274,10 @@ after_migrate = [
     "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
     "renu_customization.patches.v_0.add_naming_series_invoicetype_engg_ser_domestic.execute",
     "renu_customization.patches.v_0.add_naming_series_for_engg_service_export.execute",
-    "renu_customization.patches.v_0.add_naming_series_for_delivery_note.execute"
+    "renu_customization.patches.v_0.add_naming_series_for_delivery_note.execute",
+    "renu_customization.patches.v_0.hide_fields_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.hide_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.hide_fields_on_picklist.execute"
     
 
 
@@ -288,10 +291,8 @@ doctype_js = {
     "Item":"public/js/when_under_development_check_disable_checkbox_checked.js",
     "Address":"public/js/make_mandatory_fields_on_address.js",
     "Purchase Receipt":"public/js/upload_bulk_serial_no.js",
-    "Delivery Note":"public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js",
-    "Pick List":"public/js/hide_fields_on_picklist.js",
-    "Delivery Note":"public/js/hide-fields_on_delivery_note.js",
-    "Sales Invoice":"public/js/hide_field_on_sales_invoice.js"
+    "Delivery Note":"public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js"
+    
 
     
     
