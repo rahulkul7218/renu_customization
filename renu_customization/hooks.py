@@ -272,10 +272,9 @@ after_migrate = [
     "renu_customization.patches.v_0.add_invoice_type_field_salesinvoice_fetched_from_delivery_note.execute",
     "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
     "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
-    "renu_customization.patches.v_0.document_namirule_if_invoicetype_is_repairdomestic.execute",
-    "renu_customization.patches.v_0.add_naming_series_if_invoice_type_repair_export.execute",
     "renu_customization.patches.v_0.add_naming_series_invoicetype_engg_ser_domestic.execute",
-    "renu_customization.patches.v_0.naming_series_invoice_type_engin_ser_export.execute",
+    "renu_customization.patches.v_0.add_naming_series_for_engg_service_export.execute",
+    "renu_customization.patches.v_0.add_naming_series_for_delivery_note.execute"
     
 
 
@@ -304,6 +303,9 @@ doctype_js = {
 doc_events = {
     "Document Naming Rule": {
         "after_insert": "renu_customization.api.update_background_prefix_1.set_prefix_digits"
+    },
+    "Document Naming Rule": {
+        "after_insert": "renu_customization.api.update_prefix_on_delivery_note.set_prefix_digit"
     }
 }
 

@@ -1,12 +1,12 @@
 import frappe
 
 def execute():
-    if not frappe.db.exists("Document Naming Rule", {"document_type": "Sales Invoice", "prefix": "PSDOM.YYYY..0"}):
+    if not frappe.db.exists("Document Naming Rule", {"document_type": "Sales Invoice", "prefix": "YY.D1000"}):
         rule = frappe.get_doc({
             "doctype": "Document Naming Rule",
             "document_type": "Sales Invoice",
-            "prefix": "PSDOM.YYYY..0",
-            # "counter": 0,
+            "prefix": "YY.D1000",
+            "counter": 0,
             "digits": 0,
             "priority": 0,
             "conditions": [
