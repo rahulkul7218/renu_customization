@@ -215,7 +215,7 @@ frappe.ui.form.on("Purchase Receipt", {
 
                             // --- If duplicate serial numbers found, stop execution ---
                             if (duplicate_rows.length > 0) {
-                                frappe.throw(
+                                frappe.msgprint(
                                     `Duplicate Serial No found at Excel row(s): <b>${duplicate_rows.join(", ")}</b>`
                                 );
                                 return;
@@ -319,3 +319,5 @@ frappe.ui.form.on("Purchase Receipt", {
         }, __("Get Items From"));
     }
 });
+
+
