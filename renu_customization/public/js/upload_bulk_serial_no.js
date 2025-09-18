@@ -321,7 +321,6 @@
 // });
 
 
-
 function load_xlsx(callback) {
     if (typeof XLSX !== "undefined") {
         callback();
@@ -333,8 +332,9 @@ function load_xlsx(callback) {
     document.head.appendChild(script);
 }
 
-// --- Global storage for serial numbers across uploads ---
+// --- Global storage ---
 let global_seen_serials = {};
+let uploaded_file_data = null;   // store uploaded file temporarily until PR is saved
 
 frappe.ui.form.on("Purchase Receipt", {
     refresh(frm) {
@@ -342,11 +342,13 @@ frappe.ui.form.on("Purchase Receipt", {
             load_xlsx(() => {
                 let input = document.createElement("input");
                 input.type = "file";
-                input.accept = "*/*";
+                input.accept = ".xlsx,.xls";
 
                 input.onchange = (e) => {
                     let file = e.target.files[0];
                     if (!file) return;
+
+                    // remove empty default row
                     if (frm.doc.items && frm.doc.items.length === 1 && !frm.doc.items[0].item_code) {
                         frm.clear_table("items");
                     }
@@ -358,52 +360,71 @@ frappe.ui.form.on("Purchase Receipt", {
                             let data = new Uint8Array(e.target.result);
                             let workbook = XLSX.read(data, { type: "array" });
 
+                            // --- Save uploaded file temporarily ---
+                            uploaded_file_data = {
+                                name: file.name,
+                                content: btoa(String.fromCharCode.apply(null, data))
+                            };
+
                             let serial_map = {};
                             let duplicate_rows = [];
 
                             workbook.SheetNames.forEach(sheetName => {
                                 let sheet = workbook.Sheets[sheetName];
                                 let rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-
                                 let start_idx = 1; // skip header row
+
                                 for (let idx = start_idx; idx < rows.length; idx++) {
                                     let r = rows[idx];
 
                                     let item_code = r[0] ? r[0].toString().trim() : "";
-                                    let qty       = r[1] ? parseFloat(r[1]) : 0;   
-                                    let serial_no = r[2] ? r[2].toString().trim() : "";
-                                    let uom       = r[3] ? r[3].toString().trim() : "";
-                                    let po_no     = r[4] ? r[4].toString().trim() : "";
+                                    let serial_str = r[2] ? r[2].toString().trim() : "";
+                                    let uom = r[3] ? r[3].toString().trim() : "";
+                                    let po_no = r[4] ? r[4].toString().trim() : "";
 
                                     if (!item_code) continue;
 
-                                    // --- Duplicate Serial Check across uploads ---
-                                    if (serial_no) {
-                                        if (global_seen_serials[serial_no]) {
-                                            duplicate_rows.push(idx + 1); // Excel row no
-                                        } else {
-                                            global_seen_serials[serial_no] = true;
-                                        }
+                                    // split serial numbers
+                                    let serials = [];
+                                    if (serial_str) {
+                                        serials = serial_str
+                                            .split(/[\n,]+/)
+                                            .map(s => s.trim())
+                                            .filter(s => s);
                                     }
 
+                                    let qty = serials.length;
+
+                                    if (qty === 0) {
+                                        frappe.msgprint({
+                                            title: "Missing Serials",
+                                            message: `Row ${idx + 1}: Item <b>${item_code}</b> has no serial numbers provided.`,
+                                            indicator: "red"
+                                        });
+                                        return;
+                                    }
+
+                                    // check duplicate serials across uploads
+                                    serials.forEach(sn => {
+                                        if (global_seen_serials[sn]) {
+                                            duplicate_rows.push(idx + 1);
+                                        } else {
+                                            global_seen_serials[sn] = true;
+                                        }
+                                    });
+
                                     if (!serial_map[item_code]) {
-                                        serial_map[item_code] = {
-                                            qty: 0,
-                                            serials: [],
-                                            uom: uom
-                                        };
+                                        serial_map[item_code] = { qty: 0, serials: [], uom: uom };
                                     }
 
                                     serial_map[item_code].qty += qty;
-                                    if (serial_no) serial_map[item_code].serials.push(serial_no);
+                                    serial_map[item_code].serials = serial_map[item_code].serials.concat(serials);
                                     if (uom) serial_map[item_code].uom = uom;
-                                    if (po_no && !frm.doc.po_no) {
-                                        frm.set_value("po_no", po_no);
-                                    }
+                                    if (po_no && !frm.doc.po_no) frm.set_value("po_no", po_no);
                                 }
                             });
 
-                            // --- Stop if duplicates found ---
+                            // stop if duplicates found
                             if (duplicate_rows.length > 0) {
                                 frappe.msgprint(
                                     `Duplicate Serial No found in file "<b>${file.name}</b>" at Excel row(s): <b>${duplicate_rows.map(r => "Row No " + r).join(", ")}</b>`
@@ -464,6 +485,12 @@ frappe.ui.form.on("Purchase Receipt", {
 
                             Promise.all(promises).then(() => {
                                 frm.refresh_field("items");
+
+                                frappe.msgprint({
+                                    title: "Success",
+                                    message: `File "<b>${file.name}</b>" Upload successfully.`,
+                                    indicator: "green"
+                                });
                             });
 
                         } catch (err) {
@@ -482,5 +509,29 @@ frappe.ui.form.on("Purchase Receipt", {
                 input.click();
             });
         }, __("Get Items From"));
+    },
+
+    after_save(frm) {
+        if (uploaded_file_data) {
+            frappe.call({
+                method: "frappe.client.insert",
+                args: {
+                    doc: {
+                        doctype: "File",
+                        file_name: uploaded_file_data.name,
+                        is_private: 0,
+                        content: uploaded_file_data.content,
+                        attached_to_doctype: frm.doc.doctype,
+                        attached_to_name: frm.doc.name
+                    }
+                },
+                callback: function(res) {
+                    //frappe.msgprint(`📎 File <b>${res.message.file_name}</b> attached successfully to ${frm.doc.name}`);
+                    uploaded_file_data = null; // clear after save
+                    frm.reload_doc();
+                }
+            });
+        }
     }
 });
+
