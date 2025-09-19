@@ -1,0 +1,228 @@
+<style>
+{%include "renu_customization/renu_customization/print_format/so_domestic_invoice/so_domestic_invoice.css" %}
+</style>
+{%- from "templates/print_formats/standard_macros.html" import add_header, render_field, print_value -%}
+
+{% set company = frappe.get_doc("Company", doc.company) %}
+<div class="print-container">
+  <table class="outer-table">
+      <!-- HEADER -->
+      <tr>
+          <td colspan="4" class="header-center">
+              <h2>Order Acceptance / Proforma Invoice</h2>
+          </td>
+      </tr>
+      <tr>
+          <td colspan="4" class="header-center">
+              <p>Issued under Section 31 of The Central Goods And Services Tax Act, 2017 Read with Chapter IV of Central Goods and Service Tax Rules, 2017</p>
+          </td>
+      </tr>
+
+      <!-- COMPANY, BUYER PO, WARRANTY -->
+      <tr>
+                <td colspan="2" class="company-info">
+                    <div class="logo-placeholder">
+                        <img src="{{company.logo_for_printing}}" style="max-width: 120px;"/>
+                    </div>
+                    <p><b>{{doc.company}}</b></p>
+                    <p>Factory Address:-<br>{{doc.company_address_display or "" }}</p>
+                    <p>Tel. No.: {{doc.po_no or ""}}</p>
+                    <p><b>Email:-</b> {{doc.email or ""}}</p>
+                </td>
+          <td class="details-col">
+              <p><strong>Buyer's PO No.</strong></p><br>
+              <p><strong>PO Date</strong></p><br>
+              <p><strong>Transport Mode</strong></p><br>
+              <p><strong>Packing</strong></p><br>
+              <p><strong>Insurance</strong></p><br>
+              <p><strong>Warranty</strong></p><br>
+          </td>
+          <td class="details-col" >
+              <p>{{doc.po_no}}</p><br/>
+              <p>{{doc.po_date}}</p><br/>
+              <p>{{doc.mode_of_transport or ""}}</p><br/>
+              <p>{{""}}</p><br/>
+              <p>{{""}}</p><br/>
+              <p>{{""}}</p><br/>
+          </td>
+      </tr>
+
+      <!-- OA DETAILS & DELIVERY TERMS -->
+     <tr>
+    <td colspan="2" class="oa-section">
+        <div class="oa-container">
+            <!-- Labels -->
+            <div class="oa-labels">
+                <span>OA No.:</span>
+                <span>OA Date:</span>
+                <span>GST No.:</span>
+                <span>PAN:</span>
+                <span>Delivery Term:</span>
+            </div>
+            <!-- Values -->
+            <div class="oa-values">
+                <span>{{ doc.name }}</span>
+                <span>{{ doc.transaction_date}}</span>
+                <span>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</span>
+                <span>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</span>
+                <span>{{doc.tc_name or ""}}</span>
+            </div>
+        </div>
+    </td>
+</tr>
+
+      <!-- ADDRESS BLOCKS -->
+      <tr>
+          <td colspan="2" class="address-block">
+              <p><b>Billed To: </b> </p>
+              {% if doc.address_display %}
+              <p>{{doc.customer or ""}}</p>
+              <p>{{doc.address_display or ""}}</p><br>
+              {%endif%}
+              
+          </td>
+          <td colspan="2" class="address-block">
+              <p><b>Shipped To: </b> </p>
+              {%if doc.shipping_address %}
+              <p>{{doc.customer or ""}}</p>
+              <p>{{doc.shipping_address or ""}}</p><br>
+              {%endif%}
+              
+          </td>
+      </tr>
+
+      <!-- ITEMS -->
+      <tr>
+          <td colspan="4">
+              <table class="items-table">
+                  <thead>
+                      <tr>
+                          <th>Sr.No.</th>
+                          <th>Item Code</th>
+                          <th>Description of Goods</th>
+                          <th>HSN Code</th>
+                          <th>GST%</th>
+                          <th>Qty</th>
+                          <th>Rate in {{doc.currency}}</th>
+                          <th>UOM</th>
+                          <th>Amount in {{doc.currency}}</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {% for row in doc.items %}
+                      <tr>
+                          <td>{{loop.index}}</td>
+                          <td>{{ row.item_code or "" }}</td>
+                          <td>{{ row.item_name or ""}}</td>
+                          <td>{{ row.gst_hsn_code or ''}}</td>
+                          {%if row.igst_rate%}
+                          <td> {{row.igst_rate or ""}} </td>
+                          {%elif row.cgst_rate and row.sgst_rate%}
+                          <td>{{row.cgst_rate or ""}}+{{row.sgst_rate or ""}}</td>
+                          {%elif not row.igst_rate and not row.cgst_rate and not row.sgst_rate %}
+                          <td>{{""}}</td>
+                          {%endif%}
+                          
+                          <td>{{row.qty or 0}}</td>
+                          <td>{{row.rate or 0}}</td>
+                          <td>{{row.uom or ""}}</td>
+                          <td>{{row.amount or 0}}</td>
+                     </tr>
+                      {% endfor %}
+                  </tbody>
+                  <tfoot>
+                      <tr>
+                          <td colspan="3">&nbsp;</td>
+                          <td colspan="2"><b>Total Qty</b></td>
+                          <td colspan="1">{{doc.total_qty}}</td>
+                          <td></td>
+                          <td><b>Total</b></td>
+                          <td>{{doc.total}}</td>
+                      </tr>
+                  </tfoot>
+              </table>
+          </td>
+      </tr>
+
+      <!-- BANK DETAILS & TAX SUMMARY -->
+      <tr>
+          <td colspan="1" class="bank-details">
+              <p><b>Bank Details:</b></p>
+              <p>Name of Bank:</p>
+              <p>Swift Address:</p><br>
+              <p>Favouring:</p>
+              <p>For Further Credit To (Must include in instructions):</p>
+              <p>Ultimate Beneficiary:</p>
+          </td>
+          
+       
+          <td colspan="1" class="bank-details">
+                {% set bank_list = frappe.get_list("Bank Account", 
+                    filters={"company": doc.company, "is_default": 1}, 
+                    fields=["name", "bank", "address_html", "bank_account_no", "branch_code", "account_type"], 
+                    limit=1) 
+                %}
+            
+                {% if bank_list %}
+                    {% set bank = bank_list[0] %}
+                    <p>{{ bank.bank or "" }}</p><br/>
+                    <p>{{ bank.address_html or "" }}</p><br/>
+                    <p>{{ bank.bank_account_no or "" }}</p><br/>
+                    <p>{{ bank.branch_code or "" }}</p><br/>
+                    <p>{{ bank.account_type or "" }}</p>
+                {% else %}
+                    <p></p>
+                {% endif %}
+        </td>
+
+
+          <td colspan="1" class="signature-block">
+              <p><b>Taxable Amount:</b></p>
+              <div class="signature-space"></div>
+              <p>Total CGST Amt:</p>
+              <p>Total SGST Amt:</p>
+          </td>
+          <td>
+              <p></p>
+              <p></p>
+              <p></p>
+              
+          </td>
+      </tr>
+
+      <!-- TOTAL IN WORDS & GRAND TOTAL -->
+      <tr >
+          <td colspan="1" style="font-size:11px"><b>TOTAL (In words):</b></td>
+          <td colspan="1" style="font-size:11px" >{{doc.in_words}}</td>
+          <td colspan="1" class="grand_total"><b>GRAND TOTAL</b><br></td>
+          <td colspan="1" style="font-size:11px">{{doc.grand_total}}</td>
+      </tr>
+
+      <!-- PAYMENT TERMS & SIGNATURE -->
+      <tr class="payment_term">
+          <td colspan="1"><b>Payment Term:-</b></td>
+          <td colspan="2">{{doc.payment_terms_template or ""}}</td>
+          <th class="signature-block" style="text-align:right;">For {{doc.company}}<br><br><br><br><br>
+          <p>
+            -
+          </p>
+          </th>
+         
+      <tr>
+      
+          <td colspan="3">
+              <p></p><br>
+              <p></p><br>
+              <p></p><br
+          </td>
+          
+      
+      </tr>
+      </tr>
+      <!-- FOOTER -->
+      <tr>
+          <td colspan="4" class="footer-line">
+            Reg. Office Address :- {{doc.company_address}}     Website:- {{company.website}}          </td>
+      </tr>
+  </table>
+</div>

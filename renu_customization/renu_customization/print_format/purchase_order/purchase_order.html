@@ -1,0 +1,130 @@
+<style>
+{%include "renu_customization/print_format/purchase_order/purchase_order.css" %}
+</style>
+<!-- {%- from "templates/print_formats/standard_macros.html" import add_header, render_field, print_value -%} -->
+{% set company = frappe.get_doc("Company", doc.company) %}
+<html>
+
+<body>
+
+<div class="outer-box">
+
+    <!-- Header -->
+    <div class="header">
+        {% if company.logo_for_printing %}
+        <!--<img src="{{ frappe.utils.get_url(doc.company_logo or doc.company.logo_for_printing) }}" style="max-width: 120px;">-->
+        <img src="{{company.logo_for_printing}}" style="max-width: 120px;">
+        {% endif %}
+
+        <div class="company-details">
+            <strong class="compnay-info-name">{{ company.company_name }}</strong><br>
+           <p>{{doc.billing_address}}</p>
+        </div>
+    </div>
+
+    <!-- Supplier + PO Info -->
+    <table>
+        <tr>
+            <td rowspan="2" style= "width:63%">
+                <span class="label">To,</span><br><br>
+                {{ doc.supplier_name }}
+            </td>
+            <td><span class="label">PO NO :</span> {{ doc.name }}</td>
+        </tr>
+        <tr>
+            <td><span class="label">Date :</span> {{ doc.transaction_date }}</td>
+        </tr>
+    </table>
+
+    <!-- Title -->
+    <div class="po">PURCHASE ORDER</div>
+
+    <!-- Items Table -->
+    <table>
+       <thead>
+    <tr>
+        <th>Sr. No.</th>
+        <th>Description</th>
+        <th>Qty</th>
+        <th>Item Rate (INR)</th>
+        <th>Amount (INR)</th>
+    </tr>
+</thead>
+
+        <tbody>
+            {% for row in doc.items %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ row.item_name }}</td>
+                <td>{{ row.qty }}</td>
+                <td>{{ row.rate }}</td>
+                <td>{{ row.amount }}</td>
+            </tr>
+            {% endfor %}
+            <tr><td colspan="5"><p style="padding:4px;"></p></td></tr>
+             <tr>
+            <td colspan="2"></td>
+            <td colspan="2"><b>Total:</b></td>
+            <td>{{ doc.total }}</td>
+        </tr>
+        <tr>
+             <td colspan="2"></td>
+            <td colspan="2"><b>GST 18%:</b></td>
+            <td>{{ (doc.total * 0.18) | round(2) }}</td>
+        </tr>
+        <tr>
+             <td colspan="2"></td>
+            <td colspan="2"><b>Final Total:</b></td>
+            
+            <td>{{ (doc.total * 1.18) | round(2) }}</td>
+        </tr>
+        </tbody>
+    </table>
+
+    <!-- Totals -->
+ 
+       
+   
+
+    <!-- Terms & Conditions -->
+    <table>
+        <tr>
+            <td>Terms and Conditions:-</td>
+            
+            <td>{{doc.tc_name}}</td>
+            
+        </tr>
+        <tr>
+            <td>GST - If applicable</td>
+            <td >
+                Validity :- 60 days <br>
+                
+            </td>
+        </tr>
+        <tr style="height:100px;">
+            <td>Payment Term :</td>
+            <td> Delivery Period :-</td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                NON CONFIRMING MATERIAL WILL BE REJECTED AND SENT BACK TO YOU<br>
+                INSPECTION WILL BE DONE AT YOUR WORKS BEFORE DISPATCH TO US.
+            </td>
+        </tr>
+        <tr>
+            <td>Prepared By:</td>
+            <td>Approved By:</td>
+           
+        </tr>
+         <tr>
+            <td></td>
+            <td></td>
+           
+        </tr>
+        
+    </table>
+
+</div>
+
+</body>
+</html>
