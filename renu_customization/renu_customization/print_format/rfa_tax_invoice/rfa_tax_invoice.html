@@ -15,7 +15,7 @@
             <!-- HEADER -->
             <tr>
                 <td colspan="3" class="header-center">
-                    <h2>TAX INVOICE</h2>
+                    <h2>&nbsp; &nbsp;&nbsp; &nbsp; &nbsp; TAX INVOICE</h2>
                 </td>
                       <td colspan="1" class="copies-border" style="font-size:11px;">
         {{ copy }}
@@ -32,7 +32,7 @@
                     <div class="logo-placeholder">
                         <img src="{{company.logo_for_printing}}" style="max-width: 120px;">
  
-                    </div><br>
+                    </div><br><br/>
                     <p><b>{{doc.company}}</b></p>
                     <p style="padding: 5px"><strong>Factory Address:- </strong>{{ doc.company_address_display or "" }}</p>
                     
@@ -40,8 +40,8 @@
                 <td colspan="2" class="details-col">
                     <p><strong>Buyer's PO No.: </strong> {{doc.po_no or ""}}</p><br>
                     <p><strong>PO Date: </strong> {{doc.po_date or ""}}</p><br>
-                    <p><strong>OA No.: </strong></p><br>
-                    <p><strong>OA Date: </strong></p><br>
+                    <p><strong>OA No.: </strong> {{doc.sales_order or ""}}</p><br>
+                    <p><strong>OA Date: </strong> {{doc.sales_order_date or ""}}</p><br>
                     <p><strong>Transport Mode: </strong> {{doc.mode_of_transport or ""}}</p><br>
                     <p><strong>Way Bill No.</strong> {{doc.ewaybill or ""}}</p><br>
                     <p><strong>Tax on Reverse Charge</strong></p><br>
@@ -270,7 +270,7 @@
             <!-- FOOTER -->
             <tr>
                 <td colspan="4" class="footer-line">
-                    Place of Business :- {{doc.company_address or ""}} Website:- {{company.website or ""}} Email:- {{company.email_id or ""}} Phone No.:- {{company.phone or ""}} GSTIN:- {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company", doc.company, "pan") or ""}}
+                    Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}} Website:- {{company.website or ""}} Email:- {{company.email_id or ""}} Phone No.:- {{company.phone or ""}} GSTIN:- {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company", doc.company, "pan") or ""}}
                 </td>
             </tr>
         </table>
