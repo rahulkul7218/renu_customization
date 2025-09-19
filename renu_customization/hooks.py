@@ -285,7 +285,11 @@ after_migrate = [
     "renu_customization.patches.v_0.hide_po_no_fileld-on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_new-field-supplier_invoice_no_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_supplier_invoice_date_on_purchase_receipt.execute",
-    "renu_customization.patches.v_0.create_old_customer_code_field_on_customer.execute"
+    "renu_customization.patches.v_0.create_old_customer_code_field_on_customer.execute",
+    "renu_customization.patches.v_0.add_naming_series_on_sales_order_product_domestic.execute",
+    "renu_customization.patches.v_0.create_naming_series_on_sales_order_productexport.execute",
+    "renu_customization.patches.v_0.create_naming_series_on_sales-order_engg_domestic_service.execute",
+    "renu_customization.patches.v_0.create_naming_series_on_sales_order_engg_service_export.execute"
     
     
 
