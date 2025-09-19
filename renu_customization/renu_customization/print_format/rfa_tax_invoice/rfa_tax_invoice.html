@@ -15,7 +15,7 @@
             <!-- HEADER -->
             <tr>
                 <td colspan="3" class="header-center">
-                    <h2>&nbsp; &nbsp;&nbsp; &nbsp; &nbsp; TAX INVOICE</h2>
+                    <h2>&nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; TAX INVOICE</h2>
                 </td>
                       <td colspan="1" class="copies-border" style="font-size:11px;">
         {{ copy }}
@@ -140,8 +140,9 @@
                         <tfoot>
                             <tr>
                                 <td colspan="3">&nbsp;</td>
-                                <td colspan="2"><b>Total Qty</b></td>
+                                <td colspan="1"><b>Total Qty</b></td>
                                 <td colspan="2">{{ doc.total_qty or "" }}</td>
+                                <td><b>Total</b></td>
                                 <td><b>{{ doc.rounded_total or doc.grand_total or "" }}</b></td>
                             </tr>
                         </tfoot>
