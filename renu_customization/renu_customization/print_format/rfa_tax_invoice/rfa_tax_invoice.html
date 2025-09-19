@@ -33,7 +33,7 @@
                         <img src="{{company.logo_for_printing}}" style="max-width: 120px;">
  
                     </div><br><br/>
-                    <p><b>{{doc.company}}</b></p>
+                    <p><b>{{doc.company or ""}}</b></p>
                     <p style="padding: 5px"><strong>Factory Address:- </strong>{{ doc.company_address_display or "" }}</p>
                     
                 </td>
@@ -44,7 +44,7 @@
                     <p><strong>OA Date: </strong> {{doc.sales_order_date or ""}}</p><br>
                     <p><strong>Transport Mode: </strong> {{doc.mode_of_transport or ""}}</p><br>
                     <p><strong>Way Bill No.</strong> {{doc.ewaybill or ""}}</p><br>
-                    <p><strong>Tax on Reverse Charge</strong></p><br>
+                    <p><strong>Tax on Reverse Charge</strong> {{""}}</p><br>
                 </td>
             </tr>
             <!-- OA DETAILS & DELIVERY TERMS -->
@@ -71,14 +71,14 @@
                 </td>
                 <td colspan="1" class="details-col"> 
                {% if doc.irn %}
-{% set e_invoice_log = frappe.db.get_value(
- "e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
-) %}
+                {% set e_invoice_log = frappe.db.get_value(
+                "e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
+                ) %}
 
-{%- set invoice_data = dict(json.loads(e_invoice_log.invoice_data)) -%}
+                {%- set invoice_data = dict(json.loads(e_invoice_log.invoice_data)) -%}
 
-<img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=2) }}" class="qrcode">
-{% endif %}
+                <img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=2) }}" class="qrcode">
+                {% endif %}
 
                 
                 
@@ -92,18 +92,18 @@
             <!-- ADDRESS BLOCKS AND IRN -->
             <tr>
                 <td colspan="2" class="address-block">
-                    <p><b>Billed To: </b> {{ doc.customer_name }}</p><br>
+                    <p><b>Billed To: </b> {{ doc.customer_name or ""}}</p><br>
                     <p>{{ doc.address_display or "" }}</p><br>
                     <p>Kind Attention: {{ doc.contact_person or "" }}</p>
-                    <p>Contact No: {{doc.contact_mobile}}</p>
+                    <p>Contact No: {{doc.contact_mobile or ""}}</p>
                    
                 </td>
                 <td colspan="2" class="address-block">
-                    <p><b>Shipped To: </b> {{ doc.customer_name }}</p><br>
+                    <p><b>Shipped To: </b> {{ doc.customer_name or ""}}</p><br>
         <p>{{ doc.shipping_address or "" }}<br></p><br>
           <p>Kind Attention: {{ doc.contact_person or "" }}</p>
-           <p>Contact No: {{doc.contact_mobile}}</p>
-                   
+           <p>Contact No: {{doc.contact_mobile or ""}}</p>
+
                 </td>
             </tr>
             
@@ -129,11 +129,11 @@
                                 <td>{{ loop.index }}</td>
                                 <td>{{ row.item_code or "" }}</td>
                                 <td>{{ row.item_name or "" }}</td>
-                                <td>{{ row.gst_hsn_code }}</td>
-                                <td>{{ row.qty }}</td>
-                                <td>{{ row.rate }}</td>
-                                <td>{{ row.uom }}</td>
-                                <td>{{ row.amount }}</td>
+                                <td>{{ row.gst_hsn_code or "" }}</td>
+                                <td>{{ row.qty or "" }}</td>
+                                <td>{{ row.rate or "" }}</td>
+                                <td>{{ row.uom or "" }}</td>
+                                <td>{{ row.amount or "" }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -174,11 +174,11 @@
                         {% set ns.total_taxable = ns.total_taxable + taxable %}
                         {% set ns.total_igst = ns.total_igst + igst_amt %}
 
-                        <tr>
-                            <td class="ta-left">{{ row.gst_hsn_code }}</td>
-                            <td class="ta-right">{{ "%.2f"|format(taxable) }}</td>
-                            <td class="ta-right">{{ igst_rate }}%</td>
-                            <td class="ta-right">{{ "%.2f"|format(igst_amt) }}</td>
+                        <tr> 
+                            <td class="ta-left">{{ row.gst_hsn_code or "" }}</td>
+                            <td class="ta-right">{{ "%.2f"|format(taxable) or "" }}</td>
+                            <td class="ta-right">{{ igst_rate or "" }}%</td>
+                            <td class="ta-right">{{ "%.2f"|format(igst_amt) or "" }}</td>
                         </tr>
                     {% endfor %}
                 </tbody>
@@ -224,8 +224,8 @@
         <p><b>IGST Amt:</b></p>
     </td>
     <td colspan="1" style="font-size:11px">
-        <p>{{ "%.2f"|format(ns.total_taxable) }}</p></br>
-        <p>{{ "%.2f"|format(ns.total_igst) }}</p>
+        <p>{{ "%.2f"|format(ns.total_taxable) or ""}}</p></br>
+        <p>{{ "%.2f"|format(ns.total_igst) or ""}}</p>
     </td>
 </tr>
     
@@ -237,7 +237,7 @@
                 <td colspan="1" style="font-size: 11px"><b>TOTAL (In words):</b></td>
                 <td colspan="1" style="font-size: 11px">{{ doc.in_words or ""}}</td>
                 
-                <td colspan="1" class="grand_total"><b>GRAND TOTAL ({{doc.currency}})</b></td>
+                <td colspan="1" class="grand_total"><b>GRAND TOTAL ({{doc.currency or ""}})</b></td>
                 <td colspan="1" style="font-size: 11px">{{doc.grand_total or 0}}</td>
                 
             </tr>

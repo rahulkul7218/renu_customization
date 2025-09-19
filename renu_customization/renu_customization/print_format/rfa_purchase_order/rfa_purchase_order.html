@@ -16,8 +16,8 @@
         {% endif %}
 
         <div class="company-details">
-            <strong class="compnay-info-name">{{ company.company_name }}</strong><br>
-           <p>{{doc.billing_address}}</p>
+            <strong class="compnay-info-name">{{ company.company_name or ""}}</strong><br>
+           <p>{{ frappe.db.get_value("Address", doc.billing_address, "address_line1" ), frappe.db.get_value("Address", doc.billing_address, "city" ), frappe.db.get_value("Address", doc.billing_address, "state" ), frappe.db.get_value("Address", doc.billing_address, "country"), frappe.db.get_value("Address", doc.billing_address, "pincode" ) or ""}}</p>
         </div>
     </div>
 
@@ -26,12 +26,12 @@
         <tr>
             <td rowspan="2" style= "width:63%">
                 <span class="label">To,</span><br><br>
-                {{ doc.supplier_name }}
+                {{ doc.supplier_name or ""}}
             </td>
-            <td><span class="label">PO NO :</span> {{ doc.name }}</td>
+            <td><span class="label">PO NO :</span> {{ doc.name or "" }}</td>
         </tr>
         <tr>
-            <td><span class="label">Date :</span> {{ doc.transaction_date }}</td>
+            <td><span class="label">Date :</span> {{ doc.transaction_date or "" }}</td>
         </tr>
     </table>
 
@@ -54,28 +54,28 @@
             {% for row in doc.items %}
             <tr>
                 <td>{{ loop.index }}</td>
-                <td>{{ row.item_name }}</td>
-                <td>{{ row.qty }}</td>
-                <td>{{ row.rate }}</td>
-                <td>{{ row.amount }}</td>
+                <td>{{ row.item_name or "" }}</td>
+                <td>{{ row.qty or "" }}</td>
+                <td>{{ row.rate or "" }}</td>
+                <td>{{ row.amount or "" }}</td>
             </tr>
             {% endfor %}
             <tr><td colspan="5"><p style="padding:4px;"></p></td></tr>
              <tr>
             <td colspan="2"></td>
             <td colspan="2"><b>Total:</b></td>
-            <td>{{ doc.total }}</td>
+            <td>{{ doc.total or "" }}</td>
         </tr>
         <tr>
              <td colspan="2"></td>
             <td colspan="2"><b>GST 18%:</b></td>
-            <td>{{ (doc.total * 0.18) | round(2) }}</td>
+            <td>{{ (doc.total * 0.18) | round(2) or "" }}</td>
         </tr>
         <tr>
              <td colspan="2"></td>
             <td colspan="2"><b>Final Total:</b></td>
-            
-            <td>{{ (doc.total * 1.18) | round(2) }}</td>
+
+            <td>{{ (doc.total * 1.18) | round(2) or "" }}</td>
         </tr>
         </tbody>
     </table>
@@ -89,9 +89,9 @@
     <table>
         <tr>
             <td>Terms and Conditions:-</td>
-            
-            <td>{{doc.tc_name}}</td>
-            
+
+            <td>{{doc.tc_name or ""}}</td>
+
         </tr>
         <tr>
             <td>GST - If applicable</td>
@@ -101,8 +101,21 @@
             </td>
         </tr>
         <tr style="height:100px;">
-            <td>Payment Term :</td>
-            <td> Delivery Period :-</td>
+            <td>Payment Term :
+                 {% if doc.payment_schedule %}
+                <ul>
+                {% for row in doc.payment_schedule %}
+                    <li>{{ row.payment_term or ""}}</li>
+                {% endfor %}
+                </ul>
+                {% endif %}
+            </td>
+            <td> Delivery Period :-
+                 {% if doc.items %}
+                From {{ doc.items | map(attribute="schedule_date") | min }}
+                To {{ doc.items | map(attribute="schedule_date") | max }}
+            {% endif %}
+            </td>
         </tr>
         <tr>
             <td colspan="2">
@@ -116,8 +129,10 @@
            
         </tr>
          <tr>
-            <td></td>
-            <td></td>
+            <td>  {{ frappe.session.user_fullname or frappe.session.user }}</td>
+            <td>{% if doc.owner %}
+            {{ frappe.get_doc("User", doc.owner).full_name }}
+        {% endif %}</td>
            
         </tr>
         
