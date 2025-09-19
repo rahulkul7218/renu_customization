@@ -1,7 +1,6 @@
 <style>
-{%include "renu_customization/renu_customization/print_format/so_domestic_invoice/so_domestic_invoice.css" %}
+{%include "renu_customization/renu_customization/print_format/rfa_domestic_invoice/rfa_domestic_invoice.css" %}
 </style>
-{%- from "templates/print_formats/standard_macros.html" import add_header, render_field, print_value -%}
 
 {% set company = frappe.get_doc("Company", doc.company) %}
 <div class="print-container">
@@ -24,7 +23,7 @@
                     <div class="logo-placeholder">
                         <img src="{{company.logo_for_printing}}" style="max-width: 120px;"/>
                     </div>
-                    <p><b>{{doc.company}}</b></p>
+                    <p><b>{{doc.company or ""}}</b></p>
                     <p>Factory Address:-<br>{{doc.company_address_display or "" }}</p>
                     <p>Tel. No.: {{doc.po_no or ""}}</p>
                     <p><b>Email:-</b> {{doc.email or ""}}</p>
@@ -38,8 +37,8 @@
               <p><strong>Warranty</strong></p><br>
           </td>
           <td class="details-col" >
-              <p>{{doc.po_no}}</p><br/>
-              <p>{{doc.po_date}}</p><br/>
+              <p>{{doc.po_no or ""}}</p><br/>
+              <p>{{doc.po_date or ""}}</p><br/>
               <p>{{doc.mode_of_transport or ""}}</p><br/>
               <p>{{""}}</p><br/>
               <p>{{""}}</p><br/>

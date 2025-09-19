@@ -19,7 +19,7 @@
  "modified": "2025-09-12 12:58:03.885959",
  "modified_by": "Administrator",
  "module": "Renu Customization",
- "name": "Delivery Note",
+ "name": "RFA Delivery Note",
  "owner": "Administrator",
  "page_number": "Hide",
  "pdf_generator": "wkhtmltopdf",
