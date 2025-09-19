@@ -741,13 +741,20 @@ frappe.ui.form.on("Purchase Receipt", {
         }, __("Get Items From"));
     },
 
-    before_submit(frm) {
-        if (uploaded_po_no && uploaded_po_no !== frm.doc.supplier_invoice_no) {
-            frappe.throw(
-                `Cannot submit! Uploaded PO No "<b>${uploaded_po_no}</b>" does not match Supplier Invoice No "<b>${frm.doc.supplier_invoice_no}</b>".`
-            );
-        }
-    },
+    // before_submit(frm) {
+    //     if (uploaded_po_no && uploaded_po_no !== frm.doc.supplier_invoice_no) {
+    //         frappe.throw(
+    //             `Cannot submit! Uploaded PO No "<b>${uploaded_po_no}</b>" does not match Supplier Invoice No "<b>${frm.doc.supplier_invoice_no}</b>".`
+    //         );
+    //     }
+    // },
+     before_submit(frm) {
+    if (uploaded_po_no && uploaded_po_no !== frm.doc.purchase_order_no) {
+        frappe.throw(
+            `Cannot submit! Uploaded PO No "<b>${uploaded_po_no}</b>" does not match Custom Purchase Order No "<b>${frm.doc.purchase_order_no}</b>".`
+        );
+    }
+},
 
     after_save(frm) {
         if (uploaded_file_data) {
