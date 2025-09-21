@@ -1,5 +1,5 @@
 <style>
-{% include "renu_customization/renu_customization/print_format/rfa_tax_invoice/rfa_tax_invoice.css" %}
+{% include "renu_customization/renu_customization/print_format/rfa_repair_dti/rfa_repair_dti.css" %}
 </style>
 
 {% set copies = ["Original", "Duplicate", "Triplicate", "Extra"] %}
@@ -156,26 +156,26 @@
                 </td>
             </tr>
 
-<!-- GST DETAILS -->
+<!-- GST BREAKUP TABLE -->
 <tr>
     <td colspan="4" class="no-pad">
         <div class="gst-container">
-            <p class="gst-heading">GST Details:</p>
-            <table class="gst-table">
+            <p class="gst-heading">GST Breakup:</p>
+            <table class="gst-table" border="1" cellspacing="0" cellpadding="4">
                 <thead>
                     <tr>
                         <th>HSN Code</th>
-                        <th>Taxable Amt</th>
+                        <th>Taxable Amount</th>
 
                         {% set show_cgst = false %}
                         {% set show_sgst = false %}
                         {% set show_igst = false %}
 
-                        {# Check which taxes exist in items #}
-                        {% for row in doc.items %}
-                            {% if row.cgst_rate %} {% set show_cgst = true %} {% endif %}
-                            {% if row.sgst_rate %} {% set show_sgst = true %} {% endif %}
-                            {% if row.igst_rate %} {% set show_igst = true %} {% endif %}
+                        {# Detect applicable taxes #}
+                        {% for item in doc.items %}
+                            {% if item.cgst_rate|float > 0 %}{% set show_cgst = true %}{% endif %}
+                            {% if item.sgst_rate|float > 0 %}{% set show_sgst = true %}{% endif %}
+                            {% if item.igst_rate|float > 0 %}{% set show_igst = true %}{% endif %}
                         {% endfor %}
 
                         {% if show_igst %}<th>IGST %</th><th>IGST Amt</th>{% endif %}
@@ -186,11 +186,11 @@
                 <tbody>
                     {% set ns = namespace(total_taxable=0, total_cgst=0, total_sgst=0, total_igst=0) %}
 
-                    {% for row in doc.items %}
-                        {% set taxable = row.net_amount or row.base_net_amount or row.amount or 0 %}
-                        {% set cgst_amt = taxable * (row.cgst_rate or 0) / 100 %}
-                        {% set sgst_amt = taxable * (row.sgst_rate or 0) / 100 %}
-                        {% set igst_amt = taxable * (row.igst_rate or 0) / 100 %}
+                    {% for item in doc.items %}
+                        {% set taxable = item.net_amount|float or item.base_net_amount|float or item.amount|float or 0 %}
+                        {% set cgst_amt = taxable * (item.cgst_rate|float or 0) / 100 %}
+                        {% set sgst_amt = taxable * (item.sgst_rate|float or 0) / 100 %}
+                        {% set igst_amt = taxable * (item.igst_rate|float or 0) / 100 %}
 
                         {% set ns.total_taxable = ns.total_taxable + taxable %}
                         {% set ns.total_cgst = ns.total_cgst + cgst_amt %}
@@ -198,21 +198,21 @@
                         {% set ns.total_igst = ns.total_igst + igst_amt %}
 
                         <tr>
-                            <td>{{ row.gst_hsn_code or "" }}</td>
+                            <td>{{ item.gst_hsn_code or "" }}</td>
                             <td class="ta-right">{{ "%.2f"|format(taxable) }}</td>
 
                             {% if show_igst %}
-                                <td class="ta-right">{{ row.igst_rate or 0 }}%</td>
+                                <td class="ta-right">{{ item.igst_rate|float or 0 }}%</td>
                                 <td class="ta-right">{{ "%.2f"|format(igst_amt) }}</td>
                             {% endif %}
 
                             {% if show_cgst %}
-                                <td class="ta-right">{{ row.cgst_rate or 0 }}%</td>
+                                <td class="ta-right">{{ item.cgst_rate|float or 0 }}%</td>
                                 <td class="ta-right">{{ "%.2f"|format(cgst_amt) }}</td>
                             {% endif %}
 
                             {% if show_sgst %}
-                                <td class="ta-right">{{ row.sgst_rate or 0 }}%</td>
+                                <td class="ta-right">{{ item.sgst_rate|float or 0 }}%</td>
                                 <td class="ta-right">{{ "%.2f"|format(sgst_amt) }}</td>
                             {% endif %}
                         </tr>

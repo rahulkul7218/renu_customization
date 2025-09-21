@@ -1,5 +1,5 @@
 <style>
-{%include "renu_customization/renu_customization/print_format/rfa_export_invoice/rfa_export_invoice.css" %}
+{%include "renu_customization/renu_customization/print_format/rfa_export_product_si/rfa_export_product_si.css" %}
 </style>
 
 {% set copies = ["Original", "Duplicate", "Triplicate", "Extra"] %}
@@ -102,7 +102,7 @@
               <th style="width:10%;">Ref. / PO No.</th>
               <th style="width:12%;">HSN Code</th>
               <th style="width:10%;">Qty</th>
-              <th style="width:10%;">Unit Rate ({{doc.currency}})</th>
+              <th style="width:15%;">Unit Rate ({{doc.currency}})</th>
               <th style="width:8%;">UOM </th>
               <th style="width:15%;">Total ({{doc.currency}})</th>
             </tr>
@@ -116,7 +116,7 @@
               <td class="center">{{row.purchase_order or ""}}</td>
               <td class="center">{{row.gst_hsn_code or ""}}</td>
               <td class="center">{{row.qty or 0}}</td>
-              <td class="right">{{ "{:,.2f}".format(row.rate or 0) }}</td>
+              <td class="right" style="width: 20%;">{{ "{:,.2f}".format(row.rate or 0) }}</td>
               <td class="center">{{row.uom or ""}}</td>
               <td class="right">{{ "{:,.2f}".format(row.amount or 0) }}</td>
             </tr>
@@ -164,7 +164,7 @@
                     <p>{{ bank.bank_account_no or " " }} &nbsp;&nbsp;&nbsp; IFSC Code : {{ bank.branch_code or " " }}</p>
                     <p>{{ frappe.db.get_value("Bank Account", bank.address_html, "address_line1") or " " }}</p>
                     <p>{{ frappe.db.get_value("Bank", bank.bank, "swift_number") or " " }}</p>
-                    <p>{{ bank.account_type or " " }}</p>
+                    <p>{{ bank.company or " " }}</p>
                 {% else %}
                     <p></p>
                 {% endif %}
@@ -193,7 +193,7 @@
       </td>
       <td colspan="5">
           <p>Packing details: -</p>
-          <p>No. of Boxes (Nos) : -</p>
+          <p>No. of Boxes (Nos) : - </p>
           <p>Total Wt. of Boxes (Kg): -</p>
           <p>Net Weight  in Kg : -</p>
       </td>

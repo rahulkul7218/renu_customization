@@ -19,7 +19,7 @@
  "modified": "2025-09-19 15:26:27.938257",
  "modified_by": "admin@renu-dev.localhost",
  "module": "Renu Customization",
- "name": "RFA Tax Invoice",
+ "name": "RFA Service ETI",
  "owner": "admin@renu-dev.localhost",
  "page_number": "Hide",
  "pdf_generator": "wkhtmltopdf",
