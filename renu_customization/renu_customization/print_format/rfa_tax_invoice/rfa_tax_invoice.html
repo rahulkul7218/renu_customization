@@ -7,7 +7,7 @@
 {% for copy in copies %}
 
 {% set company = frappe.get_doc("Company", doc.company) %}
-
+{% set so = doc.items[0].sales_order %}
 
 
     <div class="print-container">
@@ -31,7 +31,6 @@
                 <td colspan="2" class="company-info">
                     <div class="logo-placeholder">
                         <img src="{{company.logo_for_printing}}" style="max-width: 120px;">
- 
                     </div><br><br/>
                     <p><b>{{doc.company or ""}}</b></p>
                     <p style="padding: 5px"><strong>Factory Address:- </strong>{{ doc.company_address_display or "" }}</p>
@@ -40,11 +39,16 @@
                 <td colspan="2" class="details-col">
                     <p><strong>Buyer's PO No.: </strong> {{doc.po_no or ""}}</p><br>
                     <p><strong>PO Date: </strong> {{doc.po_date or ""}}</p><br>
-                    <p><strong>OA No.: </strong> {{doc.sales_order or ""}}</p><br>
-                    <p><strong>OA Date: </strong> {{doc.sales_order_date or ""}}</p><br>
+                    <p><strong>OA No.: </strong> {{so or ""}}</p><br>
+                    <p><strong>OA Date: </strong> {{doc.posting_date or ""}}</p><br>
                     <p><strong>Transport Mode: </strong> {{doc.mode_of_transport or ""}}</p><br>
                     <p><strong>Way Bill No.</strong> {{doc.ewaybill or ""}}</p><br>
-                    <p><strong>Tax on Reverse Charge</strong> {{""}}</p><br>
+                    <p><strong>Tax on Reverse Charge</strong> 
+                        {% if doc.is_reverse_charge == 1 %}
+                                Yes
+                            {% else %}
+                                No
+                            {% endif %}</p><br>
                 </td>
             </tr>
             <!-- OA DETAILS & DELIVERY TERMS -->
@@ -126,6 +130,7 @@
                         <tbody>
                             {% for row in doc.items %}
                             <tr>
+                                
                                 <td>{{ loop.index }}</td>
                                 <td>{{ row.item_code or "" }}</td>
                                 <td>{{ row.item_name or "" }}</td>
@@ -134,6 +139,7 @@
                                 <td>{{ row.rate or "" }}</td>
                                 <td>{{ row.uom or "" }}</td>
                                 <td>{{ row.amount or "" }}</td>
+
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -149,53 +155,89 @@
                     </table>
                 </td>
             </tr>
+
 <!-- GST DETAILS -->
 <tr>
     <td colspan="4" class="no-pad">
         <div class="gst-container">
+            <p class="gst-heading">GST Details:</p>
             <table class="gst-table">
                 <thead>
-                   <p class="gst-heading">GST Details:</p>
                     <tr>
                         <th>HSN Code</th>
                         <th>Taxable Amt</th>
-                        <th>IGST %</th>
-                        <th>IGST Amt</th>
+
+                        {% set show_cgst = false %}
+                        {% set show_sgst = false %}
+                        {% set show_igst = false %}
+
+                        {% for row in doc.items %}
+                            {% if row.cgst_rate %} {% set show_cgst = true %} {% endif %}
+                            {% if row.sgst_rate %} {% set show_sgst = true %} {% endif %}
+                            {% if row.igst_rate %} {% set show_igst = true %} {% endif %}
+                        {% endfor %}
+
+                        {% if show_cgst %}<th>CGST %</th><th>CGST Amt</th>{% endif %}
+                        {% if show_sgst %}<th>SGST %</th><th>SGST Amt</th>{% endif %}
+                        {% if show_igst %}<th>IGST %</th><th>IGST Amt</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
-                    {% set ns = namespace(total_taxable=0, total_igst=0) %}
-
+                    {% set ns = namespace(total_taxable=0, total_cgst=0, total_sgst=0, total_igst=0) %}
                     {% for row in doc.items %}
                         {% set taxable = row.net_amount or row.base_net_amount or row.amount or 0 %}
-                        {% set igst_rate = row.igst_rate or 18 %}   {# default 18% if not set #}
-                        {% set igst_amt = (taxable * (igst_rate / 100)) %}
+                        {% set cgst_amt = taxable * (row.cgst_rate or 0) / 100 %}
+                        {% set sgst_amt = taxable * (row.sgst_rate or 0) / 100 %}
+                        {% set igst_amt = taxable * (row.igst_rate or 0) / 100 %}
 
                         {% set ns.total_taxable = ns.total_taxable + taxable %}
+                        {% set ns.total_cgst = ns.total_cgst + cgst_amt %}
+                        {% set ns.total_sgst = ns.total_sgst + sgst_amt %}
                         {% set ns.total_igst = ns.total_igst + igst_amt %}
 
-                        <tr> 
-                            <td class="ta-left">{{ row.gst_hsn_code or "" }}</td>
-                            <td class="ta-right">{{ "%.2f"|format(taxable) or "" }}</td>
-                            <td class="ta-right">{{ igst_rate or "" }}%</td>
-                            <td class="ta-right">{{ "%.2f"|format(igst_amt) or "" }}</td>
+                        <tr>
+                            <td>{{ row.gst_hsn_code or "" }}</td>
+                            <td class="ta-right">{{ "%.2f"|format(taxable) }}</td>
+
+                            {% if show_cgst %}<td class="ta-right">{{ row.cgst_rate }}%</td><td class="ta-right">{{ "%.2f"|format(cgst_amt) }}</td>{% endif %}
+                            {% if show_sgst %}<td class="ta-right">{{ row.sgst_rate }}%</td><td class="ta-right">{{ "%.2f"|format(sgst_amt) }}</td>{% endif %}
+                            {% if show_igst %}<td class="ta-right">{{ row.igst_rate }}%</td><td class="ta-right">{{ "%.2f"|format(igst_amt) }}</td>{% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>
+                <tfoot>
+                    {% set col_span = 2 %}
+                    {% if show_cgst %}{% set col_span = col_span + 2 %}{% endif %}
+                    {% if show_sgst %}{% set col_span = col_span + 2 %}{% endif %}
+                    {% if show_igst %}{% set col_span = col_span + 2 %}{% endif %}
+
+                    <tr>
+                        <td><b>Total</b></td>
+                        <td class="ta-right"><b>{{ "%.2f"|format(ns.total_taxable) }}</b></td>
+                        {% if show_cgst %}<td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_cgst) }}</b></td>{% endif %}
+                        {% if show_sgst %}<td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_sgst) }}</b></td>{% endif %}
+                        {% if show_igst %}<td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_igst) }}</b></td>{% endif %}
+                    </tr>
+
+                    <tr>
+                        <td colspan="{{ col_span }}"><b>Total GST Tax: </b>{{ "%.2f"|format(ns.total_cgst + ns.total_sgst + ns.total_igst) }}</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
     </td>
 </tr>
 
+
 <!-- BANK DETAILS & TAX SUMMARY -->
 <tr>
-   <td colspan="1" class="bank-details">
+   <td style="width: 20%;" class="bank-details">
     <p><b>Bank Details:</b></p>
-    <p>Name of Bank:</p><br/>
-    <p>Address of Branch:</p><br/>
-    <p>Account No.:</p><br/>
-    <p>IFSC Code:</p><br/>
-    <p>Type of A/c:</p><br/>
+    <p>Name of Bank:</p>
+    <p>Address of Branch:</p>
+    <p>Account No.:</p>
+    <p>IFSC Code:</p>
+    <p>Type of A/c:</p>
     
 </td>
 <td colspan="1" class="bank-details">
@@ -207,11 +249,11 @@
             
                 {% if bank_list %}
                     {% set bank = bank_list[0] %}
-                    <br/>
-                    <p>{{ bank.bank or "" }}</p><br/>
-                    <p>{{ bank.address_html or "" }}</p><br/>
-                    <p>{{ bank.bank_account_no or "" }}</p><br/>
-                    <p>{{ bank.branch_code or "" }}</p><br/>
+                    <p></p><br/>
+                    <p>{{ bank.bank or "" }}</p>
+                    <p>{{ bank.address_html or "-" }}</p>
+                    <p>{{ bank.bank_account_no or "" }}</p>
+                    <p>{{ bank.branch_code or "" }}</p>
                     <p>{{ bank.account_type or "" }}</p>
                 {% else %}
                     <p>{{""}}</p>
@@ -221,11 +263,27 @@
     <td colspan="1" class="signature-block">
         <p><b>Taxable Amount:</b></p> <br>
         <div class="signature-space"></div>
-        <p><b>IGST Amt:</b></p>
+        {% if show_cgst %}
+           <p  ><b> Total CGST:</b></p>
+        {% endif %}
+        {% if show_sgst %}
+            <p ><b> Total SGST:</b></p>
+        {% endif %}
+        {% if show_igst %}
+           <p ><b> Total IGST:</b></p>
+        {% endif %}
     </td>
     <td colspan="1" style="font-size:11px">
-        <p>{{ "%.2f"|format(ns.total_taxable) or ""}}</p></br>
-        <p>{{ "%.2f"|format(ns.total_igst) or ""}}</p>
+        <p>{{ "%.2f"|format(ns.total_taxable) or ""}}</p><br/>
+        {% if show_cgst %}
+           <p  ><b>{{ "%.2f"|format(ns.total_cgst) }}</b></p>
+        {% endif %}
+        {% if show_sgst %}
+            <p ><b>{{ "%.2f"|format(ns.total_sgst) }}</b></p>
+        {% endif %}
+        {% if show_igst %}
+           <p ><b>{{ "%.2f"|format(ns.total_igst) }}</b></p>
+        {% endif %}
     </td>
 </tr>
     
@@ -244,7 +302,18 @@
             <!-- PAYMENT TERMS & SIGNATURE -->
             <tr class="payment_term">
                 <td colspan="1"><b>Payment Term:-</b> </td>
-                <td colspan="2">{{doc.payment_terms_template or ""}}</td>
+                <td colspan="2">
+                    {% if doc.payment_terms_template %}
+                        {% if doc.payment_schedule|length > 0 %}
+                            {{ doc.payment_schedule[0].payment_term or "" }}
+                        {% else %}
+                            {{ doc.payment_terms_template }}
+                        {% endif %}
+                    {% else %}
+                        {{ "" }}
+                    {% endif %}
+                </td>
+                
                 <th rowspan="2" >
                     <p class="signature-block">For {{doc.company or ""}}</p>
                     <p></p>
