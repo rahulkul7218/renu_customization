@@ -171,19 +171,21 @@
                         {% set show_sgst = false %}
                         {% set show_igst = false %}
 
+                        {# Check which taxes exist in items #}
                         {% for row in doc.items %}
                             {% if row.cgst_rate %} {% set show_cgst = true %} {% endif %}
                             {% if row.sgst_rate %} {% set show_sgst = true %} {% endif %}
                             {% if row.igst_rate %} {% set show_igst = true %} {% endif %}
                         {% endfor %}
 
+                        {% if show_igst %}<th>IGST %</th><th>IGST Amt</th>{% endif %}
                         {% if show_cgst %}<th>CGST %</th><th>CGST Amt</th>{% endif %}
                         {% if show_sgst %}<th>SGST %</th><th>SGST Amt</th>{% endif %}
-                        {% if show_igst %}<th>IGST %</th><th>IGST Amt</th>{% endif %}
                     </tr>
                 </thead>
                 <tbody>
                     {% set ns = namespace(total_taxable=0, total_cgst=0, total_sgst=0, total_igst=0) %}
+
                     {% for row in doc.items %}
                         {% set taxable = row.net_amount or row.base_net_amount or row.amount or 0 %}
                         {% set cgst_amt = taxable * (row.cgst_rate or 0) / 100 %}
@@ -199,24 +201,42 @@
                             <td>{{ row.gst_hsn_code or "" }}</td>
                             <td class="ta-right">{{ "%.2f"|format(taxable) }}</td>
 
-                            {% if show_cgst %}<td class="ta-right">{{ row.cgst_rate }}%</td><td class="ta-right">{{ "%.2f"|format(cgst_amt) }}</td>{% endif %}
-                            {% if show_sgst %}<td class="ta-right">{{ row.sgst_rate }}%</td><td class="ta-right">{{ "%.2f"|format(sgst_amt) }}</td>{% endif %}
-                            {% if show_igst %}<td class="ta-right">{{ row.igst_rate }}%</td><td class="ta-right">{{ "%.2f"|format(igst_amt) }}</td>{% endif %}
+                            {% if show_igst %}
+                                <td class="ta-right">{{ row.igst_rate or 0 }}%</td>
+                                <td class="ta-right">{{ "%.2f"|format(igst_amt) }}</td>
+                            {% endif %}
+
+                            {% if show_cgst %}
+                                <td class="ta-right">{{ row.cgst_rate or 0 }}%</td>
+                                <td class="ta-right">{{ "%.2f"|format(cgst_amt) }}</td>
+                            {% endif %}
+
+                            {% if show_sgst %}
+                                <td class="ta-right">{{ row.sgst_rate or 0 }}%</td>
+                                <td class="ta-right">{{ "%.2f"|format(sgst_amt) }}</td>
+                            {% endif %}
                         </tr>
                     {% endfor %}
                 </tbody>
                 <tfoot>
                     {% set col_span = 2 %}
+                    {% if show_igst %}{% set col_span = col_span + 2 %}{% endif %}
                     {% if show_cgst %}{% set col_span = col_span + 2 %}{% endif %}
                     {% if show_sgst %}{% set col_span = col_span + 2 %}{% endif %}
-                    {% if show_igst %}{% set col_span = col_span + 2 %}{% endif %}
 
                     <tr>
                         <td><b>Total</b></td>
                         <td class="ta-right"><b>{{ "%.2f"|format(ns.total_taxable) }}</b></td>
-                        {% if show_cgst %}<td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_cgst) }}</b></td>{% endif %}
-                        {% if show_sgst %}<td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_sgst) }}</b></td>{% endif %}
-                        {% if show_igst %}<td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_igst) }}</b></td>{% endif %}
+
+                        {% if show_igst %}
+                            <td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_igst) }}</b></td>
+                        {% endif %}
+                        {% if show_cgst %}
+                            <td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_cgst) }}</b></td>
+                        {% endif %}
+                        {% if show_sgst %}
+                            <td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_sgst) }}</b></td>
+                        {% endif %}
                     </tr>
 
                     <tr>
@@ -227,6 +247,7 @@
         </div>
     </td>
 </tr>
+
 
 
 <!-- BANK DETAILS & TAX SUMMARY -->

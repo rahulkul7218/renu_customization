@@ -56,7 +56,7 @@
         <p><b>GST No:</b></p>
         <p><b>PAN:</b></p>
         <p><b>IEC Code:</b></p>
-        <p><b>RBI Code:</b></p
+        <p><b>RBI Code:</b></p>
       </td>
       <td colspan="4">
         <p>{{doc.name or ""}}</p>
@@ -159,12 +159,12 @@
             
                 {% if bank_list %}
                     {% set bank = bank_list[0] %}
-                    <p>{{ bank.bank or "-" }}</p>
-                    <p>{{ frappe.db.get_value("Bank", bank.name, "swift_number") or "-" }}</p>
-                    <p>{{ bank.bank_account_no or "-" }} &nbsp;&nbsp;&nbsp; IFSC Code : {{ bank.branch_code or "-" }}</p>
-                    <p>{{ bank.address_html or "-" }}</p>
-                    <p>-</p>
-                    <p>{{ bank.account_type or "-" }}</p>
+                    <p>{{ bank.bank or " " }}</p>
+                    <p>{{ frappe.db.get_value("Bank", bank.bank, "swift_number") or " " }}</p>
+                    <p>{{ bank.bank_account_no or " " }} &nbsp;&nbsp;&nbsp; IFSC Code : {{ bank.branch_code or " " }}</p>
+                    <p>{{ frappe.db.get_value("Bank Account", bank.address_html, "address_line1") or " " }}</p>
+                    <p>{{ frappe.db.get_value("Bank", bank.bank, "swift_number") or " " }}</p>
+                    <p>{{ bank.account_type or " " }}</p>
                 {% else %}
                     <p></p>
                 {% endif %}
@@ -175,7 +175,7 @@
     <!-- Totals -->
     <tr>
       <td colspan="5"><b>Total (In words):</b> {{ frappe.utils.money_in_words(doc.grand_total, doc.currency) or "" }}</td>
-      <td colspan="2" class="right bold">GRAND TOTAL ({{doc.currency or ""}})</td>
+      <td colspan="2" class="right bold">GRAND TOTAL ({{doc.currency or " "}})</td>
       <td colspan="2" class="right bold">{{doc.grand_total or 0}}</td>
     </tr>
 
