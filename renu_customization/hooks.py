@@ -329,41 +329,150 @@ doc_events = {
 
 # custom_masters/hooks.py
 
+# hooks.py
+
 fixtures = [
-    # Core Setup
-    "Company", "Currency", "Fiscal Year", "Payment Terms Template",
-    "Cost Center", "Account", "Warehouse", "UOM", "UOM Category",
-    "Item Group", "Brand", "Territory", "Customer Group", "Supplier Group",
-    "Item Default", "Item Manufacturer", "Item Attribute", "Item Attribute Value",
-    
-    # Masters
-    "Customer", "Supplier", "Employee", "Designation", "Department",
-    "Leave Type", "Leave Policy", "Salary Structure", "Employee Group",
-    "Branch", "Holiday List", "Region", "Business Unit", "Business Group",
-    
-    # India Compliance
-    "GST Settings", "HSN/SAC", "Tax Category", "Tax Template",
-    "Item Tax Template", "GST Invoice Management System",
-    "India Compliance Taxes and Charges", "GST Account",
-    
-    # Customizations
-    "Custom Field", "Property Setter", "Custom Script", "Client Script",
-    "Print Format", "Letter Head", "Workflow", "Workflow State",
-    "Workflow Action", "Workflow Action Master",
-    
-    # CRM / Marketing
-    "Lead Source", "Opportunity Type", "Campaign", "Campaign Item",
-    
-    # HR / Payroll
-    "Salary Component", "Salary Component Account", "Leave Policy Detail",
-    "Employee Tax Exemption Category", "Employee Tax Exemption Declaration Category",
-    
-    # Integrations
-    "OAuth Provider Settings", "OAuth Client", "Push Notification Settings",
-    
-    # Website / Portal
-    "Website Settings", "Web Form", "Web Form Field", "Website Theme",
-    
-    # Any additional masters
-    "Report", "Report Column", "Report Filter", "Report Type",
+    # ---------- Users, Roles & Permissions ----------
+    {"dt": "User"},
+    {"dt": "Role"},
+    {"dt": "Role Profile"},
+    {"dt": "User Permission"},
+    # {"dt": "Role Permission Manager"},
+
+    # ---------- Modules & Module Profiles ----------
+    {"dt": "Module Def"},
+    {"dt": "Module Profile"},
+    {"dt": "Workspace"},
+    {"dt": "Workspace Shortcut"},
+    {"dt": "Workspace Chart"},
+    {"dt": "Workspace Number Card"},
+
+    # ---------- Accounts & Settings ----------
+    {"dt": "Company"},
+    {"dt": "Currency"},
+    {"dt": "Fiscal Year"},
+    {"dt": "Account"},
+    {"dt": "Cost Center"},
+    {"dt": "Payment Terms Template"},
+    {"dt": "Payment Terms Template Detail"},
+    {"dt": "Sales Taxes and Charges Template"},
+    {"dt": "Purchase Taxes and Charges Template"},
+    {"dt": "Accounts Settings"},
+    {"dt": "Global Defaults"},
+    {"dt": "Currency Exchange Settings"},
+    {"dt": "Tax Category"},
+    {"dt": "Bank"},
+    {"dt": "Bank Account"},
+    {"dt": "Journal Entry Template"},
+    {"dt": "Cost Center Allocation"},
+    {"dt": "Budget"},
+    {"dt": "Asset"},
+    {"dt": "Asset Category"},
+    {"dt": "Asset Movement"},
+    {"dt": "Asset Value Adjustment"},
+    {"dt": "Payment Entry"},
+    {"dt": "Payment Entry Reference"},
+    {"dt": "Mode of Payment"},
+
+    # ---------- Items & Inventory ----------
+    {"dt": "Item Group"},
+    {"dt": "Item"},
+    {"dt": "Item Variant"},
+    {"dt": "Item Attribute"},
+    {"dt": "Item Attribute Value"},
+    {"dt": "UOM"},
+    {"dt": "UOM Conversion Detail"},
+    {"dt": "Warehouse"},
+    {"dt": "Item Tax Template"},
+    {"dt": "Item Price"},
+    {"dt": "Product Bundle"},
+    {"dt": "BOM"},
+    {"dt": "Work Order Operation"},
+    {"dt": "Workstation"},
+    {"dt": "Production Plan"},
+    {"dt": "Quality Inspection Template"},
+    {"dt": "Material Request"},
+
+    # ---------- Contacts ----------
+    {"dt": "Customer Group"},
+    {"dt": "Customer"},
+    {"dt": "Supplier Group"},
+    {"dt": "Supplier"},
+    {"dt": "Address"},
+    {"dt": "Contact"},
+    {"dt": "Party Account"},
+    {"dt": "Lead Source"},
+    {"dt": "Opportunity Type"},
+    {"dt": "Sales Team"},
+    {"dt": "Sales Partner Type"},
+    {"dt": "Campaign"},
+
+    # ---------- HR / Employee Masters ----------
+    {"dt": "Employee"},
+    {"dt": "Designation"},
+    {"dt": "Department"},
+    # {"dt": "Employment Type"},
+    # {"dt": "Salary Component"},
+    # {"dt": "Salary Structure"},
+    # {"dt": "Leave Type"},
+    # {"dt": "Leave Policy"},
+    # {"dt": "Employee Grade"},
+    # {"dt": "Shift Type"},
+    # {"dt": "Shift Assignment"},
+    # {"dt": "Employee Group"},
+    # {"dt": "Employee Skill"},
+    # {"dt": "Appraisal Template"},
+    # {"dt": "Employee Onboarding Template"},
+    # {"dt": "Employee Referral"},
+
+    # ---------- Customization ----------
+    {"dt": "Custom Field"},
+    {"dt": "Client Script"},
+    {"dt": "Property Setter"},
+    {"dt": "DocField"},
+    {"dt": "DefaultValue"},
+    {"dt": "Print Format"},
+    {"dt": "Letter Head"},
+    {"dt": "Email Template"},
+    {"dt": "Print Style"},
+    {"dt": "Server Script"},
+
+    # ---------- Workflow ----------
+    {"dt": "Workflow"},
+    {"dt": "Workflow State"},
+    {"dt": "Workflow Action Master"},
+
+    # ---------- POS ----------
+    {"dt": "POS Profile"},
+    {"dt": "Pricing Rule"},
+    # {"dt": "Promotion Scheme"},
+    {"dt": "Item Variant Settings"},
+
+    # ---------- GST / Tax / India Compliance ----------
+    {"dt": "GST Settings"},
+    {"dt": "GST HSN Code"},
+    {"dt": "GST Account"},
+    {"dt": "India Compliance Taxes and Charges"},
+
+    # ---------- Communication & Integrations ----------
+    {"dt": "Email Account"},
+    {"dt": "Notification Settings"},
+    {"dt": "Payment Gateway Account"},
+    {"dt": "Integration Request"},
+    {"dt": "Webhook"},
+    {"dt": "OAuth Client"},
+    {"dt": "OAuth Provider Settings"},
+    {"dt": "Tag"},
+    {"dt": "Tag Link"},
+
+    # ---------- Misc / Other Settings ----------
+    {"dt": "Website Settings"},
+    {"dt": "Domain"},
+    {"dt": "System Settings"},
+    {"dt": "Global Search Settings"},
+    {"dt": "Email Queue"},
+    {"dt": "Scheduler Event"},
+    {"dt": "Installed Applications"},
+    {"dt": "Data Import Log"},
+    {"dt": "Patch Log"},
 ]

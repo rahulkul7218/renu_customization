@@ -3,31 +3,31 @@ import frappe
 def execute():
     role_profiles = {
         "Sales Coordinator": [
-            "Sales User", "Sales Manager", "Accounts User", "Stock User", "Purchase User"
+            "Sales User", "Sales Manager", "Accounts User", "Stock User", "Purchase User","Report Manager", "System Manager"
         ],
         "Finance Manager": [
-            "Accounts Manager", "Accounts User", "Report Manager"
+            "Accounts Manager", "Accounts User", "Report Manager", "Sales User", "Purchase User","Stock User", "System Manager"
         ],
         "Assistant Manager": [
-            "HR User", "Employee Self Service", "Projects User", "Sales User", "Purchase User"
+            "HR User", "Employee Self Service", "Projects User", "Sales User", "Purchase User" , "System Manager"
         ],
         "Senior Executive": [
-            "Sales User", "Purchase User", "Accounts User"
+            "Sales User", "Purchase User", "Accounts User", "Stock User", "Report Manager", "System Manager"
         ],
         "Account Executive": [
-            "Accounts User", "Report Manager"
+            "Accounts User", "Report Manager", "Sales User", "Purchase User", "Stock User", "System Manager"
         ],
         "Sales Head": [
-            "Sales Manager", "Sales Master Manager", "Report Manager"
+            "Sales Manager", "Sales Master Manager", "Report Manager", "Accounts User", "Stock User", "Purchase User", "System Manager"
         ],
         "Business Unit Head": [
-            "Projects Manager", "Sales Manager", "Accounts Manager", "Stock Manager"
+            "Projects Manager", "Sales Manager", "Accounts Manager", "Stock Manager", "Purchase Manager", "Report Manager", "System Manager"
         ],
         "Project Manager": [
-            "Projects Manager", "Projects User", "Employee"
+            "Projects Manager", "Projects User", "Employee", "HR User", "System Manager"
         ],
         "IT Manager": [
-            "System Manager", "Workspace Manager", "Script Manager"
+            "System Manager", "Workspace Manager", "Script Manager", "Report Manager", "Accounts User", "Stock User", "Purchase User", "Sales User"
         ],
         
         
