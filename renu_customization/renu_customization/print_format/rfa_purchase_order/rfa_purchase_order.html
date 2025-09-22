@@ -17,7 +17,7 @@
 
         <div class="company-details">
             <strong class="compnay-info-name">{{ company.company_name or ""}}</strong><br>
-           <p>{{ frappe.db.get_value("Address", doc.billing_address, "address_line1" ), frappe.db.get_value("Address", doc.billing_address, "city" ), frappe.db.get_value("Address", doc.billing_address, "state" ), frappe.db.get_value("Address", doc.billing_address, "country"), frappe.db.get_value("Address", doc.billing_address, "pincode" ) or ""}}</p>
+           <p>{{ frappe.db.get_value("Address", doc.billing_address, "address_line1" ) or ""}}</p>
         </div>
     </div>
 
