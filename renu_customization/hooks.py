@@ -323,3 +323,43 @@ doc_events = {
 }
 
 
+# custom_masters/hooks.py
+
+fixtures = [
+    # Core Setup
+    "Company", "Currency", "Fiscal Year", "Payment Terms Template",
+    "Cost Center", "Account", "Warehouse", "UOM", "UOM Category",
+    "Item Group", "Brand", "Territory", "Customer Group", "Supplier Group",
+    "Item Default", "Item Manufacturer", "Item Attribute", "Item Attribute Value",
+    
+    # Masters
+    "Customer", "Supplier", "Employee", "Designation", "Department",
+    "Leave Type", "Leave Policy", "Salary Structure", "Employee Group",
+    "Branch", "Holiday List", "Region", "Business Unit", "Business Group",
+    
+    # India Compliance
+    "GST Settings", "HSN/SAC", "Tax Category", "Tax Template",
+    "Item Tax Template", "GST Invoice Management System",
+    "India Compliance Taxes and Charges", "GST Account",
+    
+    # Customizations
+    "Custom Field", "Property Setter", "Custom Script", "Client Script",
+    "Print Format", "Letter Head", "Workflow", "Workflow State",
+    "Workflow Action", "Workflow Action Master",
+    
+    # CRM / Marketing
+    "Lead Source", "Opportunity Type", "Campaign", "Campaign Item",
+    
+    # HR / Payroll
+    "Salary Component", "Salary Component Account", "Leave Policy Detail",
+    "Employee Tax Exemption Category", "Employee Tax Exemption Declaration Category",
+    
+    # Integrations
+    "OAuth Provider Settings", "OAuth Client", "Push Notification Settings",
+    
+    # Website / Portal
+    "Website Settings", "Web Form", "Web Form Field", "Website Theme",
+    
+    # Any additional masters
+    "Report", "Report Column", "Report Filter", "Report Type",
+]

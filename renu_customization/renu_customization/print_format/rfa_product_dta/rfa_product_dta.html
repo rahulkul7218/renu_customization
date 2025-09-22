@@ -156,7 +156,7 @@
                 </td>
             </tr>
 
-<!-- GST BREAKUP TABLE -->
+<!-- TAX BREAKUP TABLE -->
 <tr>
     <td colspan="4" class="no-pad">
         <div class="gst-container">
@@ -283,28 +283,16 @@
 
     <td colspan="1" class="signature-block">
         <p><b>Taxable Amount:</b></p> <br>
-        <div class="signature-space"></div>
-        {% if show_cgst %}
-           <p  ><b> Total CGST:</b></p>
-        {% endif %}
-        {% if show_sgst %}
-            <p ><b> Total SGST:</b></p>
-        {% endif %}
-        {% if show_igst %}
-           <p ><b> Total IGST:</b></p>
-        {% endif %}
+           
+       
     </td>
     <td colspan="1" style="font-size:11px">
         <p>{{ "%.2f"|format(ns.total_taxable) or ""}}</p><br/>
-        {% if show_cgst %}
-           <p  ><b>{{ "%.2f"|format(ns.total_cgst) }}</b></p>
-        {% endif %}
-        {% if show_sgst %}
-            <p ><b>{{ "%.2f"|format(ns.total_sgst) }}</b></p>
-        {% endif %}
-        {% if show_igst %}
-           <p ><b>{{ "%.2f"|format(ns.total_igst) }}</b></p>
-        {% endif %}
+        <div style="margin-left: -60px ;">
+            {%- set data = doc.taxes -%}
+            {%- set print_settings = frappe.get_doc("Print Settings")  -%}
+            {% include "erpnext/templates/print_formats/includes/taxes.html" %}
+        </div>
     </td>
 </tr>
     
