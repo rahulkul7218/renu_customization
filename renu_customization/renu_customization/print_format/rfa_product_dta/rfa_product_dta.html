@@ -2,7 +2,7 @@
 {% include "renu_customization/renu_customization/print_format/rfa_product_dta/rfa_product_dta.css" %}
 </style>
 
-{% set copies = ["Original", "Duplicate", "Triplicate", "Extra"] %}
+{% set copies = ["Original Copy", "Duplicate Copy", "Triplicate Copy", "Extra Copy"] %}
  
 {% for copy in copies %}
 
@@ -65,11 +65,11 @@
                         </div>
                         <!-- Values -->
                         <div class="oa-values">
-                            <span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ doc.name or ""}}</span>
-                            <span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ doc.posting_date or "" }}</span>
-                            <span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</span>
-                            <span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</span>
-                            <span>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{doc.tc_name or ""}}</span>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ doc.name or " "}}</p>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ doc.posting_date or " " }}</p>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ frappe.db.get_value("Company", doc.company, "gstin") or "  "}}</p>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ frappe.db.get_value("Company", doc.company, "pan") or " "}}</p>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{doc.delivery_term or " "}}</p>
                         </div>
                     </div>
                 </td>
@@ -123,7 +123,7 @@
                                 <th>HSN Code</th>
                                 <th>Qty</th>
                                 <th>Rate in INR</th>
-                                <th>UM</th>
+                                <th>UOM</th>
                                 <th>Amount in INR</th>
                             </tr>
                         </thead>

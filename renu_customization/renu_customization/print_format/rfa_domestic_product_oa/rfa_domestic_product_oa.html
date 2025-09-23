@@ -62,11 +62,11 @@
                       <span>Delivery Term:</span>
                   </div>
                   <div class="oa-values">
-                      <span>{{ doc.name or ""}}</span>
-                      <span>{{ doc.transaction_date or ""}}</span>
-                      <span>{{ frappe.db.get_value("Company", doc.company, "gstin") or "" }}</span>
-                      <span>{{ frappe.db.get_value("Company", doc.company, "pan") or "" }}</span>
-                      <span>{{doc.tc_name or ""}}</span>
+                      <span>{{ doc.name or " "}}</span>
+                      <span>{{ doc.transaction_date or " "}}</span>
+                      <span>{{ frappe.db.get_value("Company", doc.company, "gstin") or "  " }}</span>
+                      <span>{{ frappe.db.get_value("Company", doc.company, "pan") or " " }}</span>
+                      <span>{{doc.delivery_term or " "}}</span>
                   </div>
               </div>
           </td>
@@ -99,6 +99,7 @@
                           <th>Sr.No.</th>
                           <th>Item Code</th>
                           <th>Description of Goods</th>
+                          <th>Delivery Date</th>
                           <th>HSN Code</th>
                           <th>GST%</th>
                           <th>Qty</th>
@@ -113,6 +114,7 @@
                           <td>{{loop.index}}</td>
                           <td>{{ row.item_code or "" }}</td>
                           <td>{{ row.item_name or ""}}</td>
+                          <td>{{ row.delivery_date or ""}}</td>
                           <td>{{ row.gst_hsn_code or ''}}</td>
                           {% if row.igst_rate %}
                               <td>{{ row.igst_rate or "" }}</td>

@@ -57,3 +57,5 @@ renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice
 renu_customization.patches.v_0.add_fields_sales_invoice_pf
 renu_customization.patches.v_0.add_fields_in_bank_account
 renu_customization.patches.v_0.add_fields_in_sales_order_wi_pf
+renu_customization.patches.v_0.add_delivery_term_field_in_si
+renu_customization.patches.v_0.add_delivery_term_field_in_so

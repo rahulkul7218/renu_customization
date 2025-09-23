@@ -2,7 +2,7 @@
 {%include "renu_customization/renu_customization/print_format/rfa_export_product_si/rfa_export_product_si.css" %}
 </style>
 
-{% set copies = ["Original", "Duplicate", "Triplicate", "Extra"] %}
+{% set copies = ["Original Copy", "Duplicate Copy", "Triplicate Copy", "Extra Copy"] %}
  
 {% for copy in copies %}
 
@@ -40,7 +40,7 @@
         <p>{{ frappe.db.get_value("Address", doc.company_address, "country") or "" }}</p>
         <p>{{doc.mode_of_transport or ""}}</p>
         <p>{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</p>
-        <p>{{doc.vehicle_no or ""}}</p>
+        <p>{{doc.vessel_flight_no or ""}}</p>
         <p>{{doc.port_address or ""}}</p>
         <p>{{frappe.db.get_value("Address", doc.dispatch_address, "city") or "" }}</p>
         <p>{{frappe.db.get_value("Address", doc.company_address, "country") or "" }}</p>
@@ -193,9 +193,9 @@
       </td>
       <td colspan="5">
           <p>Packing details: -</p>
-          <p>No. of Boxes (Nos) : - </p>
-          <p>Total Wt. of Boxes (Kg): -</p>
-          <p>Net Weight  in Kg : -</p>
+          <p>No. of Boxes (Nos) : - {{doc.no_of_boxes or 0}}</p>
+          <p>Total Wt. of Boxes (Kg): - {{doc.total_weight or 0}}</p>
+          <p>Net Weight  in Kg : - {{doc.net_weight or 0}}</p>
       </td>
     </tr>
     
