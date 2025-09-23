@@ -5,6 +5,14 @@ def execute():
     custom_fields = {
         "Sales Invoice": [
             dict(
+                fieldname="sales_order",
+                label="Sales Order",
+                fieldtype="Link",
+                options="Sales Order",
+                hidden=1,
+                insert_after="invoice_typ",
+            ),
+            dict(
                 fieldname="iec_code",
                 label="IEC Code",
                 fieldtype="Data",
@@ -22,6 +30,28 @@ def execute():
                 fieldtype="Data",
                 insert_after="pre_carriage_by",
             ),
+             dict(
+                fieldname="packing",
+                label="Packing",
+                fieldtype="Data",
+                insert_after="iec_code",
+                fetch_from="sales_order.packing", 
+            ),
+             dict(
+                fieldname="insurance",
+                label="Insurance",
+                fieldtype="Data",
+                insert_after="packing",
+                fetch_from="sales_order.insurance"
+                
+            ),
+             dict(
+                fieldname="warranty",
+                label="Warranty",
+                fieldtype="Data",
+                insert_after="insurance",
+                fetch_from="sales_order.warranty"
+            )
         ]
     }
 

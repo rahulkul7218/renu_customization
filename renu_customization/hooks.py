@@ -313,11 +313,6 @@ doctype_js = {
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js"
     
 
-    
-    
-    
-    
-    
 }
 
 doc_events = {
