@@ -82,3 +82,7 @@ tr { min-height: 20px; }
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
 }
+
+.top-section-right p{
+  padding-bottom: 5px;
+}

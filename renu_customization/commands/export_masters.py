@@ -1,55 +1,64 @@
 import frappe
 import json
 import os
-from datetime import datetime, date
 
-EXPORT_DOCTYPES = [
-    "Account", "Cost Center", "Warehouse", "Item Group", "Territory",
-    "Company", "Currency", "Fiscal Year", "Global Defaults", "Domain",
-    "User", "Role", "Role Profile", "User Permission",
-    "Customer Group", "Customer", "Supplier Group", "Supplier", "Address", "Contact",
-    "UOM", "Item Attribute", "Item Attribute Value", "Item", "Item Variant", "Item Price", "Item Tax Template",
-    "BOM", "Workstation", "Work Order Operation", "Quality Inspection Template",
-    "Employee", "Designation", "Department", "Shift Type", "Shift Schedule", "Shift Schedule Assignment",
-    "Tax Category", "Sales Taxes and Charges Template", "Purchase Taxes and Charges Template",
-    "GST Settings", "GST HSN Code", "GST Account"
-]
+EXPORT_FOLDER = "renu_customization/fixtures/masters"  # relative to site path
 
-SINGLE_DOCTYPES = ["Global Defaults", "Company", "GST Settings"]
-
-def serialize(obj):
-    """Convert non-JSON types to strings"""
-    if isinstance(obj, (datetime, date)):
-        return obj.isoformat()
-    return str(obj)
 
 def execute():
-    frappe.init(site=frappe.local.site)
-    frappe.connect()
+    site_path = frappe.local.site_path
+    export_path = os.path.join(site_path, EXPORT_FOLDER)
+    os.makedirs(export_path, exist_ok=True)
 
-    export_path = frappe.get_app_path("renu_customization", "data", "masters_export.json")
-    os.makedirs(os.path.dirname(export_path), exist_ok=True)
+    doctypes_to_export = [
+        "Account", "Cost Center", "Warehouse", "Item Group", "Territory",
+        "Currency", "Fiscal Year", "Global Defaults", "Domain", "UOM",
+        "Item Attribute", "Item Attribute Value", "Item", "Item Tax Template",
+        "Designation", "Department", "Tax Category", "Sales Taxes and Charges Template",
+        "Purchase Taxes and Charges Template", "GST Settings", "GST HSN Code",
+        "Bank", "Bank Account", "Mode of Payment", "Payment Terms Template",
+        "Custom Field", "Property Setter", "Print Format", "Email Template",
+        "Notification", "Notification Settings", "Workflow State", "Workflow Action Master"
+    ]
 
-    export_data = {}
-
-    for dt in EXPORT_DOCTYPES:
+    for doctype in doctypes_to_export:
         try:
-            if dt in SINGLE_DOCTYPES:
-                doc = frappe.get_single(dt)
-                export_data[dt] = [doc.as_dict()]
-                print(f"Exported single doctype {dt}")
+            print(f"Exporting {doctype}...")
+
+            meta = frappe.get_meta(doctype)
+            if meta.issingle:
+                doc = frappe.get_single(doctype)
+                data = serialize_doc(doc)
             else:
-                records = frappe.get_all(dt, fields="*")
-                export_data[dt] = records
-                print(f"Exported {len(records)} records of {dt}")
-        except frappe.DoesNotExistError:
-            print(f"Skipping {dt}: does not exist on this site")
+                records = frappe.get_all(doctype, fields=["name"])
+                data = [serialize_doc(frappe.get_doc(doctype, r.name)) for r in records]
+
+            file_path = os.path.join(export_path, f"{doctype}.json")
+            with open(file_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=4, default=json_serial)
+
+            count = len(data) if isinstance(data, list) else 1
+            print(f"Exported {count} records of {doctype}")
+
         except Exception as e:
-            print(f"Error exporting {dt}: {e}")
+            frappe.log_error(f"Error exporting {doctype}: {e}", "Export Masters")
+            print(f"Error exporting {doctype}: {e}")
 
-    # Write JSON safely converting non-serializable objects
-    with open(export_path, "w") as f:
-        json.dump(export_data, f, indent=4, default=serialize)
 
-    print(f"\n✅ Masters exported successfully to {export_path}")
-    frappe.destroy()
+def serialize_doc(doc):
+    """Convert Frappe document to JSON-safe dictionary recursively"""
+    if isinstance(doc, dict) or isinstance(doc, frappe._dict):
+        return {k: serialize_doc(v) for k, v in doc.items() if k not in ["__islocal", "__unsaved"]}
+    elif isinstance(doc, list):
+        return [serialize_doc(v) for v in doc]
+    elif hasattr(doc, "as_dict"):
+        return serialize_doc(doc.as_dict())
+    return doc
+
+
+def json_serial(obj):
+    """Serialize unsupported types like datetime"""
+    import datetime
+    if isinstance(obj, (datetime.date, datetime.datetime)):
+        return obj.isoformat()
+    return str(obj)

@@ -27,7 +27,7 @@
         <p class="padding_td"><b>Exporter:</b> {{doc.company}}</p>
         <p class="padding_td"><b>Address:</b> {{ doc.company_address_display or "" }}</p>
       </td>
-      <td colspan="2">
+      <td colspan="2" class="top-section-right">
         <p><b>Country of Origin:</b></p>
         <p><b>Pre-Carriage by:</b></p>
         <p><b>Place of Receipt:</b></p>
@@ -36,11 +36,11 @@
         <p><b>Final Destination:</b></p>
         <p><b>Country of Final Destination:</b></p>
       </td>
-      <td colspan="4">
+      <td colspan="4" class="top-section-right">
         <p>{{ frappe.db.get_value("Address", doc.company_address, "country") or "" }}</p>
-        <p>-</p>
+        <p>{{doc.mode_of_transport or ""}}</p>
         <p>{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</p>
-        <p>-</p>
+        <p>{{doc.vehicle_no or ""}}</p>
         <p>{{doc.port_address or ""}}</p>
         <p>{{frappe.db.get_value("Address", doc.dispatch_address, "city") or "" }}</p>
         <p>{{frappe.db.get_value("Address", doc.company_address, "country") or "" }}</p>
@@ -64,7 +64,7 @@
         <p>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</p>
         <p>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</p>
         <p class="wrap-text">{{ doc.irn or ""}}</p>
-        <p>-</p>
+        <p>{{frappe.db.get_value("Bank Account", "rbi_code") or ""}}</p>
       </td>
       <td colspan="4"></td>
     </tr>
