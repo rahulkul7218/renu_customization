@@ -143,75 +143,64 @@
       </tr>
 
       <!-- BANK DETAILS & TAX SUMMARY -->
+<tr>
+  <!-- Bank Details Section -->
+  <td colspan="2" class="bank-details" style="vertical-align: top; width:50%;">
+    <p><b>Bank Details:</b></p>
+    <table style="width:100%; border-collapse: collapse;">
       <tr>
-          <td colspan="1" class="bank-details">
-              <p><b>Bank Details:</b></p>
-              <p>Name of Bank:</p>
-              <p>Swift Address:</p><br>
-              <p>Favouring:</p>
-              <p>For Further Credit To (Must include in instructions):</p>
-              <p>Ultimate Beneficiary:</p>
-          </td>
-          <td colspan="1" class="bank-details">
-              {% set bank_list = frappe.get_list("Bank Account", 
-                  filters={"company": doc.company, "is_default": 1}, 
-                  fields=["name", "bank", "address_html", "bank_account_no", "branch_code", "account_type"], 
-                  limit=1) 
-              %}
-              {% if bank_list %}
-                  {% set bank = bank_list[0] %}
-                  <p>{{ bank.bank or "" }}</p><br/>
-                  <p>{{ frappe.db.get_value("Bank Account", bank.address_html, "address_line1" ) or "" }}</p><br/>
-                  <p>{{ bank.bank_account_no or "" }}</p><br/>
-                  <p>{{ bank.branch_code or "" }}</p><br/>
-                  <p>{{ bank.account_type or "" }}</p>
-              {% else %}
-                  <p></p>
-              {% endif %}
-          </td>
-          {# --- collect GST totals --- #}
-            {% set total_cgst = 0.0 %}
-            {% set total_sgst = 0.0 %}
-            {% set total_igst = 0.0 %}
-
-            {% for t in doc.taxes %}
-            {% set desc = (t.get("account_head") or t.get("description") or "") | lower %}
-            {% set tamt = (t.get("tax_amount") or 0) | float %}
-            {% if "cgst" in desc %}
-                {% set total_cgst = total_cgst + tamt %}
-            {% elif "sgst" in desc %}
-                {% set total_sgst = total_sgst + tamt %}
-            {% elif "igst" in desc %}
-                {% set total_igst = total_igst + tamt %}
-            {% endif %}
-            {% endfor %}
-
-            <td class="total-block">
-                <p><b>Taxable Amount:</b></p>
-                {% if total_cgst %}
-                <p>Total CGST Amt:</p>
-                {% endif %}
-                {% if total_sgst %}
-                <p>Total SGST Amt:</p>
-                {% endif %}
-                {% if total_igst %}
-                <p>Total IGST Amt:</p>
-                {% endif %}
-            </td>
-            <td class="total-block">
-                <p>{{ "{:,.2f}".format(doc.net_total or 0) }}</p>
-                {% if total_cgst %}
-                <p>{{ "{:,.2f}".format(total_cgst) }}</p>
-                {% endif %}
-                {% if total_sgst %}
-                <p>{{ "{:,.2f}".format(total_sgst) }}</p>
-                {% endif %}
-                {% if total_igst %}
-                <p>{{ "{:,.2f}".format(total_igst) }}</p>
-                {% endif %}
-            </td>
-
+        <td style="width:40%;"><b>Name of Bank:</b></td>
+        <td>{{ bank.bank or "" }}</td>
       </tr>
+      <tr>
+        <td><b>Swift Address:</b></td>
+        <td>{{ frappe.db.get_value("Bank Account", bank.address_html, "address_line1") or "" }}</td>
+      </tr>
+      <tr>
+        <td><b>Favouring:</b></td>
+        <td>{{ bank.account_type or "" }}</td>
+      </tr>
+      <tr>
+        <td><b>For Further Credit To:</b></td>
+        <td>{{ bank.bank_account_no or "" }}</td>
+      </tr>
+      <tr>
+        <td><b>Ultimate Beneficiary:</b></td>
+        <td>{{ bank.branch_code or "" }}</td>
+      </tr>
+    </table>
+  </td>
+
+  <!-- Tax Summary Section -->
+  <td colspan="2" class="total-block" style="vertical-align: top; width:50%;">
+    <p><b>Tax Summary:</b></p>
+    <table style="width:100%; border-collapse: collapse;">
+      <tr>
+        <td style="width:60%;"><b>Taxable Amount:</b></td>
+        <td style="text-align:right;">{{ "{:,.2f}".format(doc.net_total or 0) }}</td>
+      </tr>
+      {% if total_cgst %}
+      <tr>
+        <td><b>Total CGST Amt:</b></td>
+        <td style="text-align:right;">{{ "{:,.2f}".format(total_cgst) }}</td>
+      </tr>
+      {% endif %}
+      {% if total_sgst %}
+      <tr>
+        <td><b>Total SGST Amt:</b></td>
+        <td style="text-align:right;">{{ "{:,.2f}".format(total_sgst) }}</td>
+      </tr>
+      {% endif %}
+      {% if total_igst %}
+      <tr>
+        <td><b>Total IGST Amt:</b></td>
+        <td style="text-align:right;">{{ "{:,.2f}".format(total_igst) }}</td>
+      </tr>
+      {% endif %}
+    </table>
+  </td>
+</tr>
+
 
       <!-- TOTAL IN WORDS & GRAND TOTAL -->
       <tr>
