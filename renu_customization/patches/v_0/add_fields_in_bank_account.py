@@ -9,6 +9,17 @@ def execute():
                 label="RBI Code",
                 fieldtype="Data",
                 insert_after="iban",
+            ),
+             dict(
+                fieldname="sort_code",
+                label="Sort Code",
+                fieldtype="Data",
+                insert_after="rbi_code",
+            ),dict(
+                fieldname="fedwire_aba",
+                label="Fedwire ABA",
+                fieldtype="Data",
+                insert_after="sort_code",
             )
         ]
     }

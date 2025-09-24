@@ -329,6 +329,7 @@
                     <p></p>
                     <p></p>
                     <p class="bottom-text">Authorised Signatory</p>
+                    <p>{{frappe.get_doc("User", doc.owner).full_name or ""}}</p>
                 
                 </th>
             </tr>

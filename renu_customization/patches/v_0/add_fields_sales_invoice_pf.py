@@ -51,6 +51,12 @@ def execute():
                 fieldtype="Data",
                 insert_after="insurance",
                 fetch_from="sales_order.warranty"
+            ),
+             dict(
+                fieldname="freight_prepared_by",
+                label="Freight Prepared by",
+                fieldtype="Data",
+                insert_after="warranty"
             )
         ]
     }
