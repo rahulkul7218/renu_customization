@@ -63,29 +63,28 @@
         <p>{{doc.posting_date or ""}}</p>
         <p>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</p>
         <p>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</p>
-        <p class="wrap-text">{{ doc.irn or ""}}</p>
+        <p class="wrap-text">{{ doc.iec or ""}}</p>
         <p>{{frappe.db.get_value("Bank Account", "rbi_code") or ""}}</p>
       </td>
       <td colspan="4"></td>
     </tr>
 
     <!-- Billing & Shipping -->
-    <tr>
-      <th colspan="4">Billed To:</th>
-      <th colspan="5">Shipped To:</th>
-    </tr>
+    
     <tr>
       <td colspan="4" class="wrap-text">
+        <p><strong>Billed To:  </strong> {{frappe.db.get_value("Customer", doc.customer, "customer_code") or ""}}</p><br/>
         {{ doc.customer_name or "" }}<br/>
         {{ doc.address_display or "" }}<br/>
        <p>Kind Attention: {{ doc.contact_person or "" }}</p>
-           <p>Contact No: {{doc.contact_mobile or ""}}</p>
+       <p>Contact No: {{doc.contact_mobile or ""}}</p>
       </td>
       <td colspan="5" class="wrap-text">
+        <p><strong>Shipped To:  </strong> {{frappe.db.get_value("Customer", doc.customer, "customer_code") or ""}}</p><br/>
         {{ doc.customer_name or "" }}<br/>
         {{ doc.shipping_address or "" }}<br/>
         <p>Kind Attention: {{ doc.contact_person or "" }}</p>
-           <p>Contact No: {{doc.contact_mobile or ""}}</p>
+        <p>Contact No: {{doc.contact_mobile or ""}}</p>
 
       </td>
     </tr>
@@ -122,6 +121,9 @@
             </tr>
             {% endfor %}
             <tr>
+              
+            </tr>
+            <tr>
               <td colspan="4">Remission of Duties and Taxes on Exported Products (RoDTEP)</td>
               <td class="right bold">Total Qty</td>
               <td class="right bold">{{doc.total_qty or 0}}</td>
@@ -136,8 +138,8 @@
 
     <!-- Freight -->
     <tr>
-      <td colspan="3">Freight:</td>
-      <td colspan="6">Freight:</td>
+      <td colspan="3">Freight:   {{doc.freight or ""}}</td>
+      <td colspan="6">Freight:   {{doc.freight or ""}}</td>
     </tr>
 
     <!-- Bank -->
@@ -190,6 +192,7 @@
       <td colspan="4" class="signature left">
         <b>For {{doc.company or ""}}</b><br/><br/><br/>
         Authorised Signatory
+        {{frappe.get_doc("User", doc.owner).full_name or ""}}
       </td>
       <td colspan="5">
           <p>Packing details: -</p>

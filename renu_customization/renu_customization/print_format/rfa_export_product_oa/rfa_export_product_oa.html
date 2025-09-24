@@ -66,7 +66,7 @@
                       <span>{{ doc.transaction_date or ""}}</span>
                       <span>{{ frappe.db.get_value("Company", doc.company, "gstin") or "" }}</span>
                       <span>{{ frappe.db.get_value("Company", doc.company, "pan") or "" }}</span>
-                      <span>{{doc.tc_name or ""}}</span>
+                      <span>{{doc.delivery_term or ""}}</span>
                   </div>
               </div>
           </td>
