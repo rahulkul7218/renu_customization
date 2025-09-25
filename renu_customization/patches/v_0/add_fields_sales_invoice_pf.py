@@ -13,12 +13,6 @@ def execute():
                 insert_after="invoice_typ",
             ),
             dict(
-                fieldname="iec_code",
-                label="IEC Code",
-                fieldtype="Data",
-                insert_after="gst_vehicle_type",
-            ),
-            dict(
                 fieldname="pre_carriage_by",
                 label="Pre-Carriage by",
                 fieldtype="Data",

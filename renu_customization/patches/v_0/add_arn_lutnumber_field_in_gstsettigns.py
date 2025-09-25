@@ -6,11 +6,10 @@ def execute():
         "GST Settings": [
             dict(
                 fieldname="lut_number",
-                label="LUT Number",
+                label="ARN No (Letter of Undertaking)",
                 fieldtype="Link",
                 options="LUT Number",
-                insert_after="item_name",
-                reqd=1
+                insert_after="rcm_threshold"
             )
         ]
     }

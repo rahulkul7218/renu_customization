@@ -1,0 +1,362 @@
+<style>
+{% include "renu_customization/renu_customization/print_format/rfa_product_domestic_si/rfa_product_domestic_si.css" %}
+</style>
+
+{% set copies = ["Original Copy", "Duplicate Copy", "Triplicate Copy", "Extra Copy"] %}
+ 
+{% for copy in copies %}
+
+{% set company = frappe.get_doc("Company", doc.company) %}
+{% set so = doc.items[0].sales_order %}
+
+
+    <div class="print-container">
+        <table class="outer-table">
+            <!-- HEADER -->
+            <tr>
+                <td colspan="3" class="header-center">
+                    <h2>&nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp; TAX INVOICE</h2>
+                </td>
+                      <td colspan="1" class="copies-border" style="font-size:11px;">
+        {{ copy }}
+      </td>
+            </tr>
+            <tr>
+                <td colspan="4" class="header-center">
+                <p>(Issued under Section 31 of The Central Goods And Services Tax Act, 2017 Read with Chapter IV of Central Goods and Service Tax Rules, 2017)</p>   
+                </td>
+            </tr>
+            <!-- COMPANY, BUYER PO, OA DETAILS -->
+            <tr>
+                <td colspan="2" class="company-info">
+                    <div class="logo-placeholder">
+                        <img src="{{company.logo_for_printing}}" style="max-width: 120px;">
+                    </div><br><br/>
+                    <p><b>{{doc.company or ""}}</b></p>
+                    <p style="padding: 5px"><strong>Factory Address:- </strong>{{ doc.company_address_display or "" }}</p>
+                    
+                </td>
+                <td colspan="2" class="details-col">
+                    <p><strong>Buyer's PO No.: </strong> {{doc.po_no or ""}}</p><br>
+                    <p><strong>PO Date: </strong> {{doc.po_date or ""}}</p><br>
+                    <p><strong>OA No.: </strong> {{so or ""}}</p><br>
+                    <p><strong>OA Date: </strong> {{doc.posting_date or ""}}</p><br>
+                    <p><strong>Transport Mode: </strong> {{doc.mode_of_transport or ""}}</p><br>
+                    <p><strong>Way Bill No.</strong> {{doc.ewaybill or ""}}</p><br>
+                    <p><strong>Tax on Reverse Charge</strong> 
+                        {% if doc.is_reverse_charge == 1 %}
+                                Yes
+                            {% else %}
+                                No
+                            {% endif %}</p><br>
+                </td>
+            </tr>
+            <!-- OA DETAILS & DELIVERY TERMS -->
+            <tr>
+                <td colspan="2" class="oa-section">
+                    <div class="oa-container">
+                        <!-- Labels -->
+                        <div class="oa-labels">
+                            <span>Invoice No.</span>
+                            <span>Invoice Date</span>
+                            <span>GST No.:</span>
+                            <span>PAN:</span>
+                            <span>Delivery Term:</span>
+                        </div>
+                        <!-- Values -->
+                        <div class="oa-values">
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ doc.name or " "}}</p>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ doc.posting_date or " " }}</p>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ frappe.db.get_value("Company", doc.company, "gstin") or "  "}}</p>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{ frappe.db.get_value("Company", doc.company, "pan") or " "}}</p>
+                            <p>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;{{doc.delivery_term or " "}}</p>
+                        </div>
+                    </div>
+                </td>
+                <td colspan="1" class="details-col"> 
+               {% if doc.irn %}
+                {% set e_invoice_log = frappe.db.get_value(
+                "e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
+                ) %}
+
+                {%- set invoice_data = dict(json.loads(e_invoice_log.invoice_data)) -%}
+
+                <img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=2) }}" class="qrcode">
+                {% endif %}
+
+                
+                
+                </td>
+                <td colspan="1" class="details-col"></td>
+            </tr>
+            <tr>
+                <td class="irn"  colspan="2"><p>IRN:&nbsp;&nbsp;{{doc.irn or ""}}</p></td>
+                
+            </tr>
+            <!-- ADDRESS BLOCKS AND IRN -->
+            <tr>
+                <td colspan="2" class="address-block">
+                    <p><b>Billed To: </b> {{ doc.customer_name or ""}}</p><br>
+                    <p>{{ doc.address_display or "" }}</p><br>
+                    <p>Kind Attention: {{ doc.contact_person or "" }}</p>
+                    <p>Contact No: {{doc.contact_mobile or ""}}</p>
+                   
+                </td>
+                <td colspan="2" class="address-block">
+                    <p><b>Shipped To: </b> {{ doc.customer_name or ""}}</p><br>
+        <p>{{ doc.shipping_address or "" }}<br></p><br>
+          <p>Kind Attention: {{ doc.contact_person or "" }}</p>
+           <p>Contact No: {{doc.contact_mobile or ""}}</p>
+
+                </td>
+            </tr>
+            
+            <!-- ITEMS -->
+            <tr>
+                <td colspan="4">
+                    <table class="items-table">
+                        <thead>
+                            <tr>
+                                <th>Sr.No.</th>
+                                <th>Item Code</th>
+                                <th>Description of Goods</th>
+                                <th>HSN Code</th>
+                                <th>Qty</th>
+                                <th>Rate in INR</th>
+                                <th>UOM</th>
+                                <th>Amount in INR</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in doc.items %}
+                            <tr>
+                                
+                                <td>{{ loop.index }}</td>
+                                <td>{{ row.item_code or "" }}</td>
+                                <td>{{ row.item_name or "" }}</td>
+                                <td>{{ row.gst_hsn_code or "" }}</td>
+                                <td>{{ row.qty or "" }}</td>
+                                <td>{{ row.rate or "" }}</td>
+                                <td>{{ row.uom or "" }}</td>
+                                <td>{{ row.amount or "" }}</td>
+
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3">&nbsp;</td>
+                                <td colspan="1"><b>Total Qty</b></td>
+                                <td colspan="2">{{ doc.total_qty or "" }}</td>
+                                <td><b>Total</b></td>
+                                <td><b>{{ doc.rounded_total or doc.grand_total or "" }}</b></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </td>
+            </tr>
+
+<!-- TAX BREAKUP TABLE -->
+<tr>
+    <td colspan="4" class="no-pad">
+        <div class="gst-container">
+            <p class="gst-heading">GST Breakup:</p>
+            <table class="gst-table" border="1" cellspacing="0" cellpadding="4">
+                <thead>
+                    <tr>
+                        <th>HSN Code</th>
+                        <th>Taxable Amount</th>
+
+                        {% set show_cgst = false %}
+                        {% set show_sgst = false %}
+                        {% set show_igst = false %}
+
+                        {# Detect applicable taxes #}
+                        {% for item in doc.items %}
+                            {% if item.cgst_rate|float > 0 %}{% set show_cgst = true %}{% endif %}
+                            {% if item.sgst_rate|float > 0 %}{% set show_sgst = true %}{% endif %}
+                            {% if item.igst_rate|float > 0 %}{% set show_igst = true %}{% endif %}
+                        {% endfor %}
+
+                        {% if show_igst %}<th>IGST %</th><th>IGST Amt</th>{% endif %}
+                        {% if show_cgst %}<th>CGST %</th><th>CGST Amt</th>{% endif %}
+                        {% if show_sgst %}<th>SGST %</th><th>SGST Amt</th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% set ns = namespace(total_taxable=0, total_cgst=0, total_sgst=0, total_igst=0) %}
+
+                    {% for item in doc.items %}
+                        {% set taxable = item.net_amount|float or item.base_net_amount|float or item.amount|float or 0 %}
+                        {% set cgst_amt = taxable * (item.cgst_rate|float or 0) / 100 %}
+                        {% set sgst_amt = taxable * (item.sgst_rate|float or 0) / 100 %}
+                        {% set igst_amt = taxable * (item.igst_rate|float or 0) / 100 %}
+
+                        {% set ns.total_taxable = ns.total_taxable + taxable %}
+                        {% set ns.total_cgst = ns.total_cgst + cgst_amt %}
+                        {% set ns.total_sgst = ns.total_sgst + sgst_amt %}
+                        {% set ns.total_igst = ns.total_igst + igst_amt %}
+
+                        <tr>
+                            <td>{{ item.gst_hsn_code or "" }}</td>
+                            <td class="ta-right">{{ "%.2f"|format(taxable) }}</td>
+
+                            {% if show_igst %}
+                                <td class="ta-right">{{ item.igst_rate|float or 0 }}%</td>
+                                <td class="ta-right">{{ "%.2f"|format(igst_amt) }}</td>
+                            {% endif %}
+
+                            {% if show_cgst %}
+                                <td class="ta-right">{{ item.cgst_rate|float or 0 }}%</td>
+                                <td class="ta-right">{{ "%.2f"|format(cgst_amt) }}</td>
+                            {% endif %}
+
+                            {% if show_sgst %}
+                                <td class="ta-right">{{ item.sgst_rate|float or 0 }}%</td>
+                                <td class="ta-right">{{ "%.2f"|format(sgst_amt) }}</td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    {% set col_span = 2 %}
+                    {% if show_igst %}{% set col_span = col_span + 2 %}{% endif %}
+                    {% if show_cgst %}{% set col_span = col_span + 2 %}{% endif %}
+                    {% if show_sgst %}{% set col_span = col_span + 2 %}{% endif %}
+
+                    <tr>
+                        <td><b>Total</b></td>
+                        <td class="ta-right"><b>{{ "%.2f"|format(ns.total_taxable) }}</b></td>
+
+                        {% if show_igst %}
+                            <td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_igst) }}</b></td>
+                        {% endif %}
+                        {% if show_cgst %}
+                            <td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_cgst) }}</b></td>
+                        {% endif %}
+                        {% if show_sgst %}
+                            <td colspan="2" class="ta-right"><b>{{ "%.2f"|format(ns.total_sgst) }}</b></td>
+                        {% endif %}
+                    </tr>
+
+                    <tr>
+                        <td colspan="{{ col_span }}"><b>Total GST Tax: </b>{{ "%.2f"|format(ns.total_cgst + ns.total_sgst + ns.total_igst) }}</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </td>
+</tr>
+
+
+
+<!-- BANK DETAILS & TAX SUMMARY -->
+<tr>
+   <td style="width: 20%;" class="bank-details">
+    <p><b>Bank Details:</b></p>
+    <p>Name of Bank:</p>
+    <p>Address of Branch:</p>
+    <p>Account No.:</p>
+    <p>IFSC Code:</p>
+    <p>Type of A/c:</p>
+    
+</td>
+<td colspan="1" class="bank-details">
+                {% set bank_list = frappe.get_list("Bank Account", 
+                    filters={"company": doc.company, "is_default": 1}, 
+                    fields=["name", "bank", "address_html", "bank_account_no", "branch_code", "account_type"], 
+                    limit=1) 
+                %}
+            
+                {% if bank_list %}
+                    {% set bank = bank_list[0] %}
+                    <p></p><br/>
+                    <p>{{ bank.bank or "" }}</p>
+                    <p>{{ bank.address_html or "-" }}</p>
+                    <p>{{ bank.bank_account_no or "" }}</p>
+                    <p>{{ bank.branch_code or "" }}</p>
+                    <p>{{ bank.account_type or "" }}</p>
+                {% else %}
+                    <p>{{""}}</p>
+                {% endif %}
+        </td>
+
+    <td colspan="1" class="signature-block">
+        <p><b>Taxable Amount:</b></p> <br>
+           
+       
+    </td>
+    <td colspan="1" style="font-size:11px">
+        <p>{{ "%.2f"|format(ns.total_taxable) or ""}}</p><br/>
+        <div style="margin-left: -60px ;">
+            {%- set data = doc.taxes -%}
+            {%- set print_settings = frappe.get_doc("Print Settings")  -%}
+            {% include "erpnext/templates/print_formats/includes/taxes.html" %}
+        </div>
+    </td>
+</tr>
+    
+               
+               
+            </tr>
+            <!-- TOTAL IN WORDS & GRAND TOTAL -->
+            <tr >
+                <td colspan="1" style="font-size: 11px"><b>TOTAL (In words):</b></td>
+                <td colspan="1" style="font-size: 11px">{{ doc.in_words or ""}}</td>
+                
+                <td colspan="1" class="grand_total"><b>GRAND TOTAL ({{doc.currency or ""}})</b></td>
+                <td colspan="1" style="font-size: 11px">{{doc.grand_total or 0}}</td>
+                
+            </tr>
+            <!-- PAYMENT TERMS & SIGNATURE -->
+            <tr class="payment_term">
+                <td colspan="1"><b>Payment Term:-</b> </td>
+                <td colspan="2">
+                    {% if doc.payment_terms_template %}
+                        {% if doc.payment_schedule|length > 0 %}
+                            {{ doc.payment_schedule[0].payment_term or "" }}
+                        {% else %}
+                            {{ doc.payment_terms_template }}
+                        {% endif %}
+                    {% else %}
+                        {{ "" }}
+                    {% endif %}
+                </td>
+                
+                <th rowspan="2" >
+                    <p class="signature-block">For {{doc.company or ""}}</p>
+                    <p></p>
+                    <p></p>
+                    <p></p>
+                    <p class="bottom-text">Authorised Signatory</p>
+                    <p>{{frappe.get_doc("User", doc.owner).full_name or ""}}</p>
+                
+                </th>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <p></p><br>
+                    <p></p><br>
+                    <p></p><br>
+                </td>
+                <td class="message">
+                    <p>
+                        All Disputes Subject to
+                    </p>
+                    <p> Pune Jurisdiction Only E&OE</p>
+                </td>
+               
+            </tr>
+            <!-- FOOTER -->
+            <tr>
+                <td colspan="4" class="footer-line">
+                    Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}} Website:- {{company.website or ""}} Email:- {{company.email_id or ""}} Phone No.:- {{company.phone or ""}} GSTIN:- {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company", doc.company, "pan") or ""}}
+                </td>
+            </tr>
+        </table>
+    </div><br/>
+    {% if not loop.last %}
+<div style="page-break-after: always;"></div>
+{% endif %}
+{% endfor %}
+    

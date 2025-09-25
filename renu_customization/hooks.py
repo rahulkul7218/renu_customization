@@ -292,11 +292,15 @@ after_migrate = [
     "renu_customization.patches.v_0.create_naming_series_on_sales_order_engg_service_export.execute",
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
+
+    
+    #print format fields
+    "renu_customization.patches.v_0.add_fields_in_company_for_pf.execute",
     "renu_customization.patches.v_0.add_fields_sales_invoice_pf.execute",
-    "renu_customization.patches.v_0.add_fields_in_bank_account.execute",
     "renu_customization.patches.v_0.add_fields_in_sales_order_wi_pf.execute",
+    "renu_customization.patches.v_0.add_fields_in_bank_account.execute",
     "renu_customization.patches.v_0.add_delivery_term_field_in_si.execute",
-    "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute"
+    "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute",
    
 
 

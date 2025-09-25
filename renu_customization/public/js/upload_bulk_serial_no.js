@@ -444,9 +444,9 @@ frappe.ui.form.on("Purchase Receipt", {
     },
 
     before_submit(frm) {
-        if (uploaded_po_no && uploaded_po_no !== frm.doc.custom_purchase_order_no) {
+        if (uploaded_po_no && uploaded_po_no !== frm.doc.purchase_order_no) {
             frappe.throw(
-                `Cannot submit! Uploaded PO No "<b>${uploaded_po_no}</b>" does not match Custom Purchase Order No "<b>${frm.doc.custom_purchase_order_no}</b>".`
+                `Cannot submit! Uploaded PO No "<b>${uploaded_po_no}</b>" does not match Custom Purchase Order No "<b>${frm.doc.purchase_order_no}</b>".`
             );
         }
     },
