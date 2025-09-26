@@ -292,11 +292,16 @@ after_migrate = [
     "renu_customization.patches.v_0.create_naming_series_on_sales_order_engg_service_export.execute",
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
+
+    
+    #print format fields
+    "renu_customization.patches.v_0.add_fields_in_company_for_pf.execute",
     "renu_customization.patches.v_0.add_fields_sales_invoice_pf.execute",
-    "renu_customization.patches.v_0.add_fields_in_bank_account.execute",
     "renu_customization.patches.v_0.add_fields_in_sales_order_wi_pf.execute",
+    "renu_customization.patches.v_0.add_fields_in_bank_account.execute",
     "renu_customization.patches.v_0.add_delivery_term_field_in_si.execute",
-    "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute"
+    "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute",
+    "renu_customization.patches.v_0.add_fields_in_sales_invoice_item.execute"
    
 
 
@@ -312,7 +317,8 @@ doctype_js = {
     "Purchase Receipt":"public/js/upload_bulk_serial_no.js",
     "Delivery Note":"public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js",
     "Sales Invoice":"public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js",
-    "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js"
+    "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
+    "Sales Invoice": "public/js/calculate_package_wait.js"
     
 
 }
