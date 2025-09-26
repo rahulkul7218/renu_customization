@@ -88,12 +88,13 @@
 }
 
 .details-col .value {
-    margin-left: 10px;    /* space between label and value */
+    margin-left: 2px;    /* space between label and value */
 }
 
 .oa-section {
     padding: 10px;
     border-bottom: none;
+
 }
 
 .oa-container {
@@ -102,21 +103,26 @@
     gap: 20px;
     font-size: 10px;
     line-height: 1.5;
+   
 }
 
 .oa-labels {
     display: flex;
     flex-direction: column;
-    gap: 30px;
+    gap: 1px;
     font-weight: bold;
+   width: 50%;
 }
 
 .oa-values {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 1px;
+    width: 50%;
 }
-
+.qrcode-section{
+    width: 20%;
+}
 .address-block {
     font-family: Arial, sans-serif;
     font-size: 10px;

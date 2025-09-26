@@ -20,7 +20,20 @@ def execute():
                 label="Fedwire ABA",
                 fieldtype="Data",
                 insert_after="sort_code",
-            )
+            ),
+            dict(
+                fieldname="ifsc_code",
+                label="IFSC Code",
+                fieldtype="Data",
+                insert_after="bank_account_no",
+            ),
+            dict(
+                fieldname="mirc_code",
+                label="MIRC Code",
+                fieldtype="Data",
+                insert_after="ifsc_code",
+            ),
+            
         ]
     }
 

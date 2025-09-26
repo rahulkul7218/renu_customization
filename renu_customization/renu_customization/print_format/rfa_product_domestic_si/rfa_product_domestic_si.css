@@ -52,8 +52,8 @@
 }
 
 .logo-placeholder {
-    width: 120px;
-    height: 40px;
+    width: 100px;
+    height: 80px;
     /* border: 1px solid #ccc; */
     display: inline-block;
     text-align: center;
@@ -84,39 +84,45 @@
 
 .details-col strong {
     display: inline-block;
-    width: 150px;         /* fixed width for labels */
+    width: 120px;         /* fixed width for labels */
 }
 
 .details-col .value {
-    margin-left: 10px;    /* space between label and value */
+    margin-left: 2px;    /* space between label and value */
 }
 
 .oa-section {
     padding: 10px;
     border-bottom: none;
+
 }
 
 .oa-container {
     display: flex;
     justify-content: flex-start;
-    gap: 50px;
+    gap: 20px;
     font-size: 10px;
     line-height: 1.5;
+   
 }
 
 .oa-labels {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 1px;
     font-weight: bold;
+   width: 50%;
 }
 
 .oa-values {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 1px;
+    width: 50%;
 }
-
+.qrcode-section{
+    width: 20%;
+}
 .address-block {
     font-family: Arial, sans-serif;
     font-size: 10px;
@@ -155,32 +161,38 @@
 .gst-container {
     width: 50%;
     margin: 5px 0;
+    font-size: 10px;
+    font-family: Arial, sans-serif;
 }
 
-.gst-table {
+.gst-container .gst-heading {
+    font-weight: bold;
+    font-size: 11px;
+    text-align: left;
+    margin-bottom: 4px;
+}
+
+.gst-table-wrapper table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
+    margin: 0;
 }
 
-.gst-table th,
-.gst-table td {
+.gst-table-wrapper table th,
+.gst-table-wrapper table td {
     border: 1px solid #000;
     padding: 4px;
     text-align: center;
 }
 
-.gst-table th {
+.gst-table-wrapper table th {
     background: #f4f4f4;
     font-weight: bold;
 }
 
-.gst-heading {
-    text-align: left;
-    background: #fff;
-    border: none;
-    font-weight: bold;
-    font-size: 11px;
+.gst-table-wrapper table td:nth-child(1) {
+    text-align: left; /* HSN/SAC left-aligned */
 }
 
 .bank-details , .signature-block {

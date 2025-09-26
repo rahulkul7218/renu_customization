@@ -23,7 +23,18 @@ def execute():
                 label="Vessel/Flight No",
                 fieldtype="Data",
                 insert_after="pre_carriage_by",
+            ),dict(
+                fieldname="freight_prepared_by",
+                label="Freight Prepared by",
+                fieldtype="Data",
+                insert_after="vessel_flight_no"
             ),
+             dict(
+                 fieldname="port_of_discharge",
+                 label="Port Of Discharge",
+                 fieldtype="Data",
+                 insert_after="freight_prepared_by"
+             ),
              dict(
                 fieldname="packing",
                 label="Packing",
@@ -46,12 +57,32 @@ def execute():
                 insert_after="insurance",
                 fetch_from="sales_order.warranty"
             ),
+             
              dict(
-                fieldname="freight_prepared_by",
-                label="Freight Prepared by",
-                fieldtype="Data",
-                insert_after="warranty"
-            )
+                 fieldname="no_of_boxes",
+                 label="No. of Boxes",
+                 fieldtype="Data",
+                 insert_after="warranty"
+             ),
+             dict(
+                 fieldname="each_box_weight",
+                 label="Each Box Weight (Kg)",
+                 fieldtype="Data",
+                 insert_after="no_of_boxes"
+             ),
+                dict(
+                    fieldname="net_weight",
+                    label="Net Weight (Kg)",
+                    fieldtype="Data",
+                    insert_after="each_box_weight"
+                ),
+                dict(
+                    fieldname="total_weight",
+                    label="Total Weight (Kg)",
+                    fieldtype="Data",
+                    insert_after="net_weight"
+                ),
+             
         ]
     }
 
