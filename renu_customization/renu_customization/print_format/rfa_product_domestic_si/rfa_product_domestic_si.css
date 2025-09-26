@@ -207,7 +207,33 @@
     font-size: 11px !important;
     font-weight: bold;
 }
+/*changing css of erpnext elements*/
+#taxes-section > .row > .col-xs-6:first-child {
+    display: none;
+}
 
+#taxes-section > .row > .col-xs-6 {
+    width: 100%;
+}
+
+#taxes-section > .row > .col-xs-6 > .row {
+    padding-top:5px !important;
+    padding-bottom:5px !important;
+    line-height:1;
+}
+
+#taxes-section > .row > .col-xs-6 > .row > .col-xs-5 > label {
+    margin:0px !important;
+}
+
+div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
+    margin:0px !important;
+}
+
+.column-break > .row:first-child {
+    line-height:1;
+    padding-bottom:5px !important;
+}
 .payment_term {
     font-size: 10px;
     font-weight: bold;

@@ -239,7 +239,7 @@
                 {% set bank = bank_list[0] %}
                 <p></p><br />
                 <p>{{ bank.bank or "" }}</p>
-                <p>{{ bank.address_html or "" }}</p>
+                <p>{{ bank.address_html or "-" }}</p>
                 <p>{{ bank.bank_account_no or "" }}</p>
                 <p>{{ bank.branch_code or "" }}</p>
                 <p>{{ bank.account_type or "" }}</p>
@@ -247,13 +247,13 @@
                 <p>{{""}}</p>
                 {% endif %}
             </td>
-            <td colspan="2" class="tax-summary">
-               
-                <p>Total Taxable Value: {{ doc.total or 0 }}</p>
-                <p>Total CGST: {{ doc.total_cgst or 0 }}</p>
-                <p>Total SGST: {{ doc.total_sgst or 0 }}</p>
-                <p>Total IGST: {{ doc.total_igst or 0 }}</p>
-                <p>Total Cess: {{ doc.total_cess or 0 }}</p>
+            <td colspan="2" style="font-size: 11px" >
+                <p><span class="bold col">Total Taxable Value:</span> <span class="col">{{ doc.total or 0 }}</span></p>
+                <div id="taxes-section">
+                    {%- set data = doc.taxes -%}
+                    {%- set print_settings = frappe.get_doc("Print Settings")  -%}
+                    {% include "erpnext/templates/print_formats/includes/taxes.html" %}
+                </div>
             </td>
 
 
@@ -292,6 +292,7 @@
                 <p></p>
                 <p></p>
                 <p class="bottom-text">Authorised Signatory</p>
+                <p>{{doc.owner}}</p>
 
             </th>
         </tr>
