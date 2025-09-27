@@ -84,7 +84,7 @@
                         <span>{{ doc.posting_date or "" }}</span>
                         <span>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</span>
                         <span>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</span>
-                        <span>{{doc.delivery_terms or ""}}</span>
+                        <span>{{doc.delivery_term or ""}}</span>
                     </div>
                 </div>
 
@@ -116,7 +116,7 @@
         <tr>
             <td colspan="2" class="address-block">
                 <p><b>Billed To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
-                    {{ doc.customer_name or ""}}</p><br>
+                    {{ doc.customer_name or ""}}</p>
                 <p>{{ frappe.db.get_value("Address", doc.customer_address , "address_line1") or "" }}
                     <br>{{ frappe.db.get_value("Address", doc.customer_address , "address_line2") or "" }}
                     <br>{{ frappe.db.get_value("Address", doc.customer_address , "city") or "" }},
@@ -130,13 +130,13 @@
 
                 </p><br>
 
-                <p>Kind Attention: {{ doc.contact_person or "" }}</p>
+                <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
                 <p>Contact No: {{ frappe.db.get_value("Address", doc.customer_address , "phone") or "" }}</p>
 
             </td>
             <td colspan="2" class="address-block">
                 <p><b>Shipped To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
-                    {{ doc.customer_name or ""}}</p><br>
+                    {{ doc.customer_name or ""}}</p>
 
                 <p>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line1") or "" }}
                     <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
@@ -152,8 +152,8 @@
 
                 </p><br>
 
-                <p>Kind Attention: {{ doc.contact_person or "" }}</p>
-                <p>Contact No: {{ frappe.db.get_value("Address", doc.shipping_address , "phone") or "" }}</p>
+                <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
+                <p>Contact No: {{ frappe.db.get_value("Address", doc.shipping_address_name , "phone") or "" }}</p>
 
             </td>
         </tr>
@@ -180,7 +180,7 @@
 
                             <td>{{ loop.index }}</td>
                             <td>{{ row.item_code or "" }}</td>
-                            <td>{{ row.item_name or "" }}</td>
+                            <td>{{ row.item_name or "" }} - {{doc.serial_no or ""}} </td>  
                             <td>{{ row.gst_hsn_code or "" }}</td>
                             <td>{{ row.qty or "" }}</td>
                             <td>{{ row.rate or "" }}</td>
@@ -196,7 +196,7 @@
                             <td colspan="1"><b>Total Qty</b></td>
                             <td colspan="2">{{ doc.total_qty or "" }}</td>
                             <td><b>Total</b></td>
-                            <td><b>{{ doc.rounded_total or doc.grand_total or "" }}</b></td>
+                            <td ><b class="right">{{ doc.rounded_total or doc.grand_total or "" }}</b></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -210,7 +210,7 @@
             {% if doc.gst_breakup_table %}
                 {{ doc.gst_breakup_table | safe }}
             {% else %}
-                <p>No GST data available</p>
+                <p></p>
             {% endif %}
         </div>
     </td>
@@ -230,7 +230,7 @@
             </td>
             <td colspan="1" class="bank-details">
                 {% set bank_list = frappe.get_list("Bank Account",
-                filters={"company": doc.company, "is_default": 1, "account_subtype": doc.currency},
+                filters={"company": doc.company, "is_default": 1, "account_subtype": "INR"},
                 fields=["name", "bank", "address_html", "bank_account_no", "branch_code", "account_type","account_subtype"],
                 limit=1)
                 %}
@@ -239,7 +239,7 @@
                 {% set bank = bank_list[0] %}
                 <p></p><br />
                 <p>{{ bank.bank or "" }}</p>
-                <p>{{ bank.address_html or "-" }}</p>
+                <p>{{ bank.address_html | safe }}</p>
                 <p>{{ bank.bank_account_no or "" }}</p>
                 <p>{{ bank.branch_code or "" }}</p>
                 <p>{{ bank.account_type or "" }}</p>
@@ -248,7 +248,7 @@
                 {% endif %}
             </td>
             <td colspan="2" style="font-size: 11px" >
-                <p><span class="bold col">Total Taxable Value:</span> <span class="col">{{ doc.total or 0 }}</span></p>
+                <p  style="display: grid; grid-template-columns: 150px auto; align-items: center; gap: 10px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item">{{ doc.total or 0 }}</span></p>
                 <div id="taxes-section">
                     {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings")  -%}
@@ -268,7 +268,7 @@
             <td colspan="1" style="font-size: 11px">{{ doc.in_words or ""}}</td>
 
             <td colspan="1" class="grand_total"><b>GRAND TOTAL ({{doc.currency or ""}})</b></td>
-            <td colspan="1" style="font-size: 11px">{{doc.grand_total or 0}}</td>
+            <td colspan="1" style="font-size: 11px" class="right">{{doc.grand_total or 0}}</td>
 
         </tr>
         <!-- PAYMENT TERMS & SIGNATURE -->
@@ -292,7 +292,7 @@
                 <p></p>
                 <p></p>
                 <p class="bottom-text">Authorised Signatory</p>
-                <p>{{doc.owner}}</p>
+                
 
             </th>
         </tr>

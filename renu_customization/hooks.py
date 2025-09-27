@@ -301,7 +301,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_fields_in_bank_account.execute",
     "renu_customization.patches.v_0.add_delivery_term_field_in_si.execute",
     "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute",
-    "renu_customization.patches.v_0.add_fields_in_sales_invoice_item.execute"
+   
    
 
 

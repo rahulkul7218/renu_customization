@@ -10,12 +10,13 @@ def execute():
                 fieldtype="Link",
                 options="Sales Order",
                 hidden=1,
-                insert_after="invoice_typ",
+                insert_after="invoice_type",
             ),
             dict(
                 fieldname="pre_carriage_by",
                 label="Pre-Carriage by",
-                fieldtype="Data",
+                fieldtype="Link",
+                options="Pre Carriage Mode",
                 insert_after="distance",
             ),
             dict(
@@ -23,46 +24,27 @@ def execute():
                 label="Vessel/Flight No",
                 fieldtype="Data",
                 insert_after="pre_carriage_by",
-            ),dict(
+            ),
+            dict(
                 fieldname="freight_prepared_by",
                 label="Freight Prepared by",
-                fieldtype="Data",
+                fieldtype="Link",
+                options="Freight",
                 insert_after="vessel_flight_no"
             ),
              dict(
                  fieldname="port_of_discharge",
                  label="Port Of Discharge",
-                 fieldtype="Data",
-                 insert_after="freight_prepared_by"
+                 fieldtype="Link",
+                 options="Address",
+                 insert_after="port_address"
              ),
-             dict(
-                fieldname="packing",
-                label="Packing",
-                fieldtype="Data",
-                insert_after="iec_code",
-                fetch_from="sales_order.packing", 
-            ),
-             dict(
-                fieldname="insurance",
-                label="Insurance",
-                fieldtype="Data",
-                insert_after="packing",
-                fetch_from="sales_order.insurance"
-                
-            ),
-             dict(
-                fieldname="warranty",
-                label="Warranty",
-                fieldtype="Data",
-                insert_after="insurance",
-                fetch_from="sales_order.warranty"
-            ),
              
              dict(
                  fieldname="no_of_boxes",
                  label="No. of Boxes",
                  fieldtype="Data",
-                 insert_after="warranty"
+                 insert_after="gst_vehicle_type"
              ),
              dict(
                  fieldname="each_box_weight",

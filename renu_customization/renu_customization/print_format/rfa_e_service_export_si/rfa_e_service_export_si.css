@@ -102,3 +102,14 @@ tr { min-height: 20px; }
 .grid-container .value {
   text-align: left; /* or right if you prefer values aligned right */
 }
+
+.address-block {
+    font-family: Arial, sans-serif;
+    font-size: 10px;
+    color: #000;
+    border-left: 1px solid #000;
+    border-right: 1px solid #000;
+    border-top: none;
+    border-bottom: 1px solid #000;
+    padding: 4px;
+}

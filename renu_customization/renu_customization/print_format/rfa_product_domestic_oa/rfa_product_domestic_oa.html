@@ -72,24 +72,51 @@
           </td>
       </tr>
 
-      <!-- ADDRESS BLOCKS -->
-      <tr>
-          <td colspan="2" class="address-block">
-              <p><b>Billed To: </b></p>
-              {% if doc.address_display %}
-              <p>{{doc.customer or ""}}</p>
-              <p>{{doc.address_display or ""}}</p><br>
-              {% endif %}
-          </td>
-          <td colspan="2" class="address-block">
-              <p><b>Shipped To: </b></p>
-              {% if doc.shipping_address %}
-              <p>{{doc.customer or ""}}</p>
-              <p>{{doc.shipping_address or ""}}</p><br>
-              {% endif %}
-          </td>
-      </tr>
+      <!-- ADDRESS BLOCKS AND IRN -->
+        <tr>
+            <td colspan="2" class="address-block">
+                <p><b>Billed To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
+                    {{ doc.customer_name or ""}}</p>
+                <p>{{ frappe.db.get_value("Address", doc.customer_address , "address_line1") or "" }}
+                    <br>{{ frappe.db.get_value("Address", doc.customer_address , "address_line2") or "" }}
+                    <br>{{ frappe.db.get_value("Address", doc.customer_address , "city") or "" }},
+                    - {{ frappe.db.get_value("Address", doc.customer_address , "pincode") or "" }} <br>
+                    <b>PAN: </b>{{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }}&nbsp; &nbsp; <b>GST No:
+                    </b>{{ frappe.db.get_value("Address", doc.customer_address , "gstin") or "" }}<br />
+                    <b>State & Code :</b> {{ frappe.db.get_value("Address",doc.customer_address, "gst_state_number") or
+                    "" }}-{{ frappe.db.get_value("Address", doc.customer_address , "gst_state") or "" }}
+                    <br />
+                    {{ frappe.db.get_value("Address", doc.customer_address , "country") or "" }}
 
+                </p><br>
+
+                <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
+                <p>Contact No: {{ frappe.db.get_value("Address", doc.customer_address , "phone") or "" }}</p>
+
+            </td>
+            <td colspan="2" class="address-block">
+                <p><b>Shipped To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
+                    {{ doc.customer_name or ""}}</p>
+
+                <p>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line1") or "" }}
+                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
+                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }},
+                    - {{ frappe.db.get_value("Address", doc.shipping_address_name , "pincode") or "" }} <br>
+                    <b>PAN:</b> {{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }} &nbsp; &nbsp;
+                    <b>GST No: </b>{{ frappe.db.get_value("Address", doc.shipping_address_name , "gstin") or "" }}<br />
+                    <b>State & Code : </b>{{ frappe.db.get_value("Address",doc.shipping_address_name,
+                    "gst_state_number") or "" }}-{{ frappe.db.get_value("Address", doc.shipping_address_name ,
+                    "gst_state") or "" }}
+                    <br />
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "country") or "" }}
+
+                </p><br>
+
+                <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
+                <p>Contact No: {{ frappe.db.get_value("Address", doc.shipping_address_name , "phone") or "" }}</p>
+
+            </td>
+        </tr>
       <!-- ITEMS -->
       <tr>
           <td colspan="4">
@@ -119,7 +146,7 @@
                           {% if row.igst_rate %}
                               <td>{{ row.igst_rate or "" }}</td>
                           {% elif row.cgst_rate and row.sgst_rate %}
-                              <td>{{ row.cgst_rate or "" }}+{{ row.sgst_rate or "" }}</td>
+                              <td>{{ row.cgst_rate + row.sgst_rate or "" }}</td>
                           {% else %}
                               <td>{{""}}</td>
                           {% endif %}
