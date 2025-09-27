@@ -1,0 +1,41 @@
+   * {
+        font-family: Arial, sans-serif;
+    }
+    .challan-container {
+        border: 1px solid #000;
+        padding: 10px;
+    }
+    .challan-header {
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        text-transform: uppercase;
+        border-bottom: 2px solid #000;
+        padding-bottom: 5px;
+        margin-bottom: 10px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    td, th {
+        border: 1px solid #000;
+        padding: 6px;
+        font-size: 12px;
+    }
+    .company-details td {
+        border: none !important;
+        padding: 4px;
+    }
+    .text-left {
+        text-align: left;
+    }
+    .text-right {
+        text-align: right;
+    }
+    .signature-section {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 20px;
+        font-size: 12px;
+    }

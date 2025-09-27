@@ -1,0 +1,111 @@
+<style>
+{% include "renu_customization/print_format/rfa_delivery_note/rfa_delivery_note.css" %}
+</style>
+
+{% set company = frappe.get_doc("Company", doc.company) if doc.company else None %}
+
+<div class="challan-container">
+    <div class="challan-header"><u>DELIVERY CHALLAN</u></div>
+
+    <!-- Company Header -->
+    <table style="margin-bottom: 10px;">
+        <tr>
+            <td rowspan="4" style="width: 25%; text-align: center;">
+                {% if company and company.logo_for_printing %}
+                    <img src="{{ company.logo_for_printing or '' }}" style="max-width: 120px;">
+                {% endif %}
+            </td>
+            <td colspan="3" style="width: 75%; padding: 6px;">
+                <strong>{{ company.company_name if company else '' }}</strong>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <p><strong>Address: </strong> {{ doc.company_address_display or "" }}</p>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="3">
+                <strong>Tel No. </strong>{{ frappe.db.get_value("Company", doc.company, "phone_no") or "" }} &nbsp;&nbsp;&nbsp;&nbsp;
+                <strong>Email: </strong>{{ frappe.db.get_value("Company", doc.company, "email") or "" }}
+            </td>
+        </tr>
+        <tr>
+            <td><strong>GST No.</strong> {{ doc.company_gstin or "" }}</td>
+            <td colspan="2"><strong>PAN No.</strong> {{ company.pan if company and company.pan else "" }}</td>
+        </tr>
+    </table>
+
+    <!-- Delivered To + Challan Details -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; margin-top: 8px;">
+        <tr>
+            <td style="width: 50%; border: 1px solid #000; vertical-align: top; padding: 6px;">
+                <strong>Delivered To:&nbsp;&nbsp;</strong>
+                {{ doc.customer_name or "" }}
+            </td>
+            <td style="width: 50%; border: 1px solid #000; vertical-align: top; padding: 6px;">
+                <div style="display: grid; grid-template-columns: 160px auto; row-gap: 6px; column-gap: 8px;">
+                    <div><strong>Challan No:</strong></div>
+                    <div>{{ doc.name or "" }}</div>
+
+                    <div><strong>Challan Date:</strong></div>
+                    <div>{{ doc.posting_date or "" }}</div>
+
+                    <div><strong>Mode of Transport:</strong></div>
+                    <div>{{ doc.mode_of_transport or "" }}</div>
+
+                    <div><strong>Customer Challan Ref:</strong></div>
+                    <div>{{ doc.customer_challan_ref or doc.name or "" }}</div>
+
+                    <div><strong>Customer Challan Dt:</strong></div>
+                    <div>{{ doc.customer_challan_dt or doc.posting_date or "" }}</div>
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Total Section -->
+    <table style="width: 100%; border-collapse: collapse; border: 1px solid #000; font-size: 12px; margin-top: 10px;">
+        <tr>
+            <td colspan="4" style="border: 1px solid #000; padding: 6px;">
+                <strong>Total (In Words):</strong> {{ doc.in_words or "" }}
+            </td>
+            <td colspan="4" style="border: 1px solid #000; padding: 6px; text-align: left;">
+                <strong>Total:</strong> {{ doc.grand_total or "" }}
+            </td>
+        </tr>
+    </table>
+
+    <br>
+
+    <table style="width: 100%; border: 1px solid #000; border-collapse: collapse; font-size: 12px; font-family: Arial, sans-serif;">
+        <tr>
+            <td style="width: 35%; border-right: 1px solid #000; padding: 6px; vertical-align: top;">
+                <strong>REMARK :</strong><br>
+                <span style="font-style: italic;">
+                    Material send after job work <span style="color: red; font-weight: bold;">OR</span><br>
+                    Material return after rework and testing<br>
+                    No commercial value
+                </span>
+            </td>
+            <td style="width: 65%; text-align: center; vertical-align: top; padding: 6px;">
+                <strong>For {{ company.company_name if company else '' }}</strong><br><br><br><br><br>
+                Authorised Signatory
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2" style="border-top: 1px solid #000; padding: 6px; text-align: center; font-weight: bold;">
+                PLEASE ACKNOWLEDGE THE RECEIPT AND RETURN THE COPY WITH YOUR SIGNATURE
+            </td>
+        </tr>
+        <tr>
+            <td style="width: 60%; border-right: 1px solid #000; padding: 6px; vertical-align: top;">
+                <strong>Received in good condition by</strong>
+            </td>
+            <td style="width: 40%; padding: 6px; vertical-align: top;">
+                Date Received <br><br>
+                Name / Stamp <br><br>
+            </td>
+        </tr>
+    </table>
+</div>

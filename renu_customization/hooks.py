@@ -257,26 +257,84 @@ after_migrate = [
     "renu_customization.patches.v_0.make_field_mandatory_on_address.execute",
     "renu_customization.patches.v_0.add_district_fileld_on_address.execute",
     "renu_customization.patches.v_0.make_fields_unmandatory_on_customer.execute",
-    "renu_customization.patches.v_0.allow_data_import_for_all_doctypes.execute",
-    "renu_customization.patches.v_0.add_payment_term_code_field_on_payment_terms.execute"
-    
+    "renu_customization.patches.v_0.add_payment_term_code_field_on_payment_terms.execute",
+    "renu_customization.patches.v_0.add_po_no_field_on_purchase_receipt.execute",
+    "renu_customization.patches.v_0.purchase_receipt_item_checkbox_checked.execute",
+    "renu_customization.patches.v_0.create_role_profiles_with_roles.execute",
+    "renu_customization.patches.v_0.create_module_profiles.execute",
+    "renu_customization.patches.v_0.make_item_name_unmandatory_on_purchase_receipt.execute",
+    "renu_customization.patches.v_0.add_invoice_type_field_on_sales_order.execute",
+    "renu_customization.patches.v_0.add-sales_order_field_on_picklist.execute",
+    "renu_customization.patches.v_0.add_picklist_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.add_delivery_note_field_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.add_invoice_type_field_fetched_from_sales_order.execute",
+    "renu_customization.patches.v_0.add_invoice_type_fetched_from_picklist.execute",
+    "renu_customization.patches.v_0.add_invoice_type_field_salesinvoice_fetched_from_delivery_note.execute",
+    "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
+    "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
+    "renu_customization.patches.v_0.add_naming_series_invoicetype_engg_ser_domestic.execute",
+    "renu_customization.patches.v_0.add_naming_series_for_engg_service_export.execute",
+    "renu_customization.patches.v_0.add_naming_series_for_delivery_note.execute",
+    "renu_customization.patches.v_0.hide_fields_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.hide_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.hide_fields_on_picklist.execute",
+    "renu_customization.patches.v_0.add_dependa_on_invoicetype_on_salesinvoice.execute",
+    "renu_customization.patches.v_0.add_invoice_type_filed_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.add_purchaseorder_linkfield_on_ourchasereceipt.execute",
+    "renu_customization.patches.v_0.create_po_date_filed_on_purchase_receipt.execute",
+    "renu_customization.patches.v_0.hide_po_no_fileld-on_purchase_receipt.execute",
+    "renu_customization.patches.v_0.create_new-field-supplier_invoice_no_on_purchase_receipt.execute",
+    "renu_customization.patches.v_0.create_supplier_invoice_date_on_purchase_receipt.execute",
+    "renu_customization.patches.v_0.create_old_customer_code_field_on_customer.execute",
+    "renu_customization.patches.v_0.add_naming_series_on_sales_order_product_domestic.execute",
+    "renu_customization.patches.v_0.create_naming_series_on_sales_order_productexport.execute",
+    "renu_customization.patches.v_0.create_naming_series_on_sales-order_engg_domestic_service.execute",
+    "renu_customization.patches.v_0.create_naming_series_on_sales_order_engg_service_export.execute",
+    "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
+    "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
 
     
-    
-    
+    #print format fields
+    "renu_customization.patches.v_0.add_fields_in_company_for_pf.execute",
+    "renu_customization.patches.v_0.add_fields_sales_invoice_pf.execute",
+    "renu_customization.patches.v_0.add_fields_in_sales_order_wi_pf.execute",
+    "renu_customization.patches.v_0.add_fields_in_bank_account.execute",
+    "renu_customization.patches.v_0.add_delivery_term_field_in_si.execute",
+    "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute",
+   
+   
 
 
 ]
+#  "renu_customization.patches.v_0.allow_data_import_for_all_doctypes.execute",
 
 doctype_js = {
 
     "Customer": ["public/js/fetched_from_business_code.js",
     "public/js/make_fields_mandatory.js"],
     "Item":"public/js/when_under_development_check_disable_checkbox_checked.js",
-    "Address":"public/js/make_mandatory_fields_on_address.js"
+    "Address":"public/js/make_mandatory_fields_on_address.js",
+    "Purchase Receipt":"public/js/upload_bulk_serial_no.js",
+    "Delivery Note":"public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js",
+    "Sales Invoice":"public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js",
+    "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
+    "Sales Invoice": "public/js/calculate_package_wait.js"
+    
 
-    
-    
-    
-    
 }
+
+doc_events = {
+    "Document Naming Rule": {
+        "after_insert": "renu_customization.api.update_background_prefix_1.set_prefix_digits"
+    },
+    "Purchase Invoice": {
+        "before_validate": "renu_customization.api.supplier_invoice_no_and_date_fetched_from_receipt.supplier_invoice_no_and_date_fetched_from_receipt"
+    }
+}
+
+
+# custom_masters/hooks.py
+
+# hooks.py
+
+
