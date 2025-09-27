@@ -213,12 +213,12 @@
 }
 
 #taxes-section > .row > .col-xs-6 {
-    width: 100%;
+    width: 90%;
 }
 
 #taxes-section > .row > .col-xs-6 > .row {
-    padding-top:5px !important;
-    padding-bottom:5px !important;
+    padding-top:1px !important;
+    padding-bottom:1px !important;
     line-height:1;
 }
 
@@ -232,7 +232,7 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
 
 .column-break > .row:first-child {
     line-height:1;
-    padding-bottom:5px !important;
+    padding-bottom:1px !important;
 }
 .payment_term {
     font-size: 10px;
@@ -249,9 +249,8 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
 }
 
 .footer-line {
-    text-align: left;
+    text-align: center;
     font-size: 9px;
-    font-weight: bold;
     padding: 4px;
 }
 .bottom-text {

@@ -1,5 +1,5 @@
 <style>
-    {% include "renu_customization/renu_customization/print_format/rfa_e_service_domestic_si/rfa_e_service_domestic_si.css" %}
+    {% include "renu_customization/renu_customization/print_format/rfa_product_domestic_si/rfa_product_domestic_si.css" %}
 </style>
 
 {% set copies = ["Original Copy", "Duplicate Copy", "Triplicate Copy", "Extra Copy"] %}
@@ -87,7 +87,7 @@
                         <span>{{doc.delivery_terms or ""}}</span>
                     </div>
                 </div>
-                
+
             </td>
             <td style="width: 25%;">
                 <div class="qrcode-section" style="margin-top:10px;">
@@ -110,24 +110,50 @@
             <td class="irn" colspan="2">
                 <p>IRN:&nbsp;&nbsp;{{doc.irn or "NA"}}</p>
             </td>
-            
+
         </tr>
-        <!-- ADDRESS BLOCKS AND IRN -->
+<!-- ADDRESS BLOCKS AND IRN -->
         <tr>
             <td colspan="2" class="address-block">
-                <p><b>Billed To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br/>
-                    {{ doc.customer_name or ""}}</p><br>
-                <p>{{ doc.address_display or "" }}</p><br>
-                <p>Kind Attention: {{ doc.contact_person or "" }}</p>
-                <p>Contact No: {{doc.contact_mobile or ""}}</p>
+                <p><b>Billed To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
+                    {{ doc.customer_name or ""}}</p>
+                <p>{{ frappe.db.get_value("Address", doc.customer_address , "address_line1") or "" }}
+                    <br>{{ frappe.db.get_value("Address", doc.customer_address , "address_line2") or "" }}
+                    <br>{{ frappe.db.get_value("Address", doc.customer_address , "city") or "" }},
+                    - {{ frappe.db.get_value("Address", doc.customer_address , "pincode") or "" }} <br>
+                    <b>PAN: </b>{{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }}&nbsp; &nbsp; <b>GST No:
+                    </b>{{ frappe.db.get_value("Address", doc.customer_address , "gstin") or "" }}<br />
+                    <b>State & Code :</b> {{ frappe.db.get_value("Address",doc.customer_address, "gst_state_number") or
+                    "" }}-{{ frappe.db.get_value("Address", doc.customer_address , "gst_state") or "" }}
+                    <br />
+                    {{ frappe.db.get_value("Address", doc.customer_address , "country") or "" }}
+
+                </p><br>
+
+                <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
+                <p>Contact No: {{ frappe.db.get_value("Address", doc.customer_address , "phone") or "" }}</p>
 
             </td>
             <td colspan="2" class="address-block">
-                <p><b>Shipped To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br/>
-                    {{ doc.customer_name or ""}}</p><br>
-                <p>{{ doc.shipping_address or "" }}<br></p><br>
-                <p>Kind Attention: {{ doc.contact_person or "" }}</p>
-                <p>Contact No: {{doc.contact_mobile or ""}}</p>
+                <p><b>Shipped To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
+                    {{ doc.customer_name or ""}}</p>
+
+                <p>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line1") or "" }}
+                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
+                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }},
+                    - {{ frappe.db.get_value("Address", doc.shipping_address_name , "pincode") or "" }} <br>
+                    <b>PAN:</b> {{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }} &nbsp; &nbsp;
+                    <b>GST No: </b>{{ frappe.db.get_value("Address", doc.shipping_address_name , "gstin") or "" }}<br />
+                    <b>State & Code : </b>{{ frappe.db.get_value("Address",doc.shipping_address_name,
+                    "gst_state_number") or "" }}-{{ frappe.db.get_value("Address", doc.shipping_address_name ,
+                    "gst_state") or "" }}
+                    <br />
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "country") or "" }}
+
+                </p><br>
+
+                <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
+                <p>Contact No: {{ frappe.db.get_value("Address", doc.shipping_address_name , "phone") or "" }}</p>
 
             </td>
         </tr>
@@ -141,11 +167,12 @@
                             <th>Sr.No.</th>
                             <th>Item Code</th>
                             <th>Description of Goods</th>
+                            
                             <th>HSN Code</th>
                             <th>Qty</th>
-                            <th>Rate in INR</th>
-                            <th>UM</th>
-                            <th>Amount in INR</th>
+                            <th>Rate in {{doc.currency}}</th>
+                            <th>UOM</th>
+                            <th>Amount in {{doc.currency}}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -154,7 +181,7 @@
 
                             <td>{{ loop.index }}</td>
                             <td>{{ row.item_code or "" }}</td>
-                            <td>{{ row.item_name or "" }}</td>
+                            <td>{{ row.item_name or "" }} - {{doc.serial_no or ""}} </td>  
                             <td>{{ row.gst_hsn_code or "" }}</td>
                             <td>{{ row.qty or "" }}</td>
                             <td>{{ row.rate or "" }}</td>
@@ -170,84 +197,25 @@
                             <td colspan="1"><b>Total Qty</b></td>
                             <td colspan="2">{{ doc.total_qty or "" }}</td>
                             <td><b>Total</b></td>
-                            <td><b>{{ doc.rounded_total or doc.grand_total or "" }}</b></td>
+                            <td ><b class="right">{{ doc.rounded_total or doc.grand_total or "" }}</b></td>
                         </tr>
                     </tfoot>
                 </table>
             </td>
         </tr>
 
-        <!-- GST BREAKUP TABLE (India Compliance Compatible) -->
-        <tr>
-            <td colspan="4" class="no-pad">
-                <div class="gst-container" style="margin-top:10px;">
-                    <p class="gst-heading" style="font-weight:bold; font-size:14px; margin-bottom:6px;">GST Breakup:</p>
-                    <table class="gst-table" border="1" cellspacing="0" cellpadding="4" width="100%">
-                        <thead>
-                            <tr>
-                                <th>HSN/SAC</th>
-                                <th style="text-align:right;">Taxable Amount</th>
-                                <th style="text-align:right;">CGST</th>
-                                <th style="text-align:right;">SGST</th>
-                                <th style="text-align:right;">IGST</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% set gst_summary = {} %}
-                            {% set total_taxable = 0 %}
-                            {% set total_cgst = 0 %}
-                            {% set total_sgst = 0 %}
-                            {% set total_igst = 0 %}
-
-                            {% for item in doc.items %}
-                            {% set hsn = item.gst_hsn_code or item.gst_hsn or item.item_group or "N/A" %}
-                            {% if not gst_summary.get(hsn) %}
-                            {% set _ = gst_summary.update({hsn: {"taxable":0,"cgst":0,"sgst":0,"igst":0}}) %}
-                            {% endif %}
-
-                            {% set row = gst_summary[hsn] %}
-                            {% set _ = row.update({"taxable": row.taxable + item.net_amount}) %}
-
-                            {% if item.gst_treatment == "In-State" %}
-                            {% set _ = row.update({
-                            "cgst": row.cgst + (item.net_amount * (item.cgst_rate or 0) / 100),
-                            "sgst": row.sgst + (item.net_amount * (item.sgst_rate or 0) / 100)
-                            }) %}
-                            {% else %}
-                            {% set _ = row.update({
-                            "igst": row.igst + (item.net_amount * (item.igst_rate or 0) / 100)
-                            }) %}
-                            {% endif %}
-                            {% endfor %}
-
-                            {% for hsn, row in gst_summary.items() %}
-                            {% set total_taxable = total_taxable + row.taxable %}
-                            {% set total_cgst = total_cgst + row.cgst %}
-                            {% set total_sgst = total_sgst + row.sgst %}
-                            {% set total_igst = total_igst + row.igst %}
-                            <tr>
-                                <td>{{ hsn }}</td>
-                                <td style="text-align:right;">{{ row.taxable | round(2) }}</td>
-                                <td style="text-align:right;">{{ row.cgst | round(2) }}</td>
-                                <td style="text-align:right;">{{ row.sgst | round(2) }}</td>
-                                <td style="text-align:right;">{{ row.igst | round(2) }}</td>
-                            </tr>
-                            {% endfor %}
-
-                            <!-- TOTAL ROW -->
-                            <tr>
-                                <td><b>Total</b></td>
-                                <td style="text-align:right;"><b>{{ total_taxable | round(2) }}</b></td>
-                                <td style="text-align:right;"><b>{{ total_cgst | round(2) }}</b></td>
-                                <td style="text-align:right;"><b>{{ total_sgst | round(2) }}</b></td>
-                                <td style="text-align:right;"><b>{{ total_igst | round(2) }}</b></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </td>
-        </tr>
-
+<tr>
+    <td colspan="4">
+        <div class="gst-container" style="margin-top:10px;">
+            <p class="gst-heading" style="font-weight:bold; font-size:14px; margin-bottom:6px;">GST Breakup:</p>
+            {% if doc.gst_breakup_table %}
+                {{ doc.gst_breakup_table | safe }}
+            {% else %}
+                <p></p>
+            {% endif %}
+        </div>
+    </td>
+</tr>
 
 
         <!-- BANK DETAILS & TAX SUMMARY -->
@@ -263,8 +231,8 @@
             </td>
             <td colspan="1" class="bank-details">
                 {% set bank_list = frappe.get_list("Bank Account",
-                filters={"company": doc.company, "is_default": 1},
-                fields=["name", "bank", "address_html", "bank_account_no", "branch_code", "account_type"],
+                filters={"company": doc.company, "is_default": 1, "account_subtype": doc.currency},
+                fields=["name", "bank", "address_html", "bank_account_no", "branch_code", "account_type","account_subtype"],
                 limit=1)
                 %}
 
@@ -272,7 +240,8 @@
                 {% set bank = bank_list[0] %}
                 <p></p><br />
                 <p>{{ bank.bank or "" }}</p>
-                <p>{{ bank.address_html or "-" }}</p>
+                <p>{% set address_lines = bank.address_html.split('<br>') %}
+                    {{ address_lines[0] }}</p>
                 <p>{{ bank.bank_account_no or "" }}</p>
                 <p>{{ bank.branch_code or "" }}</p>
                 <p>{{ bank.account_type or "" }}</p>
@@ -280,31 +249,13 @@
                 <p>{{""}}</p>
                 {% endif %}
             </td>
-
-            <td colspan="1" class="signature-block">
-                <p><b>Taxable Amount:</b></p>
-                <div class="signature-space"></div>
-                {% if total_cgst > 0 %}
-                <p><b>Total CGST:</b></p>
-                {% endif %}
-                {% if total_sgst > 0 %}
-                <p><b>Total SGST:</b></p>
-                {% endif %}
-                {% if total_igst > 0 %}
-                <p><b>Total IGST:</b></p>
-                {% endif %}
-            </td>
-            <td colspan="1" style="font-size:11px; text-align:right;">
-                <p>{{ "%.2f"|format(total_taxable) }}</p>
-                {% if total_cgst > 0 %}
-                <p><b>{{ "%.2f"|format(total_cgst) }}</b></p>
-                {% endif %}
-                {% if total_sgst > 0 %}
-                <p><b>{{ "%.2f"|format(total_sgst) }}</b></p>
-                {% endif %}
-                {% if total_igst > 0 %}
-                <p><b>{{ "%.2f"|format(total_igst) }}</b></p>
-                {% endif %}
+            <td colspan="2" style="font-size: 11px" >
+                <p><span class="bold col">Total Taxable Value:</span> <span class="col">{{ doc.total or 0 }}</span></p>
+                <div id="taxes-section">
+                    {%- set data = doc.taxes -%}
+                    {%- set print_settings = frappe.get_doc("Print Settings")  -%}
+                    {% include "erpnext/templates/print_formats/includes/taxes.html" %}
+                </div>
             </td>
 
 
@@ -312,14 +263,14 @@
 
 
 
-        </tr>
+
         <!-- TOTAL IN WORDS & GRAND TOTAL -->
         <tr>
             <td colspan="1" style="font-size: 11px"><b>TOTAL (In words):</b></td>
             <td colspan="1" style="font-size: 11px">{{ doc.in_words or ""}}</td>
 
             <td colspan="1" class="grand_total"><b>GRAND TOTAL ({{doc.currency or ""}})</b></td>
-            <td colspan="1" style="font-size: 11px">{{doc.grand_total or 0}}</td>
+            <td colspan="1" style="font-size: 11px" class="right">{{doc.grand_total or 0}}</td>
 
         </tr>
         <!-- PAYMENT TERMS & SIGNATURE -->
@@ -343,6 +294,7 @@
                 <p></p>
                 <p></p>
                 <p class="bottom-text">Authorised Signatory</p>
+                <p>{{frappe.db.get_value("User", doc.owner, "full_name")}}</p>
 
             </th>
         </tr>
@@ -372,7 +324,10 @@
         </tr>
     </table>
 </div><br />
+
 {% if not loop.last %}
 <div style="page-break-after: always;"></div>
 {% endif %}
 {% endfor %}
+
+

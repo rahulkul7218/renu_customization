@@ -60,4 +60,3 @@ renu_customization.patches.v_0.add_delivery_term_field_in_so
 renu_customization.patches.v_0.add_fields_in_sales_order_wi_pf
 renu_customization.patches.v_0.add_fields_in_company_for_pf
 renu_customization.patches.v_0.add_fields_sales_invoice_pf
-renu_customization.patches.v_0.add_fields_in_sales_invoice_item

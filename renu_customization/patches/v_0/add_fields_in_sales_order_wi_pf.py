@@ -9,18 +9,21 @@ def execute():
                 label="Packing",
                 fieldtype="Data",
                 insert_after="represents_company",
+                reqd=1,
             ),
              dict(
                 fieldname="insurance",
                 label="Insurance",
                 fieldtype="Data",
                 insert_after="packing",
+                reqd=1,
             ),
              dict(
                 fieldname="warranty",
                 label="Warranty",
                 fieldtype="Data",
                 insert_after="insurance",
+                reqd=1,
             )
              
         ]

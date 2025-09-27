@@ -1,0 +1,52 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:freight_prepared_by",
+ "creation": "2025-09-27 00:43:00.770227",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "freight_prepared_by",
+  "description"
+ ],
+ "fields": [
+  {
+   "fieldname": "freight_prepared_by",
+   "fieldtype": "Data",
+   "label": "Freight Prepared by",
+   "unique": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2025-09-27 00:44:51.070537",
+ "modified_by": "Administrator",
+ "module": "Renu Customization",
+ "name": "Freight",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}
