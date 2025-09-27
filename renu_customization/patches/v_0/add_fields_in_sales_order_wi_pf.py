@@ -17,14 +17,15 @@ def execute():
                 fieldtype="Data",
                 insert_after="packing",
                 reqd=1,
-            ),
-             dict(
-                fieldname="warranty",
-                label="Warranty",
-                fieldtype="Data",
-                insert_after="insurance",
-                reqd=1,
             )
+            #  dict(
+            #     fieldname="warranty",
+            #     label="Warranty",
+            #     fieldtype="Link",
+            #     optiond="Warranty",
+            #     insert_after="insurance",
+            #     reqd=1,
+            # )
              
         ]
     }

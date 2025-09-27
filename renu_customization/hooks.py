@@ -292,6 +292,10 @@ after_migrate = [
     "renu_customization.patches.v_0.create_naming_series_on_sales_order_engg_service_export.execute",
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
+    "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
+    "renu_customization.patches.v_0.add_party_item_code_on_salesorderitem.execute",
+    "renu_customization.patches.v_0.add_partyitemcode_on_picklist_deliverynote_salesinvoice.execute",
+    "renu_customization.patches.v_0.add_serial_no_filed_on_sales_invouce_item.execute",
 
     
     #print format fields
@@ -329,7 +333,21 @@ doc_events = {
     },
     "Purchase Invoice": {
         "before_validate": "renu_customization.api.supplier_invoice_no_and_date_fetched_from_receipt.supplier_invoice_no_and_date_fetched_from_receipt"
+    },
+    "Pick List Item": {
+        "before_insert": "renu_customization.api.fetched_party_item_code.get_party_item_code"
+    },
+    "Delivery Note Item": {
+       "before_insert": "renu_customization.api.fetched_party_item_code_from_picklist_ti_deliverytnote.get_party_item_code_from_picklist"
+    },
+    "Sales Invoice Item": {
+        "before_insert": "renu_customization.api.fetched_partitemcode_from_deliverynote_to_salesinvoice.get_party_item_code_from_dn"
+    },
+    "Sales Invoice": {
+        "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice"
     }
+
+
 }
 
 
