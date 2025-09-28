@@ -140,7 +140,8 @@
                       <tr>
                           <td>{{loop.index}}</td>
                           <td>{{ row.item_code or "" }}</td>
-                          <td>{{ row.item_name or ""}}</td>
+                          <td>{{ row.item_name or ""}}<br>
+                          {{row.party_item_code or ""}}</td>
                           <td>{{ row.delivery_date or ""}}</td>
                           <td>{{ row.gst_hsn_code or ''}}</td>
                           {% if row.igst_rate %}
@@ -159,10 +160,10 @@
                   </tbody>
                   <tfoot>
                       <tr>
-                          <td colspan="3">&nbsp;</td>
+                          <td colspan="4">&nbsp;</td>
                           <td></td>
-                          <td colspan="1"><b>Total Qty</b></td>
-                          <td colspan="2">{{doc.total_qty or 0}}</td>
+                          <td colspan="2"><b>Total Qty</b></td>
+                          <td colspan="1">{{doc.total_qty or 0}}</td>
                          
                           <td><b>Total</b></td>
                           <td colspan="2">{{doc.total or 0}}</td>

@@ -140,7 +140,10 @@
                       <tr>
                           <td>{{loop.index}}</td>
                           <td>{{ row.item_code or "" }}</td>
-                          <td>{{ row.item_name or ""}}</td>
+                          <td>{{ row.item_name or ""}}<br>
+                            {{row.party_item_code or ""}}
+
+                          </td>
                           <td>{{ row.gst_hsn_code or ''}}</td>
                           {% if row.igst_rate %}
                               <td>{{ row.igst_rate or "" }}</td>
