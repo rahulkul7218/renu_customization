@@ -5,7 +5,7 @@
 {% set copies = ["Original Copy", "Duplicate Copy", "Triplicate Copy", "Extra Copy"] %}
  
 {% for copy in copies %}
-
+ 
 {% set company = frappe.get_doc("Company", doc.company) %}
 {% set billing_address = frappe.get_doc("Address", doc.customer_address) if doc.customer_address else "" %}
 {% set shipping_address = frappe.get_doc("Address", doc.shipping_address_name) if doc.shipping_address_name else "" %}
@@ -267,7 +267,18 @@
 
         <p class="grid-row">
             <span class="col left">For further credit to (Must include in instructions)</span>
-            <span class="col right">{{ inr.bank or "" }} {{ inr.address_html or "" }}  A/C No.: {{ inr.bank_account_no or "" }}</span>
+            <span class="col right">{{ inr.bank or "" }}, 
+              {# find linked address from Dynamic Link #}
+                {% set bank_address_name = frappe.db.get_value(
+                    "Dynamic Link",
+                    {"link_doctype": "Bank Account", "link_name": inr.name, "parenttype": "Address"},
+                    "parent"
+                ) %}
+                {% if bank_address_name %}
+                    {% set addr = frappe.get_doc("Address", bank_address_name) %}
+                    {{ addr.address_line1 or "" }}
+                {% endif %}
+                A/C No.: {{ inr.bank_account_no or "" }}</span>
         </p>
 
         <p class="grid-row">
