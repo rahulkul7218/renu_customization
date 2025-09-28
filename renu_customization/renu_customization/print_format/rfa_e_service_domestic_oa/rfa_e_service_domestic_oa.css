@@ -100,14 +100,14 @@
 .oa-labels {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
     font-weight: bold;
 }
 
 .oa-values {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
 }
 
     .footer-line {
@@ -143,4 +143,22 @@
     list-style-type: none;
     padding: 0;
     margin: 0;
+}
+
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Left column label, right column value */
+  gap: 6px 12px; /* vertical & horizontal spacing */
+  font-size: 12px;
+}
+
+.grid-container .label {
+  font-weight: bold;
+  font-size: 11px;
+  text-align: left;
+}
+
+.grid-container .value {
+  text-align: left; /* or right if you prefer values aligned right */
 }

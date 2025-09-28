@@ -67,8 +67,9 @@
     .items-table td:nth-child(3) {
       text-align: left;
     }
-    .bank-details, .signature-block {
+  .signature-block {
       font-size: 10px;
+      background-color: #f0f0f0;
       
     }
     .grand_total{
@@ -98,18 +99,18 @@
 .oa-labels {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
     font-weight: bold;
 }
 
 .oa-values {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
 }
 
     .footer-line {
-      text-align: left;
+      text-align: center;
       font-size: 9px;
       padding: 4px;
     }
@@ -152,3 +153,90 @@
     border-bottom: 1px solid #000;
     padding: 4px;
 }
+
+
+.grid-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Left column label, right column value */
+  gap: 6px 5px; /* vertical & horizontal spacing */
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.grid-container .label {
+  font-weight: bold;
+  font-size: 11px;
+  text-align: left;
+}
+
+.grid-container .value {
+  text-align: left; /* or right if you prefer values aligned right */
+  word-break: break-word; /* Ensures long text wraps within the cell */
+}
+
+/*changing css of erpnext elements*/
+#taxes-section > .row > .col-xs-6:first-child {
+    display: none;
+   
+}
+
+#taxes-section > .row > .col-xs-6 {
+    width: 100%;
+    
+}
+
+#taxes-section > .row > .col-xs-6 > .row {
+    padding-top:1px !important;
+    padding-bottom:2px !important;
+    line-height:1.5;
+}
+
+#taxes-section > .row > .col-xs-6 > .row > .col-xs-5 > label {
+    margin:0px !important;
+}
+
+/* div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
+    margin:0px !important;
+} */
+
+.bank-details p{
+    margin: 0;
+    padding: 2px 0;
+}
+
+.grid-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1px 0;
+}
+
+.col {
+    flex: 1;
+}
+
+.col.left {
+    text-align: left;
+    font-weight: bold;
+    margin-right: 0;
+    white-space: wrap;
+}
+
+.col.right {
+   
+    text-align: left;
+    word-break: break-word;
+}
+.bank-grid {
+  font-size: 11px;
+}
+
+.bank-grid .grid-row {
+    display: flex;
+    justify-content: flex-start; /* both left */
+    align-items: center;
+    margin: 1px 0;
+}
+
+
+
