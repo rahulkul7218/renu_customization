@@ -262,11 +262,9 @@
       <!-- PAYMENT TERMS & SIGNATURE -->
       <tr >
           <td colspan="1" class="payment_term"><b>Payment Term:-</b></td>
-          <td colspan="2">
-             {% for row in doc.payment_schedule %}
-                    <p style="font-size: 12px;">{{ row.payment_term or ""}}</p>
-                {% endfor %}
-            </td>
+          <td colspan="2" style="font-size: 12px;">
+               <p>{{ doc.payment_schedule[0].payment_term or ""}}</p>      
+          </td>
           <td rowspan="2" class="signature-block" >For {{doc.company or ""}}<br>
               <p style="display: flex; flex-direction: column; justify-content: flex-end; height:100px;">{{frappe.get_doc("User", doc.owner).full_name or ""}}</p>
           </td>

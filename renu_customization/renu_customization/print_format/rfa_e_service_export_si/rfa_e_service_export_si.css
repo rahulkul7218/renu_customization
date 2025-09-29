@@ -113,3 +113,49 @@ tr { min-height: 20px; }
     border-bottom: 1px solid #000;
     padding: 4px;
 }
+.bank-details p{
+    margin: 0;
+    padding: 2px 0;
+}
+
+.grid-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1px 0;
+}
+
+.col {
+    flex: 1;
+}
+
+.col.left {
+    text-align: left;
+    font-weight: bold;
+}
+
+.col.right {
+    text-align: right;
+}
+
+.bank-grid {
+  font-size: 11px;
+}
+
+.bank-grid .grid-row {
+    display: flex;
+    justify-content: flex-start; /* both left */
+    align-items: center;
+    margin: 1px 0;
+}
+
+.col.left {
+    font-weight: bold;
+    margin-right: 0;
+    white-space: wrap;
+}
+
+.col.right {
+    text-align: left;
+    word-break: break-word;
+}
