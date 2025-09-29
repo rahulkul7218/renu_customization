@@ -24,29 +24,35 @@
       <!-- COMPANY, BUYER PO, WARRANTY -->
       <tr>
           <td colspan="2" class="company-info">
-              <div class="logo-placeholder">
-                  <img src="{{company.logo_for_printing}}" style="max-width: 120px;" class="logo" />
-              </div>
-              <p><b>{{doc.company or ""}}</b></p>
-              <p>Factory Address:-<br>{{doc.company_address_display or "" }}</p>
-              <p>Tel. No.: {{ frappe.db.get_value("Address", doc.company_address, "phone") or ""}}</p>
-              <p><b>Email:-</b> {{frappe.db.get_value("Address", doc.company_address, "email_id") or ""}}</p>
-          </td>
-          <td class="details-col">
-              <p><strong>Buyer's PO No.</strong></p><br>
-              <p><strong>PO Date</strong></p><br>
-              <p><strong>Transport Mode</strong></p><br>
-              <p><strong>Packing</strong></p><br>
-              <p><strong>Insurance</strong></p><br>
-              <p><strong>Warranty</strong></p><br>
-          </td>
-          <td class="details-col">
-              <p>{{doc.po_no or ""}}</p><br/>
-              <p>{{doc.po_date or ""}}</p><br/>
-              <p>{{doc.mode_of_transport or ""}}</p><br/>
-              <p>{{doc.packing or ""}}</p><br/>
-              <p>{{doc.insurance or ""}}</p><br/>
-              <p>{{doc.warranty or ""}}</p><br/>
+                <div class="grid"
+                    style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 10px;">
+                    <!-- Logo -->
+                    <div class="logo-placeholder grid-item">
+                        <img src="{{ company.logo_for_printing }}" style="max-width: 100px;">
+                    </div>
+                    <!-- Company Details -->
+                    <div class="company-details grid-item">
+                        <p><b>{{ doc.company or "" }}</b></p>
+                        <p style="padding: 5px">
+                            <strong>Factory Address:- </strong>
+                            {{ frappe.db.get_value("Address", doc.company_address, "address_line1") or "" }}
+                        </p>
+                    </div>
+                </div>
+                <p style="padding: 5px"><strong>Tel. No. </strong>{{
+                    frappe.db.get_value("Address",doc.company_address,"phone") or "" }}
+                    <strong>Email: </strong>{{ frappe.db.get_value("Address",doc.company_address,"email_id") or "" }}
+                </p>
+            </td>
+          <td colspan="2" rowspan="2" class="grid vertical-space">
+            <div class="grid-container">
+                <span class="label">Buyer's PO No.</span> <span class="value">{{doc.po_no or ""}}</span>
+                <span class="label">PO Date</span> <span class="value">{{doc.po_date or ""}}</span>
+                <span class="label">Transport Mode</span> <span class="value">{{doc.transport_mode or ""}}</span>
+                <span class="label">Packing</span> <span class="value">{{doc.packing or ""}}</span>
+                <span class="label">Insurance</span> <span class="value">{{doc.insurance or ""}}</span>
+                <span class="label">Warranty</span> <span class="value">{{doc.warranty or ""}}</span>
+            </div>
           </td>
       </tr>
 
@@ -140,7 +146,10 @@
                       <tr>
                           <td>{{loop.index}}</td>
                           <td>{{ row.item_code or "" }}</td>
-                          <td>{{ row.item_name or ""}}</td>
+                          <td>{{ row.item_name or ""}}<br>
+                            {{row.party_item_code or ""}}
+
+                          </td>
                           <td>{{ row.gst_hsn_code or ''}}</td>
                           {% if row.igst_rate %}
                               <td>{{ row.igst_rate or "" }}</td>
