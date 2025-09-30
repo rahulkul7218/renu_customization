@@ -184,9 +184,9 @@
                             <td>{{ row.item_name or "" }} - {{doc.serial_no or ""}} </td>  
                             <td>{{ row.gst_hsn_code or "" }}</td>
                             <td>{{ row.qty or "" }}</td>
-                            <td>{{ row.rate or "" }}</td>
+                            <td class="right">{{ "{:,.2f}".format(row.rate | float) or "" }}</td>
                             <td>{{ row.uom or "" }}</td>
-                            <td>{{ row.amount or "" }}</td>
+                            <td class="right"> {{ "{:,.2f}".format(row.amount | float) or "" }}</td>
 
                         </tr>
                         {% endfor %}
@@ -195,9 +195,9 @@
                         <tr>
                             <td colspan="3">&nbsp;</td>
                             <td colspan="1"><b>Total Qty</b></td>
-                            <td colspan="2">{{ doc.total_qty or "" }}</td>
+                            <td colspan="2" class="right">{{ doc.total_qty or "" }}</td>
                             <td><b>Total</b></td>
-                            <td ><b class="right">{{  doc.total or "" }}</b></td>
+                            <td ><b class="right"> {{ "{:,.2f}".format(doc.total | float) or "" }}</b></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -281,12 +281,14 @@
                     {% endif %}
                 </td>
             <td colspan="2" style="font-size: 11px" >
-                <p  style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item">{{ doc.total or 0 }}</span></p>
+                <p  style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item" style="text-align: right;"> {{ "{:,.2f}".format(doc.total | float) or "" }} </span></p>
                 <div id="taxes-section">
                     {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings")  -%}
                     {% include "erpnext/templates/print_formats/includes/taxes.html" %}
                 </div>
+                <p  style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Round Off:</span> <span class="grid-item right">{{ "{:,.2f}".format(doc.rounding_adjustment | float) or "" }} </span></p>
+
             </td>
 
 
@@ -299,7 +301,7 @@
           <td  style="width:40%">
             <p class="grid-row" style="font-size:12px">
                 <span class="col left" ><b>GRAND TOTAL ({{doc.currency}})</b></span>
-                <span class="col right" style="text-align: right;">{{doc.grand_total or ""}}</span>
+                <span class="col right" style="text-align: right;"> {{ "{:,.2f}".format(doc.rounded_total | float) or "" }}</span>
             </p>
            </td>
          
