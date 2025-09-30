@@ -18,13 +18,16 @@ def execute():
                 insert_after="packing",
                 reqd=1,
             ),
+            
              dict(
-                fieldname="warranty",
-                label="Warranty",
-                fieldtype="Data",
-                insert_after="insurance",
+                fieldname="transport_mode",
+                label="Transport Mode",
+                fieldtype="Link",
+                options="Transport Mode",
+                insert_after="party_account_currency",
                 reqd=1,
             )
+            
              
         ]
     }

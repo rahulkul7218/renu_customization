@@ -1,5 +1,5 @@
 <style>
-    {% include "renu_customization/renu_customization/print_format/rfa_product_domestic_si/rfa_product_domestic_si.css" %}
+    {% include "renu_customization/renu_customization/print_format/rfa_e_service_domestic_si/rfa_e_service_domestic_si.css" %}
 </style>
 
 {% set copies = ["Original Copy", "Duplicate Copy", "Triplicate Copy", "Extra Copy"] %}
@@ -223,25 +223,33 @@
             <td style="width: 20%;" class="bank-details">
                 <p><b>Bank Details:</b></p>
                 <p>Name of Bank:</p>
-                <p>Address of Branch:</p>
+                <p >Address of Branch:</p>
                 <p>Account No.:</p>
                 <p>IFSC Code:</p>
                 <p>Type of A/c:</p>
 
             </td>
             <td colspan="1" class="bank-details">
-                {% set bank_list = frappe.get_list("Bank Account",
-                filters={"company": doc.company, "is_default": 1, "account_subtype": doc.currency},
-                fields=["name", "bank", "address_html", "bank_account_no", "branch_code", "account_type","account_subtype"],
+                {% set bank_list = frappe.get_all("Bank Account",
+                filters={"company": doc.company, "is_default": 1, "account_subtype": "INR"},
+                fields=["name", "bank",  "bank_account_no", "branch_code", "account_type","account_subtype"],
                 limit=1)
                 %}
 
                 {% if bank_list %}
                 {% set bank = bank_list[0] %}
-                <p></p><br />
+                <p></p>
                 <p>{{ bank.bank or "" }}</p>
-                <p>{% set address_lines = bank.address_html.split('<br>') %}
-                    {{ address_lines[0] }}</p>
+                {# find linked address from Dynamic Link #}
+                {% set bank_address_name = frappe.db.get_value(
+                    "Dynamic Link",
+                    {"link_doctype": "Bank Account", "link_name": bank.name, "parenttype": "Address"},
+                    "parent"
+                ) %}
+                {% if bank_address_name %}
+                    {% set addr = frappe.get_doc("Address", bank_address_name) %}
+                    <p style="text-wrap: none;  word-break: break-word;">{{ addr.address_line1 or "" }}</p>  
+                {% endif %}
                 <p>{{ bank.bank_account_no or "" }}</p>
                 <p>{{ bank.branch_code or "" }}</p>
                 <p>{{ bank.account_type or "" }}</p>
@@ -250,7 +258,7 @@
                 {% endif %}
             </td>
             <td colspan="2" style="font-size: 11px" >
-                <p><span class="bold col">Total Taxable Value:</span> <span class="col">{{ doc.total or 0 }}</span></p>
+                <p  style="display: grid; grid-template-columns: 170px auto; align-items: center; gap: 12px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item">{{ doc.total or 0 }}</span></p>
                 <div id="taxes-section">
                     {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings")  -%}
@@ -260,9 +268,6 @@
 
 
         </tr>
-
-
-
 
         <!-- TOTAL IN WORDS & GRAND TOTAL -->
         <tr>
