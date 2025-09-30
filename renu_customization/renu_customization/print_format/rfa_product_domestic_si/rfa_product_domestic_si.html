@@ -206,12 +206,12 @@
 
 <tr>
     <td colspan="4">
-        <div class="gst-container" style="margin-top:5px;">
-            <p class="gst-heading" style="font-weight:bold; font-size:14px; margin-bottom:2px;">GST Breakup:</p>
+        <div class="gst-container" >
+            <p class="gst-heading">GST Breakup:</p>
             {% if doc.gst_breakup_table %}
                 {{ doc.gst_breakup_table | safe }}
             {% else %}
-               
+               {{""}}
             {% endif %}
         </div>
     </td>
