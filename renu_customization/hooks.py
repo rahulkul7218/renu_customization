@@ -297,7 +297,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
     
     
-    # warranty, Serial fields
+    
     "renu_customization.patches.v_0.add_serial_no_filed_on_sales_invouce_item.execute",
     "renu_customization.patches.v_0.add_sales_warranty_and_noofdays_on_item.execute",
     "renu_customization.patches.v_0.add_purchase_warranty_and_noofdays_on_item.execute",
@@ -361,7 +361,7 @@ doc_events = {
        "before_insert": "renu_customization.api.fetched_party_item_code_from_picklist_ti_deliverytnote.get_party_item_code_from_picklist"
     },
     "Sales Invoice Item": {
-        "before_insert": "renu_customization.api.fetched_partitemcode_from_deliverynote_to_salesinvoice.get_party_item_code_from_dn",
+        "before_insert": "renu_customization.api.fetched_partitemcode_from_deliverynote_to_salesinvoice.get_party_item_code_from_dn"
         
     },
     "Sales Invoice": {
