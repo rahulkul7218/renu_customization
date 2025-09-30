@@ -118,8 +118,8 @@
                 <p><b>Billed To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
                     {{ doc.customer_name or ""}}</p>
                 <p>{{ frappe.db.get_value("Address", doc.customer_address , "address_line1") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.customer_address , "address_line2") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.customer_address , "city") or "" }},
+                    {{ frappe.db.get_value("Address", doc.customer_address , "address_line2") or "" }}
+                    {{ frappe.db.get_value("Address", doc.customer_address , "city") or "" }},
                     - {{ frappe.db.get_value("Address", doc.customer_address , "pincode") or "" }} <br>
                     <b>PAN: </b>{{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }}&nbsp; &nbsp; <b>GST No:
                     </b>{{ frappe.db.get_value("Address", doc.customer_address , "gstin") or "" }}<br />
@@ -139,8 +139,8 @@
                     {{ doc.customer_name or ""}}</p>
 
                 <p>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line1") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }},
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }},
                     - {{ frappe.db.get_value("Address", doc.shipping_address_name , "pincode") or "" }} <br>
                     <b>PAN:</b> {{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }} &nbsp; &nbsp;
                     <b>GST No: </b>{{ frappe.db.get_value("Address", doc.shipping_address_name , "gstin") or "" }}<br />
