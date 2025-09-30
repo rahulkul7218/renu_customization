@@ -53,9 +53,7 @@
             <span class="label">Final Destination:</span> <span class="value">{{ frappe.db.get_value("Address", doc.shipping_address_name, "city") or "" }}</span>
             <span class="label">Country of Final Destination:</span> <span class="value">{{ frappe.db.get_value("Address", doc.shipping_address_name, "country") or "" }}</span>
           </div>
-      </td>
-
-      
+      </td>      
     </tr>
 
     <!-- Invoice Info -->
