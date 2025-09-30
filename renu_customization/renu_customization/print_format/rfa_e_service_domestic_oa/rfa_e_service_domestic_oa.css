@@ -30,7 +30,7 @@
     .outer-table td {
       border: 1px solid #000;
       vertical-align: top;
-      padding: 4px;
+      padding: 3px;
     }
     .header-center h2 {
       font-size: 14px;
@@ -71,6 +71,8 @@
     }
     .bank-details, .signature-block {
       font-size: 10px;
+      background-color: #f0f0f0;
+
       
     }
     .grand_total{
@@ -100,14 +102,14 @@
 .oa-labels {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     font-weight: bold;
 }
 
 .oa-values {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
     .footer-line {
