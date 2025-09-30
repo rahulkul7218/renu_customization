@@ -84,7 +84,7 @@
                         <span>{{ doc.posting_date or "" }}</span>
                         <span>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</span>
                         <span>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</span>
-                        <span>{{doc.delivery_terms or ""}}</span>
+                        <span>{{doc.delivery_term or ""}}</span>
                     </div>
                 </div>
 
@@ -197,7 +197,7 @@
                             <td colspan="1"><b>Total Qty</b></td>
                             <td colspan="2">{{ doc.total_qty or "" }}</td>
                             <td><b>Total</b></td>
-                            <td ><b class="right">{{ doc.rounded_total or doc.grand_total or "" }}</b></td>
+                            <td ><b class="right">{{  doc.total or "" }}</b></td>
                         </tr>
                     </tfoot>
                 </table>
@@ -206,8 +206,8 @@
 
 <tr>
     <td colspan="4">
-        <div class="gst-container" style="margin-top:10px;">
-            <p class="gst-heading" style="font-weight:bold; font-size:14px; margin-bottom:6px;">GST Breakup:</p>
+        <div class="gst-container" >
+            <p class="gst-heading" >GST Breakup:</p>
             {% if doc.gst_breakup_table %}
                 {{ doc.gst_breakup_table | safe }}
             {% else %}
@@ -220,7 +220,7 @@
 
         <!-- BANK DETAILS & TAX SUMMARY -->
         <tr>
-            <td colspan="2" class="bank-details bank-grid">
+            <td colspan="3" class="bank-grid">
                     {% set bank_list = frappe.get_all("Bank Account",
                         filters={"company": doc.company, "is_default": 1, "account_subtype": "INR"},
                         fields=["name", "bank", "bank_account_no", "branch_code", "account_type","account_subtype", "ifsc_code"],
@@ -281,7 +281,7 @@
                     {% endif %}
                 </td>
             <td colspan="2" style="font-size: 11px" >
-                <p  style="display: grid; grid-template-columns: 170px auto; align-items: center; gap: 12px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item">{{ doc.total or 0 }}</span></p>
+                <p  style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item">{{ doc.total or 0 }}</span></p>
                 <div id="taxes-section">
                     {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings")  -%}
@@ -293,14 +293,17 @@
         </tr>
 
         <!-- TOTAL IN WORDS & GRAND TOTAL -->
-        <tr>
-            <td colspan="1" style="font-size: 11px"><b>TOTAL (In words):</b></td>
-            <td colspan="1" style="font-size: 11px">{{ doc.in_words or ""}}</td>
-
-            <td colspan="1" class="grand_total"><b>GRAND TOTAL ({{doc.currency or ""}})</b></td>
-            <td colspan="1" style="font-size: 11px" class="right">{{doc.grand_total or 0}}</td>
-
-        </tr>
+      <tr >
+          <td  style="font-size:11px; width: 10%;"><b>TOTAL (In words):</b></td>
+          <td colspan="2" style="font-size:11px; width: 50%;">{{doc.in_words or ""}}</td>
+          <td  style="width:40%">
+            <p class="grid-row" style="font-size:12px">
+                <span class="col left" ><b>GRAND TOTAL ({{doc.currency}})</b></span>
+                <span class="col right" style="text-align: right;">{{doc.grand_total or ""}}</span>
+            </p>
+           </td>
+         
+      </tr>
         <!-- PAYMENT TERMS & SIGNATURE -->
         <tr class="payment_term">
             <td colspan="1"><b>Payment Term:-</b> </td>
