@@ -338,7 +338,8 @@ doctype_js = {
     "Address":"public/js/make_mandatory_fields_on_address.js",
     "Purchase Receipt":"public/js/upload_bulk_serial_no.js",
     "Delivery Note":["public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js",
-    "public/js/fetched_warrantydetails_on_deliverynoteitem.js", "public/js/fetched_warranty_date_from_delievrynote_if_date_of_dispatch.js", "public/js/calculate_end_date_on_delivery_note_and_update_serial_no.js"],
+    "public/js/fetched_warrantydetails_on_deliverynoteitem.js", "public/js/fetched_warranty_date_from_delievrynote_if_date_of_dispatch.js"],
+    # "public/js/calculate_end_date_on_delivery_note_and_update_serial_no.js"
     "Sales Invoice":["public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js",
     "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", "public/js/update_serial_no_on_sales_invoice_while_submitting.js"],
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
