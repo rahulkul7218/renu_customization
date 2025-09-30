@@ -45,7 +45,8 @@
       <td colspan="4" rowspan="2" class="grid vertical-space">
           <div class="grid-container">
             <span class="label">Country of Origin:</span> <span class="value">{{ frappe.db.get_value("Address", doc.company_address, "country") or "" }}</span>
-            <span class="label">Pre-Carriage by:</span> <span class="value">{{doc.pre_carriage_by}}, {{ doc.mode_of_transport or "" }}</span>
+            <span class="label">Pre-Carriage by:</span> <span class="value">{{doc.pre_carriage_by or ""}}</span>
+            <!-- {{ doc.mode_of_transport or "" }} -->
             <span class="label">Place of Receipt:</span><span class="value">{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</span>
             <span class="label">Vessel/Flight No.:</span><span class="value">{{ doc.vessel_flight_no or "" }}</span>
             <span class="label">Port of Loading:</span> <span class="value">{{ frappe.db.get_value("Address", doc.port_address, "city") or "" }}</span>
@@ -170,7 +171,7 @@
                {% endif %} <br/>
                <small> {%if row.party_item_code %} PartyItem: {{row.party_item_code or ""}} {%endif%}</small>
               </td>
-              <td class="center" >{{doc.po_no or ""}}<br/> <small>{{doc.po_date}}</small></td>
+              <td class="center" >{{doc.po_no or ""}}<br/> <small>{{doc.po_date or ""}}</small></td>
               <td class="center">{{row.gst_hsn_code or ""}}</td>
               <td class="center">{{row.qty or 0}}</td>
               <td class="right" style="width: 15%;">{{ "{:,.2f}".format(row.rate or 0) }}</td>
