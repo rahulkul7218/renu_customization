@@ -301,7 +301,11 @@
           <td  style="width:40%">
             <p class="grid-row" style="font-size:12px">
                 <span class="col left" ><b>GRAND TOTAL ({{doc.currency}})</b></span>
+<<<<<<< Updated upstream
                 <span class="col right" style="text-align: right;"> {{ "{:,.2f}".format(doc.rounded_total | float) or "" }}</span>
+=======
+                <span class="col right" style="text-align: right;">{{doc.rounded_total or ""}}</span>
+>>>>>>> Stashed changes
             </p>
            </td>
          
