@@ -1,10 +1,10 @@
 import frappe
 
-def update_serial_no_from_si(doc, method=None):
+def set_serial_no_warranty_info_from_si(doc, method=None):
     """
     On Sales Invoice submit:
     Update Serial No fields from Sales Invoice Item.
-    Only when warranty_begins = "Date of Invoice" and warranty_end_date is set.
+    Only when warranty_begins = "Date of Invoice" and  is warranty_end_date is set.
     """
     try:
         for item in doc.items:

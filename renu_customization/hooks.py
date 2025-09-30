@@ -294,19 +294,22 @@ after_migrate = [
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
     "renu_customization.patches.v_0.add_party_item_code_on_salesorderitem.execute",
     "renu_customization.patches.v_0.add_partyitemcode_on_picklist_deliverynote_salesinvoice.execute",
-    "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
+    # "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
+    "renu_customization.patches.v_0.add_fields_invoice_and_delivery_note_on_serial_no.execute",
     
     
-    # warranty, Serial fields
-    # "renu_customization.patches.v_0.add_serial_no_filed_on_sales_invouce_item.execute",
-    # "renu_customization.patches.v_0.add_sales_warranty_and_noofdays_on_item.execute",
-    # "renu_customization.patches.v_0.add_purchase_warranty_and_noofdays_on_item.execute",
-    # "renu_customization.patches.v_0.add_warranty_begins_field_on_serial_no.execute",
-    # "renu_customization.patches.v_0.add_fields_warranty_on_sales_invoice_item.execute",
-    # "renu_customization.patches.v_0.add_warranty_fields_on_sales_order_item.execute",
-    # "renu_customization.patches.v_0.add_fieldswarranty_on_pick_list_item.execute",
-    # "renu_customization.patches.v_0.add_warranty_fields_on_delivery_note_item.execute",
-    # "renu_customization.patches.v_0.add_field_warranty_date_deliverynoteitem.execute",
+    
+    "renu_customization.patches.v_0.add_serial_no_filed_on_sales_invouce_item.execute",
+    "renu_customization.patches.v_0.add_sales_warranty_and_noofdays_on_item.execute",
+    "renu_customization.patches.v_0.add_purchase_warranty_and_noofdays_on_item.execute",
+    "renu_customization.patches.v_0.add_warranty_begins_field_on_serial_no.execute",
+    "renu_customization.patches.v_0.add_fields_warranty_on_sales_invoice_item.execute",
+    "renu_customization.patches.v_0.add_warranty_fields_on_sales_order_item.execute",
+    "renu_customization.patches.v_0.add_fieldswarranty_on_pick_list_item.execute",
+    "renu_customization.patches.v_0.add_warranty_fields_on_delivery_note_item.execute",
+    "renu_customization.patches.v_0.add_field_warranty_date_deliverynoteitem.execute",
+    "renu_customization.patches.v_0.add_warranty_days_field_on_serial_no.execute",
+    "renu_customization.patches.v_0.add_warranty_end_date_on_delivery_note_item.execute",
   
 
     
@@ -328,25 +331,21 @@ doctype_js = {
 
     "Customer": ["public/js/fetched_from_business_code.js",
     "public/js/make_fields_mandatory.js"],
-    "Item":["public/js/when_under_development_check_disable_checkbox_checked.js"],
-    # ,"public/js/onlyshow_purchase_warranty.js","public/js/only_show_sales_warranty.js",
-    # "public/js/show_purchase_warranty_only_serialno_and_allow_purchase_checked.js",
-    # "public/js/show_sale_warranty_only_serialno_and_allow_sale_checked.js","public/js/fetched_warrantydays_of_purchase.js",
-    # "public/js/fetched_warrantydays_of_sales.js"
-    
+    "Item":["public/js/when_under_development_check_disable_checkbox_checked.js","public/js/onlyshow_purchase_warranty.js","public/js/only_show_sales_warranty.js",
+    "public/js/show_purchase_warranty_only_serialno_and_allow_purchase_checked.js",
+    "public/js/show_sale_warranty_only_serialno_and_allow_sale_checked.js","public/js/fetched_warrantydays_of_purchase.js",
+    "public/js/fetched_warrantydays_of_sales.js"],
     "Address":"public/js/make_mandatory_fields_on_address.js",
     "Purchase Receipt":"public/js/upload_bulk_serial_no.js",
     "Delivery Note":["public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js",
-   ],
-    #  "public/js/fetched_warrantydetails_on_deliverynoteitem.js", "public/js/fetched_warranty_date_from_delievrynote_if_date_of_dispatch.js"
-    
+    "public/js/fetched_warrantydetails_on_deliverynoteitem.js", "public/js/fetched_warranty_date_from_delievrynote_if_date_of_dispatch.js", "public/js/calculate_end_date_on_delivery_note_and_update_serial_no.js"],
     "Sales Invoice":["public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js",
-    "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js"],
-    # , "public/js/calculate_warranty_end_date.js"
+    "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", "public/js/update_serial_no_on_sales_invoice_while_submitting.js"],
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
     
-    # "Sales Order": "public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
-    # "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
+    "Sales Order": "public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
+    "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
+    "Serial No": "public/js/hide_warranty_field_onserial_no.js",
      
     
 
@@ -366,21 +365,20 @@ doc_events = {
        "before_insert": "renu_customization.api.fetched_party_item_code_from_picklist_ti_deliverytnote.get_party_item_code_from_picklist"
     },
     "Sales Invoice Item": {
-        "before_insert": "renu_customization.api.fetched_partitemcode_from_deliverynote_to_salesinvoice.get_party_item_code_from_dn",
+        "before_insert": "renu_customization.api.fetched_partitemcode_from_deliverynote_to_salesinvoice.get_party_item_code_from_dn"
         
     },
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
-       
+        "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
     }
-    #  "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
 
 
 }
 
-# app_include_js = [
-#     "/assets/renu_customization/js/uat_banner.js"
-# ]
+app_include_js = [
+    "/assets/renu_customization/js/uat_banner.js"
+]
 
 # custom_masters/hooks.py
 
