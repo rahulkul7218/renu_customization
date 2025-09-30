@@ -103,14 +103,14 @@
 .oa-labels {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
     font-weight: bold;
 }
 
 .oa-values {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 2px;
 }
 
     .footer-line {
