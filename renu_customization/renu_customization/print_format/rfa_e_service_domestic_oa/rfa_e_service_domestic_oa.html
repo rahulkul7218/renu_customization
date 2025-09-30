@@ -182,83 +182,78 @@
 
       <!-- BANK DETAILS & TAX SUMMARY -->
       <tr>
-          <td colspan="1" class="bank-details">
-              <p><b>Bank Details:</b></p>
-              <p>Name of Bank:</p>
-              <p>Swift Address:</p><br>
-              <p>Favouring:</p>
-              <p>For Further Credit To (Must include in instructions):</p>
-              <p>Ultimate Beneficiary:</p>
-          </td>
-          <td colspan="1" class="bank-details">
-              {% set bank_list = frappe.get_list("Bank Account", 
-                  filters={"company": doc.company, "is_default": 1}, 
-                  fields=["name", "bank", "address_html", "bank_account_no", "branch_code", "account_type","company"], 
-                  limit=1) 
-              %}
-              {% if bank_list %}
-                  {% set bank = bank_list[0] %}
-                  <p>{{ bank.bank or "" }}</p><br/>
-                  <p>{{ frappe.db.get_value("Bank Account", bank.address_html, "address_line1" ) or "" }}</p><br/>
-                  <p>{{ bank.bank_account_no or "" }}</p><br/>
-                  <p>{{ bank.branch_code or "" }}</p><br/>
-                  <p>{{ bank.company or "" }}</p>
-              {% else %}
-                  <p></p>
-              {% endif %}
-          </td>
-          {# --- collect GST totals --- #}
-            {% set total_cgst = 0.0 %}
-            {% set total_sgst = 0.0 %}
-            {% set total_igst = 0.0 %}
+          <td colspan="3" class="bank-grid">
+              
+                {% set inr_bank_list = frappe.get_list("Bank Account", 
+                    filters={"company": doc.company, "account_subtype": "INR", "is_default": 1}, 
+                    fields=["name", "bank", "address_html", "bank_account_no", "ifsc_code", "account_type", "account_subtype"],
+                    limit=1
+                ) %}
 
-            {% for t in doc.taxes %}
-            {% set desc = (t.get("account_head") or t.get("description") or "") | lower %}
-            {% set tamt = (t.get("tax_amount") or 0) | float %}
-            {% if "cgst" in desc %}
-                {% set total_cgst = total_cgst + tamt %}
-            {% elif "sgst" in desc %}
-                {% set total_sgst = total_sgst + tamt %}
-            {% elif "igst" in desc %}
-                {% set total_igst = total_igst + tamt %}
-            {% endif %}
-            {% endfor %}
-
-            <td class="total-block">
-                <p><b>Taxable Amount:</b></p>
-                {% if total_cgst %}
-                <p>Total CGST Amt:</p>
+                {% if inr_bank_list %}
+                    {% set bank = inr_bank_list[0] %}
+                <p class="grid-row col left"> Bank Details:</p>
+                    <p class="grid-row">
+                        <span class="col left">Name Of Bank:</span>
+                        <span class="col right">{{ bank.bank or "" }}</span>
+                    </p>
+                    <p class="grid-row">
+                        <span class="col left">Address Of Branch:</span>
+                        <span class="col right">{% set bank_address_name = frappe.db.get_value(
+                                "Dynamic Link",
+                                {"link_doctype": "Bank Account", "link_name": bank.name, "parenttype": "Address"},
+                                "parent"
+                            ) %}
+                            {% if bank_address_name %}
+                                {% set addr = frappe.get_doc("Address", bank_address_name) %}
+                                {{ addr.address_line1 or "" }}, 
+                                {{ addr.city or "" }}, {{ addr.pincode or "" }}
+                            {% endif %}</span>
+                    </p>
+                    <p class="grid-row">
+                        <span class="col left">IFSC Code: </span>
+                        <span class="col right"> {{ bank.ifsc_code or "" }}</span>
+                    </p>
                 {% endif %}
-                {% if total_sgst %}
-                <p>Total SGST Amt:</p>
-                {% endif %}
-                {% if total_igst %}
-                <p>Total IGST Amt:</p>
-                {% endif %}
+                    <p class="grid-row">
+                        <span class="col left">Account No. </span>
+                        <span class="col right"> 
+                            {{ bank.bank_account_no or "" }}</span>
+                    </p>
+                    <p class="grid-row">
+                        <span class="col left">Type of A/C </span>
+                        <span class="col right"> 
+                            {{ bank.account_type or "" }}</span>
+                    </p>
+                    <p class="grid-row">
+                        <span class="col left">Ultimate Beneficiary:</span>
+                        <span class="col right">{{ doc.company or "" }}</span>
+                    </p>
+                
             </td>
-            <td class="total-block">
-                <p>{{ "{:,.2f}".format(doc.net_total or 0) }}</p>
-                {% if total_cgst %}
-                <p>{{ "{:,.2f}".format(total_cgst) }}</p>
-                {% endif %}
-                {% if total_sgst %}
-                <p>{{ "{:,.2f}".format(total_sgst) }}</p>
-                {% endif %}
-                {% if total_igst %}
-                <p>{{ "{:,.2f}".format(total_igst) }}</p>
-                {% endif %}
+            <td colspan="2" style="font-size: 11px; padding-top:10px;" >
+                <p  style="display: grid; grid-template-columns: 160px auto; align-items: center; gap: 10px;"><span class="bold grid-item gap-7"><b>Total Taxable Value:</b></span> <span class="grid-item" style="text-align: right;">{{ doc.total or 0 }}</span></p>
+                <div id="taxes-section">
+                    {%- set data = doc.taxes -%}
+                    {%- set print_settings = frappe.get_doc("Print Settings")  -%}
+                    {% include "erpnext/templates/print_formats/includes/taxes.html" %}
+                </div>
             </td>
 
       </tr>
 
       <!-- TOTAL IN WORDS & GRAND TOTAL -->
-      <tr>
-          <td colspan="1" style="font-size:11px"><b>TOTAL (In words):</b></td>
-          <td colspan="1" style="font-size:11px">{{doc.in_words or ""}}</td>
-          <td colspan="1" class="grand_total"><b>GRAND TOTAL</b></td>
-          <td colspan="1" style="font-size:11px">{{doc.grand_total or ""}}</td>
+      <tr >
+          <td  style="font-size:11px; width: 20%;"><b>TOTAL (In words):</b></td>
+          <td colspan="2" style="font-size:11px; width: 45%;">{{doc.in_words or ""}}</td>
+          <td  style="width:40%">
+            <p class="grid-row" style="font-size:12px">
+                <span class="col left" ><b>GRAND TOTAL ({{doc.currency}})</b></span>
+                <span class="col right" style="text-align: right;">{{doc.grand_total or ""}}</span>
+            </p>
+           </td>
+         
       </tr>
-
       <!-- PAYMENT TERMS & SIGNATURE -->
       <tr >
           <td colspan="1" class="payment_term"><b>Payment Term:-</b></td>
@@ -266,7 +261,7 @@
                <p>{{ doc.payment_schedule[0].payment_term or ""}}</p>      
           </td>
           <td rowspan="2" class="signature-block" >For {{doc.company or ""}}<br>
-              <p style="display: flex; flex-direction: column; justify-content: flex-end; height:100px;">{{frappe.get_doc("User", doc.owner).full_name or ""}}</p>
+              <p style="display: flex; flex-direction: column; justify-content: flex-end; height:100px; text-align:right;">{{frappe.get_doc("User", doc.owner).full_name or ""}}</p>
           </td>
       </tr>
       <tr>

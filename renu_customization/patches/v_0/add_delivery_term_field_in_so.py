@@ -9,7 +9,8 @@ def execute():
                 label="Delivery Terms",
                 fieldtype="Link",
                 options="Delivery Term",
-                insert_after="terms"
+                insert_after="terms",
+                reqd=1
             )
         ]
     }

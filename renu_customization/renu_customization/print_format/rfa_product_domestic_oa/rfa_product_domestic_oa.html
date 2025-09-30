@@ -51,7 +51,7 @@
                 <span class="label">Transport Mode</span> <span class="value">{{doc.transport_mode or ""}}</span>
                 <span class="label">Packing</span> <span class="value">{{doc.packing or ""}}</span>
                 <span class="label">Insurance</span> <span class="value">{{doc.insurance or ""}}</span>
-                <span class="label">Warranty</span> <span class="value">{{doc.warranty or ""}}</span>
+                <span class="label">Warranty</span> <span class="value">{{doc.warranty or ""}}<br/>{{frappe.db.get_value("Warranty", doc.warranty, "description") or ""}}</span>
             </div>
           </td>
           
@@ -198,7 +198,7 @@
                         <span class="col right">{{ bank.bank or "" }}</span>
                     </p>
                     <p class="grid-row">
-                        <span class="col left">Swift Address:</span>
+                        <span class="col left">Address Of Branch:</span>
                         <span class="col right">{% set bank_address_name = frappe.db.get_value(
                                 "Dynamic Link",
                                 {"link_doctype": "Bank Account", "link_name": bank.name, "parenttype": "Address"},
@@ -211,18 +211,20 @@
                             {% endif %}</span>
                     </p>
                     <p class="grid-row">
-                        <span class="col left">Favouring:</span>
-                        <span class="col right"> IFSC Code: {{ bank.ifsc_code or "" }}</span>
+                        <span class="col left">IFSC Code: </span>
+                        <span class="col right"> {{ bank.ifsc_code or "" }}</span>
                     </p>
                 {% endif %}
-                
-
                     <p class="grid-row">
-                        <span class="col left">For further credit to (Must include in instructions)</span>
+                        <span class="col left">Account No. </span>
                         <span class="col right"> 
-                            A/C No.: {{ bank.bank_account_no or "" }}</span>
+                            {{ bank.bank_account_no or "" }}</span>
                     </p>
-
+                    <p class="grid-row">
+                        <span class="col left">Type of A/C </span>
+                        <span class="col right"> 
+                            {{ bank.account_type or "" }}</span>
+                    </p>
                     <p class="grid-row">
                         <span class="col left">Ultimate Beneficiary:</span>
                         <span class="col right">{{ doc.company or "" }}</span>
