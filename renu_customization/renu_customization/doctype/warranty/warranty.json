@@ -35,7 +35,7 @@
    "fieldname": "warranty_begins",
    "fieldtype": "Select",
    "label": "Warranty Begins",
-   "options": "\nDate of Invoice\nDate of Dispatch"
+   "options": "Date of Invoice"
   },
   {
    "default": "0",
