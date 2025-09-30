@@ -105,8 +105,8 @@
                     {{ doc.customer_name or ""}}</p>
 
                 <p>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line1") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }},
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }},
                     - {{ frappe.db.get_value("Address", doc.shipping_address_name , "pincode") or "" }} <br>
                     <b>PAN:</b> {{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }} &nbsp; &nbsp;
                     <b>GST No: </b>{{ frappe.db.get_value("Address", doc.shipping_address_name , "gstin") or "" }}<br />
@@ -160,9 +160,9 @@
                               <td>{{""}}</td>
                           {% endif %}
                           <td>{{row.qty or 0}}</td>
-                          <td>{{row.rate or 0}}</td>
+                          <td class="right"> {{"{:,.2f}".format(row.rate | float) or 0}}</td>
                           <td>{{row.uom or ""}}</td>
-                          <td>{{row.amount or 0}}</td>
+                          <td class="right">{{ "{:,.2f}".format(row.amount | float) or 0 }} </td>
                       </tr>
                       {% endfor %}
                   </tbody>
@@ -170,10 +170,10 @@
                       <tr>
                           <td colspan="5">&nbsp;</td>
                           <td colspan="1"><b>Total Qty</b></td>
-                          <td colspan="1">{{doc.total_qty or 0}}</td>
+                          <td colspan="1" class="right">{{doc.total_qty or 0}}</td>
                           <td></td>
                           <td><b>Total</b></td>
-                          <td>{{doc.total or 0}}</td>
+                          <td class="right">  {{ "{:,.2f}".format(doc.total | float) or 0 }}</td>
                       </tr>
                   </tfoot>
               </table>
@@ -245,7 +245,7 @@
             </td>
           
             <td colspan="2" style="font-size: 11px; padding-top:10px;" >
-                <p  style="display: grid; grid-template-columns: 140px auto; align-items: center; gap: 12px;"><span class="bold grid-item gap-7"><b>Total Taxable Value:</b></span> <span class="grid-item" style="text-align: right;">{{ doc.total or 0 }}</span></p>
+                <p  style="display: grid; grid-template-columns: 140px auto; align-items: center; gap: 12px;"><span class="bold grid-item gap-7"><b>Total Taxable Value:</b></span> <span class="grid-item" style="text-align: right;"> {{ "{:,.2f}".format(doc.total | float) or 0 }}</span></p>
                 <div id="taxes-section">
                     {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings")  -%}
@@ -261,7 +261,7 @@
           <td  style="width:40%">
             <p class="grid-row" style="font-size:12px">
                 <span class="col left" ><b>GRAND TOTAL ({{doc.currency}})</b></span>
-                <span class="col right" style="text-align: right;">{{doc.grand_total or ""}}</span>
+                <span class="col right" style="text-align: right;">{{ "{:,.2f}".format(doc.rounded_total | float) or 0 }}</span>
             </p>
            </td>
       </tr>

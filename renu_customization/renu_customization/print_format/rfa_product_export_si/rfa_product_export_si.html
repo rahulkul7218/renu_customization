@@ -82,14 +82,10 @@
             fields=["rbi_code"],
             limit=1
         ) %}
-
         <p>
             {% if banks %} {{ banks[0].rbi_code or "" }}{% endif %}
         </p>
-
-
       </td>
-      
     </tr>
 
     <!-- ADDRESS BLOCKS AND IRN -->
@@ -98,8 +94,8 @@
                 <p><b>Billed To: </b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
                     {{ doc.customer_name or ""}}</p>
                 <p>{{ frappe.db.get_value("Address", doc.customer_address , "address_line1") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.customer_address , "address_line2") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.customer_address , "city") or "" }},
+                    {{ frappe.db.get_value("Address", doc.customer_address , "address_line2") or "" }}
+                    {{ frappe.db.get_value("Address", doc.customer_address , "city") or "" }},
                     - {{ frappe.db.get_value("Address", doc.customer_address , "pincode") or "" }} <br>
                     <b>PAN: </b>{{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }}&nbsp; &nbsp; <b>GST No:
                     </b>{{ frappe.db.get_value("Address", doc.customer_address , "gstin") or "" }}<br />
@@ -119,8 +115,8 @@
                     {{ doc.customer_name or ""}}</p>
 
                 <p>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line1") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
-                    <br>{{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }},
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }},
                     - {{ frappe.db.get_value("Address", doc.shipping_address_name , "pincode") or "" }} <br>
                     <b>PAN:</b> {{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }} &nbsp; &nbsp;
                     <b>GST No: </b>{{ frappe.db.get_value("Address", doc.shipping_address_name , "gstin") or "" }}<br />
@@ -189,10 +185,10 @@
             <tr>
               <td colspan="4"><strong>Remission of Duties and Taxes on Exported Products (RoDTEP)</strong></td>
               <td class="right bold">Total Qty</td>
-              <td class="center bold">{{doc.total_qty or 0}}</td>
+              <td class="right bold">{{doc.total_qty or 0}}</td>
               <td></td>
               <td class="right bold">Total</td>
-              <td class="right bold">{{doc.total or 0}}</td>
+              <td class="right bold">{{ "{:,.2f}".format(doc.total | float) or 0 }}</td>
             </tr>
             <tr>
               <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}})</strong></td>
@@ -283,10 +279,8 @@
                 </p>
             {% endif %}
         </td>
-
-
       <td colspan="3" >
-        <p class="grid-row"><span class="col left bold">Sub Total:</span> <span class="col right" style="text-align: right;">{{doc.net_total or 0}}</span></p>
+        <p class="grid-row"><span class="col left bold">Sub Total:</span> <span class="col right" style="text-align: right;">{{ "{:,.2f}".format(doc.net_total | float) or "" }} </span></p>
 
       </td>
 
@@ -296,7 +290,7 @@
     <tr>
       <td colspan="6"><b>Total (in words):</b> {{ frappe.utils.money_in_words(doc.grand_total, doc.currency) or "" }}</td>
       <td colspan="1" class="left bold"> TOTAL ({{doc.currency or " "}})</td>
-      <td colspan="2" class="right ">{{doc.grand_total or 0}}</td>
+      <td colspan="2" class="right "> {{ "{:,.2f}".format(doc.grand_total | float) or 0 }}</td>
     </tr>
 
     <!-- Terms -->
