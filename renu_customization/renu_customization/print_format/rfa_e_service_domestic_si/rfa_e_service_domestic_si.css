@@ -269,3 +269,42 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
   thead { display: table-header-group; }
   table { page-break-inside: avoid; }
 }
+
+.bank-details p{
+    margin: 0;
+    padding: 2px 0;
+}
+
+.grid-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 1px 0;
+}
+
+.col {
+    flex: 1;
+}
+
+.col.left {
+    text-align: left;
+    font-weight: bold;
+    margin-right: 0;
+    white-space: wrap;
+}
+
+.col.right {
+   padding-bottom: 5px;
+    text-align: left;
+    word-break: break-word;
+}
+.bank-grid {
+  font-size: 11px;
+}
+
+.bank-grid .grid-row {
+    display: flex;
+    justify-content: flex-start; /* both left */
+    align-items: center;
+    margin: 1px 0;
+}

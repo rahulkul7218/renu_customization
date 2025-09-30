@@ -220,43 +220,66 @@
 
         <!-- BANK DETAILS & TAX SUMMARY -->
         <tr>
-            <td style="width: 20%;" class="bank-details">
-                <p><b>Bank Details:</b></p>
-                <p>Name of Bank:</p>
-                <p >Address of Branch:</p>
-                <p>Account No.:</p>
-                <p>IFSC Code:</p>
-                <p>Type of A/c:</p>
+            <td colspan="2" class="bank-details bank-grid">
+                    {% set bank_list = frappe.get_all("Bank Account",
+                        filters={"company": doc.company, "is_default": 1, "account_subtype": "INR"},
+                        fields=["name", "bank", "bank_account_no", "branch_code", "account_type","account_subtype", "ifsc_code"],
+                        limit=1)
+                    %}
 
-            </td>
-            <td colspan="1" class="bank-details">
-                {% set bank_list = frappe.get_all("Bank Account",
-                filters={"company": doc.company, "is_default": 1, "account_subtype": "INR"},
-                fields=["name", "bank",  "bank_account_no", "branch_code", "account_type","account_subtype"],
-                limit=1)
-                %}
+                    {% if bank_list %}
+                        {% set bank = bank_list[0] %}
+                        
+                        <div class="grid-row">
+                            <div class="col left">Bank Details:</div>
+                            <div class="col right"></div>
+                        </div>
 
-                {% if bank_list %}
-                {% set bank = bank_list[0] %}
-                <p></p>
-                <p>{{ bank.bank or "" }}</p>
-                {# find linked address from Dynamic Link #}
-                {% set bank_address_name = frappe.db.get_value(
-                    "Dynamic Link",
-                    {"link_doctype": "Bank Account", "link_name": bank.name, "parenttype": "Address"},
-                    "parent"
-                ) %}
-                {% if bank_address_name %}
-                    {% set addr = frappe.get_doc("Address", bank_address_name) %}
-                    <p style="text-wrap: none;  word-break: break-word;">{{ addr.address_line1 or "" }}</p>  
-                {% endif %}
-                <p>{{ bank.bank_account_no or "" }}</p>
-                <p>{{ bank.branch_code or "" }}</p>
-                <p>{{ bank.account_type or "" }}</p>
-                {% else %}
-                <p>{{""}}</p>
-                {% endif %}
-            </td>
+                        <div class="grid-row">
+                            <div class="col left">Name of Bank:</div>
+                            <div class="col right">{{ bank.bank or "" }}</div>
+                        </div>
+
+                        {% set bank_address_name = frappe.db.get_value(
+                            "Dynamic Link",
+                            {"link_doctype": "Bank Account", "link_name": bank.name, "parenttype": "Address"},
+                            "parent"
+                        ) %}
+                        {% if bank_address_name %}
+                            {% set addr = frappe.get_doc("Address", bank_address_name) %}
+                            <div class="grid-row">
+                                <div class="col left">Address of Branch:</div>
+                                <div class="col right">{{ addr.address_line1 or "" }}</div>
+                            </div>
+                        {% else %}
+                            <div class="grid-row">
+                                <div class="col left">Address of Branch:</div>
+                                <div class="col right"></div>
+                            </div>
+                        {% endif %}
+
+                        <div class="grid-row">
+                            <div class="col left">Account No.:</div>
+                            <div class="col right">{{ bank.bank_account_no or "" }}</div>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="col left">IFSC Code:</div>
+                            <div class="col right">{{ bank.ifsc_code or "" }}</div>
+                        </div>
+
+                        <div class="grid-row">
+                            <div class="col left">Type of A/c:</div>
+                            <div class="col right">{{ bank.account_type or "" }}</div>
+                        </div>
+
+                    {% else %}
+                        <div class="grid-row">
+                            <div class="col left">Bank Details:</div>
+                            <div class="col right">No default bank found</div>
+                        </div>
+                    {% endif %}
+                </td>
             <td colspan="2" style="font-size: 11px" >
                 <p  style="display: grid; grid-template-columns: 170px auto; align-items: center; gap: 12px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item">{{ doc.total or 0 }}</span></p>
                 <div id="taxes-section">
