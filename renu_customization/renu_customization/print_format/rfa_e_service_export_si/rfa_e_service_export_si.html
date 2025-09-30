@@ -43,32 +43,19 @@
         </div>
       </td>
 
-      <td colspan="4" rowspan="2" class="grid vertical-space">
-  <div class="grid-container">
-    <span class="label">Country of Origin:</span>
-    <span class="value">{{ frappe.db.get_value("Address", doc.company_address, "country") or "" }}</span>
-
-    <span class="label">Pre-Carriage by:</span>
-    <span class="value">{{doc.pre_carriage_by}}, {{ doc.mode_of_transport or "" }}</span>
-
-    <span class="label">Place of Receipt:</span>
-    <span class="value">{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</span>
-
-    <span class="label">Vessel/Flight No.:</span>
-    <span class="value">{{ doc.vessel_flight_no or "" }}</span>
-
-    <span class="label">Port of Loading:</span>
-    <span class="value">{{ frappe.db.get_value("Address", doc.port_address, "city") or "" }}</span>
-    <span class="label">Port of Discharge:</span>
-    <span class="value">{{ frappe.db.get_value("Address", doc.port_of_discharge, "city")  or "" }}</span>
-
-    <span class="label">Final Destination:</span>
-    <span class="value">{{ frappe.db.get_value("Address", doc.shipping_address_name, "city") or "" }}</span>
-
-    <span class="label">Country of Final Destination:</span>
-    <span class="value">{{ frappe.db.get_value("Address", doc.shipping_address_name, "country") or "" }}</span>
-  </div>
-</td>
+       <td colspan="4" rowspan="2" class="grid vertical-space">
+          <div class="grid-container">
+            <span class="label">Country of Origin:</span> <span class="value">{{ frappe.db.get_value("Address", doc.company_address, "country") or "" }}</span>
+            <span class="label">Pre-Carriage by:</span> <span class="value">{{doc.pre_carriage_by or ""}}</span>
+            <!-- {{ doc.mode_of_transport or "" }} -->
+            <span class="label">Place of Receipt:</span><span class="value">{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</span>
+            <span class="label">Vessel/Flight No.:</span><span class="value">{{ doc.vessel_flight_no or "" }}</span>
+            <span class="label">Port of Loading:</span> <span class="value">{{ frappe.db.get_value("Address", doc.port_address, "city") or "" }}</span>
+            <span class="label">Port of Discharge:</span><span class="value">{{ frappe.db.get_value("Address", doc.port_of_discharge, "city")  or "" }}</span>
+            <span class="label">Final Destination:</span> <span class="value">{{ frappe.db.get_value("Address", doc.shipping_address_name, "city") or "" }}</span>
+            <span class="label">Country of Final Destination:</span> <span class="value">{{ frappe.db.get_value("Address", doc.shipping_address_name, "country") or "" }}</span>
+          </div>
+      </td>     
 
       
     </tr>
@@ -252,9 +239,6 @@
             </span>
            
         </p>
-
-        
-
         <p class="grid-row">
             <span class="col left">Favouring:</span>
             <span class="col right">A/c No. {{ fbank.bank_account_no or "" }}, {{ inr_bank_list and inr_bank_list[0].bank or "" }}</span>
@@ -283,7 +267,7 @@
 
 
       <td colspan="3" >
-        <p class="grid-row"><span class="col left bold">Sub Total:</span> <span class="col right">{{doc.net_total or 0}}</span></p>
+        <p class="grid-row"><span class="col left bold">Sub Total:</span> <span class="col right" style="text-align: right;">{{doc.net_total or 0}}</span></p>
 
       </td>
 

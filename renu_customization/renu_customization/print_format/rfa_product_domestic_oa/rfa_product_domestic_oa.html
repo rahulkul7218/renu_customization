@@ -133,7 +133,7 @@
                           <th>Sr.No.</th>
                           <th>Item Code</th>
                           <th>Description of Goods</th>
-                          <th>Delivery Date</th>
+                          <th>Dispatch Date</th>
                           <th>HSN Code</th>
                           <th>GST%</th>
                           <th>Qty</th>
@@ -169,9 +169,9 @@
                       <tr>
                           <td colspan="4">&nbsp;</td>
                           <td></td>
-                          <td colspan="2"><b>Total Qty</b></td>
+                          <td colspan="1"><b>Total Qty</b></td>
                           <td colspan="1">{{doc.total_qty or 0}}</td>
-                         
+                          <td></td>
                           <td><b>Total</b></td>
                           <td colspan="2">{{doc.total or 0}}</td>
                       </tr>
@@ -206,9 +206,8 @@
                             ) %}
                             {% if bank_address_name %}
                                 {% set addr = frappe.get_doc("Address", bank_address_name) %}
-                                {{ addr.address_line1 or "" }}<br/>
-                                {{ addr.city or "" }}<br/>
-                                {{addr.pincode or ""}}
+                                {{ addr.address_line1 or "" }}, 
+                                {{ addr.city or "" }}, {{ addr.pincode or "" }}
                             {% endif %}</span>
                     </p>
                     <p class="grid-row">
@@ -258,11 +257,9 @@
       <!-- PAYMENT TERMS & SIGNATURE -->
       <tr >
           <td colspan="1" class="payment_term"><b>Payment Term:-</b></td>
-          <td colspan="2">
-             {% for row in doc.payment_schedule %}
-                    <p style="font-size: 12px;">{{ row.payment_term or ""}}</p>
-                {% endfor %}
-            </td>
+          <td colspan="2" style="font-size: 12px;">
+               <p>{{ doc.payment_schedule[0].payment_term or ""}}</p>      
+          </td>
           <td rowspan="2" class="signature-block" >For {{doc.company or ""}}<br>
               <p style="display: flex; flex-direction: column; justify-content: flex-end; height:80px; text-align:right;">{{frappe.get_doc("User", doc.owner).full_name or ""}}</p>
           </td>

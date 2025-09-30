@@ -6,21 +6,54 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "name1"
+  "name1",
+  "description",
+  "warranty_days",
+  "warranty_begins",
+  "sales_warranty",
+  "purchase_warranty"
  ],
  "fields": [
   {
    "fieldname": "name1",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Name",
+   "label": "Warranty Name",
    "unique": 1
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "warranty_days",
+   "fieldtype": "Data",
+   "label": "Warranty Days"
+  },
+  {
+   "fieldname": "warranty_begins",
+   "fieldtype": "Select",
+   "label": "Warranty Begins",
+   "options": "\nDate of Invoice\nDate of Dispatch"
+  },
+  {
+   "default": "0",
+   "fieldname": "sales_warranty",
+   "fieldtype": "Check",
+   "label": "Sales Warranty"
+  },
+  {
+   "default": "0",
+   "fieldname": "purchase_warranty",
+   "fieldtype": "Check",
+   "label": "Purchase Warranty"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-27 18:02:00.497466",
+ "modified": "2025-09-29 11:09:15.296884",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "Warranty",

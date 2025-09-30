@@ -183,11 +183,12 @@
     text-align: left;
     font-weight: bold;
     margin-right: 0;
+   
     white-space: wrap;
 }
 
 .col.right {
-   
+    padding-bottom: 2px;
     text-align: left;
     word-break: break-word;
 }
