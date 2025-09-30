@@ -295,6 +295,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_party_item_code_on_salesorderitem.execute",
     "renu_customization.patches.v_0.add_partyitemcode_on_picklist_deliverynote_salesinvoice.execute",
     "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
+    "renu_customization.patches.v_0.add_fields_invoice_and_delivery_note_on_serial_no.execute"
     
     
     
