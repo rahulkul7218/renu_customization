@@ -292,6 +292,8 @@ after_migrate = [
     "renu_customization.patches.v_0.create_naming_series_on_sales_order_engg_service_export.execute",
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
+    
+    # warranty, Serial fields
     "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
     "renu_customization.patches.v_0.add_party_item_code_on_salesorderitem.execute",
     "renu_customization.patches.v_0.add_partyitemcode_on_picklist_deliverynote_salesinvoice.execute",
@@ -369,6 +371,9 @@ doc_events = {
 
 }
 
+app_include_js = [
+    "/assets/renu_customization/js/uat_banner.js"
+]
 
 # custom_masters/hooks.py
 
