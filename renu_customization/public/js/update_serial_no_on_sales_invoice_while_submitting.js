@@ -79,6 +79,7 @@ frappe.ui.form.on("Sales Invoice", {
                                 warranty_expiry_date: item.warranty_end_date,
                                 warranty_days: item.warranty_days,
                                 warranty_begins: item.warranty_begins,
+                                warranty_start_date: item.warranty_start_date,
                                 sales_invoice: frm.doc.name
 
                             }
