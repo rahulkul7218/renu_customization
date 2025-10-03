@@ -347,7 +347,7 @@ doctype_js = {
     
     "Sales Order": "public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
-    "Serial No": "public/js/hide_warranty_field_onserial_no.js",
+    "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"]
      
     
 

@@ -9,7 +9,7 @@ def execute():
                 label="Warranty Begins",
                 fieldtype="Data",
                 insert_after="warranty_period",
-                reqd=0
+                read_only=1
             )
         ]
     }

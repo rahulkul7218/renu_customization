@@ -64,7 +64,7 @@
 
 
 frappe.ui.form.on("Sales Invoice", {
-    validate: function(frm) {
+    on_submit: function(frm) {
         frm.doc.items.forEach(item => {
             if (item.warranty_begins === "Date of Invoice" && item.warranty_end_date && item.serials_no) {
                 let serial_nos = item.serials_no.split("\n").map(s => s.trim()).filter(s => s);
