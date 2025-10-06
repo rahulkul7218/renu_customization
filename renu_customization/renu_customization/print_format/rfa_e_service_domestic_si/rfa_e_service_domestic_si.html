@@ -281,13 +281,13 @@
                     {% endif %}
                 </td>
             <td colspan="2" style="font-size: 11px" >
-                <p  style="display: grid; grid-template-columns: 180px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item" style="text-align: right;"> {{ "{:,.2f}".format(doc.total | float) or "" }} </span></p>
+                <p  style="display: grid; grid-template-columns: 160px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item" style="text-align: right;"> {{ "{:,.2f}".format(doc.total | float) or "" }} </span></p>
                 <div id="taxes-section">
                     {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings")  -%}
                     {% include "erpnext/templates/print_formats/includes/taxes.html" %}
                 </div>
-                <p  style="display: grid; grid-template-columns: 180px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Round Off:</span> <span class="grid-item right">{{ "{:,.2f}".format(doc.rounding_adjustment | float) or "" }} </span></p>
+                <p  style="display: grid; grid-template-columns: 160px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Round Off:</span> <span class="grid-item right">{{ "{:,.2f}".format(doc.rounding_adjustment | float) or "" }} </span></p>
 
             </td>
 
