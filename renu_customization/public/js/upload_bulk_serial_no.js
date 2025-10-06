@@ -494,7 +494,7 @@ let uploaded_po_no = null;
 
 frappe.ui.form.on("Purchase Receipt", {
     refresh(frm) {
-        frm.add_custom_button("Upload Item", () => {
+        frm.add_custom_button("Upload Serial No", () => {
             load_xlsx(() => {
                 let input = document.createElement("input");
                 input.type = "file";
@@ -602,23 +602,9 @@ frappe.ui.form.on("Purchase Receipt", {
                                     item_row.serial_no = uploaded_serials.join("\n");
                                     item_row.uom = serial_map[item_code].uom || "";
 
-                                    frappe.db.get_value("Item", item_code, ["item_name", "standard_rate"])
-                                        .then(r => {
-                                            if (r?.message) {
-                                                item_row.item_name = r.message.item_name || "";
-                                                item_row.rate = r.message.standard_rate || 0;
-                                            }
-                                            return frappe.db.get_value("Item Price", {
-                                                price_list: "Standard Buying",
-                                                item_code: item_code
-                                            }, "price_list_rate");
-                                        })
-                                        .then(r => {
-                                            if (r?.message?.price_list_rate) {
-                                                item_row.rate = r.message.price_list_rate;
-                                            }
-                                            item_row.amount = (item_row.qty || 0) * (item_row.rate || 0);
-                                        });
+                                    // Remove any rate fetching logic
+                                    item_row.rate = item_row.rate || 0;
+                                    item_row.amount = (item_row.qty || 0) * (item_row.rate || 0);
 
                                 } else {
                                     // Split serials among existing rows based on their qty
@@ -637,16 +623,9 @@ frappe.ui.form.on("Purchase Receipt", {
 
                                         serial_idx += row_qty;
 
-                                        // Optional: fetch rate
-                                        frappe.db.get_value("Item Price", {
-                                            price_list: "Standard Buying",
-                                            item_code: item_code
-                                        }, "price_list_rate").then(r => {
-                                            if (r?.message?.price_list_rate) {
-                                                row.rate = r.message.price_list_rate;
-                                            }
-                                            row.amount = (row.qty || 0) * (row.rate || 0);
-                                        });
+                                        // Remove rate fetching logic
+                                        row.rate = row.rate || 0;
+                                        row.amount = (row.qty || 0) * (row.rate || 0);
                                     });
 
                                     // If any remaining serials, add new row
@@ -663,15 +642,9 @@ frappe.ui.form.on("Purchase Receipt", {
                                         item_row.serial_no = remaining_serials.join("\n");
                                         item_row.uom = serial_map[item_code].uom || "";
 
-                                        frappe.db.get_value("Item Price", {
-                                            price_list: "Standard Buying",
-                                            item_code: item_code
-                                        }, "price_list_rate").then(r => {
-                                            if (r?.message?.price_list_rate) {
-                                                item_row.rate = r.message.price_list_rate;
-                                            }
-                                            item_row.amount = (item_row.qty || 0) * (item_row.rate || 0);
-                                        });
+                                        // Remove rate fetching logic
+                                        item_row.rate = item_row.rate || 0;
+                                        item_row.amount = (item_row.qty || 0) * (item_row.rate || 0);
                                     }
                                 }
                             });
