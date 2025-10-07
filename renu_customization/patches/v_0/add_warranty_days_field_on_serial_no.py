@@ -8,5 +8,6 @@ def execute():
             "fieldname": "warranty_days",
             "label": "Warranty Days",
             "fieldtype": "Data",   # As per your request
-            "insert_after": "warranty_period"
+            "insert_after": "warranty_period",
+            "read_only": 1
         }).insert()

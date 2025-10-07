@@ -30,7 +30,7 @@
         </tr>
         <!-- COMPANY, BUYER PO, OA DETAILS -->
         <tr>
-            <td colspan="2" class="company-info">
+            <td colspan="3" class="company-info">
                 <div class="grid"
                     style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 10px;">
                     <!-- Logo -->
@@ -68,7 +68,7 @@
         </tr>
         <!-- OA DETAILS & DELIVERY TERMS -->
         <tr>
-            <td style="width:35%" class="oa-section">
+            <td  style="width:70%" class="oa-section">
                 <div class="oa-container">
                     <!-- Labels -->
                     <div class="oa-labels ">
@@ -89,7 +89,7 @@
                 </div>
 
             </td>
-            <td style="width: 25%;">
+            <td colspan="2" style="width: 25%;">
                 <div class="qrcode-section" style="margin-top:10px;">
                     {% if doc.irn %}
                     {% set e_invoice_log = frappe.db.get_value(
@@ -107,7 +107,7 @@
 
         </tr>
         <tr>
-            <td class="irn" colspan="2">
+            <td class="irn" colspan="3">
                 <p>IRN:&nbsp;&nbsp;{{doc.irn or "NA"}}</p>
             </td>
 
@@ -281,13 +281,13 @@
                     {% endif %}
                 </td>
             <td colspan="2" style="font-size: 11px" >
-                <p  style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item" style="text-align: right;"> {{ "{:,.2f}".format(doc.total | float) or "" }} </span></p>
+                <p  style="display: grid; grid-template-columns: 160px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Total Taxable Value:</span> <span class="grid-item" style="text-align: right;"> {{ "{:,.2f}".format(doc.total | float) or "" }} </span></p>
                 <div id="taxes-section">
                     {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings")  -%}
                     {% include "erpnext/templates/print_formats/includes/taxes.html" %}
                 </div>
-                <p  style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Round Off:</span> <span class="grid-item right">{{ "{:,.2f}".format(doc.rounding_adjustment | float) or "" }} </span></p>
+                <p  style="display: grid; grid-template-columns: 160px auto; align-items: right; gap: 10px;"><span class="bold grid-item gap-10">Round Off:</span> <span class="grid-item right">{{ "{:,.2f}".format(doc.rounding_adjustment | float) or "" }} </span></p>
 
             </td>
 
@@ -351,8 +351,8 @@
                 Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}
                 Website:-
                 {{company.website or ""}} Email:- {{frappe.db.get_value("Company",
-                doc.company, "email_id")}} Phone No.:- {{frappe.db.get_value("Company",
-                doc.company, "phone") or ""}} GSTIN:-
+                doc.company, "email")}} Phone No.:- {{frappe.db.get_value("Company",
+                doc.company, "phone_no") or ""}} GSTIN:-
                 {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company",
                 doc.company, "pan") or ""}}
             </td>

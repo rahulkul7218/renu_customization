@@ -14,7 +14,7 @@
     }
     .address-block {
     font-family: Arial, sans-serif;
-    font-size: 10px;
+    font-size: 11px;
     color: #000;
     border-left: 1px solid #000;
     border-right: 1px solid #000;
@@ -118,7 +118,7 @@
       padding: 4px;
     }
     .company-info {
-    width: 60%;
+    width: 58%;
     vertical-align: top;
     font-size: 12px;
 }

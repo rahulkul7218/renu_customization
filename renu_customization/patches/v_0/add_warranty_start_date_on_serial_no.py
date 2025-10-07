@@ -5,10 +5,10 @@ def execute():
     custom_fields = {
         "Serial No": [
             dict(
-                fieldname="warranty_begins",
-                label="Warranty Begins",
-                fieldtype="Data",
-                insert_after="warranty_period",
+                fieldname="warranty_start_date",
+                label="Warranty Start Date",
+                fieldtype="Date",
+                insert_after="warranty_expiry_date",
                 read_only=1
             )
         ]
