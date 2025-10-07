@@ -30,7 +30,7 @@
         </tr>
         <!-- COMPANY, BUYER PO, OA DETAILS -->
         <tr>
-            <td colspan="2" class="company-info">
+            <td colspan="3" class="company-info">
                 <div class="grid"
                     style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 10px;">
                     <!-- Logo -->
@@ -54,7 +54,7 @@
                 </p>
 
             </td>
-            <td colspan="2" rowspan="3" class="details-col">
+            <td colspan="2" rowspan="3" class="top-right-section details-col">
                 <p><strong>Buyer's PO No.: </strong> <span>{{doc.po_no or ""}}</span></p><br>
                 <p><strong>PO Date: </strong> <span></span>{{doc.po_date or ""}}</span></p><br>
                 <p><strong>OA No.: </strong> <span>{{so or ""}}</span></p><br>
@@ -68,7 +68,7 @@
         </tr>
         <!-- OA DETAILS & DELIVERY TERMS -->
         <tr>
-            <td style="width:35%" class="oa-section">
+            <td style="width:70%" class="oa-section">
                 <div class="oa-container">
                     <!-- Labels -->
                     <div class="oa-labels ">
@@ -87,9 +87,8 @@
                         <span>{{doc.delivery_term or ""}}</span>
                     </div>
                 </div>
-
             </td>
-            <td style="width: 25%;">
+            <td colspan="2" style="width: 30%;">
                 <div class="qrcode-section" style="margin-top:10px;">
                     {% if doc.irn %}
                     {% set e_invoice_log = frappe.db.get_value(
@@ -103,14 +102,12 @@
                     {% endif %}
                 </div>
             </td>
-
-
         </tr>
         <tr>
-            <td class="irn" colspan="2">
+            <td class="irn" colspan="3" >
                 <p>IRN:&nbsp;&nbsp;{{doc.irn or "NA"}}</p>
             </td>
-
+            
         </tr>
         <!-- ADDRESS BLOCKS AND IRN -->
         <tr>
@@ -161,7 +158,7 @@
 
         <!-- ITEMS -->
         <tr>
-            <td colspan="4">
+            <td colspan="5">
                 <table class="items-table">
                     <thead>
                         <tr>

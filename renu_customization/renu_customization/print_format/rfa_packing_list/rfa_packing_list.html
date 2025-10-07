@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<style>
+    {% include "renu_customization/renu_customization/print_format/rfa_packing_list/rfa_packing_list.css" %}
+</style>
+<body>
+  <div class="print-container">
+    <table class="outer-table">
+      <!-- HEADER -->
+      <tr>
+          <td colspan="4" class="header-center">
+              <h2>PACKING LIST</h2>
+          </td>
+      </tr>
+      <!-- COMPANY, BUYER PO, WARRANTY -->
+      <tr>
+          <td colspan="2" class="company-info">
+              <div class="logo-placeholder">
+                  <img src="{{ doc.company_logo }}" style="max-width:120px;">
+              </div>
+              <p><b>Renu Factory Automation Pvt. Ltd.</b></p>
+              <p>Factory Address:-<br>Survey No 26, 1st Floor, Baner Road,<br>Baner, Pune City, Pune - 411045</p>
+              <p>Tel. No.: +91-020-27292840</p>
+          </td>
+          <td class="details-col" rowspan="2" style="width: 25%;">
+              <p><strong>Country of Origin:</strong> {{ doc.country_of_origin or '' }}</p><br>
+                    <p><strong>Pre-Carriage by:</strong> {{ doc.pre_carriage_by or '' }}</p><br>
+                    <p><strong>Place of Receipt by Courier:</strong> {{ doc.place_of_receipt_by_pre_carrier or '' }}</p><br>
+                    <p><strong>Vessel/Flight No.:</strong> {{ doc.vessel_or_flight_no or '' }}</p><br>
+                    <p><strong>Port of Loading:</strong> {{ doc.port_of_loading or '' }}</p><br><br>
+                    <p><strong>Port of Discharge:</strong> {{ doc.port_of_discharge or '' }}</p><br>
+                    <p><strong>Final Destination:</strong> {{ doc.final_destination or '' }}</p><br>
+                    <p><strong>Country of Final Destination:</strong> {{ doc.country_of_final_destination or '' }}</p>
+          </td>
+          <td class="details-col" rowspan="2"></td>
+      </tr>
+      
+      <tr>
+        <td class="partition-label">Invoice No.</td>
+        <td class="partition-value">{{ doc.name }}</td>
+      </tr>
+      <tr>
+        <td class="partition-label">Invoice Date</td>
+        <td class="partition-value">{{ doc.get_formatted }}</td>
+      </tr>
+      <tr>
+        <td class="partition-label">GST No.</td>
+        <td class="partition-value">{{ doc.gst_no }}</td>
+      </tr>
+      <tr>
+        <td class="partition-label">PAN</td>
+        <td class="partition-value">{{ doc.pan }}</td>
+      </tr>
+      <tr>
+        <td class="partition-label">IEC Code</td>
+        <td class="partition-value">{{ doc.iec_code }}</td>
+      </tr>
+ 
+  </td>
+      </tr>
+      <!-- ADDRESS BLOCKS -->
+      <tr>
+          <td colspan="2" class="address-block">
+              <b>Billed To: </b>
+              <p>{{ doc.customer_name or '' }}</p><br>
+              <p>{{ doc.billing_address_display or '' }}</p><br>
+              <p><b>State & Code:</b>{{ doc.billing_state or '' }}</p><br>
+              <p><b>Kind Attention:</b>{{ doc.attention_to or '' }}</p><br>
+              <p><b>Contact No.:</b>{{ doc.contact_mobile or '' }}</p><br>
+          </td>
+          <td colspan="2" class="address-block">
+              <b>Shipped To: </b>
+              <p>{{ doc.customer_name or '' }}</p><br>
+              <p>{{ doc.shipping_address_display or '' }}</p><br>
+              <p><b>State & Code:</b>{{ doc.shipping_state or '' }}</p><br>
+              <p><b>Kind Attention:</b>{{ doc.attention_to or '' }}</p><br>
+              <p><b>Contact No.:</b>{{ doc.contact_mobile or '' }}</p><br>
+          </td>
+      </tr>
+      <!-- ITEMS -->
+      <tr>
+          <td colspan="4">
+              <table class="items-table">
+                  <thead>
+                      <tr>
+                          <th rowspan="2" style="width: 30%;">Description of Goods</th>
+                          <th rowspan="2" style="width: 18%;text-align:center;">Serial No's or Lot No's</th>
+                          <th colspan="4" style="text-align:center;">BOX PACKING DETAILS</th>
+                      </tr>
+                      <tr>
+                          <th style="width: 9%;text-align:center">Qty</th>
+                          <th style="width: 9%;text-align:center">Box No.</th>
+                          <th style="width: 17%;text-align:center">Size (MM)</th>
+                          <th style="width: 13%;text-align:center">Weight (KG)</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {% for item in doc.items %}
+                            <tr>
+                                <td><strong>{{ item.item_code }}</strong><br>{{ item.description }}</td>
+                                <td>{{ item.serial_no or item.batch_no or '' }}</td>
+                                <td class="text-center">{{ item.qty }}</td>
+                                <td class="text-center">{{ item.box_no or '' }}</td>
+                                <td class="text-center">{{ item.dimension or '' }}</td>
+                                <td class="text-right">{{ item.weight or '0.00' }}</td>
+                            </tr>
+                            {% endfor %}
+                      <tr>
+                      <td colspan="4" class="remarks-cell">
+                          <h6>Remarks</h6><div>{{ doc.remarks or '' }}</div>
+                      </td>
+                      <td class="totals">
+                        <p>Total Weight (KG)</p>
+                        <p>Net Weight (KG)</p>
+                        <p>Total Boxes (Nos)</p>
+                      </td>
+                  
+                      <td colspan="4" class="totals">
+                        <p>{{ doc.total_weight or '0.00' }}</p>
+                      <p>{{ doc.total_net_weight or '0.00' }}</p>
+                      <p>{{ doc.total_boxes or 0 }}
+                      <span id="total-boxes-in-words" style="font-weight: normal; padding-left: 5px;"></span></p>
+                  </td>
+                      
+                  </tr>
+                  </tbody>
+              </table>
+              
+          </td>
+      </tr>
+
+      <!-- PAYMENT TERMS & SIGNATURE -->
+      <tr class="payment_term">
+          <td colspan="3"><b></b></td>
+          <th class="signature-block" style="width: 32%;text-align:right;">For Renu Factory Automation Pvt.Ltd.<br><br><br><br><br>
+          <p>Authorised Signatory</p>
+          <p>Santosh Shinde</p>
+          <p>BU Head</p>
+          </th>
+      </tr>
+      <!-- FOOTER -->
+      <tr>
+          <td colspan="4" class="footer-line"></td>
+      </tr>
+    </table>
+  </div>
+</body>
+</html>

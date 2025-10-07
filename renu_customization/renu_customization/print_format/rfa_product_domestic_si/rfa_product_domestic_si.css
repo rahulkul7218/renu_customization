@@ -35,8 +35,6 @@
    margin: 0;
     text-align: center;
     text-decoration: none;
-    
-    
 }
 
 .header-center p {
@@ -46,13 +44,18 @@
 }
 
 .company-info {
-    width: 50%;
+    width: 60% !important;
     vertical-align: top;
     font-size: 12px;
 }
-
+.top-right-section{
+    width: 40% !important;
+    vertical-align: top;
+    font-size: 12px;
+    
+}
 .logo-placeholder {
-    width: 100px;
+    width: 90px;
     height: 60px;
     /* border: 1px solid #ccc; */
     display: inline-block;
@@ -75,6 +78,7 @@
     border-right: 1px solid #000;
     border-top: 1px solid #000;
     border-bottom: none;
+    
 }
 
 .details-col p {
@@ -84,7 +88,7 @@
 
 .details-col strong {
     display: inline-block;
-    width: 120px;         /* fixed width for labels */
+    width: 110px;         /* fixed width for labels */
 }
 
 .details-col .value {

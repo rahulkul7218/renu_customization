@@ -296,6 +296,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_partyitemcode_on_picklist_deliverynote_salesinvoice.execute",
     # "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
     "renu_customization.patches.v_0.add_fields_invoice_and_delivery_note_on_serial_no.execute",
+    "renu_customization.patches.v_0.add_warranty_start_date_on_serial_no.execute",
     
     
     
@@ -310,6 +311,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_field_warranty_date_deliverynoteitem.execute",
     "renu_customization.patches.v_0.add_warranty_days_field_on_serial_no.execute",
     "renu_customization.patches.v_0.add_warranty_end_date_on_delivery_note_item.execute",
+    "renu_customization.patches.v_0.add_warranty_field_on_sales_order.execute",
   
 
     
@@ -328,6 +330,7 @@ after_migrate = [
 #  "renu_customization.patches.v_0.allow_data_import_for_all_doctypes.execute",
 
 doctype_js = {
+    
 
     "Customer": ["public/js/fetched_from_business_code.js",
     "public/js/make_fields_mandatory.js"],
@@ -341,12 +344,15 @@ doctype_js = {
     "public/js/fetched_warrantydetails_on_deliverynoteitem.js", "public/js/fetched_warranty_date_from_delievrynote_if_date_of_dispatch.js"],
     # "public/js/calculate_end_date_on_delivery_note_and_update_serial_no.js"
     "Sales Invoice":["public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js",
-    "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", "public/js/update_serial_no_on_sales_invoice_while_submitting.js"],
+    "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", 
+    "public/js/update_serial_no_on_sales_invoice_while_submitting.js", "public/js/set_by_default_value_of_delivery_terms_on_sales_invoice.js"],
+
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
     
-    "Sales Order": "public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
+    "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
+    "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"],
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
-    "Serial No": "public/js/hide_warranty_field_onserial_no.js",
+    "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"]
      
     
 

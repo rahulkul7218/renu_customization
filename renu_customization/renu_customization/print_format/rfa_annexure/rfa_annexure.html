@@ -1,0 +1,99 @@
+<style>
+{% include "renu_customization/renu_customization/print_format/rfa_annexure/rfa_annexure.css" %}
+</style>
+<div class="border">
+   <div class="text-center border-bottom fw-bold">
+       <p>Annexure</p>
+   </div>
+   <div class="text-center fs-1 border-bottom">
+       <p>(Issued under Section 31 of The Central Goods And Services Tax Act, 2017 Read with Chapter IV of Central Goods and Service Tax Rules, 2017)</p>
+   </div>
+   
+   <div class="rows border-bottom">
+       <div class="col-3 p-2 border-end">
+           <img src="{{frappe.db.get_value("Company", doc.company,"logo_for_printing")}}" style="max-width: 120px;  max-height: 100px;">
+          
+       </div>
+       <div class="col-9 text-center fs-1 p-0">
+            <p class="border-bottom">Renu Electronics Pvt. Ltd.</p>
+            <p><span class="fw-bold"> Factory Address:- </span>{{ frappe.db.get_value("Address", doc.company_address, "address_line1") or "" }} <br><span class="fw-bold"> Tel. No.:</span>{{ frappe.db.get_value("Address",doc.company_address,"phone") or "" }} <span class="fw-bold ps-2"> Email:</span> {{ frappe.db.get_value("Address",doc.company_address,"email_id") or "" }}</p>
+       </div>
+   </div>
+   
+    <div class="rows border-bottom fs-1">
+       <div class="col-2 border-end fw-bold"> <p>Invoice No.</p> </div>
+       <div class="col-4 border-end"> <p>{{doc.name or ""}}</p> </div>
+       <div class="col-3 border-end fw-bold"> <p>Buyer's PO No.</p>  </div>
+       <div class="col-3"> <p>{{doc.po_no or ""}}</p> </div>
+   </div>
+   <div class="rows border-bottom fs-1">
+       <div class="col-2 border-end fw-bold"> <p>Invoice Date</p> </div>
+       <div class="col-4 border-end"> <p>{{doc.posting_date or ""}}</p> </div>
+       <div class="col-3 border-end fw-bold"> <p>PO Date.</p>  </div>
+       <div class="col-3"> <p>{{doc.po_date or ""}}</p> </div>
+   </div>
+   <div class="rows border-bottom fs-1">
+       <div class="col-2 border-end fw-bold"> <p>GST No.</p> </div>
+       <div class="col-4 border-end"> <p>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</p> </div>
+       <div class="col-3 border-end fw-bold"> <p>OA No.</p>  </div>
+       <div class="col-3"> <p>{{doc.items[0].sales_order or ""}}</p> </div>
+   </div>
+   <div class="rows border-bottom fs-1">
+       <div class="col-2 border-end fw-bold"> <p>PAN</p> </div>
+       <div class="col-4 border-end"> <p>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</p> </div>
+       <div class="col-3 border-end fw-bold"> <p>OA Date</p>  </div>
+       <div class="col-3"> <p>{{frappe.db.get_value("Sales Order",doc.items[0].sales_order,"transaction_date") or ""}}</p> </div>
+   </div>
+   <div class="rows border-bottom fs-1">
+       <div class="col-2 border-end fw-bold"> <p>Delivery Term</p> </div>
+       <div class="col-4 border-end"> <p>{{doc.delivery_term or ""}}</p> </div>
+       <div class="col-3 border-end fw-bold"> <p>Transport Mode</p>  </div>
+       <div class="col-3"> <p>{{doc.mode_of_transport or ""}}</p> </div>
+   </div>
+    <div class="rows border-bottom fs-1">
+       <div class="col-2 border-end fw-bold"></div>
+       <div class="col-4 border-end"></div>
+       <div class="col-3 border-end fw-bold"> <p>Way Bill No.</p>  </div>
+       <div class="col-3"> <p>{{doc.ewaybill or ""}}</p> </div>
+   </div>
+    <div class="rows border-bottom fs-1">
+       <div class="col-2 border-end fw-bold"></div>
+       <div class="col-4 border-end"></div>
+       <div class="col-3 border-end fw-bold"> <p>Tax on Reverse Charge</p>  </div>
+       <div class="col-3"> <p>No</p> </div>
+   </div>
+   
+   <div class="p-2">
+    <table class="fs-1">
+    <thead>
+    <tr class="ss">
+      <th>Item Code</th>
+      <th>Item Description</th>
+      <th>Quantity</th>
+      <th>Serial Numbers</th>
+    </tr>
+    </thead>
+   
+    <tbody>
+    {% for row in doc.items %}
+    <tr>
+      <td>{{ row.item_code or "" }}</td>
+      <td>{{ row.item_name or "" }}</td>
+      <td class="text-center">{{ row.qty or "" }}</td>
+      <td>
+        {{ (row.serials_no or "").replace("\n", ", ") }}
+      </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    
+  </table>
+  </div>
+   
+   
+   
+   
+   <div class="fs-2 text-center border-top">
+       <p>Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}} Tel. No.{{ frappe.db.get_value("Address",doc.company_address,"phone") or "" }}, Website:-{{ frappe.db.get_value("Company", doc.company, "website") or "" }}</p>
+   </div>
+</div>
