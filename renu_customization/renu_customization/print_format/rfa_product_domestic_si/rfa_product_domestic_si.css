@@ -1,6 +1,6 @@
 @page {
     size: A4;
-    margin: 5mm;
+    margin: 3mm;
 }
 .right { text-align: right; }
 .bold { font-weight: bold; }
@@ -17,17 +17,15 @@
     font-size: 12px !important;
     color: #000;
 }
-
 .outer-table {
     width: 100%;
     border-collapse: collapse;
     border: 1px solid #000;
 }
-
 .outer-table td {
     border: 1px solid #000;
     vertical-align: top;
-    padding: 4px;
+    padding: 2px;
 }
 .outer-table tr:first-child .header-center { border-right: none !important;}
 
@@ -42,7 +40,6 @@
     margin: 0;
     text-align: center;
 }
-
 .company-info {
     width: 60% !important;
     vertical-align: top;
@@ -51,12 +48,11 @@
 .top-right-section{
     width: 40% !important;
     vertical-align: top;
-    font-size: 12px;
-    
+    font-size: 12px;   
 }
 .logo-placeholder {
     width: 90px;
-    height: 60px;
+    height: 50px;
     /* border: 1px solid #ccc; */
     display: inline-block;
     text-align: center;
@@ -64,8 +60,7 @@
     margin:0;
     /* line-height: 40px; */
     font-size: 8px;
-    margin-bottom: 5px;
-   
+    margin-bottom: 2px; 
 }
 
 .details-col {
@@ -73,16 +68,15 @@
     font-size: 10px;
     color: #000;
     vertical-align: top;
-    padding: 6px;
+    padding: 0px;
     border-left: 1px solid #000;
     border-right: 1px solid #000;
     border-top: 1px solid #000;
-    border-bottom: none;
-    
+    border-bottom: none; 
 }
 
 .details-col p {
-    margin: 2px 0;
+    margin: 0 0;
     padding: 0;
 }
 
@@ -98,7 +92,6 @@
 .oa-section {
     padding: 10px;
     border-bottom: none;
-
 }
 
 .oa-container {
@@ -107,7 +100,6 @@
     gap: 20px;
     font-size: 10px;
     line-height: 1.5;
-   
 }
 
 .oa-labels {
@@ -148,7 +140,7 @@
 
 .items-table th, .items-table td {
     border: 1px solid #000;
-    padding: 4px;
+    padding: 2px;
     font-size: 10px;
     text-align: center;
 }
@@ -164,7 +156,6 @@
 
 .gst-container {
     width: 60%;
-    margin: 2px 0;
     font-size: 10px;
     font-family: Arial, sans-serif;
 }
@@ -173,7 +164,6 @@
     font-weight: bold;
     font-size: 11px;
     text-align: left;
-    margin-bottom: 2px;
 }
 
 .gst-table-wrapper table {
@@ -204,7 +194,7 @@
 }
 .bank-details p {
     margin: 2px;
-    padding: 4px;
+    padding: 2px;
 }
 
 .grand_total {
@@ -264,8 +254,6 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
   
 }
 
-
-
 @media print {
   body { margin: 0; }
   .invoice-container { border: none; }
@@ -277,7 +265,6 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
     margin: 0;
     padding: 2px 0;
 }
-
 .grid-row {
     display: flex;
     justify-content: space-between;

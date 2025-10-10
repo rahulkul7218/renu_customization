@@ -32,7 +32,7 @@
         <tr>
             <td colspan="3" class="company-info">
                 <div class="grid"
-                    style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 10px;">
+                    style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 8px;">
                     <!-- Logo -->
                     <div class="logo-placeholder grid-item">
                         <img src="{{ company.logo_for_printing }}" style="max-width: 100px;">
@@ -41,14 +41,14 @@
                     <!-- Company Details -->
                     <div class="company-details grid-item">
                         <p><b>{{ doc.company or "" }}</b></p>
-                        <p style="padding: 5px">
+                        <p style="padding: 2px">
                             <strong>Factory Address:- </strong>
                             {{ frappe.db.get_value("Address", doc.company_address, "address_line1") or "" }}
                         </p>
                     </div>
                 </div>
 
-                <p style="padding: 5px"><strong>Tel. No. </strong>{{
+                <p style="padding: 2px"><strong>Tel. No. </strong>{{
                     frappe.db.get_value("Address",doc.company_address,"phone") or "" }}
                     <strong>Email: </strong>{{ frappe.db.get_value("Address",doc.company_address,"email_id") or "" }}
                 </p>
@@ -89,7 +89,7 @@
                 </div>
             </td>
             <td colspan="2" style="width: 30%;">
-                <div class="qrcode-section" style="margin-top:10px;">
+                <div class="qrcode-section" style="margin-top:5px;">
                     {% if doc.irn %}
                     {% set e_invoice_log = frappe.db.get_value(
                     "e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
@@ -291,8 +291,7 @@
 
         <!-- TOTAL IN WORDS & GRAND TOTAL -->
       <tr >
-          <td  style="font-size:11px; width: 10%;"><b>TOTAL (In words):</b></td>
-          <td colspan="2" style="font-size:11px; width: 50%;">{{doc.in_words or ""}}</td>
+          <td colspan="3" style="font-size:11px; "><b>TOTAL (In words):</b> <span>{{doc.in_words or ""}}</span></td>
           <td  style="width:40%">
             <p class="grid-row" style="font-size:12px">
                 <span class="col left" ><b>GRAND TOTAL ({{doc.currency}})</b></span>
@@ -302,9 +301,9 @@
          
       </tr>
         <!-- PAYMENT TERMS & SIGNATURE -->
-        <tr class="payment_term">
-            <td colspan="1"><b>Payment Term:-</b> </td>
-            <td colspan="2">
+        <tr >
+            <td colspan="3" style="font-size: 11px;"><b>Payment Term:-</b>
+             <span>
                 {% if doc.payment_terms_template %}
                 {% if doc.payment_schedule|length > 0 %}
                 {{ doc.payment_schedule[0].payment_term or "" }}
@@ -314,23 +313,20 @@
                 {% else %}
                 {{ "" }}
                 {% endif %}
+             </span>
             </td>
+           
 
             <th rowspan="2">
                 <p class="signature-block">For {{doc.company or ""}}</p>
                 <p></p>
-                <p></p>
-                <p></p>
                 <p class="bottom-text">Authorised Signatory</p>
-                
-
             </th>
         </tr>
         <tr>
             <td colspan="2">
                 <p></p><br>
-                <p></p><br>
-                <p></p><br>
+                
             </td>
             <td class="message">
                 <p>

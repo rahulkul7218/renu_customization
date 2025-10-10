@@ -296,8 +296,8 @@
 
         <!-- TOTAL IN WORDS & GRAND TOTAL -->
       <tr >
-          <td  style="font-size:11px; width: 10%;"><b>TOTAL (In words):</b></td>
-          <td colspan="2" style="font-size:11px; width: 50%;">{{doc.in_words or ""}}</td>
+      <td colspan="3" style="font-size:11px; "><b>TOTAL (In words):</b> <span>{{doc.in_words or ""}}</span></td>
+
           <td  style="width:40%">
             <p class="grid-row" style="font-size:12px">
                 <span class="col left" ><b>GRAND TOTAL ({{doc.currency}})</b></span>
@@ -307,9 +307,9 @@
          
       </tr>
         <!-- PAYMENT TERMS & SIGNATURE -->
-        <tr class="payment_term">
-            <td colspan="1"><b>Payment Term:-</b> </td>
-            <td colspan="2">
+        <tr >
+            <td colspan="3" style="font-size: 11px;"><b>Payment Term:-</b> 
+            <span>
                 {% if doc.payment_terms_template %}
                 {% if doc.payment_schedule|length > 0 %}
                 {{ doc.payment_schedule[0].payment_term or "" }}
@@ -319,7 +319,9 @@
                 {% else %}
                 {{ "" }}
                 {% endif %}
+            </span>
             </td>
+            
 
             <th rowspan="2">
                 <p class="signature-block">For {{doc.company or ""}}</p>
@@ -327,7 +329,6 @@
                 <p></p>
                 <p></p>
                 <p class="bottom-text">Authorised Signatory</p>
-                <p>{{frappe.db.get_value("User", doc.owner, "full_name")}}</p>
 
             </th>
         </tr>

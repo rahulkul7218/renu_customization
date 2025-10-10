@@ -272,7 +272,6 @@
                <p>{{ doc.payment_schedule[0].payment_term or ""}}</p>      
           </td>
           <td rowspan="2" class="signature-block" style="text-align:right;">For {{doc.company or ""}}<br><br><br><br><br>
-              <p>{{frappe.get_doc("User", doc.owner).full_name or ""}}</p>
           </td>
       </tr>
       <tr >
