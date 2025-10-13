@@ -55,19 +55,19 @@
 
             </td>
             <td colspan="2" rowspan="3" class="top-right-section details-col">
-                <p><strong>Buyer's PO No.: </strong> <span>{{doc.po_no or ""}}</span></p><br>
-                <p><strong>PO Date: </strong> <span></span>{{doc.po_date or ""}}</span></p><br>
-                <p><strong>OA No.: </strong> <span>{{so or ""}}</span></p><br>
-                <p><strong>OA Date: </strong> <span>{{doc.posting_date or ""}}</span></p><br>
-                <p><strong>Transport Mode: </strong> <span>{{doc.mode_of_transport or ""}}</span></p><br>
-                <p><strong>Way Bill No.</strong> <span>{{doc.ewaybill or ""}}</span></p><br>
+                <p><strong>Buyer's PO No.: </strong> <span>{{doc.po_no or ""}}</span></p>
+                <p><strong>PO Date: </strong> <span></span>{{doc.po_date or ""}}</span></p>
+                <p><strong>OA No.: </strong> <span>{{so or ""}}</span></p>
+                <p><strong>OA Date: </strong> <span>{{doc.posting_date or ""}}</span></p>
+                <p><strong>Transport Mode: </strong> <span>{{doc.mode_of_transport or ""}}</span></p>
+                <p><strong>Way Bill No.</strong> <span>{{doc.ewaybill or ""}}</span></p>
                 <p><strong>Tax on Reverse Charge</strong> <span>{% if doc.is_reverse_charge == 1 %}Yes{% else %}No{%
                         endif %}</span>
-                </p><br>
+                </p>
             </td>
         </tr>
         <!-- OA DETAILS & DELIVERY TERMS -->
-        <tr>
+        <tr >
             <td style="width:70%" class="oa-section">
                 <div class="oa-container">
                     <!-- Labels -->
@@ -89,7 +89,7 @@
                 </div>
             </td>
             <td colspan="2" style="width: 30%;">
-                <div class="qrcode-section" style="margin-top:5px;">
+                <div class="qrcode-section" >
                     {% if doc.irn %}
                     {% set e_invoice_log = frappe.db.get_value(
                     "e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
@@ -110,7 +110,7 @@
             
         </tr>
         <!-- ADDRESS BLOCKS AND IRN -->
-        <tr>
+        <tr class="address-section">
             <td colspan="2" class="address-block">
                 <p><b>Billed To: &nbsp; &nbsp;&nbsp;</b> {{frappe.db.get_value("Customer",doc.customer, "customer_code") or ""}} <br />
                     {{ doc.customer_name or ""}}</p>
@@ -126,7 +126,7 @@
                     <br />
                     {{ frappe.db.get_value("Address", doc.customer_address , "country") or "" }}
 
-                </p><br>
+                </p>
 
                 <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
                 <p>Contact No: {{ frappe.db.get_value("Address", doc.customer_address , "phone") or "" }}</p>
@@ -148,7 +148,7 @@
                     <br />
                     {{ frappe.db.get_value("Address", doc.shipping_address_name , "country") or "" }}
 
-                </p><br>
+                </p>
 
                 <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
                 <p>Contact No: {{ frappe.db.get_value("Address", doc.shipping_address_name , "phone") or "" }}</p>
@@ -319,20 +319,17 @@
 
             <th rowspan="2">
                 <p class="signature-block">For {{doc.company or ""}}</p>
-                <p></p>
                 <p class="bottom-text">Authorised Signatory</p>
             </th>
         </tr>
         <tr>
             <td colspan="2">
-                <p></p><br>
+                <p></p>
                 
             </td>
             <td class="message">
                 <p>
-                    All Disputes Subject to
-                </p>
-                <p> Pune Jurisdiction Only E&OE</p>
+                    All Disputes Subject to Pune Jurisdiction Only E&OE</p>
             </td>
 
         </tr>
@@ -341,7 +338,7 @@
             <td colspan="4" class="footer-line">
                 Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}
                 Website:-
-                {{company.website or ""}} Email:- {{company.email_id or ""}} Phone No.:- {{company.phone or ""}} GSTIN:-
+                {{frappe.db.get_value("Company", doc.company, "website") or ""}} Email:- {{frappe.db.get_value("Company", doc.company, "email") or ""}} Phone No.:- {{frappe.db.get_value("Company", doc.company, "phone_no") or ""}} GSTIN:-
                 {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company",
                 doc.company, "pan") or ""}}
             </td>

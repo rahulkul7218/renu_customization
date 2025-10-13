@@ -36,7 +36,6 @@
     text-align: center;
     text-decoration: none;
     
-    
 }
 
 .header-center p {
@@ -50,10 +49,14 @@
     vertical-align: top;
     font-size: 12px;
 }
-
+.top-right-section{
+    width: 30% !important;
+    vertical-align: top;
+    font-size: 12px;   
+}
 .logo-placeholder {
-    width: 100px;
-    height: 60px;
+    width: 90px;
+    height: 50px;
     /* border: 1px solid #ccc; */
     display: inline-block;
     text-align: center;
@@ -61,7 +64,7 @@
     margin:0;
     /* line-height: 40px; */
     font-size: 8px;
-    margin-bottom: 5px;
+    margin-bottom: 2px;
    
 }
 
@@ -70,7 +73,7 @@
     font-size: 10px;
     color: #000;
     vertical-align: top;
-    padding: 6px;
+    padding: 0px;
     border-left: 1px solid #000;
     border-right: 1px solid #000;
     border-top: 1px solid #000;
@@ -78,13 +81,13 @@
 }
 
 .details-col p {
-    margin: 2px 0;
+    margin: 5px 0;
     padding: 0;
 }
 
 .details-col strong {
     display: inline-block;
-    width: 100px;         /* fixed width for labels */
+    width: 112px;         /* fixed width for labels */
 }
 
 .details-col .value {
@@ -92,7 +95,7 @@
 }
 
 .oa-section {
-    padding: 10px;
+    padding: 8px;
     border-bottom: none;
 
 }
@@ -123,8 +126,10 @@
 .qrcode-section{
     width: 20%;
 }
+.address-section{
+    padding:1px;
+} 
 .address-block {
-    font-family: Arial, sans-serif;
     font-size: 10px;
     color: #000;
     border-left: 1px solid #000;
@@ -132,6 +137,8 @@
     border-top: none;
     border-bottom: 1px solid #000;
     padding: 4px;
+    width:50%;
+    text-wrap: inherit;
 }
 .irn{
    font-size: 10px; 
@@ -144,7 +151,7 @@
 
 .items-table th, .items-table td {
     border: 1px solid #000;
-    padding: 4px;
+    padding: 2px;
     font-size: 10px;
     text-align: center;
 }
@@ -160,7 +167,7 @@
 
 .gst-container {
     width: 60%;
-    margin: 2px 0;
+    margin: 0 !important;
     font-size: 10px;
     font-family: Arial, sans-serif;
 }
@@ -169,30 +176,32 @@
     font-weight: bold;
     font-size: 11px;
     text-align: left;
-    margin-bottom: 2px;
+   margin: 0 !important;
 }
 
 .gst-table-wrapper table {
     width: 100%;
     border-collapse: collapse;
     font-size: 10px;
-    margin: 0;
+    margin: 0 !important;
 }
 
 .gst-table-wrapper table th,
 .gst-table-wrapper table td {
     border: 1px solid #000;
-    padding: 2px;
     text-align: center;
+    margin: 0 !important;
 }
 
 .gst-table-wrapper table th {
     background: #f4f4f4;
     font-weight: bold;
+    margin: 0 !important;
 }
 
 .gst-table-wrapper table td:nth-child(1) {
     text-align: left; /* HSN/SAC left-aligned */
+    margin: 0 !important;
 }
 
 .bank-details , .signature-block {
@@ -200,7 +209,7 @@
 }
 .bank-details p {
     margin: 2px;
-    padding: 4px;
+    padding: 2px;
 }
 
 .grand_total {
@@ -218,7 +227,7 @@
 
 #taxes-section > .row > .col-xs-6 > .row {
     padding-top:1px !important;
-    padding-bottom:4px !important;
+    padding-bottom:3px !important;
     line-height:1;
 }
 
@@ -251,31 +260,17 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
 .footer-line {
     text-align: center;
     font-size: 9px;
-    padding: 4px;
+    padding: 2px;
 }
 .bottom-text {
-   height: 80px;           /* example */
+   height: 55px;           /* example */
   display: flex;
   align-items: flex-end;   /* aligns child (p) to bottom */
-  
-}
-
-.grid-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* Left column label, right column value */
-  gap: 6px 12px; /* vertical & horizontal spacing */
-  font-size: 12px;
-}
-
-.grid-container .label {
-  font-weight: bold;
   font-size: 11px;
-  text-align: left;
+  justify-content: center;
 }
 
-.grid-container .value {
-  text-align: left; /* or right if you prefer values aligned right */
-}
+
 
 @media print {
   body { margin: 0; }

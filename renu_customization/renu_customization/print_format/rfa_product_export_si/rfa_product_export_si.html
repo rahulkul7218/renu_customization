@@ -24,7 +24,7 @@
       
       <td colspan="5">
         <div class="grid"
-                    style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 10px;">
+                    style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 8px;">
                     <!-- Logo -->
                     <div class="logo-placeholder grid-item">
                         <img src="{{ company.logo_for_printing }}" style="max-width: 100px;">
@@ -32,13 +32,13 @@
                     <!-- Company Details -->
                     <div class="company-details grid-item">
                         <p><b>{{ doc.company or "" }}</b></p>
-                        <p style="padding: 5px">
+                        <p style="padding: 2px">
                             <strong>Factory Address:- </strong>
                             {{ frappe.db.get_value("Address", doc.company_address, "address_line1") or "" }}
                         </p>
                     </div>
                 </div>
-           <p style="padding: 5px"><strong>Tel. No. </strong>{{ frappe.db.get_value("Address",doc.company_address,"phone") or "" }} <strong>Email: </strong>{{ frappe.db.get_value("Address",doc.company_address,"email_id") or "" }}</p>
+           <p style="padding: 2px"><strong>Tel. No. </strong>{{ frappe.db.get_value("Address",doc.company_address,"phone") or "" }} <strong>Email: </strong>{{ frappe.db.get_value("Address",doc.company_address,"email_id") or "" }}</p>
         </div>
       </td>
 
@@ -104,7 +104,7 @@
                     <br />
                     {{ frappe.db.get_value("Address", doc.customer_address , "country") or "" }}
 
-                </p><br>
+                </p>
 
                 <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
                 <p>Contact No: {{ frappe.db.get_value("Address", doc.customer_address , "phone") or "" }}</p>
@@ -126,7 +126,7 @@
                     <br />
                     {{ frappe.db.get_value("Address", doc.shipping_address_name , "country") or "" }}
 
-                </p><br>
+                </p>
 
                 <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{ frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
                 <p>Contact No: {{ frappe.db.get_value("Address", doc.shipping_address_name , "phone") or "" }}</p>
@@ -136,19 +136,19 @@
 
     <!-- Items -->
     <tr>
-      <td colspan="9" style="padding:0;">
+      <td colspan="9" >
         <table class="items">
           <thead>
             <tr>
               <th style="width:8%;">Sr. No.</th>
-              <th style="width:12%;">Item Code</th>
+              <th style="width:22%;">Item Code</th>
               <th style="width:25%;">Description of Goods</th>
               <th style="width:15%;">Ref. / PO No.</th>
-              <th style="width:12%;">HSN Code</th>
+              <th style="width:18%;">HSN Code</th>
               <th style="width:10%;">Qty</th>
               <th style="width:15%;">Unit Rate in ({{doc.currency}})</th>
-              <th style="width:8%;">UOM </th>
-              <th style="width:15%;">Total Value in ({{doc.currency}})</th>
+              <th style="width:10%;">UOM </th>
+              <th style="width:18%;">Total Value in ({{doc.currency}})</th>
             </tr>
           </thead>
           <tbody>
@@ -306,11 +306,13 @@
         Authorised Signatory<br/>
        
       </td>
-      <td colspan="3">
-          <p>Packing details: -</p>
-          <p>No. of Boxes (Nos) : - <span>{{doc.no_of_boxes or 0}}</span></p>
-          <p>Total Wt. of Boxes (Kg): - <span>{{doc.total_weight or 0}}</span></p>
-          <p>Net Weight  in Kg : - <span>{{doc.net_weight or 0}}</span></p>
+      <td colspan="3" class=" vertical-space">
+        <div>
+          <span>Packing details: -</span><br/>
+          <span>No. of Boxes (Nos) : - </span><span style="padding-left: 20px;">{{doc.no_of_boxes or 0}}</span><br/>
+          <span>Total Wt. of Boxes (Kg): - </span><span style="padding-left: 20px;">{{doc.total_weight or 0}}</span><br/>
+          <span>Net Weight  in Kg : -</span> <span style="padding-left: 20px;">{{doc.net_weight or 0}}</span><br/>
+          </div>
       </td>
     </tr>
     

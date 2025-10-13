@@ -72,9 +72,13 @@
     .items-table td:nth-child(3) {
       text-align: left;
     }
-    .bank-details, .signature-block {
+    .bank-details{
       font-size: 10px;
-      
+    }
+    
+    .signature-block {
+      font-size: 10px;
+      background: #f0f0f0;
     }
     .grand_total{
         font-size: 12px;
@@ -114,7 +118,7 @@
 }
 
     .footer-line {
-      text-align: left;
+      text-align: center;
       font-size: 9px;
       padding: 4px;
     }
