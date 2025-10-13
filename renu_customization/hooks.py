@@ -270,11 +270,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_invoice_type_field_fetched_from_sales_order.execute",
     "renu_customization.patches.v_0.add_invoice_type_fetched_from_picklist.execute",
     "renu_customization.patches.v_0.add_invoice_type_field_salesinvoice_fetched_from_delivery_note.execute",
-    "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
-    "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
-    "renu_customization.patches.v_0.add_naming_series_invoicetype_engg_ser_domestic.execute",
-    "renu_customization.patches.v_0.add_naming_series_for_engg_service_export.execute",
-    "renu_customization.patches.v_0.add_naming_series_for_delivery_note.execute",
+    
     "renu_customization.patches.v_0.hide_fields_on_sales_invoice.execute",
     "renu_customization.patches.v_0.hide_field_on_delivery_note.execute",
     "renu_customization.patches.v_0.hide_fields_on_picklist.execute",
@@ -286,10 +282,7 @@ after_migrate = [
     "renu_customization.patches.v_0.create_new-field-supplier_invoice_no_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_supplier_invoice_date_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_old_customer_code_field_on_customer.execute",
-    "renu_customization.patches.v_0.add_naming_series_on_sales_order_product_domestic.execute",
-    "renu_customization.patches.v_0.create_naming_series_on_sales_order_productexport.execute",
-    "renu_customization.patches.v_0.create_naming_series_on_sales-order_engg_domestic_service.execute",
-    "renu_customization.patches.v_0.create_naming_series_on_sales_order_engg_service_export.execute",
+    
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
     "renu_customization.patches.v_0.add_party_item_code_on_salesorderitem.execute",
@@ -325,7 +318,16 @@ after_migrate = [
     "renu_customization.patches.v_0.add_fields_in_si_docket_no.execute",
     
    
-   
+   #Naming series
+    # "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
+    # "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
+    # "renu_customization.patches.v_0.add_naming_series_invoicetype_engg_ser_domestic.execute",
+    # "renu_customization.patches.v_0.add_naming_series_for_engg_service_export.execute",
+    # "renu_customization.patches.v_0.add_naming_series_for_delivery_note.execute",
+    # "renu_customization.patches.v_0.add_naming_series_on_sales_order_product_domestic.execute",
+    # "renu_customization.patches.v_0.create_naming_series_on_sales_order_productexport.execute",
+    # "renu_customization.patches.v_0.create_naming_series_on_sales-order_engg_domestic_service.execute",
+    # "renu_customization.patches.v_0.create_naming_series_on_sales_order_engg_service_export.execute",
 
 
 ]
@@ -361,9 +363,9 @@ doctype_js = {
 }
 
 doc_events = {
-    "Document Naming Rule": {
-        "after_insert": "renu_customization.api.update_background_prefix_1.set_prefix_digits"
-    },
+    # "Document Naming Rule": {
+    #     "after_insert": "renu_customization.api.update_background_prefix_1.set_prefix_digits"
+    # },
     "Purchase Invoice": {
         "before_validate": "renu_customization.api.supplier_invoice_no_and_date_fetched_from_receipt.supplier_invoice_no_and_date_fetched_from_receipt"
     },
