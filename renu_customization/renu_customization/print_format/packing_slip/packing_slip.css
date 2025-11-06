@@ -1,0 +1,184 @@
+@page {
+  size: A4;
+  margin: 5mm;
+  font-family: Arial, sans-serif;
+}
+.print-container {
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  color: #000;
+}
+.details-company{
+    padding-left: 70px;
+}
+.company-info {
+  width: 50%;
+  vertical-align: top;
+  font-size: 12px;
+  
+}
+.logo-placeholder {
+  width: 120px;
+  height: 40px;
+  border: none;
+  display: inline-block;
+  text-align: center;
+  line-height: 40px;
+  font-size: 8px;
+  margin-bottom: 1px;
+
+}
+
+.phone{
+    padding-top:5px;
+}
+
+.address-block {
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  color: #000;
+}
+.signature-space {
+      height: 10px;
+    }
+    .oa-section {
+    padding: 10px;
+}
+
+.oa-container {
+    display: flex;
+    justify-content: flex-start;
+    gap: 50px; /* space between labels and values */
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.oa-labels {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-weight: bold;
+}
+
+.oa-values {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.outer-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1.5px solid #000;
+}
+.outer-table td {
+  border: 1px solid #000;
+  vertical-align: top;
+  padding: 3px;
+}
+
+.header-center h2 {
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0px;
+  padding: 0px;
+  text-align: center;
+}
+.items-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.items-table th, .items-table td {
+  border: 1px solid #000;
+  padding: 4px;
+  font-size: 10px;
+  color: #000;
+}
+.items-table th {
+  background: #ffff;
+  font-weight: bold;
+}
+
+.items-table td:nth-child(2) {
+  text-align: left;
+}
+.items-table td:nth-child(3),
+.items-table td:nth-child(4) {
+  text-align: center;
+}
+.items-table td:nth-child(5) {
+  text-align: center;
+}
+.items-table td:nth-child(6) {
+  text-align: right;
+}
+.remarks-cell {
+  height: 70px;
+  text-align: left;
+}
+.totals {
+  font-weight: bold;
+  text-align: right;
+}
+.signature-block {
+  font-size: 10px;
+  text-align: right;
+}
+.payment_term {
+  font-size: 12px;
+  font-weight: bold;
+}
+.footer-line {
+  text-align: left;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 4px;
+}
+.border-bottom th{
+    border-bottom:none;
+}
+
+.partition-label {
+  border-right: 2px solid #000;
+  font-weight: bold;
+  font-size: 10px;
+  text-align: left;
+}
+.partition-value {
+  text-align: left;
+  font-size: 10px;
+}
+.text-center {
+  text-align: center;
+}
+.text-right {
+  text-align: right;
+}
+.totals p {
+  text-align: right;
+}
+
+.details-col, .details-col2 {
+  font-family: Arial, sans-serif;
+  font-size: 10px;
+  color: #000;
+  vertical-align: top;
+}
+
+/* Each line (label and value) gets the same fixed height */
+.details-col2 p {
+  margin: 0;
+  padding: 0;
+  line-height: 2.2;     /* adjust for spacing */
+  min-height: 14px;     /* FIXED row height */
+  display: block;
+}
+
+/* Even if the <strong> is empty, keep the space */
+.details-col2 strong:empty::after {
+  content: "\00a0";   /* non-breaking space */
+}
+
+.items-table thead {
+  display: table-row-group ;
+}

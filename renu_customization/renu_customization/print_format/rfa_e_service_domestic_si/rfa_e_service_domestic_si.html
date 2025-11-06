@@ -32,7 +32,7 @@
         <tr>
             <td colspan="3" class="company-info">
                 <div class="grid"
-                    style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 8px;">
+                    style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 5px;">
                     <!-- Logo -->
                     <div class="logo-placeholder grid-item">
                         <img src="{{ company.logo_for_printing }}" style="max-width: 100px;">
@@ -41,14 +41,14 @@
                     <!-- Company Details -->
                     <div class="company-details grid-item">
                         <p><b>{{ doc.company or "" }}</b></p>
-                        <p style="padding: 2px">
+                        <p >
                             <strong>Factory Address:- </strong>
                             {{ frappe.db.get_value("Address", doc.company_address, "address_line1") or "" }}
                         </p>
                     </div>
                 </div>
 
-                <p style="padding: 2px"><strong>Tel. No. </strong>{{
+                <p ><strong>Tel. No. </strong>{{
                     frappe.db.get_value("Address",doc.company_address,"phone") or "" }}
                     <strong>Email: </strong>{{ frappe.db.get_value("Address",doc.company_address,"email_id") or "" }}
                 </p>

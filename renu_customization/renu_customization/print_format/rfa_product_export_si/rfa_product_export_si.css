@@ -115,10 +115,6 @@ tr { min-height: 20px; }
     border-bottom: 1px solid #000;
     padding: 2px;
 }
-.bank-details p{
-    margin: 0;
-    padding: 2px 0;
-}
 
 .grid-row {
     display: flex;
@@ -148,7 +144,6 @@ tr { min-height: 20px; }
     display: flex;
     justify-content: flex-start; /* both left */
     align-items: center;
-    margin: 1px 0;
 }
 
 .col.left {

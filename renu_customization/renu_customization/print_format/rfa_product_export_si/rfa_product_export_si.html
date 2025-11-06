@@ -191,7 +191,7 @@
               <td class="right bold">{{ "{:,.2f}".format(doc.total | float) or 0 }}</td>
             </tr>
             <tr>
-              <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}})</strong></td>
+              <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST{%if frappe.db.get_value("Customer", doc.customer, "gst_category")!="Overseas" and frappe.db.get_value("Customer", doc.customer, "tax_category") != "Overseas With IGST" %}({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}}){%else%} {{""}} {%endif%}</strong></td>
               <td colspan="3"></td>
             </tr>
           </tbody>
@@ -281,7 +281,12 @@
         </td>
       <td colspan="3" >
         <p class="grid-row"><span class="col left bold">Sub Total:</span> <span class="col right" style="text-align: right;">{{ "{:,.2f}".format(doc.net_total | float) or "" }} </span></p>
-
+        {%if frappe.db.get_value("Customer", doc.customer, "gst_category")=="Overseas"%}<div id="taxes-section">
+                    {%- set data = doc.taxes -%}
+                    {%- set print_settings = frappe.get_doc("Print Settings")  -%}
+                    {% include "erpnext/templates/print_formats/includes/taxes.html" %}
+         </div>
+         {%endif%}
       </td>
 
     </tr>
@@ -304,7 +309,6 @@
       <td colspan="6" class="signature left">
         <b>For {{doc.company or ""}}</b><br/><br/><br/>
         Authorised Signatory<br/>
-       
       </td>
       <td colspan="3" class=" vertical-space">
         <div>

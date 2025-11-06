@@ -2,6 +2,14 @@
     size: A4;
     margin: 5mm;
 }
+
+@media print {
+  body { margin: 0; }
+  .invoice-container { border: none; }
+  thead { display: table-header-group; }
+  table { page-break-inside: avoid; }
+}
+
 .right { text-align: right; }
 .bold { font-weight: bold; }
 .copies-border {
@@ -27,7 +35,7 @@
 .outer-table td {
     border: 1px solid #000;
     vertical-align: top;
-    padding: 4px;
+    padding: 2px;
 }
 .outer-table tr:first-child .header-center { border-right: none !important;}
 
@@ -81,7 +89,7 @@
 }
 
 .details-col p {
-    margin: 5px 0;
+    margin: 10px 0;
     padding: 0;
 }
 
@@ -95,7 +103,6 @@
 }
 
 .oa-section {
-    padding: 8px;
     border-bottom: none;
 
 }
@@ -136,7 +143,6 @@
     border-right: 1px solid #000;
     border-top: none;
     border-bottom: 1px solid #000;
-    padding: 4px;
     width:50%;
     text-wrap: inherit;
 }
@@ -260,10 +266,10 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
 .footer-line {
     text-align: center;
     font-size: 9px;
-    padding: 2px;
+  
 }
 .bottom-text {
-   height: 55px;           /* example */
+   height: 50px;           /* example */
   display: flex;
   align-items: flex-end;   /* aligns child (p) to bottom */
   font-size: 11px;
@@ -271,20 +277,11 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
 }
 
 
-
-@media print {
-  body { margin: 0; }
-  .invoice-container { border: none; }
-  thead { display: table-header-group; }
-  table { page-break-inside: avoid; }
-}
-
-
 .grid-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 1px 0;
+    margin: 0;
 }
 
 .col {
@@ -299,7 +296,7 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
 }
 
 .col.right {
-   padding-bottom: 5px;
+   padding-bottom: 2px;
     text-align: left;
     word-break: break-word;
 }
@@ -311,6 +308,6 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
     display: flex;
     justify-content: flex-start; /* both left */
     align-items: center;
-    margin: 1px 0;
+    margin: 0;
 }
 
