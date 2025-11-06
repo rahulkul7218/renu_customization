@@ -15,7 +15,7 @@ table {
 
 th, td {
   border: 1px solid #000;
-  padding: 6px 8px;
+  padding: 6px 6px;
   vertical-align: top;
   word-wrap: break-word;
   white-space: normal;
@@ -84,19 +84,21 @@ tr { min-height: 20px; }
 }
 
 .top-section-right p{
-  padding-bottom: 5px;
+  padding-bottom: 2px;
 }
 
 .grid-container {
   display: grid;
   grid-template-columns: 1fr 1fr; /* Left column label, right column value */
-  gap: 6px 12px; /* vertical & horizontal spacing */
+  gap: 4px 6px; /* vertical & horizontal spacing */
+  border: none;
 }
 
 .grid-container .label {
   font-weight: bold;
   font-size: 11px;
   text-align: left;
+  border: none;
 }
 
 .grid-container .value {
@@ -113,16 +115,12 @@ tr { min-height: 20px; }
     border-bottom: 1px solid #000;
     padding: 2px;
 }
-.bank-details p{
-    margin: 0;
-    padding: 2px 0;
-}
 
 .grid-row {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin: 1px 0;
+    margin: 0;
 }
 
 .col {
@@ -146,7 +144,6 @@ tr { min-height: 20px; }
     display: flex;
     justify-content: flex-start; /* both left */
     align-items: center;
-    margin: 1px 0;
 }
 
 .col.left {
@@ -159,3 +156,5 @@ tr { min-height: 20px; }
     text-align: left;
     word-break: break-word;
 }
+
+
