@@ -1,422 +1,207 @@
-// frappe.query_reports["Stock Shortage Report"] = {
-//     formatter: function (value, row, column, data, default_formatter) {
- 
-//         value = default_formatter(value, row, column, data);
- 
-//         if (column.fieldname === "action" && data) {
- 
-//             // Create dataset spans
-//             value = `<span style="color:#007bff; background-color: #87CEFA;     /* Light Sky Blue */
-//                 border: 1px solid #1E90FF;     /* Border */
-//                 padding: 3px 8px;
-//                 border-radius: 4px;
-//                 font-size: 11px;
-//                 color: black;
-// "
-//                 data-item="${data.item}"
-//                 data-warehouse="${data.warehouse}"
-//                 data-projected="${data.projected_quantity}">
-//                 Create Request
-//             </span>`;
- 
-//             setTimeout(() => {
-//                 $("span[data-item='" + data.item + "'][data-warehouse='" + data.warehouse + "']")
-//                   .off("click")
-//                   .on("click", function () {
- 
-//                     let item = $(this).attr("data-item");   // ✅ now correct
-//                     let warehouse = $(this).attr("data-warehouse");
-//                     let projected_qty = parseFloat($(this).attr("data-projected")) || 0;
- 
-//                     let qty = Math.abs(projected_qty);
- 
-//                     frappe.prompt(
-//                         [
-//                             {
-//                                 fieldname: "select_type",
-//                                 label: "Select Request Type",
-//                                 fieldtype: "Select",
-//                                 options: "\nMaterial Request\nPurchase Order",
-//                                 reqd: 1
-//                             },
-//                             {
-//                                 fieldname: "qty",
-//                                 label: "Quantity",
-//                                 fieldtype: "Float",
-//                                 default: qty,
-//                                 read_only:1,
-//                                 reqd: 1
-//                             }
-//                         ],
-//                         function (values) {
- 
-//                             if (values.select_type === "Material Request") {
-//                                 frappe.new_doc('Material Request', {
-//                                     material_request_type: 'Purchase',
-//                                     schedule_date: frappe.datetime.nowdate(),
-//                                     items: [
-//                                         {
-//                                             item_code: item,
-//                                             qty: values.qty,
-//                                             warehouse: warehouse
-//                                         }
-//                                     ]
-//                                 });
-//                             }
- 
-//                             if (values.select_type === "Purchase Order") {
-//                                 frappe.new_doc('Purchase Order', {
-//                                     schedule_date: frappe.datetime.nowdate(),
-//                                     items: [
-//                                         {
-//                                             item_code: item,
-//                                             qty: values.qty,
-//                                             warehouse: warehouse
-//                                         }
-//                                     ]
-//                                 });
-//                             }
- 
-//                         },
-//                         "Create Request",
-//                         "Proceed"
-//                     );
- 
-//                 });
-//             });
-//         }
- 
-//         return value;
-//     }
-// };
-
-
-
-// frappe.query_reports["Stock Shortage Report"] = {
-//     formatter: function (value, row, column, data, default_formatter) {
-
-//         value = default_formatter(value, row, column, data);
-
-//         if (column.fieldname === "action" && data) {
-
-//             value = `
-//                 <span class="create-request-btn"
-//                     data-item="${data.item}"
-//                     data-warehouse="${data.warehouse}"
-//                     data-projected="${data.projected_quantity}"
-//                     style="
-//                         cursor: pointer;
-//                         padding: 4px 8px;
-//                         background: #87CEFA;
-//                         border: 1px solid #1E90FF;
-//                         border-radius: 4px;
-//                         font-size: 11px;
-//                         color: black;
-//                     ">
-//                     Create Request
-//                 </span>
-//             `;
-
-//             setTimeout(() => {
-//                 $(".create-request-btn").off("click").on("click", function () {
-//                     let item = $(this).data("item");
-//                     let warehouse = $(this).data("warehouse");
-//                     let projected_qty = parseFloat($(this).data("projected")) || 0;
-//                     let qty = Math.abs(projected_qty);
-
-//                     frappe.prompt(
-//                         [
-//                             {
-//                                 fieldname: "select_type",
-//                                 label: "Select Request Type",
-//                                 fieldtype: "Select",
-//                                 options: "\nMaterial Request\nPurchase Order",
-//                                 reqd: 1
-//                             },
-//                             {
-//                                 fieldname: "qty",
-//                                 label: "Quantity",
-//                                 fieldtype: "Float",
-//                                 default: qty,
-//                                 read_only: 1,
-//                                 reqd: 1
-//                             }
-//                         ],
-//                         function (values) {
-//                             if (values.select_type === "Material Request") {
-//                                 create_doc("Material Request", item, warehouse, values.qty);
-//                             }
-//                             if (values.select_type === "Purchase Order") {
-//                                 create_doc("Purchase Order", item, warehouse, values.qty);
-//                             }
-//                         },
-//                         "Create Request",
-//                         "Proceed"
-//                     );
-
-//                 });
-//             });
-//         }
-
-//         return value;
-//     }
-// };
-
-
-// // ------------------------------------
-// // ✅ Function to create document SAFELY
-// // ------------------------------------
-// function create_doc(doctype, item, warehouse, qty) {
-//     frappe.new_doc(doctype);
-
-//     frappe.ui.form.on(doctype, {
-//         onload: function (frm) {
-
-//             let child = frm.add_child("items");
-//             child.item_code = item;
-//             child.qty = qty;
-//             child.warehouse = warehouse;
-
-//             frm.refresh_field("items");
-//         }
-//     });
-// }
-
-
-
-
-
-
-// frappe.query_reports["Stock Shortage Report"] = {
-//     formatter: function (value, row, column, data, default_formatter) {
-
-//         value = default_formatter(value, row, column, data);
-
-//         if (column.fieldname === "action" && data) {
-
-//             value = `
-//                 <span class="create-request-btn"
-//                     data-item="${data.item}"
-//                     data-warehouse="${data.warehouse}"
-//                     data-projected="${data.projected_quantity}"
-//                     style="
-//                         cursor: pointer;
-//                         padding: 4px 8px;
-//                         background: #87CEFA;
-//                         border: 1px solid #1E90FF;
-//                         border-radius: 4px;
-//                         font-size: 11px;
-//                         color: black;
-//                     ">
-//                     Create Request
-//                 </span>
-//             `;
-
-//             setTimeout(() => {
-//                 $(".create-request-btn").off("click").on("click", function () {
-
-//                     let item = $(this).data("item");
-//                     let warehouse = $(this).data("warehouse");
-//                     let projected_qty = parseFloat($(this).data("projected")) || 0;
-//                     let qty = Math.abs(projected_qty);
-
-//                     frappe.prompt(
-//                         [
-//                             {
-//                                 fieldname: "select_type",
-//                                 label: "Select Request Type",
-//                                 fieldtype: "Select",
-//                                 options: "\nMaterial Request\nPurchase Order",
-//                                 reqd: 1
-//                             },
-//                             {
-//                                 fieldname: "qty",
-//                                 label: "Quantity",
-//                                 fieldtype: "Float",
-//                                 default: qty,
-//                                 read_only: 1,
-//                                 reqd: 1
-//                             }
-//                         ],
-//                         function (values) {
-//                             if (values.select_type === "Material Request") {
-//                                 create_doc("Material Request", item, warehouse, values.qty);
-//                             }
-
-//                             if (values.select_type === "Purchase Order") {
-//                                 create_doc("Purchase Order", item, warehouse, values.qty);
-//                             }
-//                         },
-//                         "Create Request",
-//                         "Proceed"
-//                     );
-
-//                 });
-//             });
-//         }
-
-//         return value;
-//     }
-// };
-
-
-// // ------------------------------------------------------------
-// // ✅ Function to create document + clear empty row + fetch UOM
-// // ------------------------------------------------------------
-// function create_doc(doctype, item, warehouse, qty) {
-
-//     frappe.new_doc(doctype);
-
-//     frappe.ui.form.on(doctype, {
-
-//         onload: function (frm) {
-
-//             // 🚫 Remove default empty first row
-//             frm.clear_table("items");
-
-//             // ➕ Add new row with item + qty + warehouse
-//             let row = frm.add_child("items");
-//             row.item_code = item;
-//             row.qty = qty;
-//             row.warehouse = warehouse;
-
-//             // ✅ Fetch UOM from Item Master and set
-//             frappe.call({
-//                 method: "frappe.client.get_value",
-//                 args: {
-//                     doctype: "Item",
-//                     filters: { name: item },
-//                     fieldname: "stock_uom",
-//                 },
-//                 callback: function (r) {
-//                     if (r.message) {
-//                         row.uom = r.message.stock_uom;
-//                     }
-//                     frm.refresh_field("items");
-//                 }
-//             });
-
-//             frm.refresh_field("items");
-//         }
-
-//     });
-// }
-
-
-
 frappe.query_reports["Stock Shortage Report"] = {
-    formatter: function (value, row, column, data, default_formatter) {
-
-        value = default_formatter(value, row, column, data);
-
-        if (column.fieldname === "action" && data) {
-
-            value = `
-                <span class="create-request-btn"
-                    data-item="${data.item}"
-                    data-warehouse="${data.warehouse}"
-                    data-projected="${data.projected_quantity}"
-                    style="
-                        cursor: pointer;
-                        padding: 4px 8px;
-                        background: #8CE4FF;
-                        border: 1px solid #8CE4FF;
-                        border-radius: 4px;
-                        font-size: 11px;
-                        color: black;
-                    ">
-                    Create Request
-                </span>
-            `;
-
-            setTimeout(() => {
-                $(".create-request-btn").off("click").on("click", function () {
-
-                    let item = $(this).data("item");
-                    let warehouse = $(this).data("warehouse");
-                    let projected_qty = parseFloat($(this).data("projected")) || 0;
-                    let qty = Math.abs(projected_qty);
-
-                    frappe.prompt(
-                        [
-                            {
-                                fieldname: "select_type",
-                                label: "Select Request Type",
-                                fieldtype: "Select",
-                                options: "\nMaterial Request\nPurchase Order",
-                                reqd: 1
-                            },
-                            {
-                                fieldname: "qty",
-                                label: "Quantity",
-                                fieldtype: "Float",
-                                default: qty,
-                                read_only: 0,
-                                reqd: 1
-                            }
-                        ],
-                        function (values) {
-                            if (values.select_type === "Material Request") {
-                                create_doc("Material Request", item, warehouse, values.qty);
-                            }
-
-                            if (values.select_type === "Purchase Order") {
-                                create_doc("Purchase Order", item, warehouse, values.qty);
-                            }
-                        },
-                        "Create Request",
-                        "Proceed"
-                    );
-
-                });
-            });
+    filters: [
+        {
+            fieldname: "supplier",
+            label: "Supplier",
+            fieldtype: "Link",
+            options: "Supplier",
+            reqd: 0,
+            onchange: function () {
+                frappe.query_report.refresh();
+            }
         }
+    ],
+    
 
-        return value;
-    }
+    // ✅ Enable checkbox and move it to the end (rightmost side)
+    get_datatable_options(options) {
+        options.checkboxColumn = true;
+
+        // Hook after datatable mounts
+        const originalOnMount = options.events?.onMount;
+        options.events = options.events || {};
+
+        options.events.onMount = function (datatable) {
+            // Move checkbox column to the end for all header and data rows
+            const wrapper = $(datatable.wrapper);
+            const $rows = wrapper.find(".dt-row");
+
+            $rows.each(function () {
+                const $cells = $(this).children();
+                const $checkboxCell = $cells.first(); // default checkbox is first
+                $checkboxCell.detach(); // remove from start
+                $(this).append($checkboxCell); // append to end
+            });
+
+            // Ensure header row also updated (so checkbox column title shifts too)
+            const $headerRow = wrapper.find(".dt-row.dt-head");
+            if ($headerRow.length) {
+                const $headerCheckbox = $headerRow.children().first();
+                $headerCheckbox.detach();
+                $headerRow.append($headerCheckbox);
+            }
+
+            if (originalOnMount) originalOnMount(datatable);
+        };
+
+        return options;
+    },
+
+    onload: function (report) {
+        report.page.add_inner_button(
+            __("Create Request"),
+            function () {
+                let checked_rows = [];
+
+                try {
+                    // --- 1) Modern API
+                    const sel = report.datatable?.selection?.getChecked?.();
+                    if (sel && sel.length) {
+                        if (typeof sel[0] === "number") {
+                            checked_rows = sel.map(i => report.data[i]).filter(Boolean);
+                        } else if (typeof sel[0] === "object") {
+                            checked_rows = sel.map(s => {
+                                if (s.rowIndex !== undefined) return report.data[s.rowIndex];
+                                if (s.index !== undefined) return report.data[s.index];
+                                if (s.id !== undefined && report.data[s.id]) return report.data[s.id];
+                                return null;
+                            }).filter(Boolean);
+                        }
+                    }
+
+                    // --- 2) Fallback to rowmanager
+                    if (!checked_rows.length) {
+                        const rm = report.datatable?.rowmanager?.getChecked?.();
+                        if (rm && rm.length) {
+                            checked_rows = rm.map(i => report.data[i]).filter(Boolean);
+                        }
+                    }
+
+                    // --- 3) DOM fallback
+                    if (!checked_rows.length) {
+                        const wrapper = $(report.datatable?.wrapper || []);
+                        const $checked = wrapper.find('input[type="checkbox"]:checked');
+                        const rows = [];
+
+                        $checked.each(function () {
+                            const $cb = $(this);
+                            const $row = $cb.closest('[data-row-index], .dt-row');
+                            let idx = parseInt($row.attr('data-row-index') || $row.attr('data-index') || -1);
+                            if (Number.isFinite(idx) && report.data[idx]) rows.push(report.data[idx]);
+                        });
+
+                        checked_rows = rows.filter(Boolean);
+                    }
+                } catch (e) {
+                    console.error("Error getting checked rows:", e);
+                }
+
+                if (!checked_rows.length) {
+                    frappe.msgprint(__("Please select at least one item using the checkbox."));
+                    return;
+                }
+
+                let supplier = frappe.query_report.get_filter_value("supplier");
+
+                frappe.prompt(
+                    [
+                        {
+                            fieldname: "select_type",
+                            label: "Select Request Type",
+                            fieldtype: "Select",
+                            options: "\nMaterial Request\nPurchase Order",
+                            reqd: 1
+                        }
+                    ],
+                    function (values) {
+                        let doctype =
+                            values.select_type === "Material Request"
+                                ? "Material Request"
+                                : "Purchase Order";
+
+                        frappe.new_doc(doctype);
+
+                        frappe.ui.form.on(doctype, {
+                            refresh: function (frm) {
+                                if (frm.is_new() && !frm.is_items_added) {
+                                    frm.clear_table("items");
+
+                                    if (doctype === "Purchase Order" && supplier) {
+                                        frm.set_value("supplier", supplier);
+                                    }
+
+                                    checked_rows.forEach((data) => {
+                                        let item_code = data.item_code || data.item;
+                                        let qty = Math.abs(parseFloat(data.projected_qty || data.projected_quantity) || 0);
+                                        let warehouse = data.warehouse;
+
+                                        let child = frm.add_child("items", {
+                                            item_code: item_code,
+                                            qty: qty,
+                                            warehouse: warehouse,
+                                            schedule_date: frappe.datetime.now_date(),
+                                        });
+
+                                        frappe.call({
+                                            method: "frappe.client.get_value",
+                                            args: {
+                                                doctype: "Item",
+                                                filters: { name: item_code },
+                                                fieldname: "stock_uom",
+                                            },
+                                            callback: function (r) {
+                                                if (r.message) {
+                                                    frappe.model.set_value(
+                                                        child.doctype,
+                                                        child.name,
+                                                        "uom",
+                                                        r.message.stock_uom
+                                                    );
+                                                }
+                                            },
+                                        });
+                                    });
+
+                                    frm.refresh_field("items");
+                                    frm.is_items_added = true;
+
+                                    if (doctype === "Purchase Order") {
+                                        frm.save().then(() => {
+                                            frappe.call({
+                                                method: "frappe.client.submit",
+                                                args: { doc: frm.doc },
+                                                callback: function (r) {
+                                                    if (!r.exc && r.message) {
+                                                        frappe.show_alert({
+                                                            message: __("Purchase Order <b>" + r.message.name + "</b> has been submitted successfully."),
+                                                            indicator: "green"
+                                                        }, 5);
+
+                                                        frappe.set_route("Form", "Purchase Order", r.message.name);
+                                                        frappe.after_ajax(() => {
+                                                            frappe.model.with_doc("Purchase Order", r.message.name, function () {
+                                                                frappe.get_doc("Purchase Order", r.message.name);
+                                                                cur_frm.reload_doc();
+                                                            });
+                                                        });
+                                                    }
+                                                }
+                                            });
+                                        });
+                                    }
+                                }
+                            },
+                        });
+                    },
+                    "Create Request",
+                    "Proceed"
+                );
+            },
+            __("Actions")
+        );
+    },
 };
 
 
-// ------------------------------------------------------------
-// ✅ function to create Material Request/Purchase Order
-//    Ensures: No duplicate item, UOM auto fetched,
-//    No “Not Saved” issue after Submit
-// ------------------------------------------------------------
-function create_doc(doctype, item, warehouse, qty) {
 
-    frappe.new_doc(doctype);
 
-    frappe.ui.form.on(doctype, {
-        refresh: function (frm) {
-
-            // ✅ Add only once - ensures Submit does not trigger "Not Saved"
-            if (frm.is_new() && !frm.is_item_added) {
-
-                frm.clear_table("items");    // remove default empty row
-
-                let row = frm.add_child("items");
-                row.item_code = item;
-                row.qty = qty;
-                row.warehouse = warehouse;
-
-                // ✅ Fetch UOM from Item Master
-                frappe.call({
-                    method: "frappe.client.get_value",
-                    args: {
-                        doctype: "Item",
-                        filters: { name: item },
-                        fieldname: "stock_uom",
-                    },
-                    callback: function (r) {
-                        if (r.message) {
-                            row.uom = r.message.stock_uom;
-                        }
-                        frm.refresh_field("items");
-                    }
-                });
-
-                frm.is_item_added = true; // flag to stop re-running
-            }
-        }
-    });
-}
