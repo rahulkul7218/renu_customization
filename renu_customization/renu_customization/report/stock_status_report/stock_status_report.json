@@ -1,0 +1,53 @@
+{
+ "add_total_row": 0,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2025-11-14 11:56:39.716960",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letterhead": null,
+ "modified": "2025-11-14 11:56:51.636990",
+ "modified_by": "Administrator",
+ "module": "Renu Customization",
+ "name": "Stock Status Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "query": "SELECT\r\n    it.item_code AS \"Item Code:Data\",\r\n    it.item_name AS \"Item Name:Data\",\r\n    \r\n    it.last_purchase_rate AS \"Purchase Rate:Currency\",\r\n    IFNULL(SUM(bin.actual_qty), 0) AS \"Item Available Qty:Float\",\r\n    it.safety_stock AS \"Safety Stock:Float\",\r\n    IFNULL((\r\n        SELECT SUM(GREATEST(0, (poi.qty - IFNULL(poi.received_qty,0))))\r\n        FROM `tabPurchase Order Item` poi\r\n        INNER JOIN `tabPurchase Order` po ON poi.parent = po.name\r\n        WHERE poi.item_code = it.item_code\r\n        AND po.docstatus = 1\r\n        AND (po.status IS NULL OR po.status NOT IN ('Stopped', 'Cancelled'))\r\n    ), 0) AS \"PO Booking Qty:Float\",\r\n    (IFNULL(SUM(bin.actual_qty), 0) -\r\n     IFNULL((\r\n        SELECT SUM(GREATEST(0, (poi.qty - IFNULL(poi.received_qty,0))))\r\n        FROM `tabPurchase Order Item` poi\r\n        INNER JOIN `tabPurchase Order` po ON poi.parent = po.name\r\n        WHERE poi.item_code = it.item_code\r\n        AND po.docstatus = 1\r\n        AND (po.status IS NULL OR po.status NOT IN ('Stopped', 'Cancelled'))\r\n     ), 0)) AS \"Free Item Qty:Float:150\",\r\n     it.description AS \"Description:Data:400\"\r\nFROM `tabItem` it\r\nLEFT JOIN `tabBin` bin\r\nON bin.item_code = it.item_code\r\nGROUP BY it.item_code, it.item_name, it.description, it.last_purchase_rate\r\nORDER BY it.item_code;\r\n",
+ "ref_doctype": "Item",
+ "report_name": "Stock Status Report",
+ "report_type": "Query Report",
+ "roles": [
+  {
+   "role": "Item Manager"
+  },
+  {
+   "role": "Stock Manager"
+  },
+  {
+   "role": "Stock User"
+  },
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "Purchase User"
+  },
+  {
+   "role": "Maintenance User"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Manufacturing User"
+  },
+  {
+   "role": "Desk User"
+  }
+ ],
+ "timeout": 0
+}
