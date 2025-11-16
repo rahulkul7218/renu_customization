@@ -1,5 +1,5 @@
 {
- "add_total_row": 0,
+ "add_total_row": 1,
  "add_translate_data": 0,
  "columns": [],
  "creation": "2025-11-14 11:56:39.716960",
@@ -10,7 +10,7 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2025-11-14 11:56:51.636990",
+ "modified": "2025-11-14 18:46:20.566218",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "Stock Status Report",

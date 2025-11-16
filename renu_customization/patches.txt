@@ -81,3 +81,5 @@ renu_customization.patches.v_0.add_fields_in_si_docket_no
 renu_customization.patches.v_0.renu_packing_slip_customization
 renu_customization.patches.v_0.add_field_for_packing_slip_item
 renu_customization.patches.v_0.add_field_on_delivery_note
+renu_customization.patches.v_0.unmandatory_field_purchase_order_item
+renu_customization.patches.v_0.unmandatory_field_material_request_item
