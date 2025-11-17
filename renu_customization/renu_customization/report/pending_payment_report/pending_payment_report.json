@@ -1,0 +1,32 @@
+{
+ "add_total_row": 1,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2025-11-14 11:55:57.836382",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letterhead": null,
+ "modified": "2025-11-17 09:55:27.760502",
+ "modified_by": "Administrator",
+ "module": "Renu Customization",
+ "name": "Pending Payment Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "query": "SELECT\r\n\r\n    IFNULL(c.customer_code, '') AS \"Customer Code:100\",\r\n\r\n    c.customer_name AS \"Customer Name::200\",\r\n\r\n    si.name AS \"Invoice ID:Link/Sales Invoice:150\",\r\n\r\n    si.posting_date AS \"Invoice Date:Date:140\",\r\n\r\n\r\n\r\n    CONCAT(\r\n\r\n    '<div style=\"text-align: right;\">',\r\n\r\n    CONCAT(IFNULL(cu.symbol, si.currency), ' ', FORMAT(si.grand_total, 2)),\r\n\r\n    '</div>'\r\n\r\n    ) AS \"Grand Total :HTML:150\",\r\n\r\n    \r\n\r\n    si.base_grand_total AS \"INR Value Of Foreign :Currency:170\",\r\n\r\n    \r\n\r\n    CONCAT(\r\n\r\n    '<div style=\"text-align: right;\">',\r\n\r\n    CONCAT(IFNULL(cu.symbol, si.currency), ' ', FORMAT(si.outstanding_amount, 2)),\r\n\r\n    '</div>'\r\n\r\n) AS \"Outstanding Amount :HTML:170\",\r\n\r\n      si.conversion_rate AS \"Exchange Rate :Data:140\",\r\n\r\n    \r\n\r\n\r\n\r\n    si.due_date AS \"Payment Due Date:Date:160\",\r\n\r\n    DATEDIFF(CURDATE(), si.posting_date) AS \"Invoice Age:Int:120\",\r\n\r\n    si.po_no AS \"Customer's PO No.:Data:160\",\r\n\r\n    c.business_region_name AS \"Business Region Name:140\",\r\n\r\n\r\n\r\n    (\r\n\r\n        SELECT GROUP_CONCAT(st.sales_person SEPARATOR ', ')\r\n\r\n        FROM `tabSales Team` st\r\n\r\n        WHERE st.parent = si.name\r\n\r\n    ) AS \"Sales Person::200\",\r\n\r\n\r\n\r\n    CASE\r\n\r\n        WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic'\r\n\r\n        ELSE 'Export'\r\n\r\n    END AS \"Domestic/Export:Data:150\"\r\n\r\n\r\n\r\nFROM `tabSales Invoice` si\r\n\r\nLEFT JOIN `tabCustomer` c ON c.name = si.customer\r\n\r\nLEFT JOIN `tabSales Invoice Item` sii ON sii.parent = si.name\r\n\r\nLEFT JOIN `tabItem` i ON i.name = sii.item_code\r\n\r\nLEFT JOIN `tabCurrency` cu ON cu.name = si.currency\r\n\r\nLEFT JOIN `tabAddress` a ON a.name = si.customer_address\r\n\r\n\r\n\r\nWHERE si.docstatus = 1\r\n\r\nGROUP BY si.name\r\n\r\nORDER BY si.posting_date DESC;\r\n\r\n",
+ "ref_doctype": "Payment Entry",
+ "report_name": "Pending Payment Report",
+ "report_type": "Query Report",
+ "roles": [
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Accounts Manager"
+  }
+ ],
+ "timeout": 0
+}

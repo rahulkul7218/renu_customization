@@ -305,6 +305,8 @@ after_migrate = [
     "renu_customization.patches.v_0.add_warranty_days_field_on_serial_no.execute",
     "renu_customization.patches.v_0.add_warranty_end_date_on_delivery_note_item.execute",
     "renu_customization.patches.v_0.add_warranty_field_on_sales_order.execute",
+    "renu_customization.patches.v_0.unmandatory_field_purchase_order_item.execute",
+    "renu_customization.patches.v_0.unmandatory_field_material_request_item.execute",
   
 
     
