@@ -42,11 +42,7 @@ def execute(filters=None):
 
         conditions += " AND si.currency = %(currency)s"
  
-    if filters.get("po_no"):
-
-        filters["po_no"] = f"%{filters['po_no']}%"
-
-        conditions += " AND si.po_no LIKE %(po_no)s"
+    
  
     query = f"""
 

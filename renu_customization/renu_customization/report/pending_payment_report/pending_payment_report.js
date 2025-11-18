@@ -42,12 +42,6 @@ frappe.query_reports["Pending Payment Report"] = {
             fieldtype: "Link",
             options: "Currency",
             reqd: 0
-        },
-        {
-            fieldname: "po_no",
-            label: "Customer's PO No",
-            fieldtype: "Data",
-            reqd: 0
         }
     ]
 };

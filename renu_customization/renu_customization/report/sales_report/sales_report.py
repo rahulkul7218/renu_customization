@@ -31,10 +31,12 @@ def execute(filters=None):
     # Item Code
     if filters.get("item_code"):
         conditions += " AND sii.item_code = %(item_code)s"
+
+    # Currency
+    if filters.get("currency"):
+        conditions += " AND si.currency = %(currency)s"
  
-    # Business Region Name
-    if filters.get("business_region_name"):
-        conditions += " AND c.business_region_name LIKE %(business_region_name)s"
+    
  
     # City
     if filters.get("city"):

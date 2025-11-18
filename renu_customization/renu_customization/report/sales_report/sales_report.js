@@ -49,12 +49,7 @@ frappe.query_reports["Sales Report"] = {
             // }
         },
  
-        {
-            fieldname: "business_region_name",
-            label: "Business Region Name",
-            fieldtype: "Link",
-            options: "Business Region Code"
-        },
+
  
         {
             fieldname: "city",
@@ -73,6 +68,13 @@ frappe.query_reports["Sales Report"] = {
             label: "Country",
             fieldtype: "Link",
             options: "Country"
+        },
+        {
+            fieldname: "currency",
+            label: "Currency",
+            fieldtype: "Link",
+            options: "Currency",
+            reqd: 0
         }
  
     ]
