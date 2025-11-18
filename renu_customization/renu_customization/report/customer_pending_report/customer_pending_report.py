@@ -31,7 +31,7 @@ def get_columns():
 
         _("Customer's PO Date") + ":Date:170",
 
-        _("Status") + ":Data:110",
+        
 
         _("Customer Code") + ":Link/Customer:150",
 
