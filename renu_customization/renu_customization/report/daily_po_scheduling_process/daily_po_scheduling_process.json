@@ -2,7 +2,7 @@
  "add_total_row": 1,
  "add_translate_data": 0,
  "columns": [],
- "creation": "2025-11-14 11:56:39.716960",
+ "creation": "2025-11-18 12:40:34.786625",
  "disabled": 0,
  "docstatus": 0,
  "doctype": "Report",
@@ -10,25 +10,16 @@
  "idx": 0,
  "is_standard": "Yes",
  "letterhead": null,
- "modified": "2025-11-17 18:54:29.715245",
+ "modified": "2025-11-18 12:41:01.034443",
  "modified_by": "Administrator",
  "module": "Renu Customization",
- "name": "Stock Status Report",
+ "name": "Daily PO Scheduling Process",
  "owner": "Administrator",
  "prepared_report": 0,
- "ref_doctype": "Item",
- "report_name": "Stock Status Report",
+ "ref_doctype": "Bin",
+ "report_name": "Daily PO Scheduling Process",
  "report_type": "Script Report",
  "roles": [
-  {
-   "role": "Item Manager"
-  },
-  {
-   "role": "Stock Manager"
-  },
-  {
-   "role": "Stock User"
-  },
   {
    "role": "Sales User"
   },
@@ -36,16 +27,16 @@
    "role": "Purchase User"
   },
   {
-   "role": "Maintenance User"
+   "role": "Stock User"
   },
   {
-   "role": "Accounts User"
+   "role": "Stock Manager"
   },
   {
-   "role": "Manufacturing User"
+   "role": "Purchase Manager"
   },
   {
-   "role": "Desk User"
+   "role": "Sales Manager"
   }
  ],
  "timeout": 0
