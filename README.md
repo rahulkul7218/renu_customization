@@ -1,6 +1,6 @@
 ### Renu Factory Automation Pvt Ltd
 
-For renu actory automation
+For renu factory automation
 
 ### Installation
 

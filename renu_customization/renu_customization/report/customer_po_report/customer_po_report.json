@@ -1,0 +1,41 @@
+{
+ "add_total_row": 1,
+ "add_translate_data": 0,
+ "columns": [],
+ "creation": "2025-11-14 11:57:33.144303",
+ "disabled": 0,
+ "docstatus": 0,
+ "doctype": "Report",
+ "filters": [],
+ "idx": 0,
+ "is_standard": "Yes",
+ "letterhead": null,
+ "modified": "2025-11-17 18:22:32.070886",
+ "modified_by": "Administrator",
+ "module": "Renu Customization",
+ "name": "Customer PO Report",
+ "owner": "Administrator",
+ "prepared_report": 0,
+ "query": "SELECT\n\n    so.name AS \"SO ID:Link/Sales Order:150\",\n\n    so.transaction_date AS \"SO Date:Date:120\",\n\n    si.po_no AS \"Customer's PO No. :Data:170\",\n\n    si.po_date AS \"Customer's PO Date :Date:170\",\n\n    so.status AS \"Status\",\n\n    c.customer_code AS \"Customer Code :Link/Customer:150\",\n\n    so.customer_name AS \"Customer Name :Data:180\",\n\n    soi.party_item_code AS \"Party Item Code :Link/Item:150\",\n\n    soi.item_code AS \"Item Code :Link/Item:120\",\n\n    soi.item_name AS \"Item Name :Data:180\",\n\n    soi.description AS \"Description:Data:250\",\n\n    soi.qty AS \"PO Quantity :Float:120\",\n\n    (soi.qty - IFNULL(soi.delivered_qty, 0)) AS \"Available Qty.:Float:150\",\n \n    soi.rate AS \"Item Rate:Data:120\",\n\n    so.currency AS \"Currency:Link/Currency:100\",\n\n    so.conversion_rate AS \"Exchange Rate :Float:150\",\n \n    ROUND(so.total, 2) AS \"PO Total:140\",\n \n    -- invoice Grand Total (per invoice)\n\n    si.grand_total AS \"Invoice Grand Total:Data:180\",\n \n    si.outstanding_amount AS \"Outstanding Amount :Data:170\",\n \n    so.delivery_date AS \"Delivery Date :Date:120\",\n \n    IFNULL(SUM(bin.actual_qty), 0) AS \"Item Available Qty:Float\",\n \n    c.business_region_name AS \"Business Region Name :Data:190\",\n\n    st.sales_person AS \"Sales Person:Link/Sales Person:150\",\n \n    CASE\n\n        WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic'\n\n        ELSE 'Export'\n\n    END AS \"Domestic/Export:Data:150\"\n \nFROM `tabSales Order` AS so\n\nINNER JOIN `tabSales Order Item` AS soi ON soi.parent = so.name\n \nLEFT JOIN `tabItem` AS i ON soi.item_code = i.name\n\nLEFT JOIN `tabSales Team` AS st ON st.parent = so.name\n\nLEFT JOIN `tabCustomer` AS c ON so.customer = c.name\n\nLEFT JOIN `tabAddress` a ON a.name = so.customer_address\n\nLEFT JOIN `tabCurrency` cur ON cur.name = so.currency\n \nLEFT JOIN `tabDynamic Link` dl\n\n    ON dl.parent = so.shipping_address_name\n\n    AND dl.parenttype = 'Address'\n\n    AND dl.link_doctype = 'Customer'\n \nLEFT JOIN `tabCustomer` sc ON sc.name = dl.link_name\n \nLEFT JOIN `tabBin` bin\n\n    ON bin.item_code = soi.item_code\n\nLEFT JOIN `tabSales Invoice Item` sii\n\n    ON sii.so_detail = soi.name\n \nLEFT JOIN `tabSales Invoice` si\n\n    ON si.name = sii.parent\n \nWHERE\n\n    so.docstatus = 1\n \nGROUP BY\n\n    soi.name\n \nORDER BY\n\n    so.transaction_date DESC;\n\n ",
+ "ref_doctype": "Sales Order",
+ "report_name": "Customer PO Report",
+ "report_type": "Script Report",
+ "roles": [
+  {
+   "role": "Sales User"
+  },
+  {
+   "role": "Sales Manager"
+  },
+  {
+   "role": "Maintenance User"
+  },
+  {
+   "role": "Accounts User"
+  },
+  {
+   "role": "Stock User"
+  }
+ ],
+ "timeout": 0
+}

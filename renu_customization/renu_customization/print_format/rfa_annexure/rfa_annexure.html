@@ -59,8 +59,8 @@
     <div class="rows border-bottom fs-1">
        <div class="col-2 border-end fw-bold"></div>
        <div class="col-4 border-end"></div>
-       <div class="col-3 border-end fw-bold"> <p>Tax on Reverse Charge</p>  </div>
-       <div class="col-3"> <p>No</p> </div>
+       <div class="col-3 border-end fw-bold"> <p>Tax on Reverse Charge</p></div>
+       <div class="col-3"> <p><span>{% if doc.is_reverse_charge == 1 %}Yes{% else %}No{% endif %}</span></p> </div>
    </div>
    
    <div class="p-2">
