@@ -315,7 +315,7 @@ def get_data(filters):
  
         WHERE so.docstatus = 1
 
-        AND so.status = "Completed"
+        AND so.status IN  ("Completed", "Closed")
         {conditions}
  
         GROUP BY soi.name
