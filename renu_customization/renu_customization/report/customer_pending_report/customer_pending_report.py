@@ -1,3 +1,9 @@
+# Copyright (c) 2025, Assimilate Technologies Pvt Ltd and contributors
+# For license information, please see license.txt
+
+# import frappe
+
+
 import frappe
 
 from frappe import _
@@ -24,6 +30,8 @@ def get_columns():
         _("Customer's PO No.") + ":Data:170",
 
         _("Customer's PO Date") + ":Date:170",
+
+        
 
         _("Customer Code") + ":Link/Customer:150",
 
@@ -183,10 +191,9 @@ def get_data(filters):
 
         LEFT JOIN `tabSales Invoice` si ON si.name = sii.parent
  
-        WHERE so.docstatus = 1
-        AND so.status = "Completed"
+        WHERE (so.status != "Completed" OR so.status IS NULL)
         {conditions}
-        
+ 
         GROUP BY soi.name
 
         ORDER BY so.creation ASC, so.name ASC
@@ -195,4 +202,4 @@ def get_data(filters):
  
     return frappe.db.sql(sql, filters, as_list=True)
 
-
+ 
