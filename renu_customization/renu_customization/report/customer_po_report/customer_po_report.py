@@ -251,9 +251,7 @@ def get_columns():
 
         _("Available Qty") + ":Float:120",
 
-        _("Delivered Qty") + ":Float:120",
-
-        _("Open Qty") + ":Float:120",
+       
 
         
 
