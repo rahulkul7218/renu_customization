@@ -163,7 +163,8 @@ def get_data(filters):
  
             si.base_grand_total AS invoice_total,
 
-            si.outstanding_amount AS outstanding,
+            si.outstanding_amount * si.conversion_rate AS outstanding,
+            
  
             so.delivery_date AS delivery_date,
  
