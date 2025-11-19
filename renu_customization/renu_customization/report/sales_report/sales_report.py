@@ -123,7 +123,7 @@ def execute(filters=None):
             FORMAT(sii.amount, 2, 'en_IN') AS amount,
             si.currency AS currency,
             si.conversion_rate AS exchange_rate,
-            FORMAT(sii.amount, 2, 'en_IN') AS base_amount,
+            FORMAT(sii.base_amount, 2, 'en_IN') AS base_amount,
  
             dn.posting_date AS delivery_date,
  
