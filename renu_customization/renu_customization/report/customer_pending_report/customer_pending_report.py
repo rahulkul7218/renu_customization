@@ -58,9 +58,9 @@ def get_columns():
 
         _("Amount (INR)") + ":Float:120",
 
-        _("Invoice Grand Total") + ":Float:180",
+        _("Invoice Grand Total (INR)") + ":Float:180",
 
-        _("Outstanding Amount") + ":Float:170",
+        _("Outstanding Amount (INR)") + ":Float:170",
 
         _("Delivery Date") + ":Date:120",
 
@@ -161,9 +161,9 @@ def get_data(filters):
  
             soi.base_amount AS po_total,
  
-            si.grand_total AS invoice_total,
+            si.base_grand_total AS invoice_total,
 
-            si.outstanding_amount AS outstanding,
+            si.base_outstanding_amount AS outstanding,
  
             so.delivery_date AS delivery_date,
  
