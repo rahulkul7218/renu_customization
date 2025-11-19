@@ -5,19 +5,19 @@ frappe.query_reports["Customer Pending Report"] = {
     filters: [
         {
             fieldname: "creation_no",
-            label: "Creation No",
+            label: "SO No",
             fieldtype: "Link",
             options: "Sales Order",
             reqd: 0
         },
         {
             fieldname: "from_date",
-            label: "From Creation Date",
+            label: "From SO Date",
             fieldtype: "Date",
         },
         {
             fieldname: "to_date",
-            label: "To Creation Date",
+            label: "To SO Date",
             fieldtype: "Date",
         },
         

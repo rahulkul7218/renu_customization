@@ -118,7 +118,7 @@ def get_data(filters):
  
     sql = f"""
 
-        SELECT
+        SELECT DISTINCT
 
             so.name AS creation_no,
 
@@ -204,7 +204,7 @@ def get_data(filters):
         WHERE (so.status != "Completed" OR so.status IS NULL)
         {conditions}
  
-        GROUP BY soi.name
+        # GROUP BY soi.name
 
         ORDER BY so.creation ASC, so.name ASC
 
