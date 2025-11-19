@@ -77,7 +77,7 @@ def execute(filters=None):
         {"label": "Amount", "fieldname": "amount", "fieldtype": "Float", "width": 120},
         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 120},
         {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Float", "width": 140},
-        {"label": "Total", "fieldname": "base_amount", "fieldtype": "Float", "width": 120},
+        {"label": "Amount (INR)", "fieldname": "base_amount", "fieldtype": "Float", "width": 120},
  
         {"label": "Delivery Date", "fieldname": "delivery_date", "fieldtype": "Date", "width": 120},
  
