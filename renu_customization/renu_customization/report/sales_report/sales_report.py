@@ -135,7 +135,16 @@ def execute(filters=None):
  
             CASE WHEN ad.country = 'India' THEN 'Domestic' ELSE 'Export' END AS dom_exp,
  
-            FORMAT(IFNULL(ip.price_list_rate, 0), 2, 'en_IN') AS item_purchase_rate,
+            (
+            SELECT 
+                FORMAT(IFNULL(sle.incoming_rate, 0), 2, 'en_IN')
+            FROM `tabStock Ledger Entry` sle
+            WHERE sle.item_code = sii.item_code
+            AND sle.actual_qty > 0           -- Only incoming entries
+            ORDER BY sle.posting_date DESC, sle.posting_time DESC
+            LIMIT 1
+        ) AS item_purchase_rate,
+
             '' AS old_new_flg,
             '' AS business_activity,
             '' AS business_vertical
