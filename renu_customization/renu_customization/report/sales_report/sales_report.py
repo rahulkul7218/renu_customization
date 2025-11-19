@@ -77,7 +77,7 @@ def execute(filters=None):
         {"label": "Amount", "fieldname": "amount", "fieldtype": "Float", "width": 120},
         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 120},
         {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Float", "width": 140},
-        {"label": "Total", "fieldname": "total_amount", "fieldtype": "Float", "width": 120},
+        {"label": "Total", "fieldname": "base_amount", "fieldtype": "Float", "width": 120},
  
         {"label": "Delivery Date", "fieldname": "delivery_date", "fieldtype": "Date", "width": 120},
  
@@ -123,7 +123,7 @@ def execute(filters=None):
             FORMAT(sii.amount, 2, 'en_IN') AS amount,
             si.currency AS currency,
             si.conversion_rate AS exchange_rate,
-            FORMAT(sii.amount, 2, 'en_IN') AS total_amount,
+            FORMAT(sii.amount, 2, 'en_IN') AS base_amount,
  
             dn.posting_date AS delivery_date,
  

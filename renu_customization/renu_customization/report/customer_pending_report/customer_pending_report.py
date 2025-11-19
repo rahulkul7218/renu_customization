@@ -56,7 +56,7 @@ def get_columns():
 
         _("Exchange Rate") + ":Float:150",
 
-        _("PO Total") + ":Float:120",
+        _("Amount (INR)") + ":Float:120",
 
         _("Invoice Grand Total") + ":Float:180",
 
@@ -118,7 +118,7 @@ def get_data(filters):
  
     sql = f"""
 
-        SELECT DISTINCT
+        SELECT
 
             so.name AS creation_no,
 
@@ -204,7 +204,7 @@ def get_data(filters):
         WHERE (so.status != "Completed" OR so.status IS NULL)
         {conditions}
  
-        # GROUP BY soi.name
+        GROUP BY soi.name
 
         ORDER BY so.creation ASC, so.name ASC
 
