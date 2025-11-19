@@ -102,7 +102,8 @@ def execute(filters=None):
         SELECT
             si.name AS invoice_id,
             si.posting_date AS invoice_date,
-            ROW_NUMBER() OVER (ORDER BY si.posting_date ASC, si.name ASC) AS sr_no,
+           ROW_NUMBER() OVER (PARTITION BY so.name ORDER BY soi.idx) AS sr_no,
+ 
             si.po_no AS po_no,
             si.po_date AS po_date,
  

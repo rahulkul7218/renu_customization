@@ -39,6 +39,10 @@ def get_columns():
 
         _("PO Quantity") + ":Float:120",
 
+        
+
+        _("PO Delivered Qty") + ":Float:120",
+
         _("Item Rate") + ":Float:120",
 
         _("Currency") + ":Link/Currency:100",
@@ -113,13 +117,14 @@ def get_data(filters):
 
             DATE(so.creation) AS creation_date,
  
-            ROW_NUMBER() OVER (ORDER BY so.creation ASC, so.name ASC) AS sr_no,
+            ROW_NUMBER() OVER (PARTITION BY so.name ORDER BY soi.idx) AS sr_no,
+ 
  
             si.po_no AS po_no,
 
             si.po_date AS po_date,
 
-            so.status AS status,
+            
 
             c.customer_code AS customer_code,
 
@@ -134,6 +139,10 @@ def get_data(filters):
             soi.description AS description,
 
             soi.qty AS po_qty,
+
+            
+
+            soi.delivered_qty AS delivered_qty,
  
             soi.rate AS item_rate,
 

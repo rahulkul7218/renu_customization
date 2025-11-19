@@ -1,7 +1,4 @@
-# Copyright (c) 2025, Assimilate Technologies Pvt Ltd and contributors
-# For license information, please see license.txt
 
-# import frappe
 
 
 import frappe
@@ -21,17 +18,15 @@ def get_columns():
 
     return [
 
-        _("Creation No") + ":Link/Sales Order:150",
+        _("SO No") + ":Link/Sales Order:150",
 
-        _("Creation Date") + ":Date:120",
+        _("SO Date") + ":Date:120",
 
         _("Sr.No.") + ":Int:70",
 
         _("Customer's PO No.") + ":Data:170",
 
         _("Customer's PO Date") + ":Date:170",
-
-        
 
         _("Customer Code") + ":Link/Customer:150",
 
@@ -46,6 +41,14 @@ def get_columns():
         _("Description") + ":Data:250",
 
         _("PO Quantity") + ":Float:120",
+
+        _("Available Qty") + ":Float:120",
+
+        _("PO Delivered Qty") + ":Float:120",
+
+        _("PO Open Qty") + ":Float:120",
+
+        
 
         _("Item Rate") + ":Float:120",
 
@@ -121,13 +124,13 @@ def get_data(filters):
 
             DATE(so.creation) AS creation_date,
  
-            ROW_NUMBER() OVER (ORDER BY so.creation ASC, so.name ASC) AS sr_no,
+            ROW_NUMBER() OVER (PARTITION BY so.name ORDER BY soi.idx) AS sr_no,
  
             si.po_no AS po_no,
 
             si.po_date AS po_date,
 
-            so.status AS status,
+            
 
             c.customer_code AS customer_code,
 
@@ -142,6 +145,13 @@ def get_data(filters):
             soi.description AS description,
 
             soi.qty AS po_qty,
+            "" AS available_qty,
+
+            soi.delivered_qty AS delivered_qty,
+            (soi.qty - soi.delivered_qty) AS open_qty,
+
+            
+
  
             soi.rate AS item_rate,
 
@@ -149,7 +159,7 @@ def get_data(filters):
 
             so.conversion_rate AS exchange_rate,
  
-            soi.amount AS po_total,
+            soi.base_amount AS po_total,
  
             si.grand_total AS invoice_total,
 
@@ -201,5 +211,3 @@ def get_data(filters):
     """
  
     return frappe.db.sql(sql, filters, as_list=True)
-
- 
