@@ -40,13 +40,13 @@ def get_columns():
 
         _("Description") + ":Data:250",
 
-        _("PO Quantity") + ":Float:120",
+        _("Order Quantity") + ":Float:120",
 
         _("Available Qty") + ":Float:120",
 
-        _("PO Delivered Qty") + ":Float:120",
+        _("Delivered Qty") + ":Float:120",
 
-        _("PO Open Qty") + ":Float:120",
+        _("Open Qty") + ":Float:120",
 
         
 
@@ -58,7 +58,7 @@ def get_columns():
 
         _("Amount (INR)") + ":Float:120",
 
-        _("Invoice Grand Total (INR)") + ":Float:180",
+        _("Invoiced Grand Total (INR)") + ":Float:180",
 
         _("Outstanding Amount (INR)") + ":Float:170",
 
@@ -202,8 +202,9 @@ def get_data(filters):
 
         LEFT JOIN `tabSales Invoice` si ON si.name = sii.parent
  
-        WHERE (so.status != "Completed" OR so.status IS NULL)
+        WHERE (so.status NOT IN ("Completed", "Cancelled") OR so.status IS NULL)
         {conditions}
+
  
         GROUP BY soi.name
 
