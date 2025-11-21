@@ -623,7 +623,7 @@ def get_data(filters):
         LEFT JOIN `tabSales Invoice` si ON si.name = sii.parent
  
         WHERE so.docstatus = 1 AND so.status = "Completed"
-         {conditions}
+        {conditions}
 
  
         GROUP BY soi.name
