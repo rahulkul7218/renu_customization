@@ -353,6 +353,7 @@ doctype_js = {
     "public/js/fetched_warrantydetails_on_deliverynoteitem.js", "public/js/fetched_warranty_date_from_delievrynote_if_date_of_dispatch.js"],
     # "public/js/calculate_end_date_on_delivery_note_and_update_serial_no.js"
     "Sales Invoice":["public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js",
+    "public/js/fetched_freight_charges_from_sales_order_to_sales_invoice.js",
     "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", 
     "public/js/update_serial_no_on_sales_invoice_while_submitting.js", "public/js/set_by_default_value_of_delivery_terms_on_sales_invoice.js"],
 
@@ -389,6 +390,8 @@ doc_events = {
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
         "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
+        
+        
     }
 
 
