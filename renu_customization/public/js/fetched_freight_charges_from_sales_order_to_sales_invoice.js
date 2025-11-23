@@ -145,6 +145,10 @@ function fetch_non_stock_items(frm) {
                                                 sales_order_item: row.name,
                                                 uom: row.uom,
                                                 item_name: row.item_name,
+                                                party_item_code: row.party_item_code,
+                                                warranty_name: row.warranty_name,
+                                                warranty_days: row.warranty_days,
+                                                warranty_begins: row.warranty_begins,
                                                 income_account: income_acc    // ⭐ only from company
                                             });
 
