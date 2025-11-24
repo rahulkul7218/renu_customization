@@ -309,6 +309,7 @@ after_migrate = [
     "renu_customization.patches.v_0.unmandatory_field_material_request_item.execute",
     "renu_customization.patches.v_0.add_open_qty_field_on_purchase_order_item.execute",
     "renu_customization.patches.v_0.add_open_qty_on_sales_order_item.execute",
+    "renu_customization.patches.v_0.add_customer_acknowledge_date_on_sales_order_item_table.execute",
    
   
 
