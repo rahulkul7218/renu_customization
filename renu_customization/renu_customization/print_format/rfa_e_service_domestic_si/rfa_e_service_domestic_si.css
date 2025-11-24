@@ -1,6 +1,6 @@
 @page {
-    size: Legal;
-    margin: 5mm;
+    size: A4;
+    margin: 10mm;
 }
 
 @media print {

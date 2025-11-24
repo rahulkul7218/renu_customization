@@ -362,6 +362,7 @@ doctype_js = {
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
     
     "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
+    "public/js/show_relevent_print_format_on_sales_order.js",
     "public/js/calculate_open_qty_on_so_item.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
     "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"],
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
