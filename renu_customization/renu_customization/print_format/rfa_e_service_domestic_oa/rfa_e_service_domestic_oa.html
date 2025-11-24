@@ -132,7 +132,7 @@
                           <th>Sr.No.</th>
                           <th>Item Code</th>
                           <th>Description of Goods</th>
-                          <th>Delivery Date</th>
+                          <th>Dispatch Date</th>
                           <th>HSN Code</th>
                           <th>GST%</th>
                           <th>Qty</th>
@@ -149,7 +149,7 @@
                           <td>{{ row.item_name or ""}}<br>
                             {{row.party_item_code or ""}}
                           </td>
-                          <td>{{ row.delivery_date or ""}}</td>
+                          <td>{{ row.customer_acknowledge_date or ""}}</td>
                           <td>{{ row.gst_hsn_code or ''}}</td>
                           {% if row.igst_rate %}
                               <td>{{ row.igst_rate or "" }}</td>
