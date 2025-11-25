@@ -150,7 +150,7 @@
                             {{row.party_item_code or ""}}
                             
                         </td>
-                        <td>{{ doc.delivery_date}}</td>
+                        <td>{{ row.delivery_date}}</td>
                           <td>{{ row.gst_hsn_code or ''}}</td>
                           {% if row.igst_rate %}
                               <td>{{ row.igst_rate or "" }}</td>
@@ -272,11 +272,21 @@
           <td colspan="2" style="font-size: 12px;">
                <p>{{ doc.payment_schedule[0].payment_term or ""}}</p>      
           </td>
+          
+          
           <td rowspan="2" class="signature-block" style="text-align:right;">For {{doc.company or ""}}
             <br/><br/><br/><br/>
              <p class="bottom-text" style="text-align: center;">Authorised Signatory</p>
           </td>
       </tr>
+      
+      <tr>
+        <td colspan="1" class="payment_term"><b>Important Note:-</b></td>
+          <td colspan="2" style="font-size: 12px;">
+               <p>{{ doc.important_note or ""}}</p>      
+          </td>
+      </tr>
+    
       <tr >
           <td colspan="4">
             <p></p><br/>

@@ -1,0 +1,156 @@
+/* ================================================
+   ANNEXURE C-1 – FINAL EXACT PDF-STYLE LAYOUT
+   ================================================= */
+
+/* PAGE */
+@page { size: A4; margin: 12mm; }
+
+body.print-a4 {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    color: #000;
+    line-height: 1.35;
+    margin: 5px;
+}
+
+/* OUTER FULL BORDER */
+.annexure-wrapper {
+    width: 100%;
+    border: 1px solid #000;
+    padding: 6px 10px;
+    box-sizing: border-box;
+}
+
+/* MAIN TABLE */
+.annex-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.annex-table td {
+    padding: 6px 8px;
+    vertical-align: top;
+    border: none; /* Only outer border exists, inner is minimal */
+}
+
+/* TITLE ROW */
+.annex-title-row td {
+    text-align: center;
+    font-size: 14px;
+    font-weight: bold;
+    border-bottom: 1px solid #000;
+    padding: 10px 0;
+}
+
+/* ================================
+   SUMMARY ROW: LABEL + VALUE
+   ================================ */
+
+.summary-row td {
+    padding: 0px 2px;
+    font-size: 12px;
+    vertical-align: top;
+}
+
+.summary-row .label-summ {
+    font-weight: bold;
+    display: inline-block;
+    min-width: 110px;       /* Align all labels equally */
+    text-align: left;
+}
+
+.summary-row .value {
+    font-weight: normal;
+    display: inline-block;
+}
+
+.summary-left {
+    width: 55%;
+}
+
+.summary-right {
+    width: 45%;
+    text-align: left;
+}
+
+.summary-right .label {
+    min-width: 90px;
+    text-align: left;
+    display: inline-block;
+}
+
+
+/* SECTION TITLE BAR */
+.section-title td {
+    text-align: center;
+    font-weight: bold;
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    padding: 4px 0;
+    font-size: 12px;
+}
+
+/* NUMBER + LABEL + VALUE */
+.num-col {
+    width: 2%;
+    font-weight: bold;
+    text-align: left;
+}
+
+.label-col {
+    width: 48%;
+    font-weight: bold;
+    text-align: left;
+    font-size: 12px;
+    margin: 0;
+    padding: 0;
+}
+
+.val-col {
+    width: 50%;
+    white-space: pre-wrap;
+    text-align: left;
+    font-size: 12px;
+    margin: 0;
+    padding: 0;
+}
+
+/* Row separator */
+/* .data-row:not(:first-child) td {
+    border-top: 1px solid #e0e0e0;
+} */
+
+/* CERTIFICATION */
+.certification {
+    padding: 6px 4px;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+/* FOOTER */
+.footer-table {
+    width: 100%;
+    border-top: 1px solid #000;
+    margin-top: 10px;
+}
+
+.footer-table td {
+    padding: 8px 8px;
+    vertical-align: top;
+}
+
+.footer-left { width: 70%; font-size: 12px; }
+.footer-right { width: 30%; text-align: right; font-size: 12px; }
+
+/* SELF SEAL BOX */
+.self-seal-box {
+    
+    padding: 8px 8px;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+/* PRINT FIX */
+@media print {
+    body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}

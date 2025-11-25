@@ -148,8 +148,8 @@ def execute(filters=None):
             /* PO Booking Qty = Total ordered qty */
             IFNULL((
                 SELECT SUM(IFNULL(poi.qty, 0))
-                FROM `tabPurchase Order Item` poi
-                INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
+                FROM `tabSales Order Item` poi
+                INNER JOIN `tabSales Order` po ON poi.parent = po.name
                 WHERE poi.item_code = it.item_code
                 AND po.docstatus = 1
                 AND po.status NOT IN ('Stopped', 'Cancelled')
@@ -158,30 +158,31 @@ def execute(filters=None):
             /* Open PO Qty FIXED = SUM(poi.open_qty) */
             /* Correct Open PO Qty = SUM(qty - received_qty) */
             IFNULL((
-                SELECT SUM(
-                    (IFNULL(poi.qty, 0) - IFNULL(poi.received_qty, 0))
-                )
-                FROM `tabPurchase Order Item` poi
-                INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
-                WHERE poi.item_code = it.item_code
-                AND po.docstatus = 1
-                AND po.status NOT IN ('Stopped','Cancelled')
-            ), 0) AS open_qty,
+    SELECT SUM(
+        (IFNULL(soi.qty, 0) - IFNULL(soi.delivered_qty, 0))
+    )
+    FROM `tabSales Order Item` soi
+    INNER JOIN `tabSales Order` so ON soi.parent = so.name
+    WHERE soi.item_code = it.item_code
+      AND so.docstatus = 1
+      AND so.status NOT IN ('Closed', 'Cancelled', 'Completed')
+), 0) AS open_qty,
 
 
 
             /* Free Qty = Stock - Pending purchase orders */
-            (
-                IFNULL(SUM(bin.actual_qty), 0) -
-                IFNULL((
-                    SELECT SUM(GREATEST(0, (poi.qty - IFNULL(poi.received_qty,0))))
-                    FROM `tabPurchase Order Item` poi
-                    INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
-                    WHERE poi.item_code = it.item_code
-                      AND po.docstatus = 1
-                      AND po.status NOT IN ('Stopped', 'Cancelled')
-                ), 0)
-            ) AS free_item_qty,
+(
+    IFNULL(SUM(bin.actual_qty), 0) -
+    IFNULL((
+        SELECT SUM(GREATEST(0, soi.qty))
+        FROM `tabSales Order Item` soi
+        INNER JOIN `tabSales Order` so ON soi.parent = so.name
+        WHERE soi.item_code = it.item_code
+          AND so.docstatus = 1
+          AND so.status NOT IN ('Closed', 'Cancelled')
+    ), 0)
+) AS free_item_qty,
+
 
             /* Units Sold (Last 6 Months) */
             IFNULL((

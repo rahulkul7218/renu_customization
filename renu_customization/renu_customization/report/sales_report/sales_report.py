@@ -77,7 +77,7 @@ def execute(filters=None):
         {"label": "Amount", "fieldname": "amount", "fieldtype": "Float", "width": 120},
         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 120},
         {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Float", "width": 140},
-        {"label": "Total", "fieldname": "total_amount", "fieldtype": "Float", "width": 120},
+        {"label": "Amount (INR)", "fieldname": "base_amount", "fieldtype": "Float", "width": 120},
  
         {"label": "Delivery Date", "fieldname": "delivery_date", "fieldtype": "Date", "width": 120},
  
@@ -102,7 +102,8 @@ def execute(filters=None):
         SELECT
             si.name AS invoice_id,
             si.posting_date AS invoice_date,
-            ROW_NUMBER() OVER (ORDER BY si.posting_date ASC, si.name ASC) AS sr_no,
+           ROW_NUMBER() OVER (PARTITION BY so.name ORDER BY soi.idx) AS sr_no,
+ 
             si.po_no AS po_no,
             si.po_date AS po_date,
  
@@ -122,7 +123,7 @@ def execute(filters=None):
             FORMAT(sii.amount, 2, 'en_IN') AS amount,
             si.currency AS currency,
             si.conversion_rate AS exchange_rate,
-            FORMAT(sii.amount, 2, 'en_IN') AS total_amount,
+            FORMAT(sii.base_amount, 2, 'en_IN') AS base_amount,
  
             dn.posting_date AS delivery_date,
  
@@ -134,7 +135,16 @@ def execute(filters=None):
  
             CASE WHEN ad.country = 'India' THEN 'Domestic' ELSE 'Export' END AS dom_exp,
  
-            FORMAT(IFNULL(ip.price_list_rate, 0), 2, 'en_IN') AS item_purchase_rate,
+            (
+            SELECT 
+                FORMAT(IFNULL(sle.incoming_rate, 0), 2, 'en_IN')
+            FROM `tabStock Ledger Entry` sle
+            WHERE sle.item_code = sii.item_code
+            AND sle.actual_qty > 0           -- Only incoming entries
+            ORDER BY sle.posting_date DESC, sle.posting_time DESC
+            LIMIT 1
+        ) AS item_purchase_rate,
+
             '' AS old_new_flg,
             '' AS business_activity,
             '' AS business_vertical

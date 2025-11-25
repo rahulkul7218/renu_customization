@@ -58,7 +58,8 @@ def execute(filters=None):
  
             FORMAT(si.grand_total, 2) AS invoice_value,
 
-            FORMAT(si.outstanding_amount, 2) AS outstanding_amount,
+            si.outstanding_amount * si.conversion_rate AS outstanding,
+             
  
             si.currency AS currency,
 
@@ -125,7 +126,7 @@ def execute(filters=None):
  
         {"label": "Invoice Value", "fieldname": "invoice_value", "fieldtype": "Float", "width": 150},
 
-        {"label": "Outstanding Amount", "fieldname": "outstanding_amount", "fieldtype": "Float", "width": 170},
+        {"label": "Outstanding Amount (INR)", "fieldname": "outstanding", "fieldtype": "Float", "width": 170},
  
         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 140},
 

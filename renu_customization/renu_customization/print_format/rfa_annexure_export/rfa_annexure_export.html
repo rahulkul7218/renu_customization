@@ -1,0 +1,204 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ANNEXURE 'C-1' - Examination Report</title>
+
+<style>
+{% include "renu_customization/renu_customization/print_format/rfa_annexure_export/rfa_annexure_export.css" %}
+</style>
+</head>
+
+<body class="print-a4">
+
+{% set company = frappe.get_doc("Company", doc.company) %}
+{% set billing_addr = doc.customer_address and frappe.get_doc("Address", doc.customer_address) or None %}
+{% set shipping_addr = doc.shipping_address_name and frappe.get_doc("Address", doc.shipping_address_name) or None %}
+{% set iec_num = company.get("iec_code") or "" %}
+
+
+{% set cust_addr = "" %}
+{% if billing_addr %}
+  {% set cust_addr = (billing_addr.address_line1 or "")
+      ~ (billing_addr.address_line2 and ", " ~ billing_addr.address_line2 or "")
+      ~ (billing_addr.city and ", " ~ billing_addr.city or "")
+      ~ (billing_addr.state and ", " ~ billing_addr.state or "")
+      ~ (billing_addr.pincode and " - " ~ billing_addr.pincode or "")
+  %}
+{% endif %}
+
+{% set consignee = "" %}
+{% if doc.consignee %}
+  {% set consignee = doc.consignee %}
+{% elif shipping_addr %}
+  {% set consignee =
+    (shipping_addr.address_line1 or "") ~ "<br/>" ~
+    (shipping_addr.address_line2 or "") ~ "<br/>" ~
+    (shipping_addr.city or "") ~
+    (shipping_addr.pincode and " - " ~ shipping_addr.pincode or "") ~ "<br/>" ~
+    (shipping_addr.country or "")
+  %}
+{% endif %}
+
+<div class="annexure-wrapper">
+
+<table class="annex-table">
+
+  <!-- Title -->
+  <tr class="annex-title-row">
+    <td colspan="3">ANNEXURE 'C-1'</td>
+  </tr>
+
+  <!-- Summary -->
+<tr class="summary-row">
+  <td class="summary-left">
+    <span class="label-summ">RANGE -</span>
+    <span class="value">{{ doc.range or "Customs Facilitation Range Jejuri" }}</span>
+  </td>
+
+  <td class="summary-right" colspan="2">
+    <span class="label-summ">DIVISION -</span>
+    <span class="value">{{ doc.division or "Customs Division Pune" }}</span>
+  </td>
+</tr>
+
+<tr class="summary-row">
+  <td class="summary-left">
+    <span class="label-summ">COMMISSIONERATE: </span>
+    <span class="value">{{ doc.commissionerate or "Pune Customs" }}</span>
+  </td>
+  <td class="summary-right" colspan="2"></td>
+</tr>
+
+<tr class="summary-row">
+  <td class="summary-left">
+    <span class="label-summ">C.NO.: </span>
+    <span class="value">{{ doc.cno or "" }}</span>
+  </td>
+
+  <td class="summary-right" colspan="2">
+    <span class="label-summ">DATE: </span>
+    <span class="value">{{ frappe.utils.formatdate(doc.posting_date) }}</span>
+  </td>
+</tr>
+
+<tr class="summary-row">
+  <td class="summary-left">
+    <span class="label-summ">SHIPPING BILL NO.: </span>
+    <span class="value">{{ doc.shipping_bill_no or "" }}</span>
+  </td>
+
+  <td class="summary-right" colspan="2">
+    <span class="label-summ">DATE: </span>
+    <span class="value">{{ frappe.utils.formatdate(doc.shipping_bill_date or doc.posting_date) }}</span>
+  </td>
+</tr>
+
+
+  <!-- Section Title -->
+  <tr class="section-title">
+    <td colspan="3">EXAMINATION REPORT FOR FACTORY SEALED PACKAGES OF UNITS</td>
+  </tr>
+
+  <!-- Numbered Rows -->
+  <tr class="data-row">
+   
+    <td class="label-col">1. Name</td>
+    <td class="val-col">{{ doc.customer_name or company.company_name }}</td>
+  </tr>
+
+  <tr class="data-row">
+    <td class="label-col">2. IEC No.</td>
+    <td class="val-col">{{ iec_num }}</td>
+  </tr>
+
+  <tr class="data-row">
+    
+    <td class="label-col">3. Address</td>
+    <td class="val-col">{{ cust_addr }}</td>
+  </tr>
+
+  <tr class="data-row">
+   
+    <td class="label-col">4. Date of examination</td>
+    <td class="val-col">{{ frappe.utils.formatdate(doc.date_of_examination or doc.posting_date) }}</td>
+  </tr>
+
+  <tr class="data-row">
+    
+    <td class="label-col">5. Name and Designation of the examining officer - Inspector/EO/PO</td>
+    <td class="val-col">{{ doc.inspector_name or "NA" }}</td>
+  </tr>
+
+  <tr class="data-row">
+   
+    <td class="label-col">6. (a) Name of Commissionerate/Division/Range<br><br/>(b) Location Code</td>
+    <td class="val-col">{{ doc.commissionerate_detail or "Customs Pune / Pune Customs Div. / Customs Facilitation Range Jejuri" }}</td>
+  </tr>
+
+  <tr class="data-row">
+    
+    <td class="label-col">7. Particulars of Export Invoice<br/>
+        (a) Export Invoice No.<br/>
+        (b) Total No. of packages<br/>
+        (c) Name and Address of the consignee abroad
+    </td>
+    <td class="val-col">
+       {{ doc.name }} &nbsp;&nbsp; {{ frappe.utils.formatdate(doc.posting_date) }}
+      {{ doc.total_packages or doc.total_qty or 0 }}
+      {{ consignee | safe }}
+    </td>
+  </tr>
+
+  <tr class="data-row">
+    
+    <td class="label-col">8. (a) Is the description of goods, the  quantity and their value as per the particulars furnished in the export invoice?<br>(b) Whether sample is drawn for being forwarded to port of export?</td>
+    <td class="val-col">
+      {{ doc.is_description_as_per_invoice or "Yes" }}<br>
+      {{ doc.sample_drawn or "NO" }}
+    </td>
+  </tr>
+
+  <tr class="data-row">
+    
+    <td class="label-col">9. Central Excise/Customs Plier Nos. <br/>
+        (a)For non-containeraised cargo Nos. of packages <br/>
+        (b)For containeraised cargo <br/>
+        Container Number<br/>
+        Size
+    </td>
+    <td class="val-col">
+       {{ doc.non_container_packages or doc.total_packages or 0 }}
+       {{ doc.containerised_cargo or "NIL" }}<br>
+      {% if doc.container_no %} {{ doc.container_no }}<br>{% endif %}
+      {% if doc.container_size %} {{ doc.container_size }}{% endif %}
+    </td>
+  </tr>
+
+</table>
+
+<!-- Certification -->
+<div class="certification">
+"Certifies that the description and value of the goods covered by Invoice No. {{ doc.name }} Dt. {{ frappe.utils.formatdate(doc.posting_date) }} have been checked by me and the goods have been packed and sealed with lead seal under my supervision. (Under Excise Circular No. 736/52/2003-CX Dt. 11th Aug 2003 & 860/18/2007-CX Dt. 22nd Nov 2007)"
+</div>
+
+<!-- Footer -->
+<table class="footer-table">
+  <tr>
+    <td class="footer-left">
+      <strong>For {{ company.company_name }}</strong><br><br><br>
+      Authorised Signature of Exporter<br>
+      <strong>{{ frappe.db.get_value("User", frappe.session.user, "full_name") or ""}}</strong><br>
+      {{ doc.signatory_designation or "" }}<br>
+      Date : {{ frappe.utils.formatdate(doc.sign_date or doc.posting_date) }}
+    </td>
+
+    <td class="footer-right">
+      <div class="self-seal-box">SELF SEALING</div>
+    </td>
+  </tr>
+</table>
+</div>
+
+</body>
+</html>
