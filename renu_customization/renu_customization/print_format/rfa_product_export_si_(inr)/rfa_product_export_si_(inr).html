@@ -239,14 +239,14 @@
             <td colspan="4">
                 <div class="gst-container">
                     <p class="gst-heading">GST Details :-</p>
-                    <!-- {% if doc.gst_breakup_table %}
+                    {% if doc.gst_breakup_table %}
                 {{ doc.gst_breakup_table | safe }}
             {% else %}
                {{""}}
-            {% endif %} -->
+            {% endif %}
 
 
-                    {% set hsn_table = {} %}
+                    <!-- {% set hsn_table = {} %}
 
                     {% for row in doc.items %}
                     {% set hsn = row.gst_hsn_code %}
@@ -255,7 +255,7 @@
                     {% set _ = hsn_table.update({
                     hsn: {
                     "taxable": row.net_amount or 0,
-                    "igst_rate": row.igst_base_rate or 0,
+                    "igst_rate": row.igst_rate or 0,
                     "igst_amt": row.igst_amount or 0
                     }
                     }) %}
@@ -266,9 +266,9 @@
                     }) %}
                     {% endif %}
                     {% endif %}
-                    {% endfor %}
+                    {% endfor %} -->
 
-                    <table class="table table-bordered" style="width:100%; font-size:12px;">
+                    <!-- <table class="table table-bordered" style="width:100%; font-size:12px;">
                         <thead>
                             <tr>
                                 <th>HSN Code</th>
@@ -287,7 +287,7 @@
                             </tr>
                             {% endfor %}
                         </tbody>
-                    </table>
+                    </table> -->
 
 
 
