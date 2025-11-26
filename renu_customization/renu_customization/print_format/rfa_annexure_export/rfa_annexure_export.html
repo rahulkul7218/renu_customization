@@ -133,7 +133,7 @@
   <tr class="data-row">
    
     <td class="label-col">6. (a) Name of Commissionerate/Division/Range<br><br/>(b) Location Code</td>
-    <td class="val-col">{{ doc.commissionerate_detail or "Customs Pune / Pune Customs Div. / Customs Facilitation Range Jejuri" }}<br>{{"Pune"}}</td>
+    <td class="val-col">{{ doc.commissionerate_detail or "Customs Pune / Pune Customs Div. / Customs Facilitation Range Jejuri" }}<br>{{""}}</td>
     
     
   </tr>
@@ -149,7 +149,7 @@
     <td class="val-col">
        {{ doc.name }} &nbsp;&nbsp;&nbsp;{{ frappe.utils.formatdate(doc.posting_date) }}
        {{ doc.total_packages or doc.total_qty or 0 }}
-       {{cust_addr }}
+       {{ doc.shipping_address }}
     </td>
   </tr>
 
@@ -161,7 +161,7 @@
 (b) Whether sample is drawn for being forwarded to port of export?</td>
     <td class="val-col">
       {{ doc.is_description_as_per_invoice or "Yes" }}<br>
-      {{ doc.sample_drawn or "NO" }}
+      {{ doc.sample_drawn or "No" }}
     </td>
   </tr>
 

@@ -8,7 +8,8 @@
  "field_order": [
   "enable",
   "arn_no",
-  "date",
+  "from_date",
+  "to_date",
   "description"
  ],
  "fields": [
@@ -16,11 +17,6 @@
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
-  },
-  {
-   "fieldname": "date",
-   "fieldtype": "Date",
-   "label": "Date"
   },
   {
    "default": "0",
@@ -33,12 +29,22 @@
    "fieldtype": "Data",
    "label": "ARN No (Letter of Undertaking)",
    "unique": 1
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-24 18:33:31.949122",
+ "modified": "2025-11-26 14:11:23.988101",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "LUT Number",

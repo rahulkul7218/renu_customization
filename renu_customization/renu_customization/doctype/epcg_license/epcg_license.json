@@ -8,7 +8,8 @@
  "field_order": [
   "enable",
   "epcg_no",
-  "date",
+  "from_date",
+  "to_date",
   "description"
  ],
  "fields": [
@@ -25,20 +26,25 @@
    "unique": 1
   },
   {
-   "fieldname": "date",
-   "fieldtype": "Date",
-   "label": "Date"
-  },
-  {
    "fieldname": "description",
    "fieldtype": "Small Text",
    "label": "Description"
+  },
+  {
+   "fieldname": "from_date",
+   "fieldtype": "Date",
+   "label": "From Date"
+  },
+  {
+   "fieldname": "to_date",
+   "fieldtype": "Date",
+   "label": "To Date"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-24 18:32:52.671782",
+ "modified": "2025-11-26 16:00:37.666174",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "EPCG License",
