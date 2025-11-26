@@ -363,7 +363,7 @@
             <td colspan="2" style="font-size: 11px">
                 <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span
                         class="bold grid-item gap-10">Taxable Amount:</span> <span class="grid-item right">{{
-                        "{:,.2f}".format(doc.total | float) or "" }} </span></p>
+                        "{:,.2f}".format(doc.base_total | float) or "" }} </span></p>
                 <div id="taxes-section">
                     {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings") -%}
@@ -371,7 +371,7 @@
                 </div>
                 <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;">
                     <span class="bold grid-item gap-10">Round Off:</span> <span class="grid-item right">{{
-                        "{:,.2f}".format(doc.rounding_adjustment | float) or "" }} </span>
+                        "{:,.2f}".format(doc.base_rounding_adjustment | float) or "" }} </span>
                 </p>
 
             </td>
@@ -382,8 +382,8 @@
             <td colspan="3" style="font-size:11px; "><b>TOTAL (In words):</b> <span>{{doc.in_words or ""}}</span></td>
             <td style="width:40%">
                 <p class="grid-row" style="font-size:12px">
-                    <span class="col left"><b>GRAND TOTAL ({{doc.currency}})</b></span>
-                    <span class="col right" style="text-align: right;"> {{ "{:,.2f}".format(doc.rounded_total | float)
+                    <span class="col left"><b>GRAND TOTAL</b></span>
+                    <span class="col right" style="text-align: right;"> {{ "{:,.2f}".format(doc.base_grand_total | float)
                         or "" }}</span>
                 </p>
             </td>
