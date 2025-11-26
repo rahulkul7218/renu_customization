@@ -255,7 +255,7 @@
                     {% set _ = hsn_table.update({
                     hsn: {
                     "taxable": row.net_amount or 0,
-                    "igst_rate": row.igst_rate or 0,
+                    "igst_rate": row.igst_base_rate or 0,
                     "igst_amt": row.igst_amount or 0
                     }
                     }) %}
