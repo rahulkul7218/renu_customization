@@ -73,24 +73,24 @@
 <tr class="summary-row">
   <td class="summary-left">
     <span class="label-summ">C.NO.: </span>
-    <span class="value">{{ doc.cno or "" }}</span>
+    <span class="value">{{  "" }}</span>
   </td>
 
   <td class="summary-right" colspan="2">
     <span class="label-summ">DATE: </span>
-    <span class="value">{{ frappe.utils.formatdate(doc.posting_date) }}</span>
+    <span class="value">{{ doc.posting_date or "" }}</span>
   </td>
 </tr>
 
 <tr class="summary-row">
   <td class="summary-left">
     <span class="label-summ">SHIPPING BILL NO.: </span>
-    <span class="value">{{ doc.shipping_bill_no or "" }}</span>
+    <span class="value">{{ "" }}</span>
   </td>
 
   <td class="summary-right" colspan="2">
     <span class="label-summ">DATE: </span>
-    <span class="value">{{ frappe.utils.formatdate(doc.shipping_bill_date or doc.posting_date) }}</span>
+    <span class="value">{{  doc.posting_date or "" }}</span>
   </td>
 </tr>
 
@@ -104,7 +104,7 @@
   <tr class="data-row">
    
     <td class="label-col">1. Name</td>
-    <td class="val-col">{{ doc.customer_name or company.company_name }}</td>
+    <td class="val-col">{{ doc.customer_name }}</td>
   </tr>
 
   <tr class="data-row">
@@ -121,7 +121,7 @@
   <tr class="data-row">
    
     <td class="label-col">4. Date of examination</td>
-    <td class="val-col">{{ frappe.utils.formatdate(doc.date_of_examination or doc.posting_date) }}</td>
+    <td class="val-col">{{  doc.posting_date or ""}}</td>
   </tr>
 
   <tr class="data-row">
