@@ -364,6 +364,11 @@
                 <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span
                         class="bold grid-item gap-10">Taxable Amount:</span> <span class="grid-item right">{{
                         "{:,.2f}".format(doc.base_total | float) or "" }} </span></p>
+                
+                <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span
+                        class="bold grid-item gap-10">IGST Amount:</span> <span class="grid-item right">{{
+                        "{:,.2f}".format(doc.base_total_taxes_and_charges | float) or "" }} </span></p>
+
                 <div id="taxes-section">
                     <!-- {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings") -%}
