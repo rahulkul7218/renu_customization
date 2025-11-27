@@ -355,7 +355,7 @@ doctype_js = {
     # "public/js/calculate_end_date_on_delivery_note_and_update_serial_no.js"
     "Sales Invoice":["public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js",
     "public/js/fetched_freight_charges_from_sales_order_to_sales_invoice.js",
-    "public/js/relevent_print_format_show.js",
+    "public/js/relevent_print_format_show.js","public/js/lut_no_validate_between_invoice_range_automatcally_check_is_export_with_gst.js",
     "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", 
     "public/js/update_serial_no_on_sales_invoice_while_submitting.js", "public/js/set_by_default_value_of_delivery_terms_on_sales_invoice.js"],
 
