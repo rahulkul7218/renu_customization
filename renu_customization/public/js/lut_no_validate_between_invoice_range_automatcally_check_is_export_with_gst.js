@@ -72,15 +72,17 @@ frappe.ui.form.on("Sales Invoice", {
 
         frappe.db.get_doc("Company", frm.doc.company).then(comp => {
 
-            // --- Updated section ---
+            // CASE 1: Company has NO LUT Number
             if (!comp.lut_number) {
-                // LUT not selected → GST should be 0
-                frm.set_value("is_export_with_gst", 0);
-                return;   // still end here because no LUT data to validate
+                if (frm.doc.invoice_type === "Product Export") {
+                    frm.set_value("is_export_with_gst", 1);
+                } else {
+                    frm.set_value("is_export_with_gst", 0);
+                }
+                return;
             }
-            // --- End update ---
 
-            // LUT exists → validate date
+            // CASE 2: Company has LUT Number → Validate dates
             frappe.db.get_doc("LUT Number", comp.lut_number).then(lut => {
                 let from_date = lut.from_date;
                 let to_date = lut.to_date;
