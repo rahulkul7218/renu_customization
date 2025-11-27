@@ -54,7 +54,7 @@ function validate_date_and_clear(frm, fieldname, doctype_name) {
     frappe.db.get_doc(doctype_name, frm.doc[fieldname]).then(doc => {
         let today = frappe.datetime.get_today();
 
-        // If to_date > today → remove + disable
+        // If to_date < today → remove + disable
         if (doc.to_date && doc.to_date < today) {
 
             // 1. Uncheck enable in linked document
