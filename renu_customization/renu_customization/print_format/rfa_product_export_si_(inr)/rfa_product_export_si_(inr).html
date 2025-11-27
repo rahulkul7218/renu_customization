@@ -203,7 +203,7 @@
                         <tr>
                             <td colspan="3">
                                 This Shipment is under EPCG Lic. No. {{ comp.epcg_no }}&nbsp;
-                                Dt. {{ epcg.to_date }}
+                                Dt. {{ epcg.from_date }}
                             </td>
                             <td colspan="5"></td>
                         </tr>
@@ -215,7 +215,7 @@
                                 <b>
                                     Supply for Export Under Letter of Undertaking without payment of IGST
                                     ( ARN No. {{ comp.lut_number }} &nbsp; 
-                                    Dt. {{ lut.to_date }} )
+                                    Dt. {{ lut.from_date }} )
                                 </b>
                             </td>
                             <td colspan="1"></td>
@@ -363,11 +363,11 @@
             <td colspan="2" style="font-size: 11px">
                 <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span
                         class="bold grid-item gap-10">Taxable Amount:</span> <span class="grid-item right">{{
-                        "{:,.2f}".format(doc.base_total_taxes_and_charges | float) or "" }} </span></p>
+                        "{:,.2f}".format(doc.base_total | float) or "" }} </span></p>
                 <div id="taxes-section">
-                    {%- set data = doc.taxes -%}
+                    <!-- {%- set data = doc.taxes -%}
                     {%- set print_settings = frappe.get_doc("Print Settings") -%}
-                    {% include "erpnext/templates/print_formats/includes/taxes.html" %}
+                    {% include "erpnext/templates/print_formats/includes/taxes.html" %} -->
                 </div>
                 <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;">
                     <span class="bold grid-item gap-10">Round Off:</span> <span class="grid-item right">{{
