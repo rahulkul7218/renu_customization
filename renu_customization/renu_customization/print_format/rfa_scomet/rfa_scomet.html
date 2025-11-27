@@ -1,0 +1,62 @@
+<style>
+    {% include "renu_customization/renu_customization/print_format/rfa_scomet/rfa_scomet.css" %}
+</style>
+
+<div class="letter-body">
+ 
+    <p class="text-right"><b>Date :</b> {{ doc.posting_date }}</p>
+ 
+    <p>
+
+        To,<br>
+
+        The Assistant Commissioner of Customs – Exports<br>
+
+        Sahar ACC,<br>
+
+        Andheri (E),<br>
+
+        Mumbai
+</p>
+ 
+    <p>
+<b>Sub:</b> SCOMET declaration<br>
+<b>Ref:</b> AWB &nbsp;&nbsp;&nbsp; Inv No. {{ doc.name }} Dt. {{ doc.posting_date }}
+</p>
+ 
+    <p>
+
+        Respected Sir / Madam,<br><br>
+ 
+        We are exporting (export items) to our customer 
+<b>{{ doc.customer_name }}</b> covered under Air Waybill (AWB).  
+
+        These are electronic products used in factory floor automation & many other applications such as control systems, pharmaceuticals, SPMs etc.
+ 
+        <br><br>
+
+        We hereby declare that these contents do <b>NOT</b> fall under 
+<b>SCOMET List</b> (Special Chemicals, Organisms, Materials, Equipment and Technologies).
+</p>
+ 
+    <p class="mt-20">
+
+        You are requested to allow the same for export.
+</p>
+ 
+    <p class="mt-20">
+
+        Thanking you,
+<br><br>
+
+        Yours faithfully,
+</p>
+ 
+    <p class="mt-40">
+<b>Name:</b> {{ frappe.db.get_value("User", doc.owner, "full_name") }}<br>
+<b>Designation:</b> Manager Production<br>
+<b>Authorized Signatory</b>
+</p>
+ 
+</div>
+ 
