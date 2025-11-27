@@ -53,8 +53,10 @@ SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies
 </p><br><br>
  
     <p class="mt-40">
-<b>Name:</b> {{ frappe.db.get_value("User", doc.owner, "full_name") }}<br>
-<b>Designation:</b> Manager Production<br>
+{% set sign = frappe.get_doc("Authorised Signatory", doc.authorised_signatory) %}
+ 
+<b>Name:</b> {{ sign.name1 }}<br>
+<b>Designation:</b> {{ sign.designation }}<br>
 <b>Authorized Signatory</b>
 </p><br>
 

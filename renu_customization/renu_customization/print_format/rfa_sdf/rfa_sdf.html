@@ -53,13 +53,13 @@
 
     <div class="sb-text">
 <b>Declaration under Foreign Exchange Regulation Act, 1973:</b>
-We hereby declare that we are the consignor of the goods in respect of which this declaration is made and that the particulars given in the Shipping Bill No. _____________ date ___________ are true and that -
+We hereby declare that we are the consignor of the goods in respect of which this declaration is made and that the particulars given in the Shipping Bill No. {{doc.name}} date {{doc.posting_date}} are true and that -
 
 a) the value as contracted with the buyer is same as the full export value declared in the above Shipping Bills.
 
 We undertake that we will deliver to the bank named herein {{ bank.bank or "" }},
 {{ addr.address_line1 or "" }} A/c No. {{ bank.bank_account_no or "" }} (AD Code 05116166200019)
-the foreign exchange representing the full export value of the goods on or before 180 days @ Rs.84.07 in the manner prescribed in Rule 9 of the Foreign Exchange Regulation Rules, 1974.
+the foreign exchange representing the full export value of the goods on or before 180 days {{doc.conversion_rate}} in the manner prescribed in Rule 9 of the Foreign Exchange Regulation Rules, 1974.
 
 We further declare that we are resident in India and we have place of business M/s
 {{ doc.company or "" }} {{ frappe.db.get_value("Address", doc.company_address, "address_line1") or "" }}, {{ company_state or "" }}, {{ company_country or "" }}
@@ -72,9 +72,11 @@ We are not in the caution list of the Reserve Bank of India.
         <div class="sb-text">
             <b>Date:</b> {{ frappe.utils.formatdate(doc.posting_date) }}
         </div>
+        {% set sign = frappe.get_doc("Authorised Signatory", doc.authorised_signatory) %}
         <div class="sb-text" style="text-align: right;">
             <b>Signature of Exporter</b><br>
-            <b>Name</b> SANJAY MADKAR<br>
+            <b>Name:</b> {{ sign.designation }}<br>
+            <b>Designation:</b> {{ sign.designation }}<br>
         </div>
     </div>
 
