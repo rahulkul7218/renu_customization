@@ -29,14 +29,14 @@
         Respected Sir / Madam,<br><br>
  
         We are exporting (export items) to our customer 
-<b>{{ doc.customer_name }}</b> covered under Air Waybill (AWB).  
+<b>{{ doc.customer_name }}</b> covered under Ups AWB &  
 
         These are electronic products used in factory floor automation & many other applications such as control systems, pharmaceuticals, SPMs etc.
  
         <br><br>
 
-        We hereby declare that these contents do <b>NOT</b> fall under 
-<b>SCOMET List</b> (Special Chemicals, Organisms, Materials, Equipment and Technologies).
+        We hereby declare that these contents do Not fall under 
+SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies).
 </p>
  
     <p class="mt-20">
@@ -50,13 +50,16 @@
 <br><br>
 
         Yours faithfully,
-</p>
+</p><br><br>
  
     <p class="mt-40">
 <b>Name:</b> {{ frappe.db.get_value("User", doc.owner, "full_name") }}<br>
 <b>Designation:</b> Manager Production<br>
 <b>Authorized Signatory</b>
-</p>
+</p><br>
+
+<p>We are exporting (export items) to our customer {{ doc.customer_name }} Inc.covered under DHL AWB & These are electronic products used in factory floor automation & many other applications such as control systems pharmaceuticals,SPMs etc.We hereby declare that these contents do not fall under SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies).<p>
+
  
 </div>
  
