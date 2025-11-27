@@ -310,6 +310,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_open_qty_field_on_purchase_order_item.execute",
     "renu_customization.patches.v_0.add_open_qty_on_sales_order_item.execute",
     "renu_customization.patches.v_0.add_important_note_on_sales_order.execute",
+    "renu_customization.patches.v_0.add_authorised_signatory_field_on_sales_invoice.execute",
    
   
 

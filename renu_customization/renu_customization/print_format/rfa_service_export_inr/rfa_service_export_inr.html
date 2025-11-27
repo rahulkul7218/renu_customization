@@ -1,0 +1,450 @@
+<style>
+    {% include "renu_customization/renu_customization/print_format/rfa_service_export_inr/rfa_service_export_inr.css" %}
+</style>
+<!-- <style>
+    {% include "renu_customization/renu_customization/print_format/rfa_product_domestic_si/rfa_product_domestic_si.css" %}
+</style> -->
+
+{% set copies = ["Original Copy", "Duplicate Copy", "Triplicate Copy", "Extra Copy"] %}
+
+{% for copy in copies %}
+
+{% set company = frappe.get_doc("Company", doc.company) %}
+{% set so = doc.items[0].sales_order %}
+
+
+<div class="print-container">
+    <table class="outer-table">
+        <!-- HEADER -->
+        <tr>
+            <td colspan="3" class="header-center">
+                <h2>&nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp; &nbsp; &nbsp;&nbsp;
+                    &nbsp; &nbsp; TAX INVOICE</h2>
+            </td>
+            <td colspan="1" class="copies-border" style="font-size:11px;">
+                {{ copy }}
+            </td>
+        </tr>
+        <tr>
+            <td colspan="4" class="header-center">
+                <p>(Issued under Section 31 of The Central Goods And Services Tax Act, 2017 Read with Chapter IV of
+                    Central Goods and Service Tax Rules, 2017)</p>
+            </td>
+        </tr>
+        <!-- COMPANY, BUYER PO, OA DETAILS -->
+        <tr>
+            <td colspan="3" class="company-info">
+                <div class="grid"
+                    style="display: grid; grid-template-columns: 100px auto; align-items: center; gap: 5px;">
+                    <!-- Logo -->
+                    <div class="logo-placeholder grid-item">
+                        <img src="{{ company.logo_for_printing }}" style="max-width: 100px;">
+                    </div>
+
+                    <!-- Company Details -->
+                    <div class="company-details grid-item">
+                        <p><b>{{ doc.company or "" }}</b></p>
+                        <p>
+                            <strong>Factory Address:- </strong>
+                            {{ frappe.db.get_value("Address", doc.company_address, "address_line1") or "" }}
+                        </p>
+                    </div>
+                </div>
+
+                <p><strong>Tel. No. </strong>{{
+                    frappe.db.get_value("Address",doc.company_address,"phone") or "" }}
+                    <strong>Email: </strong>{{ frappe.db.get_value("Address",doc.company_address,"email_id") or "" }}
+                </p>
+
+            </td>
+            <td colspan="2" rowspan="3" class="top-right-section details-col">
+                <p><strong>Buyer's PO No.: </strong> <span>{{doc.po_no or ""}}</span></p>
+                <p><strong>PO Date: </strong> <span></span>{{doc.po_date or ""}}</span></p>
+                <p><strong>OA No.: </strong> <span>{{so or ""}}</span></p>
+                <p><strong>OA Date: </strong> <span>{{doc.posting_date or ""}}</span></p>
+                <p><strong>Transport Mode: </strong> <span>{{doc.mode_of_transport or ""}}</span></p>
+                <p><strong>Way Bill No.</strong> <span>{{doc.ewaybill or ""}}</span></p>
+                <p><strong>Tax on Reverse Charge</strong> <span>{% if doc.is_reverse_charge == 1 %}Yes{% else %}No{%
+                        endif %}</span>
+                </p>
+            </td>
+        </tr>
+        <!-- OA DETAILS & DELIVERY TERMS -->
+        <tr>
+            <td style="width:70%" class="oa-section">
+                <div class="oa-container">
+                    <!-- Labels -->
+                    <div class="oa-labels ">
+                        <span>Invoice No.</span>
+                        <span>Invoice Date</span>
+                        <span>GST No.:</span>
+                        <span>PAN:</span>
+                        <span>Delivery Term:</span>
+                    </div>
+                    <!-- Values -->
+                    <div class="oa-values ">
+                        <span>{{ doc.name or ""}}</span>
+                        <span>{{ doc.posting_date or "" }}</span>
+                        <span>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</span>
+                        <span>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</span>
+                        <span>{{doc.delivery_term or ""}}</span>
+                    </div>
+                </div>
+            </td>
+            <td colspan="2" style="width: 30%;">
+                <div class="qrcode-section">
+                    {% if doc.irn %}
+                    {% set e_invoice_log = frappe.db.get_value(
+                    "e-Invoice Log", doc.irn, ("invoice_data", "signed_qr_code"), as_dict=True
+                    ) %}
+
+                    {%- set invoice_data = dict(json.loads(e_invoice_log.invoice_data)) -%}
+
+                    <img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=2) }}"
+                        class="qrcode">
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td class="irn" colspan="3">
+                <p>IRN:&nbsp;&nbsp;{{doc.irn or "NA"}}</p>
+            </td>
+
+        </tr>
+        <!-- ADDRESS BLOCKS AND IRN -->
+        <tr class="address-section">
+            <td colspan="2" class="address-block">
+                <p><b>Billed To: &nbsp; &nbsp;&nbsp;</b> {{frappe.db.get_value("Customer",doc.customer, "customer_code")
+                    or ""}} <br />
+                    {{ doc.customer_name or ""}}</p>
+
+                <p>{{ frappe.db.get_value("Address", doc.customer_address , "address_line1") or "" }}
+                    {{ frappe.db.get_value("Address", doc.customer_address , "address_line2") or "" }}
+                    {{ frappe.db.get_value("Address", doc.customer_address , "city") or "" }},
+                    - {{ frappe.db.get_value("Address", doc.customer_address , "pincode") or "" }}<br />
+                    <b>PAN: </b>{{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }}&nbsp; &nbsp; <b>GST No:
+                    </b>{{ frappe.db.get_value("Address", doc.customer_address , "gstin") or "" }}<br />
+                    <b>State & Code :</b> {{ frappe.db.get_value("Address",doc.customer_address, "gst_state_number") or
+                    "" }}-{{ frappe.db.get_value("Address", doc.customer_address , "gst_state") or "" }}
+                    <br />
+                    {{ frappe.db.get_value("Address", doc.customer_address , "country") or "" }}
+
+                </p>
+
+                <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{
+                    frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
+                <p>Contact No: {{ frappe.db.get_value("Address", doc.customer_address , "phone") or "" }}</p>
+
+            </td>
+            <td colspan="2" class="address-block">
+                <p><b>Shipped To: &nbsp; &nbsp;&nbsp; </b> {{frappe.db.get_value("Customer",doc.customer,
+                    "customer_code") or ""}} <br />
+                    {{ doc.customer_name or ""}}</p>
+
+                <p>{{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line1") or "" }}
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "address_line2") or "" }}
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "city") or "" }}
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "pincode") or "" }}<br />
+                    <b>PAN:</b> {{ frappe.db.get_value("Customer",doc.customer, "pan") or "" }} &nbsp; &nbsp;
+                    <b>GST No: </b>{{ frappe.db.get_value("Address", doc.shipping_address_name , "gstin") or "" }}<br />
+                    <b>State & Code : </b>{{ frappe.db.get_value("Address",doc.shipping_address_name,
+                    "gst_state_number") or "" }}-{{ frappe.db.get_value("Address", doc.shipping_address_name ,
+                    "gst_state") or "" }}
+                    <br />
+                    {{ frappe.db.get_value("Address", doc.shipping_address_name , "country") or "" }}
+
+                </p>
+
+                <p>Kind Attention: {{ frappe.db.get_value("Contact", doc.contact_person, "first_name") or "" }} {{
+                    frappe.db.get_value("Contact", doc.contact_person, "last_name") or "" }}</p>
+                <p>Contact No: {{ frappe.db.get_value("Address", doc.shipping_address_name , "phone") or "" }}</p>
+
+            </td>
+        </tr>
+
+        <!-- ITEMS -->
+        <tr>
+            <td colspan="5">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>Sr.No.</th>
+                            <th>Item Code</th>
+                            <th>Description of Goods</th>
+                            <th>HSN Code</th>
+                            <th>Qty</th>
+                            <th>UOM</th>
+                            <th>Rate in INR</th>
+                            <th>Amount in INR</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in doc.items %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td class="left-align">{{ row.item_code or "" }}</td>
+                            <td>{{ row.item_name or "" }} </td>
+                            <td>{{ row.gst_hsn_code or "" }}</td>
+                            <td>{{ row.qty or "" }}</td>
+                            <td>{{ row.uom or "" }}</td>
+                            <td class="right"> {{ "{:,.2f}".format(row.base_rate | float) or "" }}</td>
+                            <td class="right">{{ "{:,.2f}".format(row.base_amount | float) or ""}}</td>
+
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                    <!-- updated code  -->
+
+                    {% set comp = frappe.get_doc("Company", doc.company) %}
+                    {% set lut = frappe.get_doc("LUT Number", comp.lut_number) %}
+                    {% set epcg = frappe.get_doc("EPCG License", comp.epcg_no) %}
+                    <tfoot>
+                        <tr>
+                            <td colspan="3">
+                                This Shipment is under EPCG Lic. No. {{ comp.epcg_no }}&nbsp;
+                                Dt. {{ epcg.from_date }}
+                            </td>
+                            <td colspan="5"></td>
+                        </tr>
+                    </tfoot>
+                     
+                    <tfoot>
+                        <tr>
+                            <td colspan="7">
+                                <b>
+                                    Supply for Export Under Letter of Undertaking without payment of IGST
+                                    ( ARN No. {{ comp.lut_number }} &nbsp; 
+                                    Dt. {{ lut.from_date }} )
+                                </b>
+                            </td>
+                            <td colspan="1"></td>
+                        </tr>
+                    </tfoot>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3"><b>Remission of Duties and Taxes on Exported Products (RoDTEP)</b></td>
+                            <td colspan="1"><b>Total Qty</b></td>
+                            <td colspan="2" class="right">{{ doc.total_qty or "" }}</td>
+                            <td><b>Total</b></td>
+                            <td><b class="right">{{ "{:,.2f}".format(doc.base_total | float) or "" }}</b></td>
+                        </tr>
+                    </tfoot>
+
+                </table>
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="4">
+                <div class="gst-container">
+                    <p class="gst-heading">GST Details :-</p>
+                    {% if doc.gst_breakup_table %}
+                {{ doc.gst_breakup_table | safe }}
+            {% else %}
+               {{""}}
+            {% endif %}
+
+
+                    <!-- {% set hsn_table = {} %}
+
+                    {% for row in doc.items %}
+                    {% set hsn = row.gst_hsn_code %}
+                    {% if hsn %}
+                    {% if hsn not in hsn_table %}
+                    {% set _ = hsn_table.update({
+                    hsn: {
+                    "taxable": row.net_amount or 0,
+                    "igst_rate": row.igst_rate or 0,
+                    "igst_amt": row.igst_amount or 0
+                    }
+                    }) %}
+                    {% else %}
+                    {% set _ = hsn_table[hsn].update({
+                    "taxable": hsn_table[hsn].taxable + (row.net_amount or 0),
+                    "igst_amt": hsn_table[hsn].igst_amt + (row.igst_amount or 0)
+                    }) %}
+                    {% endif %}
+                    {% endif %}
+                    {% endfor %} -->
+
+                    <!-- <table class="table table-bordered" style="width:100%; font-size:12px;">
+                        <thead>
+                            <tr>
+                                <th>HSN Code</th>
+                                <th>Taxable Amount</th>
+                                <th>IGST %</th>
+                                <th>IGST Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hsn, data in hsn_table.items() %}
+                            <tr>
+                                <td>{{ hsn }}</td>
+                                <td class="right-align">{{ "{:,.2f}".format(data.taxable | float) or ""}}</td>
+                                <td class="right-align">{{ "{:,.2f}".format(data.igst_rate | float) or ""}}</td>
+                                <td class="right-align">{{ "{:,.2f}".format(data.igst_amt | float) or ""}} </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table> -->
+
+
+
+                </div>
+            </td>
+        </tr>
+
+
+        <!-- BANK DETAILS & TAX SUMMARY -->
+        <tr>
+            <td colspan="3" class="bank-grid">
+                {% set bank_list = frappe.get_all("Bank Account",
+                filters={"company": doc.company, "is_default": 1, "account_subtype": "INR"},
+                fields=["name", "bank", "bank_account_no", "branch_code", "account_type","account_subtype",
+                "ifsc_code"],
+                limit=1)
+                %}
+
+                {% if bank_list %}
+                {% set bank = bank_list[0] %}
+
+                <div class="grid-row">
+                    <div class="col left">Bank Details:</div>
+                    <div class="col right"></div>
+                </div>
+
+                <div class="grid-row">
+                    <div class="col left">Name of Bank:</div>
+                    <div class="col right">{{ bank.bank or "" }}</div>
+                </div>
+
+                {% set bank_address_name = frappe.db.get_value(
+                "Dynamic Link",
+                {"link_doctype": "Bank Account", "link_name": bank.name, "parenttype": "Address"},
+                "parent"
+                ) %}
+                {% if bank_address_name %}
+                {% set addr = frappe.get_doc("Address", bank_address_name) %}
+                <div class="grid-row">
+                    <div class="col left">Address of Branch:</div>
+                    <div class="col right">{{ addr.address_line1 or "" }}</div>
+                </div>
+                {% else %}
+                <div class="grid-row">
+                    <div class="col left">Address of Branch:</div>
+                    <div class="col right"></div>
+                </div>
+                {% endif %}
+
+                <div class="grid-row">
+                    <div class="col left">Account No.:</div>
+                    <div class="col right">{{ bank.bank_account_no or "" }}</div>
+                </div>
+
+                <div class="grid-row">
+                    <div class="col left">IFSC Code:</div>
+                    <div class="col right">{{ bank.ifsc_code or "" }}</div>
+                </div>
+
+                <div class="grid-row">
+                    <div class="col left">Type of A/c:</div>
+                    <div class="col right">{{ bank.account_type or "" }}</div>
+                </div>
+
+                {% else %}
+                <div class="grid-row">
+                    <div class="col left">Bank Details:</div>
+                    <div class="col right">No default bank found</div>
+                </div>
+                {% endif %}
+            </td>
+            <!-- TAX SUMMARY -->
+            <td colspan="2" style="font-size: 11px">
+                <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span
+                        class="bold grid-item gap-10">Taxable Amount:</span> <span class="grid-item right">{{
+                        "{:,.2f}".format(doc.base_total | float) or "" }} </span></p>
+                
+                <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;"><span
+                        class="bold grid-item gap-10">IGST Amount:</span> <span class="grid-item right">{{
+                        "{:,.2f}".format(doc.base_total_taxes_and_charges | float) or "" }} </span></p>
+
+                <div id="taxes-section">
+                    <!-- {%- set data = doc.taxes -%}
+                    {%- set print_settings = frappe.get_doc("Print Settings") -%}
+                    {% include "erpnext/templates/print_formats/includes/taxes.html" %} -->
+                </div>
+                <p style="display: grid; grid-template-columns: 170px auto; align-items: right; gap: 10px;">
+                    <span class="bold grid-item gap-10">Round Off:</span> <span class="grid-item right">{{
+                        "{:,.2f}".format(doc.base_rounding_adjustment | float) or "" }} </span>
+                </p>
+
+            </td>
+        </tr>
+
+        <!-- TOTAL IN WORDS & GRAND TOTAL -->
+        <tr>
+            <td colspan="3" style="font-size:11px; "><b>TOTAL (In words):</b> <span>{{doc.in_words or ""}}</span></td>
+            <td style="width:40%">
+                <p class="grid-row" style="font-size:12px">
+                    <span class="col left"><b>GRAND TOTAL</b></span>
+                    <span class="col right" style="text-align: right;"> {{ "{:,.2f}".format(doc.base_grand_total | float)
+                        or "" }}</span>
+                </p>
+            </td>
+
+        </tr>
+        <!-- PAYMENT TERMS & SIGNATURE -->
+        <tr>
+            <td colspan="3" style="font-size: 11px;"><b>Payment Term:-</b>
+                <span>
+                    {% if doc.payment_terms_template %}
+                    {% if doc.payment_schedule|length > 0 %}
+                    {{ doc.payment_schedule[0].payment_term or "" }}
+                    {% else %}
+                    {{ doc.payment_terms_template }}
+                    {% endif %}
+                    {% else %}
+                    {{ "" }}
+                    {% endif %}
+                </span>
+            </td>
+
+
+            <th rowspan="2">
+                <p class="signature-block">For {{doc.company or ""}}</p>
+                <p class="bottom-text">Authorised Signatory</p>
+            </th>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <p></p>
+
+            </td>
+            <td class="message">
+                <p>
+                    All Disputes Subject to Pune Jurisdiction Only E&OE</p>
+            </td>
+
+        </tr>
+        <!-- FOOTER -->
+        <tr>
+            <td colspan="4" class="footer-line">
+                Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}
+                Website:-
+                {{frappe.db.get_value("Company", doc.company, "website") or ""}} Email:-
+                {{frappe.db.get_value("Company", doc.company, "email") or ""}} Phone No.:-
+                {{frappe.db.get_value("Company", doc.company, "phone_no") or ""}} GSTIN:-
+                {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company",
+                doc.company, "pan") or ""}}
+            </td>
+        </tr>
+    </table>
+</div><br />
+
+{% if not loop.last %}
+<div style="page-break-after: always;"></div>
+{% endif %}
+{% endfor %}
+
+
