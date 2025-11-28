@@ -369,7 +369,7 @@ doctype_js = {
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
     "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"],
     "Purchase Order": "public/js/calculate_open_qty_on_purchase_order.js",
-    "Company": ["public/js/only_show_enable_lut_number.js","public/js/only_show_enable_epcg_no.js","public/js/lut_number_atomatically_disable_also_for_epcg_no.js"],
+    "Company": ["public/js/only_show_enable_lut_number.js","public/js/only_show_enable_epcg_no.js"],
     "LUT Number": "public/js/date_range_validation_lut_number.js",
     "EPCG License": "public/js/date_range_validation_on_epcg_no.js"
      
@@ -409,8 +409,11 @@ app_include_js = [
     "/assets/renu_customization/js/serial_no_track_on_packing_slip.js"
 ]
 
-# custom_masters/hooks.py
+scheduler_events = {
+    "daily": [
+        "renu_customization.renu_customization.automatcally_disable_lut_and_epcg_from_company.remove_expired_lut_epcg"
+    ]
+}
 
-# hooks.py
 
 

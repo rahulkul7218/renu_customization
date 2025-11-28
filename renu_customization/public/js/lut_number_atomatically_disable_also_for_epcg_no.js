@@ -32,49 +32,49 @@
 // });
 
 
-frappe.ui.form.on("Company", {
+// frappe.ui.form.on("Company", {
     
-    // For LUT Number
-    lut_number: function(frm) {
-        validate_date_and_clear(frm, "lut_number", "LUT Number");
-    },
+//     // For LUT Number
+//     lut_number: function(frm) {
+//         validate_date_and_clear(frm, "lut_number", "LUT Number");
+//     },
 
-    // For EPCG Number
-    epcg_no: function(frm) {
-        validate_date_and_clear(frm, "epcg_no", "EPCG License");
-    }
+//     // For EPCG Number
+//     epcg_no: function(frm) {
+//         validate_date_and_clear(frm, "epcg_no", "EPCG License");
+//     }
 
-});
+// });
 
-// Reusable function
-function validate_date_and_clear(frm, fieldname, doctype_name) {
+// // Reusable function
+// function validate_date_and_clear(frm, fieldname, doctype_name) {
 
-    if (!frm.doc[fieldname]) return;
+//     if (!frm.doc[fieldname]) return;
 
-    frappe.db.get_doc(doctype_name, frm.doc[fieldname]).then(doc => {
-        let today = frappe.datetime.get_today();
+//     frappe.db.get_doc(doctype_name, frm.doc[fieldname]).then(doc => {
+//         let today = frappe.datetime.get_today();
 
-        // If to_date < today → remove + disable
-        if (doc.to_date && doc.to_date < today) {
+//         // If to_date < today → remove + disable
+//         if (doc.to_date && doc.to_date > today) {
 
-            // 1. Uncheck enable in linked document
-            frappe.call({
-                method: "frappe.client.set_value",
-                args: {
-                    doctype: doctype_name,
-                    name: doc.name,
-                    fieldname: "enable",
-                    value: 0
-                }
-            });
+//             // 1. Uncheck enable in linked document
+//             frappe.call({
+//                 method: "frappe.client.set_value",
+//                 args: {
+//                     doctype: doctype_name,
+//                     name: doc.name,
+//                     fieldname: "enable",
+//                     value: 0
+//                 }
+//             });
 
-            // 2. Clear field on Company
-            frm.set_value(fieldname, "");
+//             // 2. Clear field on Company
+//             frm.set_value(fieldname, "");
 
-            // 3. Auto save
-            frm.save().then(() => {
-                frappe.msgprint(doctype_name + " is not valid. It has been removed automatically.");
-            });
-        }
-    });
-}
+//             // 3. Auto save
+//             frm.save().then(() => {
+//                 frappe.msgprint(doctype_name + " is not valid. It has been removed automatically.");
+//             });
+//         }
+//     });
+// }
