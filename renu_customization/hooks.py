@@ -311,6 +311,8 @@ after_migrate = [
     "renu_customization.patches.v_0.add_open_qty_on_sales_order_item.execute",
     "renu_customization.patches.v_0.add_important_note_on_sales_order.execute",
     "renu_customization.patches.v_0.add_authorised_signatory_field_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.add_lut_no_from_and_to_date_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.cadd_lut_no_and_expiry_date_on_gst_settings.execute",
    
   
 
@@ -370,9 +372,8 @@ doctype_js = {
     "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"],
     "Purchase Order": "public/js/calculate_open_qty_on_purchase_order.js",
     "Company": ["public/js/only_show_enable_lut_number.js","public/js/only_show_enable_epcg_no.js"],
-    "LUT Number": "public/js/date_range_validation_lut_number.js",
-    "EPCG License": "public/js/date_range_validation_on_epcg_no.js"
-     
+    "GST Settings": "public/js/if_enable_overseas_transactions_checked_show_lut_expiry_date.js"
+   
     
 
 }
@@ -409,11 +410,6 @@ app_include_js = [
     "/assets/renu_customization/js/serial_no_track_on_packing_slip.js"
 ]
 
-scheduler_events = {
-    "daily": [
-        "renu_customization.renu_customization.automatcally_disable_lut_and_epcg_from_company.remove_expired_lut_epcg"
-    ]
-}
 
 
 
