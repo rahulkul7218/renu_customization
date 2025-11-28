@@ -6,8 +6,7 @@ def execute():
     create_custom_field("Sales Invoice", {
         "fieldname": "lut_no",
         "label": "LUT No",
-        "fieldtype": "Link",
-        "options": "LUT Number",
+        "fieldtype": "Data",
         "insert_after": "amended_from"
     })
 
@@ -18,5 +17,5 @@ def execute():
         "fieldname": "lut_expiry_date",
         "label": "LUT Expiry Date",
         "fieldtype": "Date",
-        "insert_after": "lut_from_date"
+        "insert_after": "lut_no"
     })
