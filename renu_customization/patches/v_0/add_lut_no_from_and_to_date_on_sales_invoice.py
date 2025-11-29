@@ -7,7 +7,8 @@ def execute():
         "fieldname": "lut_no",
         "label": "LUT No",
         "fieldtype": "Data",
-        "insert_after": "amended_from"
+        "insert_after": "amended_from",
+        "read_only": 1
     })
 
    
@@ -17,5 +18,6 @@ def execute():
         "fieldname": "lut_expiry_date",
         "label": "LUT Expiry Date",
         "fieldtype": "Date",
-        "insert_after": "lut_no"
+        "insert_after": "lut_no",
+        "read_only": 1
     })
