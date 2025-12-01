@@ -1,5 +1,3 @@
-# Copyright (c) 2025, Assimilate Technologies Pvt Ltd and contributors
-# For license information, please see license.txt
 
 import frappe
 from frappe import _
@@ -19,11 +17,11 @@ def get_columns():
         _("SO No") + ":Link/Sales Order:150",
         _("SO Date") + ":Date:120",
         _("Sr.No.") + ":Int:70",
-        _("Customer's PO No.") + ":Data:170",
-        _("Customer's PO Date") + ":Date:170",
+        _("Customer PO No.") + ":Data:170",
+        _("Customer PO Date") + ":Date:170",
         _("Customer Code") + ":Link/Customer:150",
         _("Customer Name") + ":Data:180",
-        _("Party Item Code") + ":Link/Item:150",
+        # _("Party Item Code") + ":Link/Item:150",
         _("Item Code") + ":Link/Item:120",
         _("Item Name") + ":Data:180",
         _("Description") + ":Data:250",
@@ -98,12 +96,12 @@ def get_data(filters):
             so.name AS creation_no,
             DATE(so.creation) AS creation_date,
             ROW_NUMBER() OVER (PARTITION BY so.name ORDER BY soi.idx) AS sr_no,
-            si.po_no AS po_no,
-            si.po_date AS po_date,
+            so.po_no AS po_no,
+            so.po_date AS po_date,
             # so.status AS status,
             c.customer_code AS customer_code,
             so.customer_name AS customer_name,
-            soi.party_item_code AS party_item_code,
+            # soi.party_item_code AS party_item_code,
             soi.item_code AS item_code,
             soi.item_name AS item_name,
             soi.description AS description,
@@ -134,14 +132,21 @@ def get_data(filters):
  
         FROM `tabSales Order` so
         INNER JOIN `tabSales Order Item` soi ON soi.parent = so.name
+        LEFT JOIN `tabItem` i ON i.name = soi.item_code
         LEFT JOIN `tabSales Team` st ON st.parent = so.name
         LEFT JOIN `tabCustomer` c ON so.customer = c.name
         LEFT JOIN `tabAddress` a ON a.name = so.customer_address
         LEFT JOIN `tabSales Invoice Item` sii ON sii.so_detail = soi.name
         LEFT JOIN `tabSales Invoice` si ON si.name = sii.parent
- 
+        
         WHERE 1 = 1
-          {conditions}
+        AND i.is_stock_item = 1
+        AND (so.amended_from IS NULL OR so.name = (
+            SELECT MAX(name)
+            FROM `tabSales Order`
+            WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
+        ))
+        {conditions}
  
         GROUP BY soi.name
         ORDER BY so.creation ASC, so.name ASC

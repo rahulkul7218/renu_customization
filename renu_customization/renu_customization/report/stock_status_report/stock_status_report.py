@@ -1,115 +1,3 @@
-# import frappe
- 
-# def execute(filters=None):
-#     filters = filters or {}
- 
-#     item_filter = filters.get("item")
- 
-#     conditions = ""
-#     values = {}
- 
-#     if item_filter:
-#         conditions = "WHERE it.item_code = %(item)s"
-#         values["item"] = item_filter
- 
-#     query = f"""
-#         SELECT
-#             it.item_code,
-#             it.item_name,
-#             it.description,
- 
-#             /* Latest Item Price (Buying = 1) */
-#             (
-#                 SELECT ip.price_list_rate
-#                 FROM `tabItem Price` ip
-#                 WHERE ip.item_code = it.item_code
-#                   AND ip.buying = 1
-#                 ORDER BY ip.modified DESC
-#                 LIMIT 1
-#             ) AS last_purchase_rate,
- 
-#             IFNULL(SUM(bin.actual_qty), 0) AS item_available_qty,
- 
-#             it.safety_stock,
-            
-
- 
-#             /* PO Booking Qty */
-#             IFNULL((
-#                 SELECT SUM(IFNULL(poi.qty, 0))
-#                 FROM `tabPurchase Order Item` poi
-#                 INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
-#                 WHERE poi.item_code = it.item_code
-#                 AND po.docstatus = 1
-#                 AND (po.status IS NULL OR po.status NOT IN ('Stopped', 'Cancelled'))
-#             ), 0) AS po_booking_qty,
-            
-#             /* Open PO Qty at supplier end */
-            
-#             IFNULL((
-#                 SELECT SUM(IFNULL(poi.open_qty, 0))
-#                 FROM `tabPurchase Order Item` poi
-#                 INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
-#                 WHERE poi.item_code = it.item_code
-#                 AND po.docstatus = 1
-#                 AND po.status NOT IN ('Stopped','Cancelled')
-#             ), 0) AS open_qty,
-
-
-
-			
-#             /* Free Qty */
-#             (
-#                 IFNULL(SUM(bin.actual_qty), 0) -
-#                 IFNULL((
-#                     SELECT SUM(GREATEST(0, (poi.qty - IFNULL(poi.received_qty,0))))
-#                     FROM `tabPurchase Order Item` poi
-#                     INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
-#                     WHERE poi.item_code = it.item_code
-#                       AND po.docstatus = 1
-#                       AND (po.status IS NULL OR po.status NOT IN ('Stopped', 'Cancelled'))
-#                 ), 0)
-#             ) AS free_item_qty,
- 
-#             /* Units sold in last 6 months */
-#             IFNULL((
-#                 SELECT SUM(sii.qty)
-#                 FROM `tabSales Invoice Item` sii
-#                 INNER JOIN `tabSales Invoice` si ON sii.parent = si.name
-#                 WHERE sii.item_code = it.item_code
-#                   AND si.docstatus = 1
-#                   AND si.posting_date >= (CURDATE() - INTERVAL 6 MONTH)
-#             ), 0) AS units_sold_last_6_months
- 
-#         FROM `tabItem` it
-#         LEFT JOIN `tabBin` bin ON bin.item_code = it.item_code
- 
-#         {conditions}
- 
-#         GROUP BY
-#             it.item_code, it.item_name, it.description, last_purchase_rate
- 
-#         ORDER BY it.item_code
-#     """
- 
-#     data = frappe.db.sql(query, values, as_dict=True)
- 
-#     columns = [
-#         {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 150},
-#         {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 180},
-#         {"label": "Description", "fieldname": "description", "fieldtype": "Data", "width": 250},
-#         {"label": "Purchase Rate", "fieldname": "last_purchase_rate", "fieldtype": "Float"},
-#         {"label": "Item Available Qty", "fieldname": "item_available_qty", "fieldtype": "Float"},
-#         {"label": "Safety Stock", "fieldname": "safety_stock", "fieldtype": "Float"},
-#         {"label": "PO Booking Qty", "fieldname": "po_booking_qty", "fieldtype": "Float"},
-#         {"label": "Open PO Qty at supplier End", "fieldname": "open_qty", "fieldtype": "Float"},
-#         {"label": "Free Item Qty", "fieldname": "free_item_qty", "fieldtype": "Float"},
-#         {"label": "No.of Units Sold in Last six Months", "fieldname": "units_sold_last_6_months", "fieldtype": "Float"},
-#     ]
- 
-#     return columns, data
- 
- 
 import frappe
 
 def execute(filters=None):
@@ -117,7 +5,7 @@ def execute(filters=None):
 
     item_filter = filters.get("item")
 
-    conditions = ""
+    conditions = "WHERE it.is_stock_item = 1"
     values = {}
 
     if item_filter:
@@ -129,16 +17,26 @@ def execute(filters=None):
             it.item_code,
             it.item_name,
             it.description,
+           
 
             /* Latest Purchase Rate */
-            (
+            # (
+            #     SELECT ip.price_list_rate
+            #     FROM `tabItem Price` ip
+            #     WHERE ip.item_code = it.item_code
+            #       AND ip.buying = 1
+            #     ORDER BY ip.modified DESC
+            #     LIMIT 1
+            # ) AS last_purchase_rate,
+
+            FORMAT((
                 SELECT ip.price_list_rate
                 FROM `tabItem Price` ip
                 WHERE ip.item_code = it.item_code
                   AND ip.buying = 1
                 ORDER BY ip.modified DESC
                 LIMIT 1
-            ) AS last_purchase_rate,
+            ), 2, 'en_IN') AS last_purchase_rate,
 
             /* Available Qty */
             IFNULL(SUM(bin.actual_qty), 0) AS item_available_qty,
@@ -222,3 +120,5 @@ def execute(filters=None):
     ]
 
     return columns, data
+
+

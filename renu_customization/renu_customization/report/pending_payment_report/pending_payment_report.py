@@ -52,7 +52,7 @@ def execute(filters=None):
 
             si.posting_date AS invoice_date,
  
-            FORMAT(si.grand_total, 2) AS invoice_value,
+            si.grand_total AS invoice_value,
 
             si.outstanding_amount * si.conversion_rate AS outstanding,
              
@@ -61,7 +61,7 @@ def execute(filters=None):
 
             si.conversion_rate AS exchange_rate,
 
-            FORMAT(si.base_grand_total, 2) AS inr_value_of_foreign,
+            si.base_grand_total AS inr_value_of_foreign,
  
             si.due_date AS payment_due_date,
 

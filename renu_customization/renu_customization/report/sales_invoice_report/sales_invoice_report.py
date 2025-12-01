@@ -81,7 +81,7 @@ def execute(filters=None):
         {"label": "Customer Code", "fieldname": "customer_code", "fieldtype": "Data", "width": 150},
         {"label": "Customer Name", "fieldname": "customer_name", "fieldtype": "Data", "width": 150},
  
-        {"label": "Party Item Code", "fieldname": "party_item_code", "fieldtype": "Data", "width": 150},
+        # {"label": "Party Item Code", "fieldname": "party_item_code", "fieldtype": "Data", "width": 150},
         {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 120},
         {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 140},
         {"label": "Item Description", "fieldname": "description", "fieldtype": "Data", "width": 220},
@@ -127,7 +127,7 @@ def execute(filters=None):
             c.customer_code AS customer_code,
             si.customer_name AS customer_name,
  
-            sii.party_item_code AS party_item_code,
+            # sii.party_item_code AS party_item_code,
             sii.item_code AS item_code,
             sii.item_name AS item_name,
             sii.description AS description,
@@ -164,10 +164,17 @@ def execute(filters=None):
             '' AS business_vertical
  
         FROM `tabSales Invoice` si
+
         JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
+        AND (si.amended_from IS NULL OR si.name = (
+            SELECT MAX(name)
+            FROM `tabSales Invoice`
+            WHERE name LIKE CONCAT(SUBSTRING_INDEX(si.name, '-', 1), '%%')
+        ))
  
         LEFT JOIN `tabSales Order Item` soi ON soi.name = sii.so_detail
         LEFT JOIN `tabSales Order` so ON so.name = soi.parent
+        
  
         LEFT JOIN `tabDynamic Link` dl ON dl.link_name = si.customer
             AND dl.link_doctype = 'Customer'
@@ -178,6 +185,7 @@ def execute(filters=None):
         LEFT JOIN `tabCustomer` c ON c.name = si.customer
  
         LEFT JOIN `tabSales Team` st ON st.parent = si.name
+        LEFT JOIN `tabItem` it ON it.name = sii.item_code
  
         LEFT JOIN `tabItem Price` ip ON ip.item_code = sii.item_code
             AND ip.buying = 1 AND ip.selling = 0
@@ -186,6 +194,7 @@ def execute(filters=None):
         LEFT JOIN `tabDelivery Note` dn ON dn.name = dni.parent
  
         {conditions}
+        AND it.is_stock_item = 1
         ORDER BY si.posting_date ASC, si.name ASC
     """
  
