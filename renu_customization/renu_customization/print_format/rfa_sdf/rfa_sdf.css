@@ -1,0 +1,23 @@
+ .sb-heading {
+        font-weight: bold;
+        font-size: 14px;
+        padding-bottom: 6px;
+    }
+    .sb-row {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+    }
+    .sb-text {
+        font-size: 13px;
+        line-height: 20px;
+        text-align: justify;
+        white-space: pre-line;
+    }
+    .sb-sign {
+        margin-top: 40px;
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+    }

@@ -73,24 +73,24 @@
 <tr class="summary-row">
   <td class="summary-left">
     <span class="label-summ">C.NO.: </span>
-    <span class="value">{{ doc.cno or "" }}</span>
+    <span class="value">{{  "" }}</span>
   </td>
 
   <td class="summary-right" colspan="2">
     <span class="label-summ">DATE: </span>
-    <span class="value">{{ frappe.utils.formatdate(doc.posting_date) }}</span>
+    <span class="value">{{ doc.posting_date or "" }}</span>
   </td>
 </tr>
 
 <tr class="summary-row">
   <td class="summary-left">
     <span class="label-summ">SHIPPING BILL NO.: </span>
-    <span class="value">{{ doc.shipping_bill_no or "" }}</span>
+    <span class="value">{{ "" }}</span>
   </td>
 
   <td class="summary-right" colspan="2">
     <span class="label-summ">DATE: </span>
-    <span class="value">{{ frappe.utils.formatdate(doc.shipping_bill_date or doc.posting_date) }}</span>
+    <span class="value">{{  doc.posting_date or "" }}</span>
   </td>
 </tr>
 
@@ -104,12 +104,12 @@
   <tr class="data-row">
    
     <td class="label-col">1. Name</td>
-    <td class="val-col">{{ doc.customer_name or company.company_name }}</td>
+    <td class="val-col">{{ doc.customer_name }}</td>
   </tr>
 
   <tr class="data-row">
     <td class="label-col">2. IEC No.</td>
-    <td class="val-col">{{ iec_num }}</td>
+    <td class="val-col">31910001042</td>
   </tr>
 
   <tr class="data-row">
@@ -121,7 +121,7 @@
   <tr class="data-row">
    
     <td class="label-col">4. Date of examination</td>
-    <td class="val-col">{{ frappe.utils.formatdate(doc.date_of_examination or doc.posting_date) }}</td>
+    <td class="val-col">{{  doc.posting_date or ""}}</td>
   </tr>
 
   <tr class="data-row">
@@ -133,29 +133,35 @@
   <tr class="data-row">
    
     <td class="label-col">6. (a) Name of Commissionerate/Division/Range<br><br/>(b) Location Code</td>
-    <td class="val-col">{{ doc.commissionerate_detail or "Customs Pune / Pune Customs Div. / Customs Facilitation Range Jejuri" }}</td>
+    <td class="val-col">{{ doc.commissionerate_detail or "Customs Pune / Pune Customs Div. / Customs Facilitation Range Jejuri" }}<br>{{""}}</td>
+    
+    
   </tr>
 
   <tr class="data-row">
     
-    <td class="label-col">7. Particulars of Export Invoice<br/>
+    <td class="label-col">
+      7. Particulars of Export Invoice<br/>
         (a) Export Invoice No.<br/>
         (b) Total No. of packages<br/>
         (c) Name and Address of the consignee abroad
     </td>
     <td class="val-col">
-       {{ doc.name }} &nbsp;&nbsp; {{ frappe.utils.formatdate(doc.posting_date) }}
-      {{ doc.total_packages or doc.total_qty or 0 }}
-      {{ consignee | safe }}
+       {{ doc.name }} &nbsp;&nbsp;&nbsp;{{ frappe.utils.formatdate(doc.posting_date) }}
+       {{ doc.total_packages or doc.total_qty or 0 }}
+       {{ doc.shipping_address }}
     </td>
   </tr>
 
+  
+
   <tr class="data-row">
     
-    <td class="label-col">8. (a) Is the description of goods, the  quantity and their value as per the particulars furnished in the export invoice?<br>(b) Whether sample is drawn for being forwarded to port of export?</td>
+    <td class="label-col">8. (a) Is the description of goods, the  quantity and their value as per the particulars furnished in the export invoice?<br>
+(b) Whether sample is drawn for being forwarded to port of export?</td>
     <td class="val-col">
       {{ doc.is_description_as_per_invoice or "Yes" }}<br>
-      {{ doc.sample_drawn or "NO" }}
+      {{ doc.sample_drawn or "No" }}
     </td>
   </tr>
 

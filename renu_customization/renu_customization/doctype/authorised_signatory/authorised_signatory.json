@@ -1,53 +1,44 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:epcg_no",
- "creation": "2025-09-24 18:30:17.306808",
+ "autoname": "field:name1",
+ "creation": "2025-11-27 15:14:01.170615",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "enable",
-  "epcg_no",
-  "from_date",
-  "to_date",
-  "description"
+  "name1",
+  "column_break_wbjw",
+  "designation"
  ],
  "fields": [
   {
-   "default": "0",
-   "fieldname": "enable",
-   "fieldtype": "Check",
-   "label": "Enable"
-  },
-  {
-   "fieldname": "epcg_no",
+   "fieldname": "name1",
    "fieldtype": "Data",
-   "label": "EPCG Licence Number",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Name",
    "unique": 1
   },
   {
-   "fieldname": "description",
-   "fieldtype": "Small Text",
-   "label": "Description"
+   "fieldname": "column_break_wbjw",
+   "fieldtype": "Column Break"
   },
   {
-   "fieldname": "from_date",
-   "fieldtype": "Date",
-   "label": "From Date"
-  },
-  {
-   "fieldname": "to_date",
-   "fieldtype": "Date",
-   "label": "To Date"
+   "fieldname": "designation",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Designation",
+   "options": "Designation"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-11-26 16:00:37.666174",
+ "modified": "2025-11-27 15:15:17.117740",
  "modified_by": "Administrator",
  "module": "Renu Customization",
- "name": "EPCG License",
+ "name": "Authorised Signatory",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
