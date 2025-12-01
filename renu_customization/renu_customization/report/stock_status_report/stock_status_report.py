@@ -29,14 +29,14 @@ def execute(filters=None):
             #     LIMIT 1
             # ) AS last_purchase_rate,
 
-            FORMAT((
+            (
                 SELECT ip.price_list_rate
                 FROM `tabItem Price` ip
                 WHERE ip.item_code = it.item_code
                   AND ip.buying = 1
                 ORDER BY ip.modified DESC
                 LIMIT 1
-            ), 2, 'en_IN') AS last_purchase_rate,
+            ) AS last_purchase_rate,
 
             /* Available Qty */
             IFNULL(SUM(bin.actual_qty), 0) AS item_available_qty,

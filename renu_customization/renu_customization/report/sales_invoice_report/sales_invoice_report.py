@@ -133,11 +133,11 @@ def execute(filters=None):
             sii.description AS description,
             sii.qty AS qty,
  
-            FORMAT(sii.rate, 2, 'en_IN') AS item_rate,
-            FORMAT(sii.amount, 2, 'en_IN') AS amount,
+            sii.rate AS item_rate,
+            sii.amount AS amount,
             si.currency AS currency,
             si.conversion_rate AS exchange_rate,
-            FORMAT(sii.base_amount, 2, 'en_IN') AS base_amount,
+            sii.base_amount AS base_amount,
  
             dn.posting_date AS delivery_date,
  
@@ -151,7 +151,7 @@ def execute(filters=None):
  
             (
             SELECT
-                FORMAT(IFNULL(sle.incoming_rate, 0), 2, 'en_IN')
+                IFNULL(sle.incoming_rate, 0)
             FROM `tabStock Ledger Entry` sle
             WHERE sle.item_code = sii.item_code
             AND sle.actual_qty > 0           -- Only incoming entries
