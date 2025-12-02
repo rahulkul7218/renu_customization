@@ -326,11 +326,17 @@ def get_data(filters):
         LEFT JOIN `tabSales Invoice` si ON si.name = latest_sii.parent
         WHERE (so.status IS NULL OR so.status NOT IN ('Completed', 'To Bill'))
         AND i.is_stock_item = 1
-        AND (so.amended_from IS NULL OR so.name = (
+        # AND (so.amended_from IS NULL OR so.name = (
+        #     SELECT MAX(name)
+        #     FROM `tabSales Order`
+        #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
+        # ))
+
+         AND so.name = (
             SELECT MAX(name)
             FROM `tabSales Order`
             WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
-        ))
+        )
         {conditions}
         GROUP BY soi.name
         ORDER BY so.modified DESC, so.name ASC

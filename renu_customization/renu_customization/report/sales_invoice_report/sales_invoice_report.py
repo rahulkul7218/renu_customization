@@ -166,11 +166,17 @@ def execute(filters=None):
         FROM `tabSales Invoice` si
 
         JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
-        AND (si.amended_from IS NULL OR si.name = (
+        # AND (si.amended_from IS NULL OR si.name = (
+        #     SELECT MAX(name)
+        #     FROM `tabSales Invoice`
+        #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(si.name, '-', 1), '%%')
+        # ))
+
+         AND si.name = (
             SELECT MAX(name)
             FROM `tabSales Invoice`
             WHERE name LIKE CONCAT(SUBSTRING_INDEX(si.name, '-', 1), '%%')
-        ))
+        )
  
         LEFT JOIN `tabSales Order Item` soi ON soi.name = sii.so_detail
         LEFT JOIN `tabSales Order` so ON so.name = soi.parent
