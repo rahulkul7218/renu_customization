@@ -65,7 +65,7 @@ frappe.query_reports["Sales Order Report"] = {
             fieldname: "report_name",
             label: "Report Name",
             fieldtype: "Data",
-            default: "Sales Invoice Report",
+            default: "Sales Order Report",
             read_only: 1,
             hidden: 1
         },
