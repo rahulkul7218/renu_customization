@@ -389,7 +389,7 @@
         <!-- PAYMENT TERMS & SIGNATURE -->
         <tr >
             <td colspan="3" style="font-size: 11px;"><b>Payment Term:-</b>
-             <span>
+             <span><b>
                 {% if doc.payment_terms_template %}
                 {% if doc.payment_schedule|length > 0 %}
                 {{ doc.payment_schedule[0].payment_term or "" }}
@@ -398,7 +398,7 @@
                 {% endif %}
                 {% else %}
                 {{ "" }}
-                {% endif %}
+                {% endif %}</b>
              </span>
             </td>
            

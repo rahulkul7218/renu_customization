@@ -198,8 +198,8 @@
 
                     {% set comp = frappe.get_doc("Company", doc.company) %}
                     {% set gst = frappe.get_doc("GST Settings") %}
-                    <!-- {% set lut = frappe.get_doc("LUT Number", comp.lut_number) %} -->
-                    {% set epcg = frappe.get_doc("EPCG License", comp.epcg_no) %}
+                    
+                    
                     <tfoot>
                         <tr>
                             <!-- <td colspan="3">
@@ -215,8 +215,8 @@
                             <td colspan="7">
                                 <b>
                                     Supply for Export Under Letter of Undertaking without payment of IGST
-                                    ( ARN No. {{ gst.lut_no }} &nbsp; 
-                                    Dt. {{ gst.lut_expiry_date }} )
+                                    ( ARN No. {{ comp.lut_no }} &nbsp; 
+                                    Dt. {{ comp.lut_expiry_date }} )
                                 </b>
                             </td>
                             <td colspan="1"></td>
@@ -483,7 +483,7 @@
         <!-- PAYMENT TERMS & SIGNATURE -->
         <tr>
             <td colspan="3" style="font-size: 11px;"><b>Payment Term:-</b>
-                <span>
+                <span><b>
                     {% if doc.payment_terms_template %}
                     {% if doc.payment_schedule|length > 0 %}
                     {{ doc.payment_schedule[0].payment_term or "" }}
@@ -492,7 +492,7 @@
                     {% endif %}
                     {% else %}
                     {{ "" }}
-                    {% endif %}
+                    {% endif %}</b>
                 </span>
             </td>
 
