@@ -187,8 +187,16 @@
               <td class="right bold">{{"{:,.2f}".format(doc.total |float) or 0}}</td>
             </tr>
             <tr>
-              <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}})</strong></td>
-             
+              {% set gst = frappe.get_doc("GST Settings") %}
+              <!-- <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}})</strong></td> -->
+             <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST{% if frappe.db.get_value("Customer", doc.customer, "gst_category") != "Overseas"
+            and frappe.db.get_value("Customer", doc.customer, "tax_category") != "Overseas With IGST" %}
+            ( {{ gst.lut_no or "" }} Dt. {{ gst.lut_expiry_date or "" }} )
+        {% else %}
+            {{ "" }}
+        {% endif %}
+    </strong>
+</td>
             
 
               <td colspan="3"></td>
