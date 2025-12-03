@@ -172,7 +172,7 @@
             </tr>
             {% endfor %}
             <tr>
-              <td colspan="5">This Shipment Is Under EPCG Lic No. {{frappe.db.get_value("EPCG License", company.epcg_no, "epcg_no") or ""}} Dt. {{frappe.db.get_value("EPCG License", company.epcg_no, "date") or ""}}</td>
+              <td colspan="5"></td>
               <td></td>
               <td></td>
               <td></td>
@@ -187,7 +187,16 @@
               <td class="right bold">{{"{:,.2f}".format(doc.total |float) or 0}}</td>
             </tr>
             <tr>
-              <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}})</strong></td>
+              <!-- <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}})</strong></td> -->
+              {% set gst_settings = frappe.get_all("GST Settings", fields=["lut_no", "lut_expiry_date"], limit=1) %}
+            <td colspan="6">
+                <strong>
+                    Supply for Export Under Letter Of Undertaking without payment of IGST
+                    ( {{ gst_settings[0].lut_no if gst_settings else "" }} 
+                    Dt. {{ gst_settings[0].lut_expiry_date if gst_settings else "" }} )
+                </strong>
+            </td>
+
               <td colspan="3"></td>
             </tr>
           </tbody>
