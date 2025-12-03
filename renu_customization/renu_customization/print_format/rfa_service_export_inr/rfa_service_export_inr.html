@@ -198,7 +198,7 @@
 
                     {% set comp = frappe.get_doc("Company", doc.company) %}
                     {% set gst = frappe.get_doc("GST Settings") %}
-                    {% set lut = frappe.get_doc("LUT Number", comp.lut_number) %}
+                    <!-- {% set lut = frappe.get_doc("LUT Number", comp.lut_number) %} -->
                     {% set epcg = frappe.get_doc("EPCG License", comp.epcg_no) %}
                     <tfoot>
                         <tr>
