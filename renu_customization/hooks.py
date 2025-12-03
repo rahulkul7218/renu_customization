@@ -313,6 +313,11 @@ after_migrate = [
     "renu_customization.patches.v_0.add_authorised_signatory_field_on_sales_invoice.execute",
     "renu_customization.patches.v_0.add_lut_no_from_and_to_date_on_sales_invoice.execute",
     "renu_customization.patches.v_0.cadd_lut_no_and_expiry_date_on_gst_settings.execute",
+    "renu_customization.patches.v_0.change_field_label_in_currency_exchange_fields.execute",
+    "renu_customization.patches.v_0.add_freight_orepared_by_field_on_sales_order.execute",
+    "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_order.execute",
+    "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_invoice.execute",
+    
    
   
 
@@ -357,6 +362,7 @@ doctype_js = {
     "public/js/fetched_warrantydetails_on_deliverynoteitem.js", "public/js/fetched_warranty_date_from_delievrynote_if_date_of_dispatch.js"],
     # "public/js/calculate_end_date_on_delivery_note_and_update_serial_no.js"
     "Sales Invoice":["public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js","public/js/fetched_data_lut_no_and_expiry_date_on_sales_invoice_from_gst_settings.js",
+    "public/js/on_sales_invoice_freight_prepared_by_field_data_fetced_from_sales_order.js",
     "public/js/fetched_freight_charges_from_sales_order_to_sales_invoice.js","public/js/if_customer_gst_category_overseas_sez_check_gst_payment_checkbox_on_sales_invoice.js",
     "public/js/relevent_print_format_show.js","public/js/lut_no_validate_between_invoice_range_automatcally_check_is_export_with_gst.js",
     "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", 
