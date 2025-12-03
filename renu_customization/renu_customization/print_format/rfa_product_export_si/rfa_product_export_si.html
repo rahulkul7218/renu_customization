@@ -50,7 +50,7 @@
             <span class="label">Place of Receipt:</span><span class="value">{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</span>
             <span class="label">Vessel/Flight No.:</span><span class="value">{{ doc.vessel_flight_no or "" }}</span>
             <span class="label">Port of Loading:</span> <span class="value">{{ doc.port_of_loading }}</span>
-            <span class="label">Port of Discharge:</span><span class="value">{{ doc.port_of_discharg }}</span>
+            <span class="label">Port of Discharge:</span><span class="value">{{ doc.port_of_discharg or "" }}</span>
             <span class="label">Final Destination:</span> <span class="value">{{ frappe.db.get_value("Address", doc.shipping_address_name, "city") or "" }}</span>
             <span class="label">Country of Final Destination:</span> <span class="value">{{ frappe.db.get_value("Address", doc.shipping_address_name, "country") or "" }}</span>
           </div>
@@ -283,8 +283,8 @@
             {% endif %}
         </td> -->
 
-                  <td colspan="3" class="bank-details bank-grid">
-                  <table style="width:100%; border-collapse: collapse; font-size: 12px;" border="1">
+              <td colspan="6" class="bank-details bank-grid">
+              <table style="width:100%; border-collapse: collapse; font-size: 12px;" border="1">
 
               {# --------------------- FOREIGN BANK DETAILS --------------------- #}
               {% set foreign_bank_list = frappe.get_list("Bank Account", 
