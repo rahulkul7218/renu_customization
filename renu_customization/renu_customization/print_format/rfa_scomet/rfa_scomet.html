@@ -29,7 +29,7 @@
         Respected Sir / Madam,<br><br>
  
         We are exporting (export items) to our customer 
-<b>{{ doc.customer_name }}</b> covered under {{doc.freight_prepared_by}} &  
+<b>{{ doc.customer_name }}</b> covered under {{doc.freight_prepared_by or ""}} &  
 
         These are electronic products used in factory floor automation & many other applications such as control systems, pharmaceuticals, SPMs etc.
  
@@ -60,7 +60,7 @@ SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies
 <b>Authorized Signatory</b>
 </p><br>
 
-<p>We are exporting (export items) to our customer <b>{{ doc.customer_name }}</b> Inc.covered under {{doc.freight_prepared_by}} & These are electronic products used in factory floor automation & many other applications such as control systems pharmaceuticals,SPMs etc.We hereby declare that these contents do not fall under SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies).<p>
+<p>We are exporting (export items) to our customer <b>{{ doc.customer_name }}</b> Inc.covered under {{doc.freight_prepared_by or ""}} & These are electronic products used in factory floor automation & many other applications such as control systems pharmaceuticals,SPMs etc.We hereby declare that these contents do not fall under SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies).<p>
 
  
 </div>
