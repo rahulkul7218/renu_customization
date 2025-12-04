@@ -3,9 +3,9 @@ frappe.ui.form.on("Sales Invoice", {
         frm.trigger("set_lut_values");
     },
 
-    refresh(frm) {
-        frm.trigger("set_lut_values");
-    },
+    // refresh(frm) {
+    //     frm.trigger("set_lut_values");
+    // },
 
     company(frm) {
         frm.trigger("set_lut_values");
