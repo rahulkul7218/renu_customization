@@ -182,7 +182,7 @@
 
       <!-- BANK DETAILS & TAX SUMMARY -->
       <tr>
-          <td colspan="3" class="bank-grid">
+          <!-- <td colspan="3" class="bank-grid">
               
                 {% set inr_bank_list = frappe.get_list("Bank Account", 
                     filters={"company": doc.company, "account_subtype": "INR", "is_default": 1}, 
@@ -230,7 +230,91 @@
                         <span class="col right">{{ doc.company or "" }}</span>
                     </p>
                 
-            </td>
+            </td> -->
+
+            <td colspan="3" class="bank-details bank-grid">
+    <table style="width:100%; border-collapse: collapse; font-size: 12px;" border="1">
+
+        {# --------------------- FOREIGN BANK DETAILS --------------------- #}
+        {% set foreign_bank_list = frappe.get_list("Bank Account", 
+            filters={"company": doc.company, "account_subtype": doc.currency if doc.currency != "INR" else ""}, 
+            fields=["name", "bank", "bank_account_no", "iban", "fedwire_aba", "sort_code", "branch_code", "account_type", "account_subtype", "address_html"],
+            limit=1
+        ) %}
+        {% set inr_bank_list = frappe.get_list("Bank Account", 
+            filters={"company": doc.company, "account_subtype": "INR", "is_default": 1}, 
+            fields=["name", "bank", "address_html", "bank_account_no", "ifsc_code", "account_type", "account_subtype"],
+            limit=1
+        ) %}
+
+        {% if foreign_bank_list %}
+            {% set fbank = foreign_bank_list[0] %}
+
+            <tr>
+                <td colspan="2" style="font-weight:bold; background:#f2f2f2; ">Bank Details</td>
+            </tr>
+
+            <tr>
+                <td style="width:40%; padding:5px;">Name of Bank:</td>
+                <td style="padding:5px;">{{ fbank.bank or "" }}</td>
+            </tr>
+
+            <tr>
+                <td style="padding:5px;">Swift Code:</td>
+                <td style="padding:5px;">
+                    {{ frappe.db.get_value("Bank", fbank.bank, "swift_number") or "" }}
+
+                    {% if fbank.account_subtype == "EUR" %}
+                        <br><b>IBAN No.:</b> {{ fbank.iban or "" }}
+                    {% elif fbank.account_subtype == "USD" %}
+                        <br><b>FEDWIRE ABA:</b> {{ fbank.fedwire_aba or "" }}
+                    {% elif fbank.account_subtype == "GBP" %}
+                        <br><b>Sort Code:</b> {{ fbank.sort_code or "" }}
+                    {% endif %}
+                </td>
+            </tr>
+
+            <tr>
+                <td style="padding:5px;">Favouring:</td>
+                <td style="padding:5px;">
+                    A/c No. {{ fbank.bank_account_no or "" }},
+                    {{ inr_bank_list and inr_bank_list[0].bank or "" }}
+                </td>
+            </tr>
+        {% endif %}
+
+
+        {# --------------------- INR BANK DETAILS --------------------- #}
+        {% if inr_bank_list %}
+            {% set inr = inr_bank_list[0] %}
+
+            <tr>
+                <td style="padding:5px;">For further credit to (Must include in instructions)</td>
+                <td style="padding:5px;">
+                    {{ inr.bank or "" }},
+                    
+                    {# Dynamic address fetch #}
+                    {% set bank_address_name = frappe.db.get_value(
+                        "Dynamic Link",
+                        {"link_doctype": "Bank Account", "link_name": inr.name, "parenttype": "Address"},
+                        "parent"
+                    ) %}
+                    {% if bank_address_name %}
+                        {% set addr = frappe.get_doc("Address", bank_address_name) %}
+                        {{ addr.address_line1 or "" }},
+                    {% endif %}
+                    A/C No.: {{ inr.bank_account_no or "" }}
+                </td>
+            </tr>
+
+            <tr>
+                <td style="padding:5px;">Ultimate Beneficiary:</td>
+                <td style="padding:5px;">{{ doc.company or "" }}</td>
+            </tr>
+        {% endif %}
+
+    </table>
+</td>
           
           <td colspan="2" style="font-size: 11px; padding-top:10px;" >
                 <p  style="display: grid; grid-template-columns: 160px auto; align-items: center; gap: 10px;"><span class="bold grid-item gap-7"><b>Total Taxable Value:</b></span> <span class="grid-item" style="text-align: right;">{{ "{:,.2f}".format(doc.total | float) or 0 }}</span></p>
@@ -260,11 +344,17 @@
       <tr >
           <td colspan="1" class="payment_term"><b>Payment Term:-</b></td>
           <td colspan="2" style="font-size: 12px;">
-               <p>{{ doc.payment_schedule[0].payment_term or ""}}</p>      
+               <p><b>{{ doc.payment_schedule[0].payment_term or ""}}</b></p>      
           </td>
           <td rowspan="2" class="signature-block" >For {{doc.company or ""}}<br/><br/><br/><br/><br/>
          <p class="bottom-text" style="text-align: center;">Authorised Signatory</p>  
         </td>
+      </tr>
+      <tr>
+        <td colspan="1" class="payment_term"><b>Important Note:-</b></td>
+          <td colspan="2" style="font-size: 12px;">
+               <p><b>{{ doc.important_note or ""}}</b></p>      
+          </td>
       </tr>
       <tr>
           <td colspan="3">

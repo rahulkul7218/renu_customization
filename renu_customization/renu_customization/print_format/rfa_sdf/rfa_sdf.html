@@ -1,0 +1,86 @@
+
+<style>
+    {% include "renu_customization/renu_customization/print_format/rfa_sdf/rfa_sdf.css" %}
+</style>
+
+{% set company = frappe.get_doc("Company", doc.company) %}
+{% set company_state = frappe.db.get_value("Address", doc.company_address, "state") %}
+{% set company_country = frappe.db.get_value("Address", doc.company_address, "country") %}
+
+    <tr>
+            <td colspan="3" class="bank-grid">
+                    {% set bank_list = frappe.get_all("Bank Account",
+                        filters={"company": doc.company, "is_default": 1, "account_subtype": "INR"},
+                        fields=["name", "bank", "bank_account_no", "branch_code", "account_type","account_subtype", "ifsc_code"],
+                        limit=1)
+                    %}
+
+                    {% if bank_list %}
+                        {% set bank = bank_list[0] %}
+                        
+                        
+
+                        {% set bank_address_name = frappe.db.get_value(
+                            "Dynamic Link",
+                            {"link_doctype": "Bank Account", "link_name": bank.name, "parenttype": "Address"},
+                            "parent"
+                        ) %}
+                        {% if bank_address_name %}
+                            {% set addr = frappe.get_doc("Address", bank_address_name) %}
+                            
+                   
+                            
+                        {% endif %}
+
+                  
+                   
+                    {% endif %}
+                </td>
+          
+        </tr>
+      
+
+<div>
+    <h3 class="text-center">APPENDIX I</h3>
+    
+    <h3 class="text-center">FORM - SDF</h3>
+    <br><br>
+    <div class="sb-row">
+        <div class="sb-heading">Shipping Bill No. {{doc.shipping_bill_number}}</div>
+        <div class="sb-heading">Date : {{ frappe.utils.formatdate(doc.posting_date) }}</div>
+    </div>                     
+
+
+    <div class="sb-text">
+<b>Declaration under Foreign Exchange Regulation Act, 1973:</b>
+We hereby declare that we are the consignor of the goods in respect of which this declaration is made and that the particulars given in the Shipping Bill No. {{doc.shipping_bill_number}} date {{doc.shipping_bill_date}} are true and that -
+
+a) the value as contracted with the buyer is same as the full export value declared in the above Shipping Bills.
+
+We undertake that we will deliver to the bank named herein {{ bank.bank or "" }},
+{{ addr.address_line1 or "" }} A/c No. {{ bank.bank_account_no or "" }} (AD Code 05116166200019)
+the foreign exchange representing the full export value of the goods on or before 180 days @ Rs.{{doc.conversion_rate}} in the manner prescribed in Rule 9 of the Foreign Exchange Regulation Rules, 1974.
+
+We further declare that we are resident in India and we have place of business M/s
+{{ doc.company or "" }} {{ frappe.db.get_value("Address", doc.company_address, "address_line1") or "" }}, {{ company_state or "" }}, {{ company_country or "" }}
+ <!--Renu Electronics Pvt. Ltd., Survey No. 2/6, Baner Road, Baner, Pune - 411 045, Maharashtra, India.-->
+
+We are not in the caution list of the Reserve Bank of India.
+    </div>
+
+    <div class="sb-sign">
+        <div class="sb-text">
+            <b>Date:</b> {{ frappe.utils.formatdate(doc.posting_date) }}
+        </div>
+        {% set sign = frappe.get_doc("Authorised Signatory", doc.authorised_signatory) %}
+        <div class="sb-text" style="text-align: right;">
+            <b>Signature of Exporter</b><br>
+            <b>Name:</b> {{ sign.name1 }}<br>
+            <b>Designation:</b> {{ sign.designation }}<br>
+        </div>
+    </div>
+
+</div>
+
+
+

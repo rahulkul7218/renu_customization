@@ -308,6 +308,17 @@ after_migrate = [
     "renu_customization.patches.v_0.unmandatory_field_purchase_order_item.execute",
     "renu_customization.patches.v_0.unmandatory_field_material_request_item.execute",
     "renu_customization.patches.v_0.add_open_qty_field_on_purchase_order_item.execute",
+    "renu_customization.patches.v_0.add_open_qty_on_sales_order_item.execute",
+    "renu_customization.patches.v_0.add_important_note_on_sales_order.execute",
+    "renu_customization.patches.v_0.add_authorised_signatory_field_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.add_lut_no_from_and_to_date_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.cadd_lut_no_and_expiry_date_on_gst_settings.execute",
+    "renu_customization.patches.v_0.change_field_label_in_currency_exchange_fields.execute",
+    "renu_customization.patches.v_0.add_freight_orepared_by_field_on_sales_order.execute",
+    "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_order.execute",
+    "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_invoice.execute",
+    
+   
   
 
     
@@ -350,18 +361,25 @@ doctype_js = {
     "Delivery Note":["public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js",
     "public/js/fetched_warrantydetails_on_deliverynoteitem.js", "public/js/fetched_warranty_date_from_delievrynote_if_date_of_dispatch.js"],
     # "public/js/calculate_end_date_on_delivery_note_and_update_serial_no.js"
-    "Sales Invoice":["public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js",
+    "Sales Invoice":["public/js/if_invoice_type_have_data_then_fetched_stored_in_invoice_typ_field.js","public/js/fetched_data_lut_no_and_expiry_date_on_sales_invoice_from_gst_settings.js",
+    "public/js/on_sales_invoice_freight_prepared_by_field_data_fetced_from_sales_order.js","public/js/read_only_currency_exchange_rate_on_sales_invoice.js",
+    "public/js/fetched_freight_charges_from_sales_order_to_sales_invoice.js","public/js/if_customer_gst_category_overseas_sez_check_gst_payment_checkbox_on_sales_invoice.js",
+    "public/js/relevent_print_format_show.js","public/js/lut_no_validate_between_invoice_range_automatcally_check_is_export_with_gst.js",
     "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", 
     "public/js/update_serial_no_on_sales_invoice_while_submitting.js", "public/js/set_by_default_value_of_delivery_terms_on_sales_invoice.js"],
 
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
     
     "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
+    "public/js/show_relevent_print_format_on_sales_order.js","public/js/read_only_currency_exchange_rate_sales_order.js",
+    "public/js/calculate_open_qty_on_so_item.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
     "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"],
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
     "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"],
-    "Purchase Order": "public/js/calculate_open_qty_on_purchase_order.js"
-     
+    "Purchase Order": "public/js/calculate_open_qty_on_purchase_order.js",
+    "Company": ["public/js/only_show_enable_lut_number.js","public/js/only_show_enable_epcg_no.js"],
+    "GST Settings": "public/js/if_enable_overseas_transactions_checked_show_lut_expiry_date.js"
+   
     
 
 }
@@ -386,6 +404,8 @@ doc_events = {
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
         "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
+        
+        
     }
 
 
@@ -396,8 +416,6 @@ app_include_js = [
     "/assets/renu_customization/js/serial_no_track_on_packing_slip.js"
 ]
 
-# custom_masters/hooks.py
 
-# hooks.py
 
 
