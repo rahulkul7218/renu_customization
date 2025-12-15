@@ -100,7 +100,7 @@
 frappe.query_reports["Pending Sales Order Report"] = {
     filters: [
         {
-            fieldname: "creation_no",
+            fieldname: "so_no",
             label: "SO No",
             fieldtype: "Link",
             options: "Sales Order"

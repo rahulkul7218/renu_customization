@@ -142,7 +142,7 @@ frappe.query_reports["Sales Order Report"] = {
         },
 
         {
-            fieldname: "creation_no",
+            fieldname: "so_no",
             label: "SO No",
             fieldtype: "Link",
             options: "Sales Order"
