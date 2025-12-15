@@ -1,9 +1,3 @@
-# # Copyright (c) 2025, Assimilate Technologies Pvt Ltd and contributors
-# # For license information, please see license.txt
- 
-# # import frappe
- 
- 
 # from warnings import filters
 # import frappe
  
@@ -130,7 +124,8 @@
 #             # sii.party_item_code AS party_item_code,
 #             sii.item_code AS item_code,
 #             sii.item_name AS item_name,
-#             sii.description AS description,
+#             # sii.description AS description,
+#             REGEXP_REPLACE(sii.description, '<[^>]*>', '') AS description,
             
 #             sii.qty AS qty,
  
@@ -208,18 +203,103 @@
 #     data = frappe.db.sql(query, filters, as_dict=1)
 #     return columns, data
 
+# from frappe.utils import flt
+# from frappe import _
+# import base64
+# from io import BytesIO
+# import openpyxl
+# from openpyxl.utils import get_column_letter
+# from openpyxl.styles import Alignment, Font, PatternFill
+
+# @frappe.whitelist()
+# def download_xlsx(filters=None):
+
+#     if isinstance(filters, str):
+#         filters = frappe.parse_json(filters)
+
+#     columns, data = execute(filters)
+
+#     wb = openpyxl.Workbook()
+#     ws = wb.active
+#     ws.title = "Sales Invoice Report"
+
+#     # Header
+#     ws["A1"].value = "Report Name"
+#     ws["A1"].font = Font(bold=True)
+#     ws["B1"].value = "Sales Invoice Report"
+
+#     ws["A2"].value = "Generated On"
+#     ws["A2"].font = Font(bold=True)
+#     ws["B2"].value = frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+
+#     row_idx = 4
+
+#     # Column headers
+#     for idx, col in enumerate(columns, start=1):
+#         c = ws.cell(row=row_idx, column=idx, value=col["label"])
+#         c.font = Font(bold=True)
+#         c.alignment = Alignment(horizontal="center")
+
+#     row_idx += 1
+
+#     # Identify numeric columns automatically
+#     numeric_fields = {"qty", "item_rate", "amount", "exchange_rate",
+#                       "base_amount", "item_purchase_rate"}
+
+#     # Data rows
+#     for row in data:
+#         for col_idx, col in enumerate(columns, start=1):
+#             fieldname = col["fieldname"]
+#             value = row.get(fieldname)
+
+#             cell = ws.cell(row=row_idx, column=col_idx)
+
+#             if fieldname in numeric_fields and value not in (None, ""):
+#                 cell.value = flt(value)
+#                 cell.number_format = "#,##0.00"
+#                 cell.alignment = Alignment(horizontal="right")
+#             else:
+#                 cell.value = value
+#                 cell.alignment = Alignment(horizontal="left")
+
+#         row_idx += 1
+
+#     # =============== TOTAL ROW with GRAY BACKGROUND =================
+#     total_row = row_idx
+
+#     for col_idx, col in enumerate(columns, start=1):
+#         fieldname = col["fieldname"]
+#         cell = ws.cell(total_row, col_idx)
+
+#         cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+#         cell.font = Font(bold=True)
+
+#         if col_idx == 1:
+#             cell.value = "Total"
+#             cell.alignment = Alignment(horizontal="left")
+#             continue
+
+#         if fieldname in numeric_fields:
+#             total_val = sum(flt(d.get(fieldname)) for d in data)
+#             cell.value = total_val
+#             cell.number_format = "#,##0.00"
+#             cell.alignment = Alignment(horizontal="right")
+#         else:
+#             cell.value = ""
+#             cell.alignment = Alignment(horizontal="left")
+
+#     # Column width
+#     for idx in range(1, len(columns) + 1):
+#         ws.column_dimensions[get_column_letter(idx)].width = 22
+
+#     output = BytesIO()
+#     wb.save(output)
+#     output.seek(0)
+#     return base64.b64encode(output.read()).decode()
 
 
 
 
-
-
-# Copyright (c) 2025, Assimilate Technologies Pvt Ltd and contributors
-# For license information, please see license.txt
- 
-# import frappe
- 
- 
 from warnings import filters
 import frappe
  
@@ -241,7 +321,7 @@ def execute(filters=None):
         if status_list:
             filters["status"] = tuple(status_list)
             conditions += " AND si.status IN %(status)s"
-        
+       
     # Invoice ID Filter
     if filters.get("invoice_id"):
         conditions += " AND si.name = %(invoice_id)s"
@@ -287,7 +367,7 @@ def execute(filters=None):
     columns = [
         {"label": "Invoice ID", "fieldname": "invoice_id", "fieldtype": "Link", "options": "Sales Invoice", "width": 120},
         {"label": "Invoice Date", "fieldname": "invoice_date", "fieldtype": "Date", "width": 120},
-        {"label": "Sr.No.", "fieldname": "sr_no", "fieldtype": "Int", "width": 70},
+        {"label": "Sr.No.", "fieldname": "sr_no", "fieldtype": "Int", "width": 70, "disable_total": 1},
         {"label": "Customer PO No.", "fieldname": "po_no", "fieldtype": "Data", "width": 150},
         {"label": "Customer PO Date", "fieldname": "po_date", "fieldtype": "Date", "width": 150},
  
@@ -301,12 +381,12 @@ def execute(filters=None):
         {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 120},
         {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 140},
         {"label": "Item Description", "fieldname": "description", "fieldtype": "Data", "width": 220},
-        {"label": "Qty", "fieldname": "qty", "fieldtype": "Float", "width": 80},
+        {"label": "Qty", "fieldname": "qty", "fieldtype": "Float", "width": 80,"disable_total": 1},
  
         {"label": "Item Rate", "fieldname": "item_rate", "fieldtype": "Float", "width": 120},
         {"label": "Amount", "fieldname": "amount", "fieldtype": "Float", "width": 120},
         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 120},
-        {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Float", "width": 140},
+        {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Float", "width": 140, "disable_total": 1},
         {"label": "Amount (INR)", "fieldname": "base_amount", "fieldtype": "Float", "width": 120},
  
         {"label": "Delivery Date", "fieldname": "delivery_date", "fieldtype": "Date", "width": 120},
@@ -332,23 +412,26 @@ def execute(filters=None):
         SELECT
             si.name AS invoice_id,
             si.posting_date AS invoice_date,
-           ROW_NUMBER() OVER (PARTITION BY so.name ORDER BY soi.idx) AS sr_no,
+           ROW_NUMBER() OVER (PARTITION BY si.name ORDER BY sii.idx) AS sr_no,
  
             si.po_no AS po_no,
+ 
             si.po_date AS po_date,
  
             so.name AS order_id_no,
+ 
             so.transaction_date AS order_id_date,
  
             c.customer_code AS customer_code,
+ 
             si.customer_name AS customer_name,
  
-            # sii.party_item_code AS party_item_code,
             sii.item_code AS item_code,
+ 
             sii.item_name AS item_name,
-            # sii.description AS description,
+ 
             REGEXP_REPLACE(sii.description, '<[^>]*>', '') AS description,
-            
+           
             sii.qty AS qty,
  
             sii.rate AS item_rate,
@@ -382,14 +465,14 @@ def execute(filters=None):
             '' AS business_vertical
  
         FROM `tabSales Invoice` si
-
+ 
         JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
         # AND (si.amended_from IS NULL OR si.name = (
         #     SELECT MAX(name)
         #     FROM `tabSales Invoice`
         #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(si.name, '-', 1), '%%')
         # ))
-
+ 
          AND si.name = (
             SELECT MAX(name)
             FROM `tabSales Invoice`
@@ -398,7 +481,7 @@ def execute(filters=None):
  
         LEFT JOIN `tabSales Order Item` soi ON soi.name = sii.so_detail
         LEFT JOIN `tabSales Order` so ON so.name = soi.parent
-        
+       
  
         LEFT JOIN `tabDynamic Link` dl ON dl.link_name = si.customer
             AND dl.link_doctype = 'Customer'
@@ -419,12 +502,14 @@ def execute(filters=None):
  
         {conditions}
         AND it.is_stock_item = 1
-        ORDER BY si.posting_date ASC, si.name ASC
+        ORDER BY si.posting_date ASC, si.name ASC,sii.idx ASC
     """
  
     data = frappe.db.sql(query, filters, as_dict=1)
     return columns, data
-
+ 
+ 
+import frappe
 from frappe.utils import flt
 from frappe import _
 import base64
@@ -432,89 +517,139 @@ from io import BytesIO
 import openpyxl
 from openpyxl.utils import get_column_letter
 from openpyxl.styles import Alignment, Font, PatternFill
-
+import json
+ 
 @frappe.whitelist()
 def download_xlsx(filters=None):
-
+ 
+    # ---------- PARSE FILTERS ----------
     if isinstance(filters, str):
-        filters = frappe.parse_json(filters)
-
+        try:
+            filters = frappe.parse_json(filters)
+        except Exception:
+            filters = json.loads(filters)
+ 
+    if not isinstance(filters, dict):
+        filters = {}
+ 
+    # read include_filters flag
+    include_filters = frappe.utils.cint(filters.get("include_filters", 1))
+ 
+    # remove include_filters from actual filter list
+    actual_filters = {k: v for k, v in filters.items() if k != "include_filters"}
+ 
+    # ---------- GET REPORT DATA ----------
     columns, data = execute(filters)
-
+ 
+ 
+ 
+ 
+   
+ 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Sales Invoice Report"
-
-    # Header
+ 
+    # ---------- HEADER ----------
     ws["A1"].value = "Report Name"
     ws["A1"].font = Font(bold=True)
     ws["B1"].value = "Sales Invoice Report"
-
+ 
     ws["A2"].value = "Generated On"
     ws["A2"].font = Font(bold=True)
     ws["B2"].value = frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S")
-
-    row_idx = 4
-
-    # Column headers
+ 
+    ws["A3"].value = "Generated By"
+    ws["A3"].font = Font(bold=True)
+    full_name = frappe.db.get_value("User", frappe.session.user, "full_name")
+    ws["B3"].value = full_name or frappe.session.user
+   
+    ws.append([])
+    row_idx = 5
+ 
+    # ---------- FILTERS SECTION ----------
+ 
+ 
+    # ---------- COLUMN HEADERS ----------
     for idx, col in enumerate(columns, start=1):
         c = ws.cell(row=row_idx, column=idx, value=col["label"])
         c.font = Font(bold=True)
         c.alignment = Alignment(horizontal="center")
-
+ 
     row_idx += 1
-
-    # Identify numeric columns automatically
-    numeric_fields = {"qty", "item_rate", "amount", "exchange_rate",
-                      "base_amount", "item_purchase_rate"}
-
-    # Data rows
+ 
+    # numeric fields
+    numeric_fields = {   "qty", "item_rate",
+         "exchange_rate", "item_purchase_rate" ,"amount", "base_amount" }
+ 
+    # Skip total for selected numeric columns
+    no_total_fields = {
+         "qty",
+        #  "item_rate",
+         "exchange_rate",
+        #  "item_purchase_rate"
+    }
+ 
+    # ---------- DATA ROWS ----------
     for row in data:
         for col_idx, col in enumerate(columns, start=1):
             fieldname = col["fieldname"]
             value = row.get(fieldname)
-
             cell = ws.cell(row=row_idx, column=col_idx)
-
-            if fieldname in numeric_fields and value not in (None, ""):
-                cell.value = flt(value)
+ 
+            if fieldname == "sr_no":
+                cell.value = int(value) if value else 0
+                cell.number_format = "0"
+                cell.alignment = Alignment(horizontal="center")
+ 
+            elif fieldname in numeric_fields:
+                cell.value = flt(value or 0)
                 cell.number_format = "#,##0.00"
                 cell.alignment = Alignment(horizontal="right")
+ 
             else:
+                if isinstance(value, (list, tuple, set, dict)):
+                    value = json.dumps(value)
                 cell.value = value
                 cell.alignment = Alignment(horizontal="left")
-
+ 
         row_idx += 1
-
-    # =============== TOTAL ROW with GRAY BACKGROUND =================
+ 
+    # ---------- TOTAL ROW ----------
     total_row = row_idx
-
     for col_idx, col in enumerate(columns, start=1):
         fieldname = col["fieldname"]
         cell = ws.cell(total_row, col_idx)
-
-        cell.fill = PatternFill(start_color="D3D3D3", end_color="D3D3D3", fill_type="solid")
+ 
+        cell.fill = PatternFill(start_color="D3D3D3", fill_type="solid")
         cell.font = Font(bold=True)
-
+ 
         if col_idx == 1:
             cell.value = "Total"
             cell.alignment = Alignment(horizontal="left")
             continue
-
+       
+        # Skip total for selected numeric columns
+        if fieldname in no_total_fields:
+             cell.value = ""
+             continue
+ 
         if fieldname in numeric_fields:
-            total_val = sum(flt(d.get(fieldname)) for d in data)
+            total_val = sum(flt(d.get(fieldname) or 0) for d in data)
             cell.value = total_val
             cell.number_format = "#,##0.00"
             cell.alignment = Alignment(horizontal="right")
         else:
             cell.value = ""
-            cell.alignment = Alignment(horizontal="left")
-
-    # Column width
+ 
+    # ---------- COLUMN WIDTH ----------
     for idx in range(1, len(columns) + 1):
         ws.column_dimensions[get_column_letter(idx)].width = 22
-
+ 
+    # ---------- OUTPUT ----------
     output = BytesIO()
     wb.save(output)
     output.seek(0)
     return base64.b64encode(output.read()).decode()
+ 
+ 
