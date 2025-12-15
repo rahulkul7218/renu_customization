@@ -381,7 +381,7 @@ def execute(filters=None):
         {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 120},
         {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 140},
         {"label": "Item Description", "fieldname": "description", "fieldtype": "Data", "width": 220},
-        {"label": "Qty", "fieldname": "qty", "fieldtype": "Float", "width": 80,"disable_total": 1},
+        {"label": "Qty", "fieldname": "qty", "fieldtype": "Float", "width": 80},
  
         {"label": "Item Rate", "fieldname": "item_rate", "fieldtype": "Float", "width": 120},
         {"label": "Amount", "fieldname": "amount", "fieldtype": "Float", "width": 120},
@@ -584,7 +584,7 @@ def download_xlsx(filters=None):
  
     # Skip total for selected numeric columns
     no_total_fields = {
-         "qty",
+        #  "qty",
         #  "item_rate",
          "exchange_rate",
         #  "item_purchase_rate"

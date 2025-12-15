@@ -158,12 +158,12 @@ frappe.query_reports["Sales Order Report"] = {
             fieldtype: "Date",
         },
 
-        {
-            fieldname: "customer_code",
-            label: "Customer Code",
-            fieldtype: "Link",
-            options: "Customer"
-        },
+        // {
+        //     fieldname: "customer_code",
+        //     label: "Customer Code",
+        //     fieldtype: "Link",
+        //     options: "Customer"
+        // },
         {
             fieldname: "customer_name",
             label: "Customer Name",
