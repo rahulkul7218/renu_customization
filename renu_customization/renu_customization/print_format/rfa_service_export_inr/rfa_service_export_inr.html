@@ -184,7 +184,8 @@
                         <tr>
                             <td>{{ loop.index }}</td>
                             <td class="left-align">{{ row.item_code or "" }}</td>
-                            <td>{{ row.item_name or "" }} </td>
+                            <td>{{ row.item_name or "" }} </td><br>
+                            {{row.party_item_code or ""}}
                             <td>{{ row.gst_hsn_code or "" }}</td>
                             <td>{{ row.qty or "" }}</td>
                             <td>{{ row.uom or "" }}</td>
