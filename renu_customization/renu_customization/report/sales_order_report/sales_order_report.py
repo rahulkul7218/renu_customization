@@ -442,6 +442,7 @@ def get_data(filters):
         LEFT JOIN `tabSales Invoice` si ON si.name = sii.parent
        
         WHERE 1 = 1
+        AND so.status != 'Cancelled'
         AND i.is_stock_item = 1
         # AND (so.amended_from IS NULL OR so.name = (
         #     SELECT MAX(name)

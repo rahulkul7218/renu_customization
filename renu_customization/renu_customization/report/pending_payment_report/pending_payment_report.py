@@ -330,7 +330,7 @@ def execute(filters=None):
  
             si.posting_date AS invoice_date,
  
-            si.grand_total AS invoice_value,
+            si.rounded_total AS invoice_value,
  
             si.outstanding_amount * si.conversion_rate AS outstanding,
              

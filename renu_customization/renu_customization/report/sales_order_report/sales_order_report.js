@@ -131,7 +131,7 @@ frappe.query_reports["Sales Order Report"] = {
                     "To Bill",
                     "To Deliver",
                     "Completed",
-                    "Cancelled",
+                    
                     "Closed",
                 ];
 

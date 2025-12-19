@@ -363,8 +363,9 @@ def get_data(filters):
             GROUP BY sii.so_detail
         ) latest_sii ON latest_sii.so_detail = soi.name
         LEFT JOIN `tabSales Invoice` si ON si.name = latest_sii.parent
-        WHERE (so.status IS NULL OR so.status NOT IN ('Completed', 'To Bill'))
+        WHERE (so.status IS NULL OR so.status NOT IN ('Completed', 'To Bill', 'Cancelled'))
         AND i.is_stock_item = 1
+        AND (soi.qty - soi.delivered_qty) > 0
         # AND (so.amended_from IS NULL OR so.name = (
         #     SELECT MAX(name)
         #     FROM `tabSales Order`
@@ -379,7 +380,7 @@ def get_data(filters):
         {conditions}
  
         GROUP BY soi.name
-        ORDER BY so.modified DESC, so.name ASC,soi.idx ASC,so.transaction_date ASC
+        ORDER BY so.name ASC,soi.idx ASC,so.transaction_date ASC
     """
  
     return frappe.db.sql(sql, filters, as_list=True)
