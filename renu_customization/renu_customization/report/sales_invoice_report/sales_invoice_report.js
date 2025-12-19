@@ -256,7 +256,8 @@ frappe.query_reports["Sales Invoice Report"] = {
                         fieldname: "include_filters",
                         fieldtype: "Check",
                         label: __("Include Filters"),
-                        default: 1
+                        default: 1,
+                        read_only: 1
                     }
                 ],
                 primary_action_label: __("Download"),

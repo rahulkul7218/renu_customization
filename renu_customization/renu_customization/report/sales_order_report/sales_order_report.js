@@ -131,7 +131,7 @@ frappe.query_reports["Sales Order Report"] = {
                     "To Bill",
                     "To Deliver",
                     "Completed",
-                    "Cancelled",
+                    
                     "Closed",
                 ];
 
@@ -142,7 +142,7 @@ frappe.query_reports["Sales Order Report"] = {
         },
 
         {
-            fieldname: "creation_no",
+            fieldname: "so_no",
             label: "SO No",
             fieldtype: "Link",
             options: "Sales Order"
@@ -158,12 +158,12 @@ frappe.query_reports["Sales Order Report"] = {
             fieldtype: "Date",
         },
 
-        {
-            fieldname: "customer_code",
-            label: "Customer Code",
-            fieldtype: "Link",
-            options: "Customer"
-        },
+        // {
+        //     fieldname: "customer_code",
+        //     label: "Customer Code",
+        //     fieldtype: "Link",
+        //     options: "Customer"
+        // },
         {
             fieldname: "customer_name",
             label: "Customer Name",
