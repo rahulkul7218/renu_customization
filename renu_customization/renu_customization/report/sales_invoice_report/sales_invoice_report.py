@@ -175,6 +175,7 @@ def execute(filters=None):
             SELECT MAX(name)
             FROM `tabSales Invoice`
             WHERE name LIKE CONCAT(SUBSTRING_INDEX(si.name, '-', 1), '%%')
+            AND docstatus != 2
         )
  
         LEFT JOIN `tabSales Order Item` soi ON soi.name = sii.so_detail
@@ -208,7 +209,7 @@ def execute(filters=None):
  
         {conditions}
         AND it.is_stock_item = 1
-        AND si.docstatus != 2
+        
         ORDER BY si.posting_date ASC, si.name ASC,sii.idx ASC
     """
  
