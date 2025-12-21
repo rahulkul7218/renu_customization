@@ -182,11 +182,14 @@ def execute(filters=None):
         LEFT JOIN `tabSales Order` so ON so.name = soi.parent
        
  
-        LEFT JOIN `tabDynamic Link` dl ON dl.link_name = si.customer
-            AND dl.link_doctype = 'Customer'
-            AND dl.parenttype = 'Address'
+        # LEFT JOIN `tabDynamic Link` dl ON dl.link_name = si.customer
+        #     AND dl.link_doctype = 'Customer'
+        #     AND dl.parenttype = 'Address'
  
-        LEFT JOIN `tabAddress` ad ON ad.name = dl.parent
+        # LEFT JOIN `tabAddress` ad ON ad.name = dl.parent
+
+        LEFT JOIN `tabAddress` ad ON ad.name = si.customer_address
+ 
  
         LEFT JOIN `tabCustomer` c ON c.name = si.customer
  
