@@ -180,7 +180,10 @@
 
                             <td>{{ loop.index }}</td>
                             <td>{{ row.item_code or "" }}</td>
-                            <td>{{ row.item_name or "" }} - {{doc.serial_no or ""}} </td>  
+                            <td>{{ row.item_name or "" }} - {{doc.serial_no or ""}} <br>
+                            <small> {%if row.party_item_code %}  {{row.party_item_code or ""}} {%endif%}</small>
+                            </td>
+                             
                             <td>{{ row.gst_hsn_code or "" }}</td>
                             <td>{{ row.qty or "" }}</td>
                             <td class="right">{{ "{:,.2f}".format(row.rate | float) or "" }}</td>

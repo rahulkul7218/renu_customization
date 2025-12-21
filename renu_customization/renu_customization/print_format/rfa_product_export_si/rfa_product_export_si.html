@@ -165,7 +165,7 @@
                        {{ serials[0] }} TO {{ serials[-1] }}
                   </small>
                {% endif %} <br/>
-               <small> {%if row.party_item_code %} PartyItem: {{row.party_item_code or ""}} {%endif%}</small>
+               <small> {%if row.party_item_code %}  {{row.party_item_code or ""}} {%endif%}</small>
               </td>
               <td class="center" >{{doc.po_no or ""}}<br/> <small>{{doc.po_date or ""}}</small></td>
               <td class="center">{{row.gst_hsn_code or ""}}</td>
