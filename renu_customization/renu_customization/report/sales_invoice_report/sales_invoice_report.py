@@ -190,15 +190,9 @@ def execute(filters=None):
  
         LEFT JOIN `tabCustomer` c ON c.name = si.customer
  
-        # LEFT JOIN `tabSales Team` st ON st.parent = si.name
+        LEFT JOIN `tabSales Team` st ON st.parent = si.name
 
-        (
-            SELECT GROUP_CONCAT(st.sales_person SEPARATOR ', ')
-            FROM `tabSales Team` st
-            WHERE st.parent = si.name
-        ) AS sales_person,
-
-
+        
         LEFT JOIN `tabItem` it ON it.name = sii.item_code
  
         LEFT JOIN `tabItem Price` ip ON ip.item_code = sii.item_code
