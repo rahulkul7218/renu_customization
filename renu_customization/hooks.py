@@ -317,6 +317,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_freight_orepared_by_field_on_sales_order.execute",
     "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_order.execute",
     "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.add_is_service_item_checkbox_on_item.execute",
     
    
   

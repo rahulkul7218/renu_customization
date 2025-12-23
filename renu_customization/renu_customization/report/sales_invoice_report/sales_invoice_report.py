@@ -205,8 +205,10 @@ def execute(filters=None):
         LEFT JOIN `tabDelivery Note` dn ON dn.name = dni.parent
  
         {conditions}
-        AND it.is_stock_item = 1
-        
+        # AND it.is_stock_item = 1
+        AND NOT (it.is_stock_item = 0 AND it.custom_is_freight_item = 1)
+
+
         ORDER BY si.posting_date ASC, si.name ASC,sii.idx ASC
     """
  
