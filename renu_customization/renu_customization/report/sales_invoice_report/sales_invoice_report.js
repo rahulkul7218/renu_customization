@@ -167,7 +167,7 @@ frappe.query_reports["Sales Invoice Report"] = {
             fieldtype: "MultiSelectList",
             get_data: function (txt) {
                 const status_list = [
-                    "Draft", "Return", "Credit Note Issued", "Submitted",
+                    "Return", "Credit Note Issued", "Submitted",
                     "Paid", "Partly Paid", "Unpaid", "Unpaid and Discounted",
                     "Partly Paid and Discounted", "Overdue and Discounted",
                     "Overdue", "Cancelled", "Internal Transfer"

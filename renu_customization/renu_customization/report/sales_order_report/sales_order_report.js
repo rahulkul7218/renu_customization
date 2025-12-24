@@ -125,7 +125,7 @@ frappe.query_reports["Sales Order Report"] = {
             fieldtype: "MultiSelectList",
             get_data: function (txt) {
                 const status_list = [
-                    "Draft",
+                    
                     "On Hold",
                     "To Deliver and Bill",
                     "To Bill",
