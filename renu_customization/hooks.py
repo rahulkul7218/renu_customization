@@ -244,6 +244,7 @@ app_license = "mit"
 
 after_migrate = [
     "renu_customization.patches.v_0.add_business_fields_to_item.execute",
+    
     "renu_customization.patches.v_0.addbusiness_region_field_on_customer.execute",
     "renu_customization.patches.v_0.add_supplier_code_field_on_supplier.execute",
     "renu_customization.patches.v_0.add_business_unit_field_on_sales_invoice_item.execute",
