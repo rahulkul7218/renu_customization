@@ -364,6 +364,13 @@ def get_data(filters):
         ) latest_sii ON latest_sii.so_detail = soi.name
         LEFT JOIN `tabSales Invoice` si ON si.name = latest_sii.parent
         WHERE (so.status IS NULL OR so.status NOT IN ('Completed', 'To Bill', 'Cancelled'))
+        AND NOT (
+                so.invoice_type IN (
+                    'Engineering Service Domestic',
+                    'Engineering Service Export'
+                )
+                AND so.billing_status = 'Fully Billed'
+                )
         # AND i.is_stock_item = 1
         AND NOT (i.is_stock_item = 0 AND i.custom_is_freight_item = 1)
         AND (soi.qty - soi.delivered_qty) > 0
