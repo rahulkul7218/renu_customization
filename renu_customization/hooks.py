@@ -420,5 +420,5 @@ app_include_js = [
 
 
 override_doctype_class = {
-    "Packing Slip": "packing_bypass.overrides.packing_slip.PackingSlipOverride"
+    "Packing Slip": "renu_customization.overrides.packing_slip.PackingSlipOverride"
 }
