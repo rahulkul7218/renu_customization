@@ -333,7 +333,6 @@ after_migrate = [
     "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute",
     "renu_customization.patches.v_0.add_fields_in_si_docket_no.execute",
     
-   
    #Naming series
     # "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
     # "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
