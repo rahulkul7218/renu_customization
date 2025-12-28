@@ -8,8 +8,10 @@ def execute(filters=None):
     conditions = " WHERE 1=1 "
 
     # 🔴 ADDED: Exclude Draft documents (docstatus = 0)
-    conditions += " AND si.docstatus != 1 "
- 
+    conditions += " AND si.docstatus != 0 "
+    conditions += " AND si.docstatus != 2 "
+
+
  
     status = filters.get("status")
  
