@@ -9,7 +9,9 @@ def execute(filters=None):
 
     # 🔴 ADDED: Exclude Draft documents (docstatus = 0)
     conditions += " AND si.docstatus != 0 "
- 
+    conditions += " AND si.docstatus != 2 "
+
+
  
     status = filters.get("status")
  
@@ -175,13 +177,13 @@ def execute(filters=None):
         #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(si.name, '-', 1), '%%')
         # ))
  
-         AND si.name = (
-            SELECT MAX(name)
-            FROM `tabSales Invoice`
-            WHERE name LIKE CONCAT(SUBSTRING_INDEX(si.name, '-', 1), '%%')
-            AND docstatus != 2
-        )
- 
+        #  AND si.name = (
+        #     SELECT MAX(name)
+        #     FROM `tabSales Invoice`
+        #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(si.name, '-', 1), '%%')
+        #     AND docstatus != 2
+        # )
+         
         LEFT JOIN `tabSales Order Item` soi ON soi.name = sii.so_detail
         LEFT JOIN `tabSales Order` so ON so.name = soi.parent
        

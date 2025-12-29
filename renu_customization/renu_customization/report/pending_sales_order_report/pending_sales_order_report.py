@@ -363,7 +363,7 @@ def get_data(filters):
             GROUP BY sii.so_detail
         ) latest_sii ON latest_sii.so_detail = soi.name
         LEFT JOIN `tabSales Invoice` si ON si.name = latest_sii.parent
-        WHERE (so.status IS NULL OR so.status NOT IN ('Completed', 'To Bill', 'Cancelled'))
+        WHERE (so.status IS NULL OR so.status NOT IN ('Completed', 'To Bill', 'Cancelled', 'Draft'))
         AND NOT (
                 so.invoice_type IN (
                     'Engineering Service Domestic',
@@ -380,11 +380,11 @@ def get_data(filters):
         #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
         # ))
  
-         AND so.name = (
-            SELECT MAX(name)
-            FROM `tabSales Order`
-            WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
-        )
+        # AND so.name = (
+        #     SELECT MAX(name)
+        #     FROM `tabSales Order`
+        #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
+        # )
         {conditions}
  
         GROUP BY soi.name

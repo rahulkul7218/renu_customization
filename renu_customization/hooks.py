@@ -244,6 +244,7 @@ app_license = "mit"
 
 after_migrate = [
     "renu_customization.patches.v_0.add_business_fields_to_item.execute",
+    
     "renu_customization.patches.v_0.addbusiness_region_field_on_customer.execute",
     "renu_customization.patches.v_0.add_supplier_code_field_on_supplier.execute",
     "renu_customization.patches.v_0.add_business_unit_field_on_sales_invoice_item.execute",
@@ -332,7 +333,6 @@ after_migrate = [
     "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute",
     "renu_customization.patches.v_0.add_fields_in_si_docket_no.execute",
     
-   
    #Naming series
     # "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
     # "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
@@ -419,6 +419,6 @@ app_include_js = [
 
 
 
-override_doctype_class = {
-    "Packing Slip": "renu_customization.overrides.packing_slip.PackingSlipOverride"
-}
+# override_doctype_class = {
+#     "Packing Slip": "renu_customization.overrides.packing_slip.PackingSlipOverride"
+# }
