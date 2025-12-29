@@ -380,11 +380,11 @@ def get_data(filters):
         #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
         # ))
  
-         AND so.name = (
-            SELECT MAX(name)
-            FROM `tabSales Order`
-            WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
-        )
+        # AND so.name = (
+        #     SELECT MAX(name)
+        #     FROM `tabSales Order`
+        #     WHERE name LIKE CONCAT(SUBSTRING_INDEX(so.name, '-', 1), '%%')
+        # )
         {conditions}
  
         GROUP BY soi.name
