@@ -146,9 +146,8 @@ def execute(filters=None):
  
             dn.posting_date AS delivery_date,
  
-            # c.business_region_name AS business_region_name,
-            brc.business_region_name AS business_region_name,
-
+            c.business_region_name AS business_region_name,
+            
             ad.city AS city,
             ad.state AS state,
             ad.country AS country,
@@ -200,9 +199,6 @@ def execute(filters=None):
  
  
         LEFT JOIN `tabCustomer` c ON c.name = si.customer
-
-        LEFT JOIN `tabBusiness Region Code` brc
-            ON brc.name = c.business_region_name
  
         LEFT JOIN `tabSales Team` st ON st.parent = si.name
 
