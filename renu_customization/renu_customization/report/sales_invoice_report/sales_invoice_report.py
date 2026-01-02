@@ -200,6 +200,9 @@ def execute(filters=None):
  
  
         LEFT JOIN `tabCustomer` c ON c.name = si.customer
+
+        LEFT JOIN `tabBusiness Region Code` brc
+            ON brc.name = c.business_region_name
  
         LEFT JOIN `tabSales Team` st ON st.parent = si.name
 
