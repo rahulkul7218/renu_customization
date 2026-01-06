@@ -46,7 +46,7 @@
 
 <td class="details-col2" rowspan="3">
   <p><strong>{{ frappe.db.get_value("Company", doc.company_address, "country") or "" }}</strong></p> 
-  <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"mode_of_transport") or ""}}</strong></p>
+  <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"pre_carriage_by") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</strong></p>
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"vesselorflightno") or ""}}</strong></p>
   <!-- <p><strong>{{ frappe.db.get_value("Delivery Note", frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_loading"), "port_of_loading") or "" }}</strong></p>
