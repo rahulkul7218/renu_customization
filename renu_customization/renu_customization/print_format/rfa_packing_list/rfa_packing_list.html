@@ -49,7 +49,7 @@
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"mode_of_transport") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</strong></p>
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"vesselorflightno") or ""}}</strong></p>
-  <p><strong>{{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "city") or "" }}</strong></p>
+  <p><strong>{{ frappe.db.get_value("Delivery Note", frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_loading"), "port_of_loading") or "" }}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"city") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"customer_address"),"city") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"country") or ""}}</strong></p>
@@ -125,13 +125,29 @@
                       {% for item in doc.items %}
                             <tr>
                                 <td><strong>{{ item.item_code }}</strong><br>{{ item.item_name }}</td>
-                                <td>
-    {% if item.serial_no %}
-        <small style="white-space: pre-line;">
-            {{ item.serial_no or "" }}
-        </small>
-    {% endif %}
-</td>
+                            <!-- <td>
+                              {% if item.serial_no %}
+                                  <small style="white-space: pre-line;">
+                                      {{ item.serial_no or "" }}
+                                  </small>
+                              {% endif %}
+                          </td> -->
+                          <td>
+                                        {% if item.serial_no %}
+                                    <small>
+                                                {{
+                                                    ", ".join(
+                                                        item.serial_no
+                                                        .replace('\n', ',')
+                                                        .split(',')
+                                                        | map('trim')
+                                                        | select
+                                                    )
+                                                }}
+                                    </small>
+                                        {% endif %}
+                                    </td>
+ 
                                 <td class="text-center">{{ item.qty }}</td>
                                 <td class="text-center">{{ item.box_no or '' }}</td>
                                 <td class="text-center">{{ item.dimension or '' }}</td>
