@@ -19,7 +19,7 @@ def execute():
         "default": "Mumbai",
         "fieldtype": "Link",
         "options": "Port of Loading",
-        "insert_after": "shipping_address_name",  # you can change position
+        "insert_after": "vesselorflightno",  # you can change position
         "reqd": 0,
         "read_only": 0
     }).insert(ignore_permissions=True)
