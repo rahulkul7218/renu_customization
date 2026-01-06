@@ -46,11 +46,13 @@
 
 <td class="details-col2" rowspan="3">
   <p><strong>{{ frappe.db.get_value("Company", doc.company_address, "country") or "" }}</strong></p> 
-  <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"mode_of_transport") or ""}}</strong></p>
+  <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"pre_carriage_by") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</strong></p>
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"vesselorflightno") or ""}}</strong></p>
-  <p><strong>{{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "city") or "" }}</strong></p>
-  <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"city") or ""}}</strong></p>
+  <!-- <p><strong>{{ frappe.db.get_value("Delivery Note", frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_loading"), "port_of_loading") or "" }}</strong></p>
+  <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"city") or ""}}</strong></p> -->
+  <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_loading") or ""}}</strong></p>
+  <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_discharge") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"customer_address"),"city") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"country") or ""}}</strong></p>
 </td>
@@ -125,13 +127,29 @@
                       {% for item in doc.items %}
                             <tr>
                                 <td><strong>{{ item.item_code }}</strong><br>{{ item.item_name }}</td>
-                                <td>
-    {% if item.serial_no %}
-        <small style="white-space: pre-line;">
-            {{ item.serial_no or "" }}
-        </small>
-    {% endif %}
-</td>
+                            <!-- <td>
+                              {% if item.serial_no %}
+                                  <small style="white-space: pre-line;">
+                                      {{ item.serial_no or "" }}
+                                  </small>
+                              {% endif %}
+                          </td> -->
+                          <td>
+                                        {% if item.serial_no %}
+                                    <small>
+                                                {{
+                                                    ", ".join(
+                                                        item.serial_no
+                                                        .replace('\n', ',')
+                                                        .split(',')
+                                                        | map('trim')
+                                                        | select
+                                                    )
+                                                }}
+                                    </small>
+                                        {% endif %}
+                                    </td>
+ 
                                 <td class="text-center">{{ item.qty }}</td>
                                 <td class="text-center">{{ item.box_no or '' }}</td>
                                 <td class="text-center">{{ item.dimension or '' }}</td>
@@ -145,13 +163,13 @@
                       <td class="totals">
                         <p>Total Weight (KG)</p>
                         <p>Net Weight (KG)</p>
-                        <p>Total Boxes (Nos)</p>
+                        <!-- <p>Total Boxes (Nos)</p> -->
                       </td>
-                  
+                    
                       <td colspan="4" class="totals">
-                        <p>{{ doc.gross_weight_pkg or '0.00' }}</p>
+                        <p>{{ doc.total_weight or '0.00' }}</p>
                       <p>{{ doc.net_weight_pkg or '0.00' }}</p>
-                      <p>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"total_qty") or "" }}
+                      <!-- <p>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"total_qty") or "" }} -->
                       <!--<span id="total-boxes-in-words" style="font-weight: normal; padding-left: 5px;"></span></p>-->
                   </td>
                       
@@ -168,10 +186,10 @@
           <th class="signature-block" style="width: 32%;text-align:right;">For {{ frappe.db.get_value("Delivery Note",doc.delivery_note,"company")}}<br><br><br><br><br>
           <p>Authorised Signatory</p>
           <!--<p>{{frappe.db.get_value("User",doc.owner,"full_name")}}</p>-->
-          <p>-</p>
+          <p></p>
           </th>
       </tr>
-      <!-- FOOTER -->
+      
       <tr>
           <td colspan="4" class="footer-line"></td>
       </tr>

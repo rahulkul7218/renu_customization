@@ -332,6 +332,11 @@ after_migrate = [
     "renu_customization.patches.v_0.add_delivery_term_field_in_si.execute",
     "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute",
     "renu_customization.patches.v_0.add_fields_in_si_docket_no.execute",
+    "renu_customization.patches.v_0.add_port_of_loading_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.add_port_of_discharge_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.add_pre_carriage_by_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.add_sales_order_field_on_delivery_note.execute"
+    
     
    #Naming series
     # "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
@@ -414,7 +419,7 @@ doc_events = {
 
 app_include_js = [
     "/assets/renu_customization/js/uat_banner.js",
-    "/assets/renu_customization/js/serial_no_track_on_packing_slip.js"
+    # "/assets/renu_customization/js/serial_no_track_on_packing_slip.js"
 ]
 
 
