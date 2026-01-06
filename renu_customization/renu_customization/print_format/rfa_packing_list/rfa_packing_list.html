@@ -49,8 +49,10 @@
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"mode_of_transport") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</strong></p>
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"vesselorflightno") or ""}}</strong></p>
-  <p><strong>{{ frappe.db.get_value("Delivery Note", frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_loading"), "port_of_loading") or "" }}</strong></p>
-  <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"city") or ""}}</strong></p>
+  <!-- <p><strong>{{ frappe.db.get_value("Delivery Note", frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_loading"), "port_of_loading") or "" }}</strong></p>
+  <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"city") or ""}}</strong></p> -->
+  <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_loading") or ""}}</strong></p>
+  <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"port_of_discharge") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"customer_address"),"city") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"country") or ""}}</strong></p>
 </td>
