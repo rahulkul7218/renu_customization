@@ -189,7 +189,7 @@
           <p>-</p>
           </th>
       </tr>
-      tr ><td colspan="9" style="font-size: 9px; text-align: center;">Place of Business :-  
+      <tr ><td colspan="9" style="font-size: 9px; text-align: center;">Place of Business :-  
    {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}, {{frappe.db.get_value("Address", doc.company_address, "pincode") or ""}}  Website:- {{company.website or ""}}</td></tr>
       <tr>
           <td colspan="4" class="footer-line"></td>
