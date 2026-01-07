@@ -2,6 +2,7 @@
     <style>
       {% include 'renu_customization/print_format/rfa_packing_list/rfa_packing_list.css' %}
 </style>
+    {% set company = frappe.get_doc("Company", doc.company) %}
 <body>
   <div class="print-container">
     <table class="outer-table">
@@ -22,10 +23,10 @@
               <p><b>{{ doc.company or "" }}</b></p>
               <p>
                   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"company")}}</strong></p>
-                <strong>Address:- </strong>{{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "address_line1") or "" }}, 
-                {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "city") or "" }},
+                <strong>Address:- </strong>{{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "address_line1") or "" }} 
+                <!-- {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "city") or "" }},
                 {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "country") or "" }}
-                - {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "pincode") or "" }}
+                - {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "pincode") or "" }} -->
                 <!--<p><strong><strong>Address:- </strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address_display")}}</strong></p>-->
                 <!--</p>-->
                 </div>
@@ -163,12 +164,13 @@
                       <td class="totals">
                         <p>Total Weight (KG)</p>
                         <p>Net Weight (KG)</p>
-                        <!-- <p>Total Boxes (Nos)</p> -->
+                        <p>Total Boxes (Nos)</p>
                       </td>
                     
                       <td colspan="4" class="totals">
                         <p>{{ doc.total_weight or '0.00' }}</p>
-                      <p>{{ doc.net_weight_pkg or '0.00' }}</p>
+                        <p>{{ doc.net_weight_pkg or '0.00' }}</p>
+                        <p>{{doc.total_boxes}}</p>
                       <!-- <p>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"total_qty") or "" }} -->
                       <!--<span id="total-boxes-in-words" style="font-weight: normal; padding-left: 5px;"></span></p>-->
                   </td>
@@ -191,7 +193,14 @@
       </tr>
       
       <tr>
-          <td colspan="4" class="footer-line"></td>
+          <!-- <td colspan="4" class="footer-line"></td> -->
+           <td colspan="4" class="footer-line">
+                 Place of Business :- {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "address_line1") or "" }}
+                Website:- {{company.website or ""}} 
+                 Email:- {{frappe.db.get_value("Company", doc.company, "email") or ""}} Phone No.:- {{frappe.db.get_value("Company", doc.company, "phone_no") or ""}} GSTIN:-
+                {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company",
+                doc.company, "pan") or ""}}
+            </td>
       </tr>
     </table>
   </div>
