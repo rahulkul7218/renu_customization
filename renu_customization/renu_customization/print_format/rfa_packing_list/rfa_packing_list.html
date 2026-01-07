@@ -164,12 +164,13 @@
                       <td class="totals">
                         <p>Total Weight (KG)</p>
                         <p>Net Weight (KG)</p>
-                        <!-- <p>Total Boxes (Nos)</p> -->
+                        <p>Total Boxes (Nos)</p>
                       </td>
                     
                       <td colspan="4" class="totals">
                         <p>{{ doc.total_weight or '0.00' }}</p>
-                      <p>{{ doc.net_weight_pkg or '0.00' }}</p>
+                        <p>{{ doc.net_weight_pkg or '0.00' }}</p>
+                        <p>{{doc.total_boxes}}</p>
                       <!-- <p>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"total_qty") or "" }} -->
                       <!--<span id="total-boxes-in-words" style="font-weight: normal; padding-left: 5px;"></span></p>-->
                   </td>
