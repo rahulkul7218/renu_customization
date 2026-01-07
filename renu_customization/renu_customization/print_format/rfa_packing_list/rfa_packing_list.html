@@ -194,17 +194,8 @@
       <tr>
           <!-- <td colspan="4" class="footer-line"></td> -->
            <td colspan="4" class="footer-line">
-                <!-- Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}
-                Website:- {{company.website or ""}} -->
-                Place of Business :- {{
-                    frappe.db.get_value(
-                        "Address",
-                        frappe.db.get_value("Company", doc.company, "address_line1"),
-                        "address_line1"
-                    ) or ""
-                }}
-                Website :- 
-
+                 Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}
+                Website:- {{company.website or ""}} 
                 {{frappe.db.get_value("Company", doc.company, "website") or ""}} Email:- {{frappe.db.get_value("Company", doc.company, "email") or ""}} Phone No.:- {{frappe.db.get_value("Company", doc.company, "phone_no") or ""}} GSTIN:-
                 {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company",
                 doc.company, "pan") or ""}}
