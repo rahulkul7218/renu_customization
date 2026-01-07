@@ -23,7 +23,7 @@
               <p><b>{{ doc.company or "" }}</b></p>
               <p>
                   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"company")}}</strong></p>
-                <strong>Address:- </strong>{{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "address_line1") or "" }}, 
+                <strong>Address:- </strong>{{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "address_line1") or "" }} 
                 <!-- {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "city") or "" }},
                 {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "country") or "" }}
                 - {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "pincode") or "" }} -->
@@ -194,8 +194,17 @@
       <tr>
           <!-- <td colspan="4" class="footer-line"></td> -->
            <td colspan="4" class="footer-line">
-                Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}
-                Website:-
+                <!-- Place of Business :- {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}
+                Website:- {{company.website or ""}} -->
+                Place of Business :- {{
+                    frappe.db.get_value(
+                        "Address",
+                        frappe.db.get_value("Company", doc.company, "primary_address"),
+                        "address_line1"
+                    ) or ""
+                }}
+                Website :- 
+
                 {{frappe.db.get_value("Company", doc.company, "website") or ""}} Email:- {{frappe.db.get_value("Company", doc.company, "email") or ""}} Phone No.:- {{frappe.db.get_value("Company", doc.company, "phone_no") or ""}} GSTIN:-
                 {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company",
                 doc.company, "pan") or ""}}
