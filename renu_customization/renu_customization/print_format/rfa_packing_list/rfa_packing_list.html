@@ -34,7 +34,7 @@
                 </p></div>
           </td>
          
-          <td class="details-col2 label-col" rowspan="3" style="width: 25%;">
+          <td class="details-col2 label-col" rowspan="6" style="width: 25%;">
           <p><strong>Country of Origin:</strong></p>
           <p><strong>Pre-Carriage by:</strong></p>
           <p><strong>Place of Receipt by Courier:</strong></p>
@@ -45,7 +45,7 @@
           <p><strong>Country of Final Destination:</strong></p>
         </td>
  
-<td class="details-col2" rowspan="3">
+<td class="details-col2" rowspan="6">
   <p><strong>{{ frappe.db.get_value("Company", doc.company_address, "country") or "" }}</strong></p>
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"pre_carriage_by") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</strong></p>
