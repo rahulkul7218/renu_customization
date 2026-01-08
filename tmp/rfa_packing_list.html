@@ -18,12 +18,12 @@
               <div class="logo-placeholder">
                   <img src="{{ frappe.db.get_value('Company',doc.company,'logo_for_printing') }}" style="max-width: 100px;">
               </div>
-             
+              
               <div><p><strong>Exporter:-</strong></p><div class="details-company">
               <p><b>{{ doc.company or "" }}</b></p>
               <p>
                   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"company")}}</strong></p>
-                <strong>Address:- </strong>{{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "address_line1") or "" }}
+                <strong>Address:- </strong>{{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "address_line1") or "" }} 
                 <!-- {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "city") or "" }},
                 {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "country") or "" }}
                 - {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "pincode") or "" }} -->
@@ -33,8 +33,8 @@
                 <p class="phone"><strong>Tel. No. {{frappe.db.get_value("Address",doc.company_address,"phone") or "" }}</strong>
                 </p></div>
           </td>
-         
-          <td class="details-col2 label-col" rowspan="6" style="width: 25%;">
+          
+          <td class="details-col2 label-col" rowspan="3" style="width: 25%;">
           <p><strong>Country of Origin:</strong></p>
           <p><strong>Pre-Carriage by:</strong></p>
           <p><strong>Place of Receipt by Courier:</strong></p>
@@ -44,9 +44,9 @@
           <p><strong>Final Destination:</strong></p>
           <p><strong>Country of Final Destination:</strong></p>
         </td>
- 
-<td class="details-col2" rowspan="6">
-  <p><strong>{{ frappe.db.get_value("Company", doc.company_address, "country") or "" }}</strong></p>
+
+<td class="details-col2" rowspan="3">
+  <p><strong>{{ frappe.db.get_value("Company", doc.company_address, "country") or "" }}</strong></p> 
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"pre_carriage_by") or ""}}</strong></p>
   <p><strong>{{ frappe.db.get_value("Address", doc.company_address, "city") or "" }}</strong></p>
   <p><strong>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"vesselorflightno") or ""}}</strong></p>
@@ -58,7 +58,6 @@
   <p><strong>{{ frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"shipping_address_name"),"country") or ""}}</strong></p>
 </td>
 
-       
       <tr>
         <td class="partition-label">Invoice No.</td>
         <td class="partition-value">{{ doc.name or ""}}</td>
@@ -108,144 +107,101 @@
               <p><b>Contact No.: </b>{{frappe.db.get_value("Address",frappe.db.get_value("Delivery Note",doc.delivery_note,"customer_address"),"phone") or ""}}</p>
           </td>
       </tr>
-
-      <!-- ITEMS TABLE -->
+      <!-- ITEMS -->
       <tr>
-        <td colspan="4">
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th rowspan="2" style="width:30%;">Description of Goods</th>
-                <th rowspan="2" style="width:18%;text-align:center;">Serial No's / Lot No's</th>
-                <th colspan="4" style="text-align:center;">BOX PACKING DETAILS</th>
-              </tr>
-              <tr>
-                <th style="width:9%;text-align:center;">Qty</th>
-                <th style="width:9%;text-align:center;">Box No.</th>
-                <th style="width:17%;text-align:center;">Size (MM)</th>
-                <th style="width:13%;text-align:center;">Weight (KG)</th>
-              </tr>
-            </thead>
-
-            <tbody>
-
-            {% set boxes = {} %}
-
-            {% for row in doc.packing_slip_item_table %}
-              {% set key = (row.box or "") ~ "||" ~ (row.box_no|string) %}
-
-              {% if key not in boxes %}
-                {% set box_doc = frappe.get_doc("Box", row.box) if row.box else None %}
-                {% set size_val = (
-                  (box_doc.length_l|int|string ~ "X" ~
-                   box_doc.width_l|int|string ~ "X" ~
-                   box_doc.height_l|int|string)
-                  if box_doc else ""
-                ) %}
-                {% set _ = boxes.update({
-                  key: {
-                    "box": row.box or "",
-                    "box_no": row.box_no or "",
-                    "serials": [],
-                    "items": [],
-                    "qty": 0,
-                    "size": size_val,
-                    "weight": 0
-                  }
-                }) %}
-              {% endif %}
-
-              {% if row.serial_no %}
-                {% for s in row.serial_no.replace('\n', ',').split(',') %}
-                  {% if s.strip() %}
-                    {% set _ = boxes[key]["serials"].append(s.strip()) %}
-                  {% endif %}
-                {% endfor %}
-              {% endif %}
-
-              {% set _ = boxes[key].update({
-                "qty": boxes[key]["qty"] + (row.qty or 0)
-              }) %}
-            {% endfor %}
-
-            {% for key, data in boxes.items() %}
-              {% set ns = namespace(weight=0) %}
-              {% for serial in data.serials %}
-                {% for it in doc.items %}
-                  {% if it.serial_no %}
-                    {% for s in it.serial_no.replace('\n', ',').split(',') %}
-                      {% if s.strip() == serial %}
-                        {% if it.item_name not in data["items"] %}
-                          {% set _ = data["items"].append(it.item_name) %}
-                        {% endif %}
-                        {% set ns.weight = ns.weight + (it.net_weight or 0) %}
-                      {% endif %}
-                    {% endfor %}
-                  {% endif %}
-                {% endfor %}
-              {% endfor %}
-              {% set _ = data.update({"weight": ns.weight}) %}
-            {% endfor %}
-
-            {% for key, data in boxes.items() %}
-              <tr>
-                <td>
-                  {% for name in data["items"] %}
-                    {{ name }}{% if not loop.last %},{% endif %}<br>
-                  {% endfor %}
-                </td>
-
-                <td><small>{{ ", ".join(data.serials) }}</small></td>
-                <td class="text-center">{{ data.qty }}</td>
-                <td class="text-center">{{ data.box }} {{ data.box_no }}</td>
-                <td class="text-center">{{ data.size }}</td>
-                <td class="text-right">{{ "%.3f"|format(data.weight) }}</td>
-              </tr>
-            {% endfor %}
-
-            <tr>
-              <td colspan="4" class="remarks-cell">
-                <h6>Remarks</h6>
-                <div>{{ doc.remarks or "" }}</div>
-              </td>
-              <td class="totals">
-                <p>Total Weight (KG)</p>
-                <p>Net Weight (KG)</p>
-                <p>Total Boxes (Nos)</p>
-              </td>
-              <td colspan="4" class="totals">
-                <p>{{ "%.3f"|format(doc.total_weight or 0) }}</p>
-                <p>{{ "%.3f"|format(doc.net_weight_pkg or 0) }}</p>
-                <p>{{ doc.total_boxes }}</p>
-              </td>
-            </tr>
-            </tbody>
-          </table>
-        </td>
-      </tr>
-    <!-- PAYMENT TERMS & SIGNATURE -->
-          <tr class="payment_term">
-              <td colspan="3"><b></b></td>
-              <th class="signature-block" style="width: 32%;text-align:right;">For {{ frappe.db.get_value("Delivery Note",doc.delivery_note,"company")}}<br><br><br><br><br>
-              <p>Authorised Signatory</p>
-              <!--<p>{{frappe.db.get_value("User",doc.owner,"full_name")}}</p>-->
-              <p></p>
-              </th>
-          </tr>
-      <!-- FOOTER -->
-      <tr>
-        <td colspan="4" class="footer-line">
-          Place of Business :- {{ frappe.db.get_value("Address",
-            frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"),
-            "address_line1") or "" }}
-          Website:- {{ company.website or "" }}
-          Email:- {{ frappe.db.get_value("Company", doc.company, "email") or "" }}
-          Phone No.:- {{ frappe.db.get_value("Company", doc.company, "phone_no") or "" }}
-          GSTIN:- {{ frappe.db.get_value("Company", doc.company, "gstin") or "" }}
-          PAN:- {{ frappe.db.get_value("Company", doc.company, "pan") or "" }}
-        </td>
+          <td colspan="4">
+              <table class="items-table">
+                  <thead>
+                      <tr>
+                          <th rowspan="2" style="width: 30%;">Description of Goods</th>
+                          <th rowspan="2" style="width: 18%;text-align:center;">Serial No's or Lot No's</th>
+                          <th colspan="4" style="text-align:center;">BOX PACKING DETAILS</th>
+                      </tr>
+                      <tr>
+                          <th style="width: 9%;text-align:center">Qty</th>
+                          <th style="width: 9%;text-align:center">Box No.</th>
+                          <th style="width: 17%;text-align:center">Size (MM)</th>
+                          <th style="width: 13%;text-align:center">Weight (KG)</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                      {% for item in doc.items %}
+                            <tr>
+                                <td><strong>{{ item.item_code }}</strong><br>{{ item.item_name }}</td>
+                            <!-- <td>
+                              {% if item.serial_no %}
+                                  <small style="white-space: pre-line;">
+                                      {{ item.serial_no or "" }}
+                                  </small>
+                              {% endif %}
+                          </td> -->
+                          <td>
+                                        {% if item.serial_no %}
+                                    <small>
+                                                {{
+                                                    ", ".join(
+                                                        item.serial_no
+                                                        .replace('\n', ',')
+                                                        .split(',')
+                                                        | map('trim')
+                                                        | select
+                                                    )
+                                                }}
+                                    </small>
+                                        {% endif %}
+                                    </td>
+ 
+                                <td class="text-center">{{ item.qty }}</td>
+                                <td class="text-center">{{ item.box_no or '' }}</td>
+                                <td class="text-center">{{ item.dimension or '' }}</td>
+                                <td class="text-right">{{ item.net_weight or '0.00' }}</td>
+                            </tr>
+                            {% endfor %}
+                      <tr>
+                      <td colspan="4" class="remarks-cell">
+                          <h6>Remarks</h6><div>{{ doc.remarks or '' }}</div>
+                      </td>
+                      <td class="totals">
+                        <p>Total Weight (KG)</p>
+                        <p>Net Weight (KG)</p>
+                        <p>Total Boxes (Nos)</p>
+                      </td>
+                    
+                      <td colspan="4" class="totals">
+                        <p>{{ doc.total_weight or '0.00' }}</p>
+                        <p>{{ doc.net_weight_pkg or '0.00' }}</p>
+                        <p>{{doc.total_boxes}}</p>
+                      <!-- <p>{{ frappe.db.get_value("Delivery Note",doc.delivery_note,"total_qty") or "" }} -->
+                      <!--<span id="total-boxes-in-words" style="font-weight: normal; padding-left: 5px;"></span></p>-->
+                  </td>
+                      
+                  </tr>
+                  </tbody>
+              </table>
+              
+          </td>
       </tr>
 
+      <!-- PAYMENT TERMS & SIGNATURE -->
+      <tr class="payment_term">
+          <td colspan="3"><b></b></td>
+          <th class="signature-block" style="width: 32%;text-align:right;">For {{ frappe.db.get_value("Delivery Note",doc.delivery_note,"company")}}<br><br><br><br><br>
+          <p>Authorised Signatory</p>
+          <!--<p>{{frappe.db.get_value("User",doc.owner,"full_name")}}</p>-->
+          <p></p>
+          </th>
+      </tr>
+      
+      <tr>
+          <!-- <td colspan="4" class="footer-line"></td> -->
+           <td colspan="4" class="footer-line">
+                 Place of Business :- {{ frappe.db.get_value("Address", frappe.db.get_value("Delivery Note",doc.delivery_note,"company_address"), "address_line1") or "" }}
+                Website:- {{company.website or ""}} 
+                 Email:- {{frappe.db.get_value("Company", doc.company, "email") or ""}} Phone No.:- {{frappe.db.get_value("Company", doc.company, "phone_no") or ""}} GSTIN:-
+                {{frappe.db.get_value("Company", doc.company, "gstin") or ""}} PAN:- {{frappe.db.get_value("Company",
+                doc.company, "pan") or ""}}
+            </td>
+      </tr>
     </table>
   </div>
 </body>
