@@ -694,13 +694,214 @@
 
 
 
+# import frappe
+# from frappe.utils import nowdate
+
+
+# # =========================================
+# # ⭐ FETCH MRP DATA FOR TABLE
+# # =========================================
+# @frappe.whitelist()
+# def get_mrp_data():
+#     items = frappe.get_all(
+#         "Item",
+#         filters={"is_stock_item": 1, "mrp": 1},
+#         fields=["name", "safety_stock", "min_order_qty as moq"]
+#     )
+
+#     result = []
+
+#     for item in items:
+#         item_code = item.name
+
+#         # ---------------- ON HAND STOCK ----------------
+#         on_hand = frappe.db.sql("""
+#             SELECT IFNULL(SUM(actual_qty),0)
+#             FROM `tabBin`
+#             WHERE item_code=%s
+#         """, item_code)[0][0]
+
+#         # ---------------- AVAILABLE QTY ----------------
+#         available = on_hand - (item.safety_stock or 0)
+
+#         # ---------------- OPEN SALES ORDER ----------------
+#         so_qty = frappe.db.sql("""
+#             SELECT IFNULL(SUM(qty - delivered_qty),0)
+#             FROM `tabSales Order Item`
+#             WHERE item_code=%s
+#             AND docstatus = 1
+#         """, item_code)[0][0]
+
+#         # ---------------- OPEN PURCHASE ORDER ----------------
+#         po_qty = frappe.db.sql("""
+#             SELECT IFNULL(SUM(qty - received_qty),0)
+#             FROM `tabPurchase Order Item`
+#             WHERE item_code=%s
+#             AND docstatus = 1
+#         """, item_code)[0][0]
+
+#         # ---------------- GROSS REQUIREMENT ----------------
+#         gross_requirement = so_qty - available - po_qty
+
+#         # ---------------- PLANNED PURCHASE LOGIC ----------------
+#         planned = 0
+#         safety = item.safety_stock or 0
+#         moq = item.moq or 0
+
+#         # Rule 1
+#         if on_hand == safety and moq > 0:
+#             planned = moq
+
+#         # Rule 2
+#         elif gross_requirement <= 0:
+#             planned = 0
+
+#         # Rule 3
+#         elif gross_requirement > 0 and gross_requirement < moq:
+#             planned = moq
+
+#         # Rule 4
+#         elif gross_requirement >= moq:
+#             planned = gross_requirement
+
+#         result.append({
+#             "item": item_code,
+#             "safety_stock": safety,
+#             "moq": moq,
+#             "on_hand_qty": on_hand,
+#             "available_qty": available,
+#             "open_sales_order": so_qty,
+#             "po_qty": po_qty,
+#             "gross_requirement": gross_requirement,
+#             "planned_purchase_qty": planned
+#         })
+
+#     return result
+
+
+
+# # =========================================
+# # ⭐ MANUAL BUTTON CREATE PURCHASE ORDER
+# # (Your Existing Function)
+# # =========================================
+# @frappe.whitelist()
+# def create_purchase_order(items):
+#     items = frappe.parse_json(items)
+
+#     if not items:
+#         return
+
+#     supplier_map = {}
+
+#     for row in items:
+#         item_code = row.get("item")
+#         qty = row.get("planned_qty")
+
+#         if qty <= 0:
+#             continue
+
+#         supplier = frappe.db.get_value(
+#             "Item Default",
+#             {"parent": item_code},
+#             "default_supplier"
+#         )
+
+#         if not supplier:
+#             frappe.throw(f"No Default Supplier found for Item {item_code}")
+
+#         supplier_map.setdefault(supplier, [])
+#         supplier_map[supplier].append({
+#             "item_code": item_code,
+#             "qty": qty,
+#             "schedule_date": nowdate()
+#         })
+
+#     last_po = None
+
+#     for supplier, po_items in supplier_map.items():
+#         po = frappe.get_doc({
+#             "doctype": "Purchase Order",
+#             "supplier": supplier,
+#             "schedule_date": nowdate(),
+#             "items": po_items
+#         })
+
+#         po.insert(ignore_permissions=True)
+#         po.submit()
+#         last_po = po.name
+
+#     return last_po
+
+
+
+# # =========================================
+# # ⭐ AUTO DAILY PURCHASE ORDER JOB
+# # (Runs every day 12AM)
+# # =========================================
+# @frappe.whitelist()
+# def auto_create_purchase_orders():
+
+#     mrp_data = get_mrp_data()
+#     supplier_map = {}
+
+#     for row in mrp_data:
+
+#         item = row.get("item")
+#         planned_qty = row.get("planned_purchase_qty") or 0
+
+#         # ❌ Skip if no requirement
+#         if planned_qty <= 0:
+#             continue
+
+#         # ✅ Get Default Supplier
+#         supplier = frappe.db.get_value(
+#             "Item Default",
+#             {"parent": item},
+#             "default_supplier"
+#         )
+
+#         if not supplier:
+#             frappe.log_error(
+#                 f"No Default Supplier for Item {item}",
+#                 "MRP Auto PO"
+#             )
+#             continue
+
+#         supplier_map.setdefault(supplier, [])
+#         supplier_map[supplier].append({
+#             "item_code": item,
+#             "qty": planned_qty,
+#             "schedule_date": nowdate()
+#         })
+
+#     created = []
+
+#     for supplier, po_items in supplier_map.items():
+
+#         po = frappe.get_doc({
+#             "doctype": "Purchase Order",
+#             "supplier": supplier,
+#             "schedule_date": nowdate(),
+#             "items": po_items
+#         })
+
+#         po.insert(ignore_permissions=True)
+#         po.submit()
+
+#         created.append(po.name)
+
+#     return created
+
+
+# Testing popup message
+
 import frappe
 from frappe.utils import nowdate
 
 
-# =========================================
-# ⭐ FETCH MRP DATA FOR TABLE
-# =========================================
+# =====================================================
+# ⭐ FETCH MRP TABLE DATA
+# =====================================================
 @frappe.whitelist()
 def get_mrp_data():
     items = frappe.get_all(
@@ -721,7 +922,7 @@ def get_mrp_data():
             WHERE item_code=%s
         """, item_code)[0][0]
 
-        # ---------------- AVAILABLE QTY ----------------
+        # ---------------- AVAILABLE STOCK ----------------
         available = on_hand - (item.safety_stock or 0)
 
         # ---------------- OPEN SALES ORDER ----------------
@@ -748,19 +949,19 @@ def get_mrp_data():
         safety = item.safety_stock or 0
         moq = item.moq or 0
 
-        # Rule 1
+        # RULE 1
         if on_hand == safety and moq > 0:
             planned = moq
 
-        # Rule 2
+        # RULE 2
         elif gross_requirement <= 0:
             planned = 0
 
-        # Rule 3
+        # RULE 3
         elif gross_requirement > 0 and gross_requirement < moq:
             planned = moq
 
-        # Rule 4
+        # RULE 4
         elif gross_requirement >= moq:
             planned = gross_requirement
 
@@ -780,10 +981,9 @@ def get_mrp_data():
 
 
 
-# =========================================
-# ⭐ MANUAL BUTTON CREATE PURCHASE ORDER
-# (Your Existing Function)
-# =========================================
+# =====================================================
+# ⭐ MANUAL PURCHASE ORDER BUTTON
+# =====================================================
 @frappe.whitelist()
 def create_purchase_order(items):
     items = frappe.parse_json(items)
@@ -834,10 +1034,9 @@ def create_purchase_order(items):
 
 
 
-# =========================================
-# ⭐ AUTO DAILY PURCHASE ORDER JOB
-# (Runs every day 12AM)
-# =========================================
+# =====================================================
+# ⭐ AUTO DAILY MRP PURCHASE JOB (12AM)
+# =====================================================
 @frappe.whitelist()
 def auto_create_purchase_orders():
 
@@ -849,11 +1048,9 @@ def auto_create_purchase_orders():
         item = row.get("item")
         planned_qty = row.get("planned_purchase_qty") or 0
 
-        # ❌ Skip if no requirement
         if planned_qty <= 0:
             continue
 
-        # ✅ Get Default Supplier
         supplier = frappe.db.get_value(
             "Item Default",
             {"parent": item},
@@ -861,10 +1058,7 @@ def auto_create_purchase_orders():
         )
 
         if not supplier:
-            frappe.log_error(
-                f"No Default Supplier for Item {item}",
-                "MRP Auto PO"
-            )
+            frappe.log_error(f"No Default Supplier for Item {item}", "MRP Auto PO")
             continue
 
         supplier_map.setdefault(supplier, [])
@@ -891,3 +1085,45 @@ def auto_create_purchase_orders():
         created.append(po.name)
 
     return created
+
+
+
+# =====================================================
+# ⭐ OPEN SALES ORDER POPUP DATA
+# =====================================================
+@frappe.whitelist()
+def get_sales_orders_for_item(item_code):
+    if not item_code:
+        return []
+
+    return frappe.db.sql("""
+        SELECT 
+            soi.parent AS sales_order,
+            soi.qty,
+            soi.delivered_qty,
+            (soi.qty - soi.delivered_qty) AS pending_qty
+        FROM `tabSales Order Item` soi
+        WHERE soi.item_code = %s
+        AND soi.docstatus = 1
+    """, item_code, as_dict=True)
+
+
+
+# =====================================================
+# ⭐ OPEN PURCHASE ORDER POPUP DATA
+# =====================================================
+@frappe.whitelist()
+def get_purchase_orders_for_item(item_code):
+    if not item_code:
+        return []
+
+    return frappe.db.sql("""
+        SELECT 
+            poi.parent AS purchase_order,
+            poi.qty,
+            poi.received_qty,
+            (poi.qty - poi.received_qty) AS pending_qty
+        FROM `tabPurchase Order Item` poi
+        WHERE poi.item_code = %s
+        AND poi.docstatus = 1
+    """, item_code, as_dict=True)
