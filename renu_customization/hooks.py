@@ -431,10 +431,10 @@ app_include_js = [
 #     "Packing Slip": "renu_customization.overrides.packing_slip.PackingSlipOverride"
 # }
 
-# scheduler_events = {
-#     "cron": {
-#         "0 0 * * *": [
-#             "renu_customization.renu_customization.page.mrp.mrp.auto_create_purchase_orders"
-#         ]
-#     }
-# }
+scheduler_events = {
+    "cron": {
+        "0 0 * * *": [
+            "renu_customization.renu_customization.page.mrp.mrp.auto_create_purchase_orders"
+        ]
+    }
+}
