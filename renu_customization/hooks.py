@@ -321,7 +321,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_is_service_item_checkbox_on_item.execute",
     "renu_customization.patches.v_0.add_mrp_checkbox_on_item.execute",
     "renu_customization.patches.v_0.add_auto_email_send_checkbox_on_supplier.execute",
-    "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
+    # "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
     "renu_customization.patches.v_0.send_email_mrp.execute",
     "renu_customization.patches.v_0.manually_send_email_to_supplier.execute",
   
@@ -431,10 +431,10 @@ app_include_js = [
 #     "Packing Slip": "renu_customization.overrides.packing_slip.PackingSlipOverride"
 # }
 
-scheduler_events = {
-    "cron": {
-        "0 0 * * *": [
-            "renu_customization.renu_customization.page.mrp.mrp.auto_create_purchase_orders"
-        ]
-    }
-}
+# scheduler_events = {
+#     "cron": {
+#         "0 0 * * *": [
+#             "renu_customization.renu_customization.page.mrp.mrp.auto_create_purchase_orders"
+#         ]
+#     }
+# }
