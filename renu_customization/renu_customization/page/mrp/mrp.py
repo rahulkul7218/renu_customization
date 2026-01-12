@@ -1,0 +1,893 @@
+# import frappe
+
+# @frappe.whitelist()
+# def get_mrp_data():
+#     # Fetch items with MRP checked
+#     items = frappe.get_all(
+#         "Item",
+#         filters={"is_stock_item": 1, "mrp": 1},
+#         fields=["name", "safety_stock", "min_order_qty"]
+#     )
+
+#     result = []
+
+#     for item in items:
+#         # On-hand and available qty per item (sum across all warehouses)
+#         bin_data = frappe.db.get_all(
+#             "Bin",
+#             filters={"item_code": item.name},
+#             fields=["SUM(actual_qty) as on_hand_qty", "SUM(projected_qty) as available_qty"]
+#         )
+#         on_hand_qty = bin_data[0].on_hand_qty or 0
+#         available_qty = bin_data[0].available_qty or 0
+
+#         # Open sales orders
+#         open_so = frappe.db.sql("""
+#             SELECT SUM(sii.qty - sii.delivered_qty)
+#             FROM `tabSales Order Item` sii
+#             JOIN `tabSales Order` so ON so.name = sii.parent
+#             WHERE sii.item_code=%s AND so.docstatus=1
+#         """, item.name)[0][0] or 0
+
+#         # Open purchase orders
+#         po_qty = frappe.db.sql("""
+#             SELECT SUM(poi.qty - poi.received_qty)
+#             FROM `tabPurchase Order Item` poi
+#             JOIN `tabPurchase Order` po ON po.name = poi.parent
+#             WHERE poi.item_code=%s AND po.docstatus=1
+#         """, item.name)[0][0] or 0
+
+#         # Planned purchase / gross requirement (can be from Material Request or computed)
+#         gross_requirement = frappe.db.sql("""
+#             SELECT SUM(mri.qty)
+#             FROM `tabMaterial Request Item` mri
+#             JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+#             WHERE mri.item_code=%s AND mr.docstatus=1 AND mr.status='Pending'
+#         """, item.name)[0][0] or 0
+
+#         planned_purchase_qty = frappe.db.sql("""
+#             SELECT SUM(mri.qty)
+#             FROM `tabMaterial Request Item` mri
+#             JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+#             WHERE mri.item_code=%s AND mr.docstatus=1 AND mr.status='Ordered'
+#         """, item.name)[0][0] or 0
+
+
+#         result.append({
+#             "item": item.name,
+#             "safety_stock": item.safety_stock or 0,
+#             "open_sales_order": open_so,
+#             "on_hand_qty": on_hand_qty,
+#             "available_qty": available_qty,
+#             "po_qty": po_qty,
+#             "gross_requirement": gross_requirement,
+#             "moq": item.min_order_qty or 0,
+#             "planned_purchase_qty": planned_purchase_qty
+#         })
+
+#     return result
+
+
+# import frappe
+
+# @frappe.whitelist()
+# def get_mrp_data():
+#     # Fetch items with MRP checked
+#     items = frappe.get_all(
+#         "Item",
+#         filters={"is_stock_item": 1, "mrp": 1},
+#         fields=["name", "safety_stock", "min_order_qty"]
+#     )
+
+#     result = []
+
+#     for item in items:
+
+#         # -------------------------
+#         # On-hand Qty = GRN Qty - Delivered Qty
+#         # -------------------------
+#         grn_qty = frappe.db.sql("""
+#             SELECT SUM(pri.received_qty)
+#             FROM `tabPurchase Receipt Item` pri
+#             JOIN `tabPurchase Receipt` pr ON pr.name = pri.parent
+#             WHERE pri.item_code=%s AND pr.docstatus=1
+#         """, item.name)[0][0] or 0
+
+#         delivered_qty = frappe.db.sql("""
+#             SELECT SUM(dni.qty)
+#             FROM `tabDelivery Note Item` dni
+#             JOIN `tabDelivery Note` dn ON dn.name = dni.parent
+#             WHERE dni.item_code=%s AND dn.docstatus=1
+#         """, item.name)[0][0] or 0
+
+#         on_hand_qty = grn_qty - delivered_qty
+
+#         # -------------------------
+#         # Available Qty = On-hand Qty - Open Sales Orders
+#         # -------------------------
+#         # open_so = frappe.db.sql("""
+#         #     SELECT SUM(sii.qty - sii.delivered_qty)
+#         #     FROM `tabSales Order Item` sii
+#         #     JOIN `tabSales Order` so ON so.name = sii.parent
+#         #     WHERE sii.item_code=%s AND so.docstatus=1
+#         # """, item.name)[0][0] or 0
+#         open_so = frappe.db.sql("""
+#         SELECT SUM(sii.qty - IFNULL(sii.delivered_qty, 0))
+#         FROM `tabSales Order Item` sii
+#         JOIN `tabSales Order` so ON so.name = sii.parent
+#         WHERE sii.item_code=%s
+#         AND so.docstatus IN (0,1)     -- Draft + Submitted
+#         AND so.status NOT IN ('Closed', 'Cancelled')
+#     """, item.name)[0][0] or 0
+
+
+#         available_qty = on_hand_qty - open_so
+
+#         # -------------------------
+#         # Open purchase orders
+#         # -------------------------
+#         po_qty = frappe.db.sql("""
+#             SELECT SUM(poi.qty - poi.received_qty)
+#             FROM `tabPurchase Order Item` poi
+#             JOIN `tabPurchase Order` po ON po.name = poi.parent
+#             WHERE poi.item_code=%s 
+#             AND po.docstatus IN (0,1)
+#             AND po.status NOT IN ('Closed', 'Cancelled')
+#         """, item.name)[0][0] or 0
+
+#         # -------------------------
+#         # Planned purchase / gross requirement
+#         # -------------------------
+#         gross_requirement = frappe.db.sql("""
+#             SELECT SUM(mri.qty)
+#             FROM `tabMaterial Request Item` mri
+#             JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+#             WHERE mri.item_code=%s AND mr.docstatus=1 AND mr.status='Pending'
+#         """, item.name)[0][0] or 0
+
+#         planned_purchase_qty = frappe.db.sql("""
+#             SELECT SUM(mri.qty)
+#             FROM `tabMaterial Request Item` mri
+#             JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+#             WHERE mri.item_code=%s AND mr.docstatus=1 AND mr.status='Ordered'
+#         """, item.name)[0][0] or 0
+
+#         result.append({
+#             "item": item.name,
+#             "safety_stock": item.safety_stock or 0,
+#             "open_sales_order": open_so,
+#             "on_hand_qty": on_hand_qty,
+#             "available_qty": available_qty,
+#             "po_qty": po_qty,
+#             "gross_requirement": gross_requirement,
+#             "moq": item.min_order_qty or 0,
+#             "planned_purchase_qty": planned_purchase_qty
+#         })
+
+#     return result
+
+# below script is working till Gross requirement column
+# import frappe
+
+# @frappe.whitelist()
+# def get_mrp_data():
+#     # Fetch items with MRP checked
+#     items = frappe.get_all(
+#         "Item",
+#         filters={"is_stock_item": 1, "mrp": 1},
+#         fields=["name", "safety_stock", "min_order_qty"]
+#     )
+
+#     result = []
+
+#     for item in items:
+
+#         # ======================================================
+#         # ⭐⭐ UPDATED PART — Fetch Real On-hand Stock ⭐⭐
+#         # On-hand Qty = Actual Qty from Warehouse Stock (tabBin)
+#         # ======================================================
+#         on_hand_qty = frappe.db.sql("""
+#             SELECT SUM(actual_qty)
+#             FROM `tabBin`
+#             WHERE item_code = %s
+#         """, item.name)[0][0] or 0
+#         # ======================================================
+
+
+#         # -------------------------
+#         # Available Qty = On-hand Qty - Open Sales Orders
+#         # -------------------------
+#         open_so = frappe.db.sql("""
+#             SELECT SUM(sii.qty - IFNULL(sii.delivered_qty, 0))
+#             FROM `tabSales Order Item` sii
+#             JOIN `tabSales Order` so ON so.name = sii.parent
+#             WHERE sii.item_code=%s
+#             AND so.docstatus IN (0,1)     -- Draft + Submitted
+#             AND so.status NOT IN ('Closed', 'Cancelled')
+#         """, item.name)[0][0] or 0
+
+#         # available_qty = on_hand_qty - open_so
+#         safety_stock = item.safety_stock or 0
+#         available_qty = on_hand_qty - safety_stock
+
+
+#         # -------------------------
+#         # Open purchase orders
+#         # -------------------------
+#         po_qty = frappe.db.sql("""
+#             SELECT SUM(poi.qty - poi.received_qty)
+#             FROM `tabPurchase Order Item` poi
+#             JOIN `tabPurchase Order` po ON po.name = poi.parent
+#             WHERE poi.item_code=%s 
+#             AND po.docstatus IN (0,1)
+#             AND po.status NOT IN ('Closed', 'Cancelled')
+#         """, item.name)[0][0] or 0
+
+
+#         # -------------------------
+#         # Gross Requirement (Pending MR)
+#         # -------------------------
+#         # gross_requirement = frappe.db.sql("""
+#         #     SELECT SUM(mri.qty)
+#         #     FROM `tabMaterial Request Item` mri
+#         #     JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+#         #     WHERE mri.item_code=%s 
+#         #     AND mr.docstatus=1 
+#         #     AND mr.status='Pending'
+#         # """, item.name)[0][0] or 0
+#         gross_requirement = (open_so - available_qty - po_qty)
+
+
+#         # -------------------------
+#         # Planned Purchase (Ordered MR)
+#         # -------------------------
+#         planned_purchase_qty = frappe.db.sql("""
+#             SELECT SUM(mri.qty)
+#             FROM `tabMaterial Request Item` mri
+#             JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+#             WHERE mri.item_code=%s 
+#             AND mr.docstatus=1 
+#             AND mr.status='Ordered'
+#         """, item.name)[0][0] or 0
+
+
+#         result.append({
+#             "item": item.name,
+#             "safety_stock": item.safety_stock or 0,
+#             "open_sales_order": open_so,
+#             "on_hand_qty": on_hand_qty,
+#             "available_qty": available_qty,
+#             "po_qty": po_qty,
+#             "gross_requirement": gross_requirement,
+#             "moq": item.min_order_qty or 0,
+#             "planned_purchase_qty": planned_purchase_qty
+#         })
+
+#     return result
+
+
+
+# New logic script for calculating planned to request qty
+# import frappe
+
+# @frappe.whitelist()
+# def get_mrp_data():
+#     # Fetch items with MRP checked
+#     items = frappe.get_all(
+#         "Item",
+#         filters={"is_stock_item": 1, "mrp": 1},
+#         fields=["name", "safety_stock", "min_order_qty"]
+#     )
+
+#     result = []
+
+#     for item in items:
+
+#         # ======================================================
+#         # ⭐⭐ Fetch Real On-hand Stock from tabBin ⭐⭐
+#         # ======================================================
+#         on_hand_qty = frappe.db.sql("""
+#             SELECT SUM(actual_qty)
+#             FROM `tabBin`
+#             WHERE item_code = %s
+#         """, item.name)[0][0] or 0
+#         on_hand_qty = float(on_hand_qty)
+
+#         # ======================================================
+#         # Open Sales Order Qty
+#         # ======================================================
+#         open_so = frappe.db.sql("""
+#             SELECT SUM(sii.qty - IFNULL(sii.delivered_qty, 0))
+#             FROM `tabSales Order Item` sii
+#             JOIN `tabSales Order` so ON so.name = sii.parent
+#             WHERE sii.item_code=%s
+#             AND so.docstatus IN (0,1)     -- Draft + Submitted
+#             AND so.status NOT IN ('Closed', 'Cancelled')
+#         """, item.name)[0][0] or 0
+#         open_so = float(open_so)
+
+#         # ======================================================
+#         # Safety Stock
+#         # ======================================================
+#         safety_stock = item.safety_stock or 0
+#         safety_stock = float(safety_stock)
+
+#         # ======================================================
+#         # Available Qty = On-hand - Safety Stock
+#         # ======================================================
+#         available_qty = on_hand_qty - safety_stock
+
+#         # ======================================================
+#         # Open Purchase Orders
+#         # ======================================================
+#         po_qty = frappe.db.sql("""
+#             SELECT SUM(poi.qty - IFNULL(poi.received_qty, 0))
+#             FROM `tabPurchase Order Item` poi
+#             JOIN `tabPurchase Order` po ON po.name = poi.parent
+#             WHERE poi.item_code=%s 
+#             AND po.docstatus IN (0,1)
+#             AND po.status NOT IN ('Closed', 'Cancelled')
+#         """, item.name)[0][0] or 0
+#         po_qty = float(po_qty)
+
+#         # ======================================================
+#         # Gross Requirement
+#         # ======================================================
+#         gross_requirement = open_so - available_qty - po_qty
+#         gross_requirement = float(gross_requirement)
+
+#         # ======================================================
+#         # Planned Purchase Qty from Ordered Material Requests
+#         # ======================================================
+#         planned_purchase_qty = frappe.db.sql("""
+#             SELECT SUM(mri.qty)
+#             FROM `tabMaterial Request Item` mri
+#             JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+#             WHERE mri.item_code=%s 
+#             AND mr.docstatus=1 
+#             AND mr.status='Ordered'
+#         """, item.name)[0][0] or 0
+#         planned_purchase_qty = float(planned_purchase_qty)
+
+#         # ======================================================
+#         # Minimum Order Qty (MOQ)
+#         # ======================================================
+#         moq = item.min_order_qty or 0
+#         moq = float(moq)
+
+#         # ======================================================
+#         # Planned to Purchase Qty Calculation
+#         # ======================================================
+#         if on_hand_qty == safety_stock:
+#             planned_purchase_qty = moq
+#         elif gross_requirement <= 0:
+#             planned_purchase_qty = 0
+#         elif gross_requirement < moq:
+#             planned_purchase_qty = moq
+#         else:
+#             planned_purchase_qty = gross_requirement
+
+#         # ======================================================
+#         # Append Result
+#         # ======================================================
+#         result.append({
+#             "item": item.name,
+#             "safety_stock": safety_stock,
+#             "open_sales_order": open_so,
+#             "on_hand_qty": on_hand_qty,
+#             "available_qty": available_qty,
+#             "po_qty": po_qty,
+#             "gross_requirement": gross_requirement,
+#             "moq": moq,
+#             "planned_purchase_qty": planned_purchase_qty
+           
+#         })
+
+#     return result
+
+
+# New logic for dialog box show sales orders
+
+# import frappe
+
+# @frappe.whitelist()
+# def get_mrp_data():
+#     items = frappe.get_all(
+#         "Item",
+#         filters={"is_stock_item": 1, "mrp": 1},
+#         fields=["name", "safety_stock", "min_order_qty"]
+#     )
+
+#     result = []
+
+#     for item in items:
+#         # On-hand Qty
+#         on_hand_qty = frappe.db.sql("""SELECT SUM(actual_qty) FROM `tabBin` WHERE item_code=%s""", item.name)[0][0] or 0
+#         on_hand_qty = float(on_hand_qty)
+
+#         # Open SO Qty
+#         open_so = frappe.db.sql("""
+#             SELECT SUM(sii.qty - IFNULL(sii.delivered_qty,0))
+#             FROM `tabSales Order Item` sii
+#             JOIN `tabSales Order` so ON so.name = sii.parent
+#             WHERE sii.item_code=%s
+#             AND so.docstatus IN (0,1)
+#             AND so.status NOT IN ('Closed','Cancelled')
+#         """, item.name)[0][0] or 0
+#         open_so = float(open_so)
+
+#         # Safety Stock
+#         safety_stock = float(item.safety_stock or 0)
+
+#         # Available Qty
+#         available_qty = on_hand_qty - safety_stock
+
+#         # Open PO Qty
+#         po_qty = frappe.db.sql("""
+#             SELECT SUM(poi.qty - IFNULL(poi.received_qty,0))
+#             FROM `tabPurchase Order Item` poi
+#             JOIN `tabPurchase Order` po ON po.name = poi.parent
+#             WHERE poi.item_code=%s
+#             AND po.docstatus IN (0,1)
+#             AND po.status NOT IN ('Closed','Cancelled')
+#         """, item.name)[0][0] or 0
+#         po_qty = float(po_qty)
+
+#         # Gross Requirement
+#         gross_requirement = float(open_so - available_qty - po_qty)
+
+#         # Planned Purchase Qty
+#         planned_purchase_qty = frappe.db.sql("""
+#             SELECT SUM(mri.qty)
+#             FROM `tabMaterial Request Item` mri
+#             JOIN `tabMaterial Request` mr ON mr.name = mri.parent
+#             WHERE mri.item_code=%s
+#             AND mr.docstatus=1
+#             AND mr.status='Ordered'
+#         """, item.name)[0][0] or 0
+#         planned_purchase_qty = float(planned_purchase_qty)
+
+#         # MOQ
+#         moq = float(item.min_order_qty or 0)
+
+#         # Planned to Purchase Qty
+#         if on_hand_qty == safety_stock:
+#             planned_purchase_qty = moq
+#         elif gross_requirement <= 0:
+#             planned_purchase_qty = 0
+#         elif gross_requirement < moq:
+#             planned_purchase_qty = moq
+#         else:
+#             planned_purchase_qty = gross_requirement
+
+#         result.append({
+#             "item": item.name,
+#             "safety_stock": safety_stock,
+#             "open_sales_order": open_so,
+#             "on_hand_qty": on_hand_qty,
+#             "available_qty": available_qty,
+#             "po_qty": po_qty,
+#             "gross_requirement": gross_requirement,
+#             "moq": moq,
+#             "planned_purchase_qty": planned_purchase_qty
+#         })
+
+#     return result
+
+
+# # Open SO Function
+# @frappe.whitelist()
+# def get_sales_orders_for_item(item_code):
+#     sales_orders = frappe.db.sql("""
+#         SELECT so.name AS sales_order,
+#                sii.qty - IFNULL(sii.delivered_qty,0) AS qty
+#         FROM `tabSales Order Item` sii
+#         JOIN `tabSales Order` so ON so.name = sii.parent
+#         WHERE sii.item_code=%s
+#         AND so.docstatus IN (0,1)
+#         AND so.status NOT IN ('Closed','Cancelled')
+#     """, item_code, as_dict=1)
+#     return sales_orders
+
+
+# # ✅ New: Open PO Function
+# @frappe.whitelist()
+# def get_purchase_orders_for_item(item_code):
+#     purchase_orders = frappe.db.sql("""
+#         SELECT po.name AS purchase_order,
+#                poi.qty - IFNULL(poi.received_qty,0) AS qty
+#         FROM `tabPurchase Order Item` poi
+#         JOIN `tabPurchase Order` po ON po.name = poi.parent
+#         WHERE poi.item_code=%s
+#         AND po.docstatus IN (0,1)
+#         AND po.status NOT IN ('Closed','Cancelled')
+#     """, item_code, as_dict=1)
+#     return purchase_orders
+
+
+# Below code is for auto PO generation
+# import frappe
+
+
+# # =========================================
+# # ⭐ FETCH MRP DATA FOR TABLE
+# # =========================================
+# @frappe.whitelist()
+# def get_mrp_data():
+#     items = frappe.get_all(
+#         "Item",
+#         filters={"is_stock_item": 1, "mrp": 1},
+#         fields=["name", "safety_stock", "min_order_qty as moq"]
+#     )
+
+#     result = []
+
+#     for item in items:
+#         item_code = item.name
+
+#         # ---------------- ON HAND STOCK ----------------
+#         on_hand = frappe.db.sql("""
+#             SELECT IFNULL(SUM(actual_qty),0)
+#             FROM `tabBin`
+#             WHERE item_code=%s
+#         """, item_code)[0][0]
+
+#         # ---------------- AVAILABLE QTY ----------------
+#         # available = frappe.db.sql("""
+#         #     SELECT IFNULL(SUM(actual_qty - reserved_qty),0)
+#         #     FROM `tabBin`
+#         #     WHERE item_code=%s
+#         # """, item_code)[0][0]
+#         # ---------------- AVAILABLE QTY ----------------
+#         available = on_hand - (item.safety_stock or 0)
+
+#         # ---------------- OPEN SALES ORDER ----------------
+#         so_qty = frappe.db.sql("""
+#             SELECT IFNULL(SUM(qty - delivered_qty),0)
+#             FROM `tabSales Order Item`
+#             WHERE item_code=%s
+#             AND docstatus = 1
+#         """, item_code)[0][0]
+
+#         # ---------------- OPEN PURCHASE ORDER ----------------
+#         po_qty = frappe.db.sql("""
+#             SELECT IFNULL(SUM(qty - received_qty),0)
+#             FROM `tabPurchase Order Item`
+#             WHERE item_code=%s
+#             AND docstatus = 1
+#         """, item_code)[0][0]
+
+#         # ---------------- GROSS REQUIREMENT ----------------
+#         gross_requirement = so_qty - available - po_qty
+
+#         # ---------------- PLANNED PURCHASE LOGIC ----------------
+#         planned = 0
+#         safety = item.safety_stock or 0
+#         moq = item.moq or 0
+
+#         # Rule 1
+#         if on_hand == safety and moq > 0:
+#             planned = moq
+
+#         # Rule 2
+#         elif gross_requirement <= 0:
+#             planned = 0
+
+#         # Rule 3
+#         elif gross_requirement > 0 and gross_requirement < moq:
+#             planned = moq
+
+#         # Rule 4
+#         elif gross_requirement >= moq:
+#             planned = gross_requirement
+
+#         result.append({
+#             "item": item_code,
+#             "safety_stock": safety,
+#             "moq": moq,
+#             "on_hand_qty": on_hand,
+#             "available_qty": available,
+#             "open_sales_order": so_qty,
+#             "po_qty": po_qty,
+#             "gross_requirement": gross_requirement,
+#             "planned_purchase_qty": planned
+#         })
+
+#     return result
+
+
+
+# # =========================================
+# # ⭐ SALES ORDER POPUP DATA
+# # =========================================
+# @frappe.whitelist()
+# def get_sales_orders_for_item(item_code):
+#     data = frappe.db.sql("""
+#         SELECT parent, qty
+#         FROM `tabSales Order Item`
+#         WHERE item_code=%s
+#         AND docstatus = 1
+#     """, item_code, as_dict=True)
+
+#     result = []
+#     for d in data:
+#         result.append({
+#             "sales_order": d.parent,
+#             "qty": d.qty
+#         })
+
+#     return result
+
+
+
+# # =========================================
+# # ⭐ PURCHASE ORDER POPUP DATA
+# # =========================================
+# @frappe.whitelist()
+# def get_purchase_orders_for_item(item_code):
+#     data = frappe.db.sql("""
+#         SELECT parent, qty
+#         FROM `tabPurchase Order Item`
+#         WHERE item_code=%s
+#         AND docstatus = 1
+#     """, item_code, as_dict=True)
+
+#     result = []
+#     for d in data:
+#         result.append({
+#             "purchase_order": d.parent,
+#             "qty": d.qty
+#         })
+
+#     return result
+
+
+
+# # =========================================
+# # ⭐ CREATE PURCHASE ORDER
+# # =========================================
+# import json
+
+# @frappe.whitelist()
+# def create_purchase_order(items):
+#     items = json.loads(items)
+
+#     if not items:
+#         frappe.throw("No items selected")
+
+#     po = frappe.new_doc("Purchase Order")
+
+#     # Supplier from first item
+#     first_item = items[0]["item"]
+#     supplier = get_default_supplier(first_item)
+
+#     if not supplier:
+#         frappe.throw(f"No Default Supplier found for item: {first_item}")
+
+#     po.supplier = supplier
+
+#     # Add Items
+#     for row in items:
+#         supplier = get_default_supplier(row["item"])
+#         if not supplier:
+#             frappe.throw(f"No Default Supplier for {row['item']}")
+
+#         po.append("items", {
+#             "item_code": row["item"],
+#             "qty": row["planned_qty"],
+#             "schedule_date": frappe.utils.nowdate()
+#         })
+
+#     po.insert()
+#     po.submit()
+
+#     return po.name
+
+
+# def get_default_supplier(item_code):
+#     return frappe.db.get_value(
+#         "Item Default",
+#         {"parent": item_code},
+#         "default_supplier"
+#     )
+
+
+
+
+import frappe
+from frappe.utils import nowdate
+
+
+# =========================================
+# ⭐ FETCH MRP DATA FOR TABLE
+# =========================================
+@frappe.whitelist()
+def get_mrp_data():
+    items = frappe.get_all(
+        "Item",
+        filters={"is_stock_item": 1, "mrp": 1},
+        fields=["name", "safety_stock", "min_order_qty as moq"]
+    )
+
+    result = []
+
+    for item in items:
+        item_code = item.name
+
+        # ---------------- ON HAND STOCK ----------------
+        on_hand = frappe.db.sql("""
+            SELECT IFNULL(SUM(actual_qty),0)
+            FROM `tabBin`
+            WHERE item_code=%s
+        """, item_code)[0][0]
+
+        # ---------------- AVAILABLE QTY ----------------
+        available = on_hand - (item.safety_stock or 0)
+
+        # ---------------- OPEN SALES ORDER ----------------
+        so_qty = frappe.db.sql("""
+            SELECT IFNULL(SUM(qty - delivered_qty),0)
+            FROM `tabSales Order Item`
+            WHERE item_code=%s
+            AND docstatus = 1
+        """, item_code)[0][0]
+
+        # ---------------- OPEN PURCHASE ORDER ----------------
+        po_qty = frappe.db.sql("""
+            SELECT IFNULL(SUM(qty - received_qty),0)
+            FROM `tabPurchase Order Item`
+            WHERE item_code=%s
+            AND docstatus = 1
+        """, item_code)[0][0]
+
+        # ---------------- GROSS REQUIREMENT ----------------
+        gross_requirement = so_qty - available - po_qty
+
+        # ---------------- PLANNED PURCHASE LOGIC ----------------
+        planned = 0
+        safety = item.safety_stock or 0
+        moq = item.moq or 0
+
+        # Rule 1
+        if on_hand == safety and moq > 0:
+            planned = moq
+
+        # Rule 2
+        elif gross_requirement <= 0:
+            planned = 0
+
+        # Rule 3
+        elif gross_requirement > 0 and gross_requirement < moq:
+            planned = moq
+
+        # Rule 4
+        elif gross_requirement >= moq:
+            planned = gross_requirement
+
+        result.append({
+            "item": item_code,
+            "safety_stock": safety,
+            "moq": moq,
+            "on_hand_qty": on_hand,
+            "available_qty": available,
+            "open_sales_order": so_qty,
+            "po_qty": po_qty,
+            "gross_requirement": gross_requirement,
+            "planned_purchase_qty": planned
+        })
+
+    return result
+
+
+
+# =========================================
+# ⭐ MANUAL BUTTON CREATE PURCHASE ORDER
+# (Your Existing Function)
+# =========================================
+@frappe.whitelist()
+def create_purchase_order(items):
+    items = frappe.parse_json(items)
+
+    if not items:
+        return
+
+    supplier_map = {}
+
+    for row in items:
+        item_code = row.get("item")
+        qty = row.get("planned_qty")
+
+        if qty <= 0:
+            continue
+
+        supplier = frappe.db.get_value(
+            "Item Default",
+            {"parent": item_code},
+            "default_supplier"
+        )
+
+        if not supplier:
+            frappe.throw(f"No Default Supplier found for Item {item_code}")
+
+        supplier_map.setdefault(supplier, [])
+        supplier_map[supplier].append({
+            "item_code": item_code,
+            "qty": qty,
+            "schedule_date": nowdate()
+        })
+
+    last_po = None
+
+    for supplier, po_items in supplier_map.items():
+        po = frappe.get_doc({
+            "doctype": "Purchase Order",
+            "supplier": supplier,
+            "schedule_date": nowdate(),
+            "items": po_items
+        })
+
+        po.insert(ignore_permissions=True)
+        po.submit()
+        last_po = po.name
+
+    return last_po
+
+
+
+# =========================================
+# ⭐ AUTO DAILY PURCHASE ORDER JOB
+# (Runs every day 12AM)
+# =========================================
+@frappe.whitelist()
+def auto_create_purchase_orders():
+
+    mrp_data = get_mrp_data()
+    supplier_map = {}
+
+    for row in mrp_data:
+
+        item = row.get("item")
+        planned_qty = row.get("planned_purchase_qty") or 0
+
+        # ❌ Skip if no requirement
+        if planned_qty <= 0:
+            continue
+
+        # ✅ Get Default Supplier
+        supplier = frappe.db.get_value(
+            "Item Default",
+            {"parent": item},
+            "default_supplier"
+        )
+
+        if not supplier:
+            frappe.log_error(
+                f"No Default Supplier for Item {item}",
+                "MRP Auto PO"
+            )
+            continue
+
+        supplier_map.setdefault(supplier, [])
+        supplier_map[supplier].append({
+            "item_code": item,
+            "qty": planned_qty,
+            "schedule_date": nowdate()
+        })
+
+    created = []
+
+    for supplier, po_items in supplier_map.items():
+
+        po = frappe.get_doc({
+            "doctype": "Purchase Order",
+            "supplier": supplier,
+            "schedule_date": nowdate(),
+            "items": po_items
+        })
+
+        po.insert(ignore_permissions=True)
+        po.submit()
+
+        created.append(po.name)
+
+    return created
