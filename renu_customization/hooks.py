@@ -433,7 +433,7 @@ app_include_js = [
 
 scheduler_events = {
     "cron": {
-        "0 10 * * *": [
+        "15 10 * * *": [
             "renu_customization.renu_customization.page.mrp.mrp.auto_create_purchase_orders"
         ]
     }
