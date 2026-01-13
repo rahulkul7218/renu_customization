@@ -766,7 +766,7 @@
 //     });
 // }
 
-//Add hyperlink to item open pi and so qty
+//Add hyperlink to item open pi and so qty below script is working till date
 frappe.pages['mrp'].on_page_load = function(wrapper) {
     var page = frappe.ui.make_app_page({
         parent: wrapper,
@@ -912,6 +912,71 @@ function load_mrp_table() {
         }
     });
 }
+//🚀 LOAD SCHEDULER LOG
+function load_mrp_scheduler_log() {
+    frappe.call({
+        method: "frappe.client.get_list",
+        args: {
+            doctype: "MRP Scheduler Log",
+            fields: ["run_date", "status", "item", "reason"],
+            order_by: "run_date desc",
+            limit_page_length: 20,
+            filters: [["reason","!=","Planned Purchase Qty is 0"]]
+        },
+        callback: function(r) {
+            let logs = r.message || [];
+
+            if(!logs.length){
+                $("#mrp-scheduler-log").html("<p>No Scheduler Logs Found</p>");
+                return;
+            }
+
+            let html = `
+                <h5>MRP Scheduler Run Status</h5>
+                <table class="table table-bordered" style="width:100%; text-align:center;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Item</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            logs.forEach(log => {
+                html += `
+                    <tr>
+                        <td>${log.run_date || ""}</td>
+                        <td style="color:${log.status==="Success"?"green":"red"}">${log.status}</td>
+                        <td>${log.item || "-"}</td>
+                        <td>${log.reason || "-"}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            $("#mrp-scheduler-log").html(html);
+        }
+    });
+}
+
+// Call this after loading MRP table
+$(document).ready(function(){
+    $("#mrp-table").after('<div id="mrp-scheduler-log" style="margin-top:30px;"></div>');
+    load_mrp_scheduler_log();
+});
+
+// ITEM CLICK → OPEN ITEM
+$(document).on('click', '.item-link', function() {
+    const item = $(this).data('item');
+    frappe.set_route("Form", "Item", item);
+});
 
 
 // ===============================
@@ -1132,3 +1197,4 @@ function create_purchase_order_from_mrp() {
         }
     });
 }
+

@@ -2024,6 +2024,262 @@
 #         ORDER BY po.transaction_date DESC
 #     """, item_code, as_dict=True)
 
+# below script is working till date
+# import frappe
+# from frappe.utils import nowdate
+
+
+# # =====================================================
+# # ⭐ FETCH MRP TABLE DATA
+# # =====================================================
+# @frappe.whitelist()
+# def get_mrp_data():
+#     items = frappe.get_all(
+#         "Item",
+#         filters={"is_stock_item": 1, "mrp": 1},
+#         fields=["name", "safety_stock", "min_order_qty as moq"]
+#     )
+
+#     result = []
+
+#     for item in items:
+#         item_code = item.name
+
+#         # ---------------- ON HAND STOCK ----------------
+#         on_hand = frappe.db.sql("""
+#             SELECT IFNULL(SUM(actual_qty),0)
+#             FROM `tabBin`
+#             WHERE item_code=%s
+#         """, item_code)[0][0]
+
+#         # ---------------- AVAILABLE STOCK ----------------
+#         available = on_hand - (item.safety_stock or 0)
+
+#         # ---------------- OPEN SALES ORDER ----------------
+#         so_qty = frappe.db.sql("""
+#             SELECT IFNULL(SUM(qty - delivered_qty),0)
+#             FROM `tabSales Order Item`
+#             WHERE item_code=%s
+#             AND docstatus = 1
+#             AND parent IN (
+#                 SELECT name FROM `tabSales Order`
+#                 WHERE status NOT IN ('Cancelled','Closed')
+#             )
+#         """, item_code)[0][0]
+
+#         # ---------------- OPEN PURCHASE ORDER ----------------
+#         po_qty = frappe.db.sql("""
+#             SELECT IFNULL(SUM(qty - received_qty),0)
+#             FROM `tabPurchase Order Item`
+#             WHERE item_code=%s
+#             AND docstatus = 1
+#             AND parent IN (
+#                 SELECT name FROM `tabPurchase Order`
+#                 WHERE status NOT IN ('Cancelled','Closed')
+#             )
+#         """, item_code)[0][0]
+
+#         # ---------------- GROSS REQUIREMENT ----------------
+#         gross_requirement = so_qty - available - po_qty
+
+#         # ---------------- PLANNED PURCHASE LOGIC ----------------
+#         planned = 0
+#         safety = item.safety_stock or 0
+#         moq = item.moq or 0
+
+#         if on_hand == safety and moq > 0:
+#             planned = moq
+#         elif gross_requirement <= 0:
+#             planned = 0
+#         elif gross_requirement > 0 and gross_requirement < moq:
+#             planned = moq
+#         elif gross_requirement >= moq:
+#             planned = gross_requirement
+
+#         result.append({
+#             "item": item_code,
+#             "safety_stock": safety,
+#             "moq": moq,
+#             "on_hand_qty": on_hand,
+#             "available_qty": available,
+#             "open_sales_order": so_qty,
+#             "po_qty": po_qty,
+#             "gross_requirement": gross_requirement,
+#             "planned_purchase_qty": planned
+#         })
+
+#     return result
+
+
+
+# # =====================================================
+# # ⭐ MANUAL PURCHASE ORDER BUTTON
+# # =====================================================
+# @frappe.whitelist()
+# def create_purchase_order(items):
+#     items = frappe.parse_json(items)
+
+#     if not items:
+#         return
+
+#     # Block if all qty = 0
+#     if not any((row.get("planned_qty") or 0) > 0 for row in items):
+#         frappe.throw("Purchase Order cannot be created because all 'Planned to Purchase Qty' values are 0.")
+
+#     supplier_map = {}
+
+#     for row in items:
+#         item_code = row.get("item")
+#         qty = row.get("planned_qty")
+
+#         if qty <= 0:
+#             frappe.throw(
+#                 f"Cannot create Purchase Order for Item <b>{item_code}</b> because "
+#                 f"<b>Planned to Purchase Qty is 0</b>."
+#             )
+
+#         # SUPPLIER
+#         supplier = frappe.db.get_value(
+#             "Item Default",
+#             {"parent": item_code},
+#             "default_supplier"
+#         )
+
+#         if not supplier:
+#             frappe.throw(f"No Default Supplier found for Item {item_code}")
+
+#         supplier_map.setdefault(supplier, [])
+#         supplier_map[supplier].append({
+#             "item_code": item_code,
+#             "qty": qty,
+#             "schedule_date": nowdate()
+#         })
+
+#     last_po = None
+
+#     for supplier, po_items in supplier_map.items():
+#         po = frappe.get_doc({
+#             "doctype": "Purchase Order",
+#             "supplier": supplier,
+#             "schedule_date": nowdate(),
+#             "items": po_items
+#         })
+
+#         po.insert(ignore_permissions=True)
+#         po.submit()
+#         last_po = po.name
+
+#     return last_po
+
+
+
+# # =====================================================
+# # ⭐ AUTO DAILY MRP PURCHASE JOB (12AM)
+# # =====================================================
+# @frappe.whitelist()
+# def auto_create_purchase_orders():
+
+#     mrp_data = get_mrp_data()
+#     supplier_map = {}
+
+#     for row in mrp_data:
+#         item = row.get("item")
+#         planned_qty = row.get("planned_purchase_qty") or 0
+
+#         if planned_qty <= 0:
+#             continue
+
+#         supplier = frappe.db.get_value(
+#             "Item Default",
+#             {"parent": item},
+#             "default_supplier"
+#         )
+
+#         if not supplier:
+#             frappe.log_error(f"No Default Supplier for Item {item}", "MRP Auto PO")
+#             continue
+
+#         supplier_map.setdefault(supplier, [])
+#         supplier_map[supplier].append({
+#             "item_code": item,
+#             "qty": planned_qty,
+#             "schedule_date": nowdate()
+#         })
+
+#     created = []
+
+#     for supplier, po_items in supplier_map.items():
+
+#         po = frappe.get_doc({
+#             "doctype": "Purchase Order",
+#             "supplier": supplier,
+#             "schedule_date": nowdate(),
+#             "items": po_items
+#         })
+
+#         po.insert(ignore_permissions=True)
+#         po.submit()
+
+#         created.append(po.name)
+
+#     return created
+
+
+
+# # =====================================================
+# # ⭐ SALES ORDER POPUP
+# # =====================================================
+# @frappe.whitelist()
+# def get_sales_orders_for_item(item_code):
+#     if not item_code:
+#         return []
+
+#     return frappe.db.sql("""
+#         SELECT 
+#             soi.parent AS sales_order,
+#             soi.qty,
+#             soi.delivered_qty,
+#             (soi.qty - soi.delivered_qty) AS pending_qty
+#         FROM `tabSales Order Item` soi
+#         INNER JOIN `tabSales Order` so
+#             ON so.name = soi.parent
+#         WHERE 
+#             soi.item_code = %s
+#             AND soi.docstatus = 1
+#             AND so.status NOT IN ('Cancelled','Closed')
+#             AND (soi.qty - soi.delivered_qty) > 0
+#         ORDER BY so.transaction_date DESC
+#     """, item_code, as_dict=True)
+
+
+
+# # =====================================================
+# # ⭐ PURCHASE ORDER POPUP
+# # =====================================================
+# @frappe.whitelist()
+# def get_purchase_orders_for_item(item_code):
+#     if not item_code:
+#         return []
+
+#     return frappe.db.sql("""
+#         SELECT 
+#             poi.parent AS purchase_order,
+#             poi.qty,
+#             poi.received_qty,
+#             (poi.qty - poi.received_qty) AS pending_qty
+#         FROM `tabPurchase Order Item` poi
+#         INNER JOIN `tabPurchase Order` po
+#             ON po.name = poi.parent
+#         WHERE 
+#             poi.item_code = %s
+#             AND poi.docstatus = 1
+#             AND po.status NOT IN ('Cancelled','Closed')
+#             AND (poi.qty - poi.received_qty) > 0
+#         ORDER BY po.transaction_date DESC
+#     """, item_code, as_dict=True)
+
+
+# if scheduler is not run then show in table
 
 import frappe
 from frappe.utils import nowdate
@@ -2053,7 +2309,8 @@ def get_mrp_data():
         """, item_code)[0][0]
 
         # ---------------- AVAILABLE STOCK ----------------
-        available = on_hand - (item.safety_stock or 0)
+        safety = item.safety_stock or 0
+        available = on_hand - safety
 
         # ---------------- OPEN SALES ORDER ----------------
         so_qty = frappe.db.sql("""
@@ -2083,80 +2340,60 @@ def get_mrp_data():
         gross_requirement = so_qty - available - po_qty
 
         # ---------------- PLANNED PURCHASE LOGIC ----------------
-        planned = 0
-        safety = item.safety_stock or 0
         moq = item.moq or 0
+        planned_purchase_qty = 0
 
-        if on_hand == safety and moq > 0:
-            planned = moq
-        elif gross_requirement <= 0:
-            planned = 0
+        if gross_requirement <= 0:
+            planned_purchase_qty = 0
         elif gross_requirement > 0 and gross_requirement < moq:
-            planned = moq
+            planned_purchase_qty = moq
         elif gross_requirement >= moq:
-            planned = gross_requirement
+            planned_purchase_qty = gross_requirement
 
         result.append({
             "item": item_code,
             "safety_stock": safety,
-            "moq": moq,
             "on_hand_qty": on_hand,
             "available_qty": available,
             "open_sales_order": so_qty,
             "po_qty": po_qty,
             "gross_requirement": gross_requirement,
-            "planned_purchase_qty": planned
+            "moq": moq,
+            "planned_purchase_qty": planned_purchase_qty
         })
 
     return result
 
 
-
 # =====================================================
-# ⭐ MANUAL PURCHASE ORDER BUTTON
+# 🚀 CREATE PURCHASE ORDER
 # =====================================================
 @frappe.whitelist()
-def create_purchase_order(items):
+def create_purchase_order(items, send_email_on_mrp=None):
     items = frappe.parse_json(items)
 
     if not items:
-        return
+        frappe.throw("No items received")
 
-    # Block if all qty = 0
-    if not any((row.get("planned_qty") or 0) > 0 for row in items):
-        frappe.throw("Purchase Order cannot be created because all 'Planned to Purchase Qty' values are 0.")
+    # ❌ Do not allow PO if any planned qty = 0
+    zero_items = [d["item"] for d in items if not d["planned_qty"] or d["planned_qty"] <= 0]
+    if zero_items:
+        frappe.throw(f"Planned Qty is 0 for: {', '.join(zero_items)}. Cannot create PO.")
 
+    # GROUP ITEMS BY SUPPLIER
     supplier_map = {}
-
-    for row in items:
-        item_code = row.get("item")
-        qty = row.get("planned_qty")
-
-        if qty <= 0:
-            frappe.throw(
-                f"Cannot create Purchase Order for Item <b>{item_code}</b> because "
-                f"<b>Planned to Purchase Qty is 0</b>."
-            )
-
-        # SUPPLIER
-        supplier = frappe.db.get_value(
-            "Item Default",
-            {"parent": item_code},
-            "default_supplier"
-        )
-
+    for d in items:
+        supplier = frappe.db.get_value("Item Default", {"parent": d["item"]}, "default_supplier")
         if not supplier:
-            frappe.throw(f"No Default Supplier found for Item {item_code}")
-
+            frappe.throw(f"No Default Supplier found for Item: {d['item']}")
         supplier_map.setdefault(supplier, [])
         supplier_map[supplier].append({
-            "item_code": item_code,
-            "qty": qty,
+            "item_code": d["item"],
+            "qty": d["planned_qty"],
             "schedule_date": nowdate()
         })
 
     last_po = None
-
     for supplier, po_items in supplier_map.items():
         po = frappe.get_doc({
             "doctype": "Purchase Order",
@@ -2165,6 +2402,9 @@ def create_purchase_order(items):
             "items": po_items
         })
 
+        if send_email_on_mrp:
+            po.send_email_on_mrp = 1
+
         po.insert(ignore_permissions=True)
         po.submit()
         last_po = po.name
@@ -2172,31 +2412,106 @@ def create_purchase_order(items):
     return last_po
 
 
-
 # =====================================================
 # ⭐ AUTO DAILY MRP PURCHASE JOB (12AM)
 # =====================================================
 @frappe.whitelist()
-def auto_create_purchase_orders():
 
+# def auto_create_purchase_orders():
+#     mrp_data = get_mrp_data()
+#     supplier_map = {}
+#     log_entries = []
+
+#     for row in mrp_data:
+#         item = row.get("item")
+#         planned_qty = row.get("planned_purchase_qty") or 0
+
+#         if planned_qty <= 0:
+#             continue  # skip logging "Planned Purchase Qty is 0"
+
+#         supplier = frappe.db.get_value("Item Default", {"parent": item}, "default_supplier")
+#         if not supplier:
+#             log_entries.append({
+#                 "item": item,
+#                 "run_date": nowdate(),
+#                 "status": "Failed",
+#                 "reason": "Default Supplier not set"
+#             })
+#             continue
+
+#         supplier_map.setdefault(supplier, [])
+#         supplier_map[supplier].append({
+#             "item_code": item,
+#             "qty": planned_qty,
+#             "schedule_date": nowdate()
+#         })
+
+#     created_pos = []
+#     for supplier, po_items in supplier_map.items():
+#         po = frappe.get_doc({
+#             "doctype": "Purchase Order",
+#             "supplier": supplier,
+#             "schedule_date": nowdate(),
+#             "items": po_items,
+#             "send_email_on_mrp": 1
+#         })
+
+#         # ❌ Check for Rate = 0
+#         zero_rate_items = [i["item_code"] for i in po_items if not frappe.db.get_value("Item Price", {"item_code": i["item_code"]}, "price_list_rate") or frappe.db.get_value("Item Price", {"item_code": i["item_code"]}, "price_list_rate") == 0]
+#         if zero_rate_items:
+#             for zi in zero_rate_items:
+#                 log_entries.append({
+#                     "item": zi,
+#                     "run_date": nowdate(),
+#                     "status": "Failed",
+#                     "reason": "Rate not set in Price List for this item"
+#                 })
+#             continue  # skip PO creation
+
+#         po.insert(ignore_permissions=True)
+#         po.submit()
+#         created_pos.append(po.name)
+
+#     # Log successful PO creation
+#     # if created_pos:
+#     #     frappe.get_doc({
+#     #         "doctype": "MRP Scheduler Log",
+#     #         "run_date": nowdate(),
+#     #         "status": "Success",
+#     #         "reason": f"POs Created: {', '.join(created_pos)}"
+#     #     }).insert(ignore_permissions=True)
+
+#     # Log failures (excluding planned qty 0)
+#     for log in log_entries:
+#         frappe.get_doc({
+#             "doctype": "MRP Scheduler Log",
+#             "run_date": log["run_date"],
+#             "status": log["status"],
+#             "item": log.get("item"),
+#             "reason": log["reason"]
+#         }).insert(ignore_permissions=True)
+
+#     return created_pos
+def auto_create_purchase_orders():
     mrp_data = get_mrp_data()
     supplier_map = {}
+    log_entries = []
 
     for row in mrp_data:
         item = row.get("item")
         planned_qty = row.get("planned_purchase_qty") or 0
 
         if planned_qty <= 0:
-            continue
+            continue  
 
-        supplier = frappe.db.get_value(
-            "Item Default",
-            {"parent": item},
-            "default_supplier"
-        )
-
+        supplier = frappe.db.get_value("Item Default", {"parent": item}, "default_supplier")
         if not supplier:
-            frappe.log_error(f"No Default Supplier for Item {item}", "MRP Auto PO")
+            log_entries.append({
+                "item": item,
+                "run_date": nowdate(),
+                "status": "Failed",
+                "reason": "Default Supplier not set"
+            })
             continue
 
         supplier_map.setdefault(supplier, [])
@@ -2206,24 +2521,63 @@ def auto_create_purchase_orders():
             "schedule_date": nowdate()
         })
 
-    created = []
+    created_pos = []
 
     for supplier, po_items in supplier_map.items():
 
+        # 🔴🔴 NEW VALIDATION → CHECK RATE BEFORE MAKING PO
+        zero_rate_items = []
+        for i in po_items:
+            rate = frappe.db.get_value(
+                "Item Price",
+                {"item_code": i["item_code"]},
+                "price_list_rate"
+            )
+
+            if not rate or float(rate) == 0:
+                zero_rate_items.append(i["item_code"])
+
+        if zero_rate_items:
+            for itm in zero_rate_items:
+                log_entries.append({
+                    "item": itm,
+                    "run_date": nowdate(),
+                    "status": "Failed",
+                    "reason": "Rate not set in Price List (Rate = 0)"
+                })
+            
+            continue   # 🔴 Skip PO creation for this supplier
+
+
+        # ==========================
+        # CREATE PURCHASE ORDER
+        # ==========================
         po = frappe.get_doc({
             "doctype": "Purchase Order",
             "supplier": supplier,
             "schedule_date": nowdate(),
-            "items": po_items
+            "items": po_items,
+            "send_email_on_mrp": 1
         })
 
         po.insert(ignore_permissions=True)
         po.submit()
+        created_pos.append(po.name)
 
-        created.append(po.name)
 
-    return created
+    # ==========================
+    # LOG FAILED ENTRIES
+    # ==========================
+    for log in log_entries:
+        frappe.get_doc({
+            "doctype": "MRP Scheduler Log",
+            "run_date": log["run_date"],
+            "status": log["status"],
+            "item": log.get("item"),
+            "reason": log["reason"]
+        }).insert(ignore_permissions=True)
 
+    return created_pos
 
 
 # =====================================================
@@ -2233,7 +2587,6 @@ def auto_create_purchase_orders():
 def get_sales_orders_for_item(item_code):
     if not item_code:
         return []
-
     return frappe.db.sql("""
         SELECT 
             soi.parent AS sales_order,
@@ -2252,7 +2605,6 @@ def get_sales_orders_for_item(item_code):
     """, item_code, as_dict=True)
 
 
-
 # =====================================================
 # ⭐ PURCHASE ORDER POPUP
 # =====================================================
@@ -2260,7 +2612,6 @@ def get_sales_orders_for_item(item_code):
 def get_purchase_orders_for_item(item_code):
     if not item_code:
         return []
-
     return frappe.db.sql("""
         SELECT 
             poi.parent AS purchase_order,
