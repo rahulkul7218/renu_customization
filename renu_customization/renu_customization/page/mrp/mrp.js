@@ -842,7 +842,7 @@ function load_mrp_table() {
                         </td>
 
                         <!-- OPEN SO QTY CLICK -->
-                        <td style="border:1px solid #000;">
+                        <td style="border:1px solid #000; text-align:right;">
                             <a href="javascript:void(0);" 
                                class="open-so-link" 
                                data-item="${row.item}"
@@ -851,13 +851,13 @@ function load_mrp_table() {
                             </a>
                         </td>
 
-                        <td style="border:1px solid #000;">${row.safety_stock}</td>
+                        <td style="border:1px solid #000; text-align:right;">${row.safety_stock}</td>
 
-                        <td style="border:1px solid #000;">${row.on_hand_qty}</td>
-                        <td style="border:1px solid #000;">${row.available_qty}</td>
+                        <td style="border:1px solid #000; text-align:right;">${row.on_hand_qty}</td>
+                        <td style="border:1px solid #000; text-align:right;">${row.available_qty}</td>
                         
                         <!-- OPEN PO QTY CLICK -->
-                        <td style="border:1px solid #000;">
+                        <td style="border:1px solid #000; text-align:right;">
                             <a href="javascript:void(0);" 
                                class="open-po-link" 
                                data-item="${row.item}"
@@ -867,7 +867,7 @@ function load_mrp_table() {
                         </td>
 
                         <!-- GROSS REQUIREMENT CLICK -->
-                        <td style="border:1px solid #000;">
+                        <td style="border:1px solid #000; text-align:right;">
                             <a href="javascript:void(0);"
                                class="gross-req-link"
                                data-item="${row.item}"
@@ -879,10 +879,10 @@ function load_mrp_table() {
                             </a>
                         </td>
 
-                        <td style="border:1px solid #000;">${row.moq}</td>
+                        <td style="border:1px solid #000; text-align:right;">${row.moq}</td>
 
                         <!-- PLANNED PURCHASE CLICK -->
-                        <td style="border:1px solid #000; color:#08CB00;">
+                        <td style="border:1px solid #000; color:#08CB00; text-align:right;">
                             <a href="javascript:void(0);"
                                class="planned-purchase-link"
                                data-item="${row.item}"
