@@ -6,6 +6,7 @@ def execute():
             "doctype": "Custom Field",
             "dt": "Purchase Order",
             "fieldname": "add_email_on_purchase_order",
+            "options": "Email",
             "label": "Email",
             "fieldtype": "Data",
             "insert_after": "supplier"
