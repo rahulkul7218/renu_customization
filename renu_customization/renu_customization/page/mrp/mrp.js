@@ -836,7 +836,7 @@ function load_mrp_table() {
                             <a href="javascript:void(0);"
                                class="item-link"
                                data-item="${row.item}"
-                               style="color:#007bff;text-decoration:underline;">
+                               style="color:#007bff;">
                                 ${row.item}
                             </a>
                         </td>
@@ -846,7 +846,7 @@ function load_mrp_table() {
                             <a href="javascript:void(0);" 
                                class="open-so-link" 
                                data-item="${row.item}"
-                               style="color:#007bff;text-decoration:underline;">
+                               style="color:#007bff;">
                                 ${row.open_sales_order}
                             </a>
                         </td>
@@ -861,7 +861,7 @@ function load_mrp_table() {
                             <a href="javascript:void(0);" 
                                class="open-po-link" 
                                data-item="${row.item}"
-                               style="color:#007bff;text-decoration:underline;">
+                               style="color:#007bff;">
                                 ${row.po_qty}
                             </a>
                         </td>
@@ -874,7 +874,7 @@ function load_mrp_table() {
                                data-so="${row.open_sales_order}"
                                data-avl="${row.available_qty}"
                                data-po="${row.po_qty}"
-                               style="color:#007bff;text-decoration:underline;">
+                               style="color:#007bff;">
                                 ${row.gross_requirement}
                             </a>
                         </td>
@@ -891,7 +891,7 @@ function load_mrp_table() {
                                data-gross="${row.gross_requirement}"
                                data-moq="${row.moq}"
                                data-planned="${row.planned_purchase_qty}"
-                               style="color:#007bff;text-decoration:underline;">
+                               style="color:#007bff;">
                                 ${row.planned_purchase_qty}
                             </a>
                         </td>
@@ -1015,7 +1015,7 @@ $(document).on('click', '.open-so-link', function() {
                     <li>
                         <a href="javascript:void(0);" 
                            onclick="frappe.set_route('Form','Sales Order','${so.sales_order}')"
-                           style="color:#007bff;text-decoration:underline;">
+                           style="color:#007bff;">
                             ${so.sales_order}
                         </a>
                         &nbsp; → &nbsp; ${so.pending_qty || so.qty}
@@ -1059,7 +1059,7 @@ $(document).on('click', '.open-po-link', function() {
                     <li>
                         <a href="javascript:void(0);" 
                            onclick="frappe.set_route('Form','Purchase Order','${po.purchase_order}')"
-                           style="color:#007bff;text-decoration:underline;">
+                           style="color:#007bff;">
                             ${po.purchase_order}
                         </a>
                         &nbsp; → &nbsp; ${po.pending_qty || po.qty}
