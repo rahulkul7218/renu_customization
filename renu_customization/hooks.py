@@ -321,9 +321,9 @@ after_migrate = [
     "renu_customization.patches.v_0.add_is_service_item_checkbox_on_item.execute",
     "renu_customization.patches.v_0.add_mrp_checkbox_on_item.execute",
     # "renu_customization.patches.v_0.add_auto_email_send_checkbox_on_supplier.execute",
-    "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
-    "renu_customization.patches.v_0.send_email_mrp.execute",
-    "renu_customization.patches.v_0.manually_send_email_to_supplier.execute",
+    # "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
+    # "renu_customization.patches.v_0.send_email_mrp.execute",
+    # "renu_customization.patches.v_0.manually_send_email_to_supplier.execute",
   
 
     
@@ -387,7 +387,8 @@ doctype_js = {
     "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"],
     "Purchase Order": "public/js/calculate_open_qty_on_purchase_order.js",
     "Company": ["public/js/only_show_enable_lut_number.js","public/js/only_show_enable_epcg_no.js"],
-    "GST Settings": "public/js/if_enable_overseas_transactions_checked_show_lut_expiry_date.js"
+    "GST Settings": "public/js/if_enable_overseas_transactions_checked_show_lut_expiry_date.js",
+    "Purchase Order": "public/js/fetched_supplier_email_on_purchase_order.js"
    
     
 
