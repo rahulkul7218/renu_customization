@@ -913,23 +913,77 @@ function load_mrp_table() {
     });
 }
 //🚀 LOAD SCHEDULER LOG
-function load_mrp_scheduler_log() {
+
+// function load_mrp_scheduler_log() {
+//     frappe.call({
+//         method: "frappe.client.get_list",
+//         args: {
+//             doctype: "MRP Scheduler Log",
+//             fields: ["run_date", "status", "item", "reason"],
+//             order_by: "run_date desc",
+//             limit_page_length: 20,
+//             filters: [["reason","!=","Planned Purchase Qty is 0"]]
+//         },
+//         callback: function(r) {
+//             let logs = r.message || [];
+
+//             if(!logs.length){
+//                 $("#mrp-scheduler-log").html("<p>No Scheduler Logs Found</p>");
+//                 return;
+//             }
+
+//             let html = `
+//                 <h5>MRP Scheduler Run Status</h5>
+//                 <table class="table table-bordered" style="width:100%; text-align:center;">
+//                     <thead>
+//                         <tr>
+//                             <th>Date</th>
+//                             <th>Status</th>
+//                             <th>Item</th>
+//                             <th>Reason</th>
+//                         </tr>
+//                     </thead>
+//                     <tbody>
+//             `;
+
+//             logs.forEach(log => {
+//                 html += `
+//                     <tr>
+//                         <td>${log.run_date || ""}</td>
+//                         <td style="color:${log.status==="Success"?"green":"red"}">${log.status}</td>
+//                         <td>${log.item || "-"}</td>
+//                         <td>${log.reason || "-"}</td>
+//                     </tr>
+//                 `;
+//             });
+
+//             html += `
+//                     </tbody>
+//                 </table>
+//             `;
+
+//             $("#mrp-scheduler-log").html(html);
+//         }
+//     });
+// }
+let mrpLogPage = 0;           // Current page
+const pageSize = 15;          // Records per page
+
+function load_mrp_scheduler_log(page = 0) {
+    mrpLogPage = page;
+
     frappe.call({
         method: "frappe.client.get_list",
         args: {
             doctype: "MRP Scheduler Log",
             fields: ["run_date", "status", "item", "reason"],
             order_by: "run_date desc",
-            limit_page_length: 20,
+            limit_start: page * pageSize,
+            limit_page_length: pageSize,
             filters: [["reason","!=","Planned Purchase Qty is 0"]]
         },
         callback: function(r) {
             let logs = r.message || [];
-
-            if(!logs.length){
-                $("#mrp-scheduler-log").html("<p>No Scheduler Logs Found</p>");
-                return;
-            }
 
             let html = `
                 <h5>MRP Scheduler Run Status</h5>
@@ -945,26 +999,51 @@ function load_mrp_scheduler_log() {
                     <tbody>
             `;
 
-            logs.forEach(log => {
+            if(!logs.length){
                 html += `
                     <tr>
-                        <td>${log.run_date || ""}</td>
-                        <td style="color:${log.status==="Success"?"green":"red"}">${log.status}</td>
-                        <td>${log.item || "-"}</td>
-                        <td>${log.reason || "-"}</td>
-                    </tr>
-                `;
-            });
+                        <td colspan="4">No Scheduler Logs Found</td>
+                    </tr>`;
+            } else {
+                logs.forEach(log => {
+                    html += `
+                        <tr>
+                            <td>${log.run_date || ""}</td>
+                            <td style="color:${log.status==="Success"?"green":"red"}">
+                                ${log.status}
+                            </td>
+                            <td>${log.item || "-"}</td>
+                            <td>${log.reason || "-"}</td>
+                        </tr>`;
+                });
+            }
 
             html += `
                     </tbody>
                 </table>
+
+                <div style="display:flex; justify-content:center; gap:10px;">
+                    <button class="btn btn-secondary" 
+                        onclick="load_mrp_scheduler_log(${page - 1})"
+                        ${page <= 0 ? "disabled" : ""}>
+                        Previous
+                    </button>
+
+                    <span style="margin-top:6px;">Page ${page + 1}</span>
+
+                    <button class="btn btn-primary"
+                        onclick="load_mrp_scheduler_log(${page + 1})"
+                        ${logs.length < pageSize ? "disabled" : ""}>
+                        Next
+                    </button>
+                </div>
             `;
 
             $("#mrp-scheduler-log").html(html);
         }
     });
 }
+
 
 // Call this after loading MRP table
 $(document).ready(function(){
