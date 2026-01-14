@@ -789,10 +789,133 @@ frappe.pages['mrp'].on_page_load = function(wrapper) {
 // ===============================
 // 🚀 LOAD MRP TABLE
 // ===============================
+// function load_mrp_table() {
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_mrp_data",
+//         callback: function(r) {
+//             if (!r.message) {
+//                 $("#mrp-table").html("<p>No Data Found</p>");
+//                 return;
+//             }
+
+//             let data = r.message;
+
+//             let html = `
+//                 <table class="table table-bordered" style="width:100%; text-align:center;">
+//                     <thead>
+//                         <tr>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Demand</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Supply</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Requirement</th>
+//                             <th rowspan="2" style="border:1px solid #000; background:#d9d9d9;">Select</th>
+//                         </tr>
+
+//                         <tr>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Item</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open SO Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Safety Stock</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">On Hand Stock</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Available Stock</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open PO Qty</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Gross Requirement</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">MOQ</th>
+//                             <th style="border:1px solid #000; background:#8BAE66;">Planned to Purchase Qty</th>
+//                         </tr>
+//                     </thead>
+
+//                     <tbody>
+//             `;
+
+//             data.forEach(row => {
+//                 html += `
+//                     <tr>
+//                         <!-- ITEM CLICKABLE -->
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);"
+//                                class="item-link"
+//                                data-item="${row.item}"
+//                                style="color:#007bff;">
+//                                 ${row.item}
+//                             </a>
+//                         </td>
+
+//                         <!-- OPEN SO QTY CLICK -->
+//                         <td style="border:1px solid #000; text-align:right;">
+//                             <a href="javascript:void(0);" 
+//                                class="open-so-link" 
+//                                data-item="${row.item}"
+//                                style="color:#007bff;">
+//                                 ${row.open_sales_order}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000; text-align:right;">${row.safety_stock}</td>
+
+//                         <td style="border:1px solid #000; text-align:right;">${row.on_hand_qty}</td>
+//                         <td style="border:1px solid #000; text-align:right;">${row.available_qty}</td>
+                        
+//                         <!-- OPEN PO QTY CLICK -->
+//                         <td style="border:1px solid #000; text-align:right;">
+//                             <a href="javascript:void(0);" 
+//                                class="open-po-link" 
+//                                data-item="${row.item}"
+//                                style="color:#007bff;">
+//                                 ${row.po_qty}
+//                             </a>
+//                         </td>
+
+//                         <!-- GROSS REQUIREMENT CLICK -->
+//                         <td style="border:1px solid #000; text-align:right;">
+//                             <a href="javascript:void(0);"
+//                                class="gross-req-link"
+//                                data-item="${row.item}"
+//                                data-so="${row.open_sales_order}"
+//                                data-avl="${row.available_qty}"
+//                                data-po="${row.po_qty}"
+//                                style="color:#007bff;">
+//                                 ${row.gross_requirement}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000; text-align:right;">${row.moq}</td>
+
+//                         <!-- PLANNED PURCHASE CLICK -->
+//                         <td style="border:1px solid #000; color:#08CB00; text-align:right;">
+//                             <a href="javascript:void(0);"
+//                                class="planned-purchase-link"
+//                                data-item="${row.item}"
+//                                data-on-hand="${row.on_hand_qty}"
+//                                data-safety="${row.safety_stock}"
+//                                data-gross="${row.gross_requirement}"
+//                                data-moq="${row.moq}"
+//                                data-planned="${row.planned_purchase_qty}"
+//                                style="color:#007bff;">
+//                                 ${row.planned_purchase_qty}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">
+//                             <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}">
+//                         </td>
+//                     </tr>
+//                 `;
+//             });
+
+//             html += `
+//                     </tbody>
+//                 </table>
+//             `;
+
+//             $("#mrp-table").html(html);
+//         }
+//     });
+// }
 function load_mrp_table() {
     frappe.call({
         method: "renu_customization.renu_customization.page.mrp.mrp.get_mrp_data",
-        callback: function(r) {
+        callback: function (r) {
             if (!r.message) {
                 $("#mrp-table").html("<p>No Data Found</p>");
                 return;
@@ -800,7 +923,17 @@ function load_mrp_table() {
 
             let data = r.message;
 
-            let html = `
+            let page_size = 20;
+            let current_page = 1;
+
+            function render_table(page = 1) {
+                current_page = page;
+                let start = (page - 1) * page_size;
+                let end = start + page_size;
+
+                let paginated_data = data.slice(start, end);
+
+                let html = `
                 <table class="table table-bordered" style="width:100%; text-align:center;">
                     <thead>
                         <tr>
@@ -826,92 +959,101 @@ function load_mrp_table() {
                     </thead>
 
                     <tbody>
-            `;
-
-            data.forEach(row => {
-                html += `
-                    <tr>
-                        <!-- ITEM CLICKABLE -->
-                        <td style="border:1px solid #000;">
-                            <a href="javascript:void(0);"
-                               class="item-link"
-                               data-item="${row.item}"
-                               style="color:#007bff;">
-                                ${row.item}
-                            </a>
-                        </td>
-
-                        <!-- OPEN SO QTY CLICK -->
-                        <td style="border:1px solid #000; text-align:right;">
-                            <a href="javascript:void(0);" 
-                               class="open-so-link" 
-                               data-item="${row.item}"
-                               style="color:#007bff;">
-                                ${row.open_sales_order}
-                            </a>
-                        </td>
-
-                        <td style="border:1px solid #000; text-align:right;">${row.safety_stock}</td>
-
-                        <td style="border:1px solid #000; text-align:right;">${row.on_hand_qty}</td>
-                        <td style="border:1px solid #000; text-align:right;">${row.available_qty}</td>
-                        
-                        <!-- OPEN PO QTY CLICK -->
-                        <td style="border:1px solid #000; text-align:right;">
-                            <a href="javascript:void(0);" 
-                               class="open-po-link" 
-                               data-item="${row.item}"
-                               style="color:#007bff;">
-                                ${row.po_qty}
-                            </a>
-                        </td>
-
-                        <!-- GROSS REQUIREMENT CLICK -->
-                        <td style="border:1px solid #000; text-align:right;">
-                            <a href="javascript:void(0);"
-                               class="gross-req-link"
-                               data-item="${row.item}"
-                               data-so="${row.open_sales_order}"
-                               data-avl="${row.available_qty}"
-                               data-po="${row.po_qty}"
-                               style="color:#007bff;">
-                                ${row.gross_requirement}
-                            </a>
-                        </td>
-
-                        <td style="border:1px solid #000; text-align:right;">${row.moq}</td>
-
-                        <!-- PLANNED PURCHASE CLICK -->
-                        <td style="border:1px solid #000; color:#08CB00; text-align:right;">
-                            <a href="javascript:void(0);"
-                               class="planned-purchase-link"
-                               data-item="${row.item}"
-                               data-on-hand="${row.on_hand_qty}"
-                               data-safety="${row.safety_stock}"
-                               data-gross="${row.gross_requirement}"
-                               data-moq="${row.moq}"
-                               data-planned="${row.planned_purchase_qty}"
-                               style="color:#007bff;">
-                                ${row.planned_purchase_qty}
-                            </a>
-                        </td>
-
-                        <td style="border:1px solid #000;">
-                            <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}">
-                        </td>
-                    </tr>
                 `;
-            });
 
-            html += `
+                paginated_data.forEach(row => {
+                    html += `
+                        <tr>
+                            <td style="border:1px solid #000;">
+                                <a href="javascript:void(0);" class="item-link" data-item="${row.item}" style="color:#007bff;">
+                                    ${row.item}
+                                </a>
+                            </td>
+
+                            <td style="border:1px solid #000; text-align:right;">
+                                <a href="javascript:void(0);" class="open-so-link" data-item="${row.item}" style="color:#007bff;">
+                                    ${row.open_sales_order}
+                                </a>
+                            </td>
+
+                            <td style="border:1px solid #000; text-align:right;">${row.safety_stock}</td>
+                            <td style="border:1px solid #000; text-align:right;">${row.on_hand_qty}</td>
+                            <td style="border:1px solid #000; text-align:right;">${row.available_qty}</td>
+
+                            <td style="border:1px solid #000; text-align:right;">
+                                <a href="javascript:void(0);" class="open-po-link" data-item="${row.item}" style="color:#007bff;">
+                                    ${row.po_qty}
+                                </a>
+                            </td>
+
+                            <td style="border:1px solid #000; text-align:right;">
+                                <a href="javascript:void(0);" class="gross-req-link"
+                                   data-item="${row.item}" style="color:#007bff;"
+                                   data-so="${row.open_sales_order}"
+                                   data-avl="${row.available_qty}"
+                                   data-po="${row.po_qty}">
+                                   ${row.gross_requirement}
+                                </a>
+                            </td>
+
+                            <td style="border:1px solid #000; text-align:right;">${row.moq}</td>
+
+                            <td style="border:1px solid #000; color:#08CB00; text-align:right;">
+                                <a href="javascript:void(0);" class="planned-purchase-link"
+                                   data-item="${row.item}" style="color:#007bff;"
+                                   data-on-hand="${row.on_hand_qty}"
+                                   data-safety="${row.safety_stock}"
+                                   data-gross="${row.gross_requirement}"
+                                   data-moq="${row.moq}"
+                                   data-planned="${row.planned_purchase_qty}">
+                                   ${row.planned_purchase_qty}
+                                </a>
+                            </td>
+
+                            <td style="border:1px solid #000;">
+                                <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}">
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `
                     </tbody>
                 </table>
-            `;
+                `;
 
-            $("#mrp-table").html(html);
+                // Pagination Controls
+                let total_pages = Math.ceil(data.length / page_size);
+
+                html += `
+                    <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+                        <button class="btn btn-primary" id="prev_page" ${current_page === 1 ? "disabled" : ""}>
+                            Previous
+                        </button>
+
+                        <span style="padding:3px 5px; ">
+                            Page ${current_page} of ${total_pages}
+                        </span>
+
+                        <button class="btn btn-primary" id="next_page" ${current_page === total_pages ? "disabled" : ""}>
+                            Next
+                        </button>
+                    </div>
+                `;
+
+                $("#mrp-table").html(html);
+
+                $("#prev_page").click(() => render_table(current_page - 1));
+                $("#next_page").click(() => render_table(current_page + 1));
+            }
+
+            // Initial Render
+            render_table(1);
         }
     });
 }
+
+
 //🚀 LOAD SCHEDULER LOG
 
 // function load_mrp_scheduler_log() {
@@ -966,83 +1108,185 @@ function load_mrp_table() {
 //         }
 //     });
 // }
-let mrpLogPage = 0;           // Current page
-const pageSize = 15;          // Records per page
+// let mrpLogPage = 0;           // Current page
+// const pageSize = 15;          // Records per page
 
-function load_mrp_scheduler_log(page = 0) {
+// function load_mrp_scheduler_log(page = 0) {
+//     mrpLogPage = page;
+
+//     frappe.call({
+//         method: "frappe.client.get_list",
+//         args: {
+//             doctype: "MRP Scheduler Log",
+//             fields: ["run_date", "status", "item", "reason"],
+//             order_by: "run_date desc",
+//             limit_start: page * pageSize,
+//             limit_page_length: pageSize,
+//             filters: [["reason","!=","Planned Purchase Qty is 0"]]
+//         },
+//         callback: function(r) {
+//             let logs = r.message || [];
+
+//             let html = `
+//                 <h5>MRP Scheduler Run Status</h5>
+//                 <table class="table table-bordered" style="width:100%; text-align:center;">
+//                     <thead>
+//                         <tr>
+//                             <th>Date</th>
+//                             <th>Status</th>
+//                             <th>Item</th>
+//                             <th>Reason</th>
+//                         </tr>
+//                     </thead>
+//                     <tbody>
+//             `;
+
+//             if(!logs.length){
+//                 html += `
+//                     <tr>
+//                         <td colspan="4">No Scheduler Logs Found</td>
+//                     </tr>`;
+//             } else {
+//                 logs.forEach(log => {
+//                     html += `
+//                         <tr>
+//                             <td>${log.run_date || ""}</td>
+//                             <td style="color:${log.status==="Success"?"green":"red"}">
+//                                 ${log.status}
+//                             </td>
+//                             <td>${log.item || "-"}</td>
+//                             <td>${log.reason || "-"}</td>
+//                         </tr>`;
+//                 });
+//             }
+
+//             html += `
+//                     </tbody>
+//                 </table>
+
+//                 <div style="display:flex; justify-content:center; gap:10px;">
+//                     <button class="btn btn-secondary" 
+//                         onclick="load_mrp_scheduler_log(${page - 1})"
+//                         ${page <= 0 ? "disabled" : ""}>
+//                         Previous
+//                     </button>
+
+//                     <span style="margin-top:6px;">Page ${page + 1}</span>
+
+//                     <button class="btn btn-primary"
+//                         onclick="load_mrp_scheduler_log(${page + 1})"
+//                         ${logs.length < pageSize ? "disabled" : ""}>
+//                         Next
+//                     </button>
+//                 </div>
+//             `;
+
+//             $("#mrp-scheduler-log").html(html);
+//         }
+//     });
+// }
+let mrpLogPage = 1;          // Start page as 1
+const logPageSize = 20;      // Records per page
+let totalLogPages = 1;
+
+// Get total count first
+function load_mrp_scheduler_log(page = 1) {
+
     mrpLogPage = page;
 
     frappe.call({
-        method: "frappe.client.get_list",
+        method: "frappe.client.get_count",
         args: {
             doctype: "MRP Scheduler Log",
-            fields: ["run_date", "status", "item", "reason"],
-            order_by: "run_date desc",
-            limit_start: page * pageSize,
-            limit_page_length: pageSize,
             filters: [["reason","!=","Planned Purchase Qty is 0"]]
         },
-        callback: function(r) {
-            let logs = r.message || [];
+        callback: function(res) {
 
-            let html = `
-                <h5>MRP Scheduler Run Status</h5>
-                <table class="table table-bordered" style="width:100%; text-align:center;">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Item</th>
-                            <th>Reason</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
+            let total_logs = res.message || 0;
+            totalLogPages = Math.ceil(total_logs / logPageSize);
 
-            if(!logs.length){
-                html += `
-                    <tr>
-                        <td colspan="4">No Scheduler Logs Found</td>
-                    </tr>`;
-            } else {
-                logs.forEach(log => {
+            // Now fetch paginated logs
+            frappe.call({
+                method: "frappe.client.get_list",
+                args: {
+                    doctype: "MRP Scheduler Log",
+                    fields: ["run_date", "status", "item", "reason"],
+                    order_by: "run_date desc",
+                    limit_start: (page - 1) * logPageSize,
+                    limit_page_length: logPageSize,
+                    filters: [["reason","!=","Planned Purchase Qty is 0"]]
+                },
+                callback: function(r) {
+
+                    let logs = r.message || [];
+
+                    let html = `
+                        <h5>MRP Scheduler Run Status</h5>
+
+                        <table class="table table-bordered" style="width:100%; text-align:center;">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Item</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    if(!logs.length){
+                        html += `
+                            <tr>
+                                <td colspan="4">No Scheduler Logs Found</td>
+                            </tr>`;
+                    } 
+                    else {
+                        logs.forEach(log => {
+                            html += `
+                                <tr>
+                                    <td>${log.run_date || ""}</td>
+                                    <td style="color:${log.status==="Success"?"green":"red"}">
+                                        ${log.status}
+                                    </td>
+                                    <td>${log.item || "-"}</td>
+                                    <td>${log.reason || "-"}</td>
+                                </tr>`;
+                        });
+                    }
+
                     html += `
-                        <tr>
-                            <td>${log.run_date || ""}</td>
-                            <td style="color:${log.status==="Success"?"green":"red"}">
-                                ${log.status}
-                            </td>
-                            <td>${log.item || "-"}</td>
-                            <td>${log.reason || "-"}</td>
-                        </tr>`;
-                });
-            }
+                            </tbody>
+                        </table>
 
-            html += `
-                    </tbody>
-                </table>
+                        <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
 
-                <div style="display:flex; justify-content:center; gap:10px;">
-                    <button class="btn btn-secondary" 
-                        onclick="load_mrp_scheduler_log(${page - 1})"
-                        ${page <= 0 ? "disabled" : ""}>
-                        Previous
-                    </button>
+                            <button class="btn btn-primary" 
+                                onclick="load_mrp_scheduler_log(${page - 1})"
+                                ${page === 1 ? "disabled" : ""}>
+                                Previous
+                            </button>
 
-                    <span style="margin-top:6px;">Page ${page + 1}</span>
+                            <span style="padding:3px 5px;">
+                                Page ${page} of ${totalLogPages}
+                            </span>
 
-                    <button class="btn btn-primary"
-                        onclick="load_mrp_scheduler_log(${page + 1})"
-                        ${logs.length < pageSize ? "disabled" : ""}>
-                        Next
-                    </button>
-                </div>
-            `;
+                            <button class="btn btn-primary"
+                                onclick="load_mrp_scheduler_log(${page + 1})"
+                                ${page === totalLogPages ? "disabled" : ""}>
+                                Next
+                            </button>
 
-            $("#mrp-scheduler-log").html(html);
+                        </div>
+                    `;
+
+                    $("#mrp-scheduler-log").html(html);
+                }
+            });
         }
     });
 }
+
 
 
 // Call this after loading MRP table
