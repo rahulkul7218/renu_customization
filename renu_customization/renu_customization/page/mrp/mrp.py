@@ -2592,7 +2592,7 @@ def get_mrp_data():
             SELECT IFNULL(SUM(qty - delivered_qty),0)
             FROM `tabSales Order Item`
             WHERE item_code=%s
-            # AND docstatus = 1
+            
             AND docstatus IN (0,1)
             AND parent IN (
                 SELECT name FROM `tabSales Order`
@@ -2605,7 +2605,7 @@ def get_mrp_data():
             SELECT IFNULL(SUM(qty - received_qty),0)
             FROM `tabPurchase Order Item`
             WHERE item_code=%s
-            # AND docstatus = 1
+           
             AND docstatus IN (0,1)
             AND parent IN (
                 SELECT name FROM `tabPurchase Order`
@@ -2802,7 +2802,7 @@ def get_sales_orders_for_item(item_code):
             ON so.name = soi.parent
         WHERE 
             soi.item_code = %s
-            AND soi.docstatus = 1
+            AND soi.docstatus IN (0,1)
             AND so.status NOT IN ('Cancelled','Closed')
             AND (soi.qty - soi.delivered_qty) > 0
         ORDER BY so.transaction_date DESC
@@ -2826,7 +2826,7 @@ def get_purchase_orders_for_item(item_code):
             ON po.name = poi.parent
         WHERE 
             poi.item_code = %s
-            AND poi.docstatus = 1
+            AND poi.docstatus IN (0,1)
             AND po.status NOT IN ('Cancelled','Closed')
             AND (poi.qty - poi.received_qty) > 0
         ORDER BY po.transaction_date DESC
