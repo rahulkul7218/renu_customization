@@ -1205,31 +1205,96 @@ $(document).on('click', '.open-po-link', function() {
 // ===============================
 // GROSS REQUIREMENT POPUP
 // ===============================
+// $(document).on('click', '.gross-req-link', function() {
+//     const item = $(this).data('item');
+//     const so = $(this).data('so');
+//     const avl = $(this).data('avl');
+//     const po = $(this).data('po');
+
+//     const gross = so - avl - po;
+
+//     let content = `
+//         <p><b>Gross Requirement Formula</b></p>
+//         <p>Gross Requirement = Open SO Qty − Available Qty − Open PO Qty</p>
+
+//         <p>
+//             = ${so} − ${avl} − ${po}<br>
+//             = <b>${gross}</b>
+//         </p>
+//     `;
+//     new frappe.ui.Dialog({
+//         title:`Gross Requirement Calculation – ${item}`,
+//         fields:[{ fieldtype:'HTML', fieldname:'calc', options:content }]
+//     }).show();
+// });
+/* ⭐⭐⭐ ADDED — GROSS REQUIREMENT POPUP ⭐⭐⭐ */
 $(document).on('click', '.gross-req-link', function() {
+
     const item = $(this).data('item');
-    const so = $(this).data('so');
-    const avl = $(this).data('avl');
-    const po = $(this).data('po');
+    const so = Number($(this).data('so') || 0);
+    const avl = Number($(this).data('avl') || 0);
+    const po = Number($(this).data('po') || 0);
 
     const gross = so - avl - po;
 
     let content = `
-        <p><b>Gross Requirement Formula</b></p>
-        <p>Gross Requirement = Open SO Qty − Available Qty − Open PO Qty</p>
+        <table class="table table-bordered" style="text-align:center;">
+            <thead>
+                <tr>
+                    <th colspan="5" style="background:#f5f5f5;">
+                        Gross Requirement Calculation
+                    </th>
+                </tr>
+                <tr>
+                <th colspan="5" style="padding:10px;">
+                    <b>
+                        Gross Requirement = Open SO Qty − Available Qty − Open PO Qty
+                    </b>
+                </th>
+            </tr>
+            </thead>
 
-        <p>
-            = ${so} − ${avl} − ${po}<br>
-            = <b>${gross}</b>
-        </p>
+            <tbody>
+
+                <!-- Header Row -->
+                <tr>
+                    <td><b>Gross Requirement</b></td>
+                    <td>=</td>
+                    <td><b>Open SO Qty</b></td>
+                    <td><b>Available Qty</b></td>
+                    <td><b>Open PO Qty</b></td>
+                </tr>
+
+                <!-- Value Row -->
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td>${so}</td>
+                    <td>${-avl}</td>
+                    <td>${-po}</td>
+                </tr>
+
+                <!-- Result Row -->
+                <tr>
+                    <td><b>Gross Requirement</b></td>
+                    <td>=</td>
+                    <td colspan="3" style="color:blue;"><b>${gross}</b></td>
+                </tr>
+
+            </tbody>
+        </table>
     `;
-    
-
 
     new frappe.ui.Dialog({
-        title:`Gross Requirement Calculation – ${item}`,
-        fields:[{ fieldtype:'HTML', fieldname:'calc', options:content }]
+        title: `Gross Requirement Details — ${item}`,
+        fields:[
+            { fieldtype:'HTML', fieldname:'list', options:content }
+        ],
+        size: 'large'
     }).show();
 });
+/* ⭐⭐⭐ END — GROSS REQUIREMENT POPUP ⭐⭐⭐ */
+
 
 
 // ===============================
