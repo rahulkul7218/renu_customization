@@ -320,6 +320,8 @@ after_migrate = [
     "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_invoice.execute",
     "renu_customization.patches.v_0.add_is_service_item_checkbox_on_item.execute",
     "renu_customization.patches.v_0.add_mrp_checkbox_on_item.execute",
+    "renu_customization.patches.v_0.add_section_and_enable_mrp_field_on_stock_setting.execute",
+    "renu_customization.patches.v_0.consider_draft_so_and_po_field_on_stock_setting.execute",
     # "renu_customization.patches.v_0.add_auto_email_send_checkbox_on_supplier.execute",
     # "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
     # "renu_customization.patches.v_0.send_email_mrp.execute",
