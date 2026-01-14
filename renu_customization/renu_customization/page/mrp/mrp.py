@@ -2788,15 +2788,36 @@ def auto_create_purchase_orders():
 # ⭐ SALES ORDER POPUP
 # =====================================================
 @frappe.whitelist()
+# def get_sales_orders_for_item(item_code):
+#     if not item_code:
+#         return []
+#     return frappe.db.sql("""
+#         SELECT 
+#             soi.parent AS sales_order,
+#             soi.qty,
+#             soi.delivered_qty,
+#             (soi.qty - soi.delivered_qty) AS pending_qty
+#         FROM `tabSales Order Item` soi
+#         INNER JOIN `tabSales Order` so
+#             ON so.name = soi.parent
+#         WHERE 
+#             soi.item_code = %s
+#             AND soi.docstatus IN (0,1)
+#             AND so.status NOT IN ('Cancelled','Closed')
+#             AND (soi.qty - soi.delivered_qty) > 0
+#         ORDER BY so.transaction_date DESC
+#     """, item_code, as_dict=True)
 def get_sales_orders_for_item(item_code):
     if not item_code:
         return []
+
     return frappe.db.sql("""
         SELECT 
             soi.parent AS sales_order,
             soi.qty,
-            soi.delivered_qty,
-            (soi.qty - soi.delivered_qty) AS pending_qty
+            IFNULL(soi.delivered_qty,0) AS delivered_qty,
+            (soi.qty - IFNULL(soi.delivered_qty,0)) AS pending_qty,
+            soi.delivery_date
         FROM `tabSales Order Item` soi
         INNER JOIN `tabSales Order` so
             ON so.name = soi.parent
@@ -2804,30 +2825,51 @@ def get_sales_orders_for_item(item_code):
             soi.item_code = %s
             AND soi.docstatus IN (0,1)
             AND so.status NOT IN ('Cancelled','Closed')
-            AND (soi.qty - soi.delivered_qty) > 0
-        ORDER BY so.transaction_date DESC
+            AND (soi.qty - IFNULL(soi.delivered_qty,0)) > 0
+        ORDER BY soi.delivery_date ASC
     """, item_code, as_dict=True)
 
 # =====================================================
 # ⭐ PURCHASE ORDER POPUP
 # =====================================================
 @frappe.whitelist()
+# def get_purchase_orders_for_item(item_code):
+#     if not item_code:
+#         return []
+#     return frappe.db.sql("""
+#         SELECT 
+#             poi.parent AS purchase_order,
+#             poi.qty,
+#             poi.received_qty,
+#             (poi.qty - poi.received_qty) AS pending_qty
+#         FROM `tabPurchase Order Item` poi
+#         INNER JOIN `tabPurchase Order` po
+#             ON po.name = poi.parent
+#         WHERE 
+#             poi.item_code = %s
+#             AND poi.docstatus IN (0,1)
+#             AND po.status NOT IN ('Cancelled','Closed')
+#             AND (poi.qty - poi.received_qty) > 0
+#         ORDER BY po.transaction_date DESC
+#     """, item_code, as_dict=True)
 def get_purchase_orders_for_item(item_code):
     if not item_code:
         return []
+
     return frappe.db.sql("""
         SELECT 
             poi.parent AS purchase_order,
             poi.qty,
-            poi.received_qty,
-            (poi.qty - poi.received_qty) AS pending_qty
+            IFNULL(poi.received_qty,0) AS received_qty,
+            (poi.qty - IFNULL(poi.received_qty,0)) AS pending_qty,
+            poi.schedule_date
         FROM `tabPurchase Order Item` poi
         INNER JOIN `tabPurchase Order` po
             ON po.name = poi.parent
         WHERE 
             poi.item_code = %s
             AND poi.docstatus IN (0,1)
-            AND po.status NOT IN ('Cancelled','Closed')
-            AND (poi.qty - poi.received_qty) > 0
-        ORDER BY po.transaction_date DESC
+            AND po.status NOT IN ('Cancelled','Closed','Completed')
+            AND (poi.qty - IFNULL(poi.received_qty,0)) > 0
+        ORDER BY poi.schedule_date ASC
     """, item_code, as_dict=True)

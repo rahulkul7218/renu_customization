@@ -991,6 +991,47 @@ $(document).on('click', '.item-link', function() {
 // ===============================
 // OPEN SO QTY POPUP
 // ===============================
+// $(document).on('click', '.open-so-link', function() {
+//     const item = $(this).data('item');
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_sales_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+
+//             let so_list = r.message || [];
+
+//             // Only pending qty
+//             so_list = so_list.filter(so => Number(so.pending_qty || so.qty) > 0);
+
+//             if(!so_list.length){
+//                 frappe.msgprint("No Open Sales Orders for this Item");
+//                 return;
+//             }
+
+//             let content = `<ul>`;
+//             so_list.forEach(so => {
+//                 content += `
+//                     <li>
+//                         <a href="javascript:void(0);" 
+//                            onclick="frappe.set_route('Form','Sales Order','${so.sales_order}')"
+//                            style="color:#007bff;">
+//                             ${so.sales_order}
+//                         </a>
+//                         &nbsp; → &nbsp; ${so.pending_qty || so.qty}
+//                     </li>`;
+//             });
+//             content += `</ul>`;
+            
+
+
+//             new frappe.ui.Dialog({
+//                 title:`Open Sales Orders for ${item}`,
+//                 fields:[{ fieldtype:'HTML', fieldname:'list', options:content }]
+//             }).show();
+//         }
+//     });
+// });
 $(document).on('click', '.open-so-link', function() {
     const item = $(this).data('item');
 
@@ -1001,39 +1042,100 @@ $(document).on('click', '.open-so-link', function() {
 
             let so_list = r.message || [];
 
-            // Only pending qty
-            so_list = so_list.filter(so => Number(so.pending_qty || so.qty) > 0);
-
             if(!so_list.length){
                 frappe.msgprint("No Open Sales Orders for this Item");
                 return;
             }
 
-            let content = `<ul>`;
+            let content = `
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Sales Order</th>
+                            <th style="text-align:right;">Order Qty</th>
+                            <th style="text-align:right;">Delivered Qty</th>
+                            <th style="text-align:right;">Open Qty</th>
+                            <th>Delivery Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
             so_list.forEach(so => {
                 content += `
-                    <li>
-                        <a href="javascript:void(0);" 
-                           onclick="frappe.set_route('Form','Sales Order','${so.sales_order}')"
-                           style="color:#007bff;">
-                            ${so.sales_order}
-                        </a>
-                        &nbsp; → &nbsp; ${so.pending_qty || so.qty}
-                    </li>`;
+                    <tr>
+                        <td>
+                            <a href="javascript:void(0);" 
+                                onclick="frappe.set_route('Form','Sales Order','${so.sales_order}')"
+                                style="color:#007bff;">
+                                ${so.sales_order}
+                            </a>
+                        </td>
+                        <td style="text-align:right;">${so.qty}</td>
+                        <td style="text-align:right;">${so.delivered_qty}</td>
+                        <td style="text-align:right;">${so.pending_qty}</td>
+                        <td>${so.delivery_date || "-"}</td>
+                    </tr>
+                `;
             });
-            content += `</ul>`;
-            
 
+            content += `
+                    </tbody>
+                </table>
+            `;
 
             new frappe.ui.Dialog({
                 title:`Open Sales Orders for ${item}`,
-                fields:[{ fieldtype:'HTML', fieldname:'list', options:content }]
+                fields:[{ fieldtype:'HTML', fieldname:'list', options:content }],
+                size: 'large'
             }).show();
         }
     });
 });
 
 
+// ===============================
+// OPEN PO QTY POPUP
+// ===============================
+// $(document).on('click', '.open-po-link', function() {
+//     const item = $(this).data('item');
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_purchase_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+
+//             let po_list = r.message || [];
+
+//             // Only pending qty
+//             po_list = po_list.filter(po => Number(po.pending_qty || po.qty) > 0);
+
+//             if(!po_list.length){
+//                 frappe.msgprint("No Open Purchase Orders for this Item");
+//                 return;
+//             }
+
+//             let content = `<ul>`;
+//             po_list.forEach(po => {
+//                 content += `
+//                     <li>
+//                         <a href="javascript:void(0);" 
+//                            onclick="frappe.set_route('Form','Purchase Order','${po.purchase_order}')"
+//                            style="color:#007bff;">
+//                             ${po.purchase_order}
+//                         </a>
+//                         &nbsp; → &nbsp; ${po.pending_qty || po.qty}
+//                     </li>`;
+//             });
+//             content += `</ul>`;
+
+//             new frappe.ui.Dialog({
+//                 title:`Open Purchase Orders for ${item}`,
+//                 fields:[{ fieldtype:'HTML', fieldname:'list', options:content }]
+//             }).show();
+//         }
+//     });
+// });
 // ===============================
 // OPEN PO QTY POPUP
 // ===============================
@@ -1047,35 +1149,57 @@ $(document).on('click', '.open-po-link', function() {
 
             let po_list = r.message || [];
 
-            // Only pending qty
-            po_list = po_list.filter(po => Number(po.pending_qty || po.qty) > 0);
-
             if(!po_list.length){
                 frappe.msgprint("No Open Purchase Orders for this Item");
                 return;
             }
 
-            let content = `<ul>`;
+            let content = `
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Purchase Order</th>
+                            <th style="text-align:right;">Order Qty</th>
+                            <th style="text-align:right;">Received Qty</th>
+                            <th style="text-align:right;">Open Qty</th>
+                            <th>Schedule Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
             po_list.forEach(po => {
                 content += `
-                    <li>
-                        <a href="javascript:void(0);" 
-                           onclick="frappe.set_route('Form','Purchase Order','${po.purchase_order}')"
-                           style="color:#007bff;">
-                            ${po.purchase_order}
-                        </a>
-                        &nbsp; → &nbsp; ${po.pending_qty || po.qty}
-                    </li>`;
+                    <tr>
+                        <td>
+                            <a href="javascript:void(0);"
+                                onclick="frappe.set_route('Form','Purchase Order','${po.purchase_order}')"
+                                style="color:#007bff;">
+                                ${po.purchase_order}
+                            </a>
+                        </td>
+                        <td style="text-align:right;">${po.qty}</td>
+                        <td style="text-align:right;">${po.received_qty}</td>
+                        <td style="text-align:right;">${po.pending_qty}</td>
+                        <td>${po.schedule_date || "-"}</td>
+                    </tr>
+                `;
             });
-            content += `</ul>`;
+
+            content += `
+                    </tbody>
+                </table>
+            `;
 
             new frappe.ui.Dialog({
                 title:`Open Purchase Orders for ${item}`,
-                fields:[{ fieldtype:'HTML', fieldname:'list', options:content }]
+                fields:[{ fieldtype:'HTML', fieldname:'list', options:content }],
+                size: 'large'
             }).show();
         }
     });
 });
+
 
 
 // ===============================
@@ -1098,6 +1222,8 @@ $(document).on('click', '.gross-req-link', function() {
             = <b>${gross}</b>
         </p>
     `;
+    
+
 
     new frappe.ui.Dialog({
         title:`Gross Requirement Calculation – ${item}`,
