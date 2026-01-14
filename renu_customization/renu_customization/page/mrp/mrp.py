@@ -2618,12 +2618,20 @@ def get_mrp_data():
         moq = item.moq or 0
         planned_purchase_qty = 0
 
-        if gross_requirement <= 0:
-            planned_purchase_qty = 0
-        elif gross_requirement > 0 and gross_requirement < moq:
-            planned_purchase_qty = moq
-        elif gross_requirement >= moq:
-            planned_purchase_qty = gross_requirement
+        # if gross_requirement <= 0:
+        #     planned_purchase_qty = 0
+        # elif gross_requirement > 0 and gross_requirement < moq:
+        #     planned_purchase_qty = moq
+        # elif gross_requirement >= moq:
+        #     planned_purchase_qty = gross_requirement
+        if on_hand == safety:
+             planned_purchase_qty = moq
+        elif gross_requirement <= 0:
+             planned_purchase_qty = 0
+        elif gross_requirement < moq:
+             planned_purchase_qty = moq
+        else:
+             planned_purchase_qty = gross_requirement
 
         result.append({
             "item": item_code,

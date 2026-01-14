@@ -1022,6 +1022,8 @@ $(document).on('click', '.open-so-link', function() {
                     </li>`;
             });
             content += `</ul>`;
+            
+
 
             new frappe.ui.Dialog({
                 title:`Open Sales Orders for ${item}`,
@@ -1119,20 +1121,23 @@ $(document).on('click', '.planned-purchase-link', function() {
 
     if(on_hand === safety) {
         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
-    } else {
+    } 
+    else {
         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → FALSE</li>`);
     }
 
     if(gross <= 0) {
         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → TRUE → Planned Qty = 0</li>`);
-    } else {
+    } 
+    else {
         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → FALSE</li>`);
     }
 
-    if(gross > 0 && gross < moq) {
+    if(gross < moq) {
         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
-    } else {
-        steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → FALSE</li>`);
+    } 
+    else {
+        steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${gross}) → FALSE</li>`);
     }
 
     if(gross >= moq) {
