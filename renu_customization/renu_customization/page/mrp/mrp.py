@@ -2890,7 +2890,7 @@ def get_mrp_data():
     items = frappe.get_all(
         "Item",
         filters={"is_stock_item": 1, "mrp": 1},
-        fields=["name", "safety_stock", "min_order_qty as moq"]
+        fields=["name", "safety_stock", "min_order_qty as moq", "modified"]
     )
 
     result = []
