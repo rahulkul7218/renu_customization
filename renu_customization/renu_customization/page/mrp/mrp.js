@@ -880,7 +880,7 @@ function load_mrp_table() {
 
                             <td style="border:1px solid #000; color:#08CB00; text-align:right;">
                                 <a href="javascript:void(0);" class="planned-purchase-link"
-                                   data-item="${row.item}" style="color:#007bff;"
+                                   data-item="${row.item}"
                                    data-on-hand="${row.on_hand_qty}"
                                    data-safety="${row.safety_stock}"
                                    data-gross="${row.gross_requirement}"
@@ -1262,55 +1262,55 @@ $(document).on('click', '.gross-req-link', function() {
 // ===============================
 // PLANNED PURCHASE – REASON POPUP
 // ===============================
-$(document).on('click', '.planned-purchase-link', function() {
-    const item = $(this).data('item');
-    const on_hand = Number($(this).data('on-hand'));
-    const safety = Number($(this).data('safety'));
-    const gross = Number($(this).data('gross'));
-    const moq = Number($(this).data('moq'));
-    const planned = Number($(this).data('planned'));
+// $(document).on('click', '.planned-purchase-link', function() {
+//     const item = $(this).data('item');
+//     const on_hand = Number($(this).data('on-hand'));
+//     const safety = Number($(this).data('safety'));
+//     const gross = Number($(this).data('gross'));
+//     const moq = Number($(this).data('moq'));
+//     const planned = Number($(this).data('planned'));
 
-    let steps = [];
+//     let steps = [];
 
-    if(on_hand === safety) {
-        steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
-    } 
-    else {
-        steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → FALSE</li>`);
-    }
+//     if(on_hand === safety) {
+//         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+//     } 
+//     else {
+//         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → FALSE</li>`);
+//     }
 
-    if(gross <= 0) {
-        steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → TRUE → Planned Qty = 0</li>`);
-    } 
-    else {
-        steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → FALSE</li>`);
-    }
+//     if(gross <= 0) {
+//         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → TRUE → Planned Qty = 0</li>`);
+//     } 
+//     else {
+//         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → FALSE</li>`);
+//     }
 
-    if(gross < moq) {
-        steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
-    } 
-    else {
-        steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${gross}) → FALSE</li>`);
-    }
+//     if(gross < moq) {
+//         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+//     } 
+//     else {
+//         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${gross}) → FALSE</li>`);
+//     }
 
-    if(gross >= moq) {
-        steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → TRUE → Planned Qty = Gross Requirement (${gross})</li>`);
-    } else {
-        steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → FALSE</li>`);
-    }
+//     if(gross >= moq) {
+//         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → TRUE → Planned Qty = Gross Requirement (${gross})</li>`);
+//     } else {
+//         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → FALSE</li>`);
+//     }
 
-    const content = `
-        <p><b>Planned Purchase Qty Decision Logic</b></p>
-        <ol>${steps.join("")}</ol>
+//     const content = `
+//         <p><b>Planned Purchase Qty Decision Logic</b></p>
+//         <ol>${steps.join("")}</ol>
 
-        <p><b>Final Planned to Purchase Qty = ${planned}</b></p>
-    `;
+//         <p><b>Final Planned to Purchase Qty = ${planned}</b></p>
+//     `;
 
-    new frappe.ui.Dialog({
-        title:`Planned Purchase Qty Reason – ${item}`,
-        fields:[{ fieldtype:'HTML', fieldname:'logic', options:content }]
-    }).show();
-});
+//     new frappe.ui.Dialog({
+//         title:`Planned Purchase Qty Reason – ${item}`,
+//         fields:[{ fieldtype:'HTML', fieldname:'logic', options:content }]
+//     }).show();
+// });
 
 
 // ===============================
