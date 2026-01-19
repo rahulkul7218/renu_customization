@@ -387,10 +387,13 @@ doctype_js = {
     "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"],
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
     "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"],
-    "Purchase Order": "public/js/calculate_open_qty_on_purchase_order.js",
+    "Purchase Order": [
+        "public/js/calculate_open_qty_on_purchase_order.js",
+        "public/js/fetched_supplier_email_on_purchase_order.js",
+        "public/js/validate_po_item_rate.js"
+    ],
     "Company": ["public/js/only_show_enable_lut_number.js","public/js/only_show_enable_epcg_no.js"],
-    "GST Settings": "public/js/if_enable_overseas_transactions_checked_show_lut_expiry_date.js",
-    "Purchase Order": "public/js/fetched_supplier_email_on_purchase_order.js"
+    "GST Settings": "public/js/if_enable_overseas_transactions_checked_show_lut_expiry_date.js"
    
     
 
@@ -417,7 +420,6 @@ doc_events = {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
         "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
         
-        
     }
 
 
@@ -430,9 +432,6 @@ app_include_js = [
 
 
 
-# override_doctype_class = {
-#     "Packing Slip": "renu_customization.overrides.packing_slip.PackingSlipOverride"
-# }
 
 scheduler_events = {
     "cron": {
