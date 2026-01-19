@@ -1664,13 +1664,13 @@ function load_mrp_scheduler_log(page = 1) {
  
                     let html = `
                         <table class="table table-bordered text-center">
-                            <thead>
+                            <thead style="border:1px solid #000; background:#BEDBFF;">
                                 <tr>
-                                    <th>Item</th>
-                                    <th>Date</th>
-                                    <th>Status</th>
-                                    <th>PO ID</th>
-                                    <th>Reason</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Item</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Date</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Status</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">PO ID</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Reason</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1708,13 +1708,13 @@ function load_mrp_scheduler_log(page = 1) {
  
     html += `
         <tr>
-            <td>${l.item || "-"}</td>
-            <td>${l.run_date || ""}</td>
-            <td style="color:${l.status === "Success" ? "green" : "red"}">
+            <td style="border:1px solid #000;">${l.item || "-"}</td>
+            <td style="border:1px solid #000;">${l.run_date || ""}</td>
+            <td style="border:1px solid #000; color:${l.status === "Success" ? "green" : "red"}">
                 ${l.status}
             </td>
-            <td>${po_id}</td>
-            <td>${reason_text}</td>
+            <td style="border:1px solid #000;">${po_id}</td>
+            <td style="border:1px solid #000;">${reason_text}</td>
         </tr>`;
     });
  
