@@ -3008,21 +3008,33 @@ def create_purchase_order(items, send_email_on_mrp=None):
 
     # 🔴 CHECK ITEM PRICE BEFORE CREATING PO
     for d in items:
-        rate = frappe.db.get_value(
-            "Item Price",
-            {"item_code": d["item"]},
-            "price_list_rate"
-        )
-        if rate is None or float(rate) <= 0:
+        item_code = d["item"]
+        rate = frappe.db.get_value("Item Price", {
+            "item_code": item_code,
+            "price_list": "Standard Buying"
+        }, "price_list_rate")
+
+        if rate is None:
+            # Missing Price List entry
             frappe.get_doc({
                 "doctype": "MRP Scheduler Log",
                 "run_date": nowdate(),
                 "status": "Failed",
-                "item": d["item"],
+                "item": item_code,
+                "reason": "Price list not set"
+            }).insert(ignore_permissions=True)
+            frappe.throw(f"Cannot create PO for Item {item_code}: Price list not set")
+
+        if float(rate) <= 0:
+            # Zero or Negative Rate
+            frappe.get_doc({
+                "doctype": "MRP Scheduler Log",
+                "run_date": nowdate(),
+                "status": "Failed",
+                "item": item_code,
                 "reason": "Rate is not set in the Price List. The rate must be greater than 0."
             }).insert(ignore_permissions=True)
-
-            frappe.throw(f"Cannot create PO for Item {d['item']}: Rate is not set in the Price List. The rate must be greater than 0.")
+            frappe.throw(f"Cannot create PO for Item {item_code}: Rate is not set in the Price List. The rate must be greater than 0.")
 
     supplier_map = {}
     for d in items:
@@ -3112,8 +3124,21 @@ def auto_create_purchase_orders():
             })
             continue
 
-        rate = frappe.db.get_value("Item Price", {"item_code": item}, "price_list_rate")
-        if rate is None or float(rate) <= 0:
+        rate = frappe.db.get_value("Item Price", {
+            "item_code": item,
+            "price_list": "Standard Buying"
+        }, "price_list_rate")
+
+        if rate is None:
+            log_entries.append({
+                "item": item,
+                "run_date": nowdate(),
+                "status": "Failed",
+                "reason": "Price list not set"
+            })
+            continue
+
+        if float(rate) <= 0:
             log_entries.append({
                 "item": item,
                 "run_date": nowdate(),
