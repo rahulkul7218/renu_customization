@@ -19,7 +19,7 @@ frappe.ui.form.on('Purchase Order', {
         if (invalid_items.length > 0) {
             frappe.msgprint({
                 title: __('Invalid Item Rate'),
-                message: __('Cannot save Purchase Order.Rate should be Greater than zero', 
+                message: __('Rate is not set in the Price List. The rate must be greater than 0.', 
                     [invalid_items.join(', ')]),
                 indicator: 'red'
             });

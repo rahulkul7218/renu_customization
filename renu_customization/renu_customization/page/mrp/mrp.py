@@ -3015,10 +3015,10 @@ def create_purchase_order(items, send_email_on_mrp=None):
                 "run_date": nowdate(),
                 "status": "Failed",
                 "item": d["item"],
-                "reason": "Rate not set in Price List (≤ 0)"
+                "reason": "Rate is not set in the Price List. The rate must be greater than 0."
             }).insert(ignore_permissions=True)
 
-            frappe.throw(f"Cannot create PO for Item {d['item']}: Rate not set in Price List (≤ 0)")
+            frappe.throw(f"Cannot create PO for Item {d['item']}: Rate is not set in the Price List. The rate must be greater than 0.")
 
     supplier_map = {}
     for d in items:
@@ -3114,7 +3114,7 @@ def auto_create_purchase_orders():
                 "item": item,
                 "run_date": nowdate(),
                 "status": "Failed",
-                "reason": "Rate not set in Price List (≤ 0)"
+                "reason": "Rate is not set in the Price List. The rate must be greater than 0."
             })
             continue
 
