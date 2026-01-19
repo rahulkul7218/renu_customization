@@ -1942,8 +1942,8 @@ $(document).on('click', '.gross-req-link', function() {
                     <td></td>
                     <td></td>
                     <td>${so}</td>
-                    <td>${-avl}</td>
-                    <td>${-po}</td>
+                    <td>${avl}</td>
+                    <td>${po}</td>
                 </tr>
  
                 <!-- Result Row -->
