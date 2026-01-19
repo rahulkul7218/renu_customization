@@ -1492,7 +1492,7 @@ function load_mrp_table() {
             });
  
  
-            let page_size = 20;
+            let page_size = 15;
             let current_page = 1;
  
             function render_table(page = 1) {
@@ -1624,7 +1624,7 @@ function load_mrp_table() {
  
  
 let mrpLogPage = 1;          // Start page as 1
-const logPageSize = 10;      // Records per page
+const logPageSize = 15;      // Records per page
 let totalLogPages = 1;
  
 function load_mrp_scheduler_log(page = 1) {
