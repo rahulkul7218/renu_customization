@@ -53,29 +53,29 @@
         <tbody>
             {% for row in doc.items %}
             <tr>
-                <td>{{ loop.index }}</td>
-                <td>{{ row.item_name or "" }}</td>
-                <td>{{ row.qty or "" }}</td>
-                <td>{{ row.rate or "" }}</td>
-                <td>{{ row.amount or "" }}</td>
+                <td style="text-align:center;">{{ loop.index }}</td>
+                <td style="text-align:center;">{{ row.item_name or "" }}</td>
+                <td style="text-align:right;">{{ row.qty or "" }}</td>
+                <td style="text-align:right;">{{ row.rate or "" }}</td>
+                <td style="text-align:right;">{{ row.amount or "" }}</td>
             </tr>
             {% endfor %}
             <tr><td colspan="5"><p style="padding:4px;"></p></td></tr>
              <tr>
             <td colspan="2"></td>
             <td colspan="2"><b>Total:</b></td>
-            <td>{{ doc.total or "" }}</td>
+            <td style="text-align:right;">{{ frappe.utils.fmt_money(doc.total, 2, doc.currency) }}</td>
         </tr>
         <tr>
              <td colspan="2"></td>
             <td colspan="2"><b>GST 18%:</b></td>
-            <td>{{ (doc.total * 0.18) | round(2) or "" }}</td>
+            <td style="text-align:right;">{{ frappe.utils.fmt_money((doc.taxes_and_charges_added) | round(2), 2, doc.currency) }}</td>
         </tr>
         <tr>
              <td colspan="2"></td>
             <td colspan="2"><b>Final Total:</b></td>
 
-            <td>{{ (doc.total * 1.18) | round(2) or "" }}</td>
+            <td style="text-align:right;">{{ frappe.utils.fmt_money((doc.grand_total) | round(2), 2, doc.currency) }}</td>
         </tr>
         </tbody>
     </table>
@@ -100,7 +100,7 @@
         </tr>
         <tr style="height:100px;">
             <td>Payment Term :
-                 {% if doc.payment_schedule %}
+                 {% if doc.payment_terms_template %}
                 <ul>
                 {% for row in doc.payment_schedule %}
                     <li>{{ row.payment_term or ""}}</li>
@@ -121,7 +121,7 @@
                 INSPECTION WILL BE DONE AT YOUR WORKS BEFORE DISPATCH TO US.
             </td>
         </tr>
-        <tr>
+        <!-- <tr>
             <td>Prepared By:</td>
             <td>Approved By:</td>
            
@@ -132,7 +132,20 @@
             {{ frappe.get_doc("User", doc.owner).full_name }}
         {% endif %}</td>
            
-        </tr>
+        </tr> -->
+        <tr>
+    <td>
+        <b>Prepared By:  </b>
+        {{ frappe.session.user_fullname or frappe.session.user }}
+    </td>
+
+    <td>
+        <b>Approved By:  </b>
+        {% if doc.owner %}
+            {{ frappe.get_doc("User", doc.owner).full_name }}
+        {% endif %}
+    </td>
+</tr>
         
     </table>
 
