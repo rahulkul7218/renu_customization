@@ -1420,7 +1420,7 @@ $(wrapper).append(`
  
     /* Normal tab */
     .nav-tabs .nav-link {
-        background: #c8def4;
+        background: #BEDBFF;
         color: #333;
         margin-right: 5px;
         border-radius: 5px;
@@ -1513,16 +1513,16 @@ function load_mrp_table() {
                         </tr>
  
                         <tr>
-                            <th style="border:1px solid #000; background:#FBEFEF;">Item</th>
-                            <th style="border:1px solid #000; background:#FBEFEF;">Open SO Qty</th>
-                            <th style="border:1px solid #000; background:#FBEFEF;">Safety Stock</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Item</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Open SO Qty</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Safety Stock</th>
  
-                            <th style="border:1px solid #000; background:#FBEFEF;">On Hand Stock</th>
-                            <th style="border:1px solid #000; background:#FBEFEF;">Available Stock</th>
-                            <th style="border:1px solid #000; background:#FBEFEF;">Open PO Qty</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">On Hand Stock</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Available Stock</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Open PO Qty</th>
  
-                            <th style="border:1px solid #000; background:#FBEFEF;">Gross Requirement</th>
-                            <th style="border:1px solid #000; background:#FBEFEF;">MOQ</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Gross Requirement</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">MOQ</th>
                             <th style="border:1px solid #000; background:#8BAE66;">Planned to Purchase Qty</th>
                         </tr>
                     </thead>
