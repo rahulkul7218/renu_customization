@@ -665,28 +665,7 @@
 //         frappe.msgprint("Please select at least one item");
 //         return;
 //     }
-//      // 🔴 CHECK ITEM RATE BEFORE SENDING TO SERVER
-//     let zero_rate_items = [];
-//     selected_items.forEach(d => {
-//         frappe.call({
-//             method: "frappe.client.get_value",
-//             args: {
-//                 doctype: "Item Price",
-//                 filters: { item_code: d.item },
-//                 fieldname: "price_list_rate"
-//             },
-//             async: false,
-//             callback: function(r) {
-//                 let rate = r.message?.price_list_rate || 0;
-//                 if (rate <= 0) zero_rate_items.push(d.item);
-//             }
-//         });
-//     });
- 
-//     if (zero_rate_items.length > 0) {
-//         frappe.msgprint(`Cannot create PO. Rate set as 0 or less than 0 in Price List for: ${zero_rate_items.join(", ")}`);
-//         return;
-//     }
+//     // 🔴 Validation removed to prioritize server-side checks and logging
  
 //     frappe.call({
 //         method: "renu_customization.renu_customization.page.mrp.mrp.create_purchase_order",

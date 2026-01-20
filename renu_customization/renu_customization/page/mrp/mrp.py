@@ -2955,7 +2955,7 @@ def get_mrp_data():
         if so_qty == 0 and safety == 0:
             planned_purchase_qty = 0
         elif so_qty > 0 and moq <= 0:
-            planned_purchase_qty = so_qty
+            planned_purchase_qty = gross_requirement
         elif so_qty <= 0:
             planned_purchase_qty = 0
         elif so_qty >0 and safety == 0 and available == 0 and moq == 0:
@@ -3004,6 +3004,14 @@ def create_purchase_order(items, send_email_on_mrp=None):
 
     zero_items = [d["item"] for d in items if not d["planned_qty"] or d["planned_qty"] <= 0]
     if zero_items:
+        for item_code in zero_items:
+            frappe.get_doc({
+                "doctype": "MRP Scheduler Log",
+                "run_date": nowdate(),
+                "status": "Failed",
+                "item": item_code,
+                "reason": f"Planned Qty is 0 for: {item_code}. Cannot create PO."
+            }).insert(ignore_permissions=True)
         frappe.throw(f"Planned Qty is 0 for: {', '.join(zero_items)}. Cannot create PO.")
 
     # 🔴 CHECK ITEM PRICE BEFORE CREATING PO
