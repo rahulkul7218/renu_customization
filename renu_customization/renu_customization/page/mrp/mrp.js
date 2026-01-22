@@ -1561,7 +1561,7 @@ function load_mrp_table() {
                                    data-so="${row.open_sales_order}"
                                    data-avl="${row.available_qty}"
                                    data-po="${row.po_qty}">
-                                   ${row.gross_requirement}
+                                   ${row.gross_requirement < 0 ? 0 : row.gross_requirement}
                                 </a>
                                 
 
