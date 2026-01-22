@@ -1534,13 +1534,13 @@ function load_mrp_table() {
                     html += `
                         <tr>
                             <td style="border:1px solid #000;">
-                                <a href="javascript:void(0);" class="item-link" data-item="${row.item}" style="color:#007bff; text-decoration: underline;">
+                                <a href="javascript:void(0);" class="item-link" data-item="${row.item}" style="text-decoration: underline;">
                                     ${row.item}
                                 </a>
                             </td>
  
                             <td style="border:1px solid #000; text-align:right;">
-                                <a href="javascript:void(0);" class="open-so-link" data-item="${row.item}" style="color:#007bff; text-decoration: underline;">
+                                <a href="javascript:void(0);" class="open-so-link" data-item="${row.item}" style="text-decoration: underline;">
                                     ${row.open_sales_order}
                                 </a>
                             </td>
@@ -1550,19 +1550,21 @@ function load_mrp_table() {
                             <td style="border:1px solid #000; text-align:right;">${row.available_qty}</td>
  
                             <td style="border:1px solid #000; text-align:right;">
-                                <a href="javascript:void(0);" class="open-po-link" data-item="${row.item}" style="color:#007bff; text-decoration: underline;">
+                                <a href="javascript:void(0);" class="open-po-link" data-item="${row.item}" style="text-decoration: underline;">
                                     ${row.po_qty}
                                 </a>
                             </td>
  
                             <td style="border:1px solid #000; text-align:right;">
                                 <a href="javascript:void(0);" class="gross-req-link"
-                                   data-item="${row.item}" style="color:#007bff; text-decoration: underline;"
+                                   data-item="${row.item}" style="text-decoration: underline;"
                                    data-so="${row.open_sales_order}"
                                    data-avl="${row.available_qty}"
                                    data-po="${row.po_qty}">
-                                   ${row.gross_requirement}
+                                   ${row.gross_requirement < 0 ? 0 : row.gross_requirement}
                                 </a>
+                                
+
                             </td>
  
                             <td style="border:1px solid #000; text-align:right;">${row.moq}</td>
@@ -1713,7 +1715,7 @@ function load_mrp_scheduler_log(page = 1) {
             <td style="border:1px solid #000; color:${l.status === "Success" ? "green" : "red"}">
                 ${l.status}
             </td>
-            <td style="border:1px solid #000;">${po_id}</td>
+            <td style="border:1px solid #000; text-decoration: underline;">${po_id}</td>
             <td style="border:1px solid #000;">${reason_text}</td>
         </tr>`;
                         });
