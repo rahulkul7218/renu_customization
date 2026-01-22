@@ -2899,11 +2899,18 @@ def get_mrp_data():
         item_code = item.name
 
         # ---------------- ON HAND STOCK ----------------
+        # on_hand = frappe.db.sql("""
+        #     SELECT IFNULL(SUM(actual_qty),0)
+        #     FROM `tabBin`
+        #     WHERE item_code=%s
+        # """, item_code)[0][0]
         on_hand = frappe.db.sql("""
-            SELECT IFNULL(SUM(actual_qty),0)
+            SELECT IFNULL(SUM(actual_qty), 0)
             FROM `tabBin`
-            WHERE item_code=%s
-        """, item_code)[0][0]
+            WHERE item_code = %s
+            AND warehouse = %s
+        """, (item_code, "Stores - RFAPL"))[0][0]
+
 
         # ---------------- AVAILABLE STOCK ----------------
         safety = item.safety_stock or 0
@@ -2972,8 +2979,8 @@ def get_mrp_data():
             planned_purchase_qty = 0
         elif gross_requirement < moq:
             planned_purchase_qty = moq
-        # else:
-        #     planned_purchase_qty = gross_requirement
+        else:
+            planned_purchase_qty = gross_requirement
 
 
 
