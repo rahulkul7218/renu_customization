@@ -2973,10 +2973,10 @@ def get_mrp_data():
             planned_purchase_qty = so_qty
         elif safety == 0 and available == 0:
             planned_purchase_qty = so_qty
-        # below add new condition
+
         elif gross_requirement < = 0:
             planned_purchase_qty = 0
-        # add new condition
+        
         elif on_hand == safety:
             planned_purchase_qty = moq
         elif gross_requirement <= 0:
