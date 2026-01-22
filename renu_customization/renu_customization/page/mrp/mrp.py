@@ -2972,8 +2972,8 @@ def get_mrp_data():
             planned_purchase_qty = 0
         elif gross_requirement < moq:
             planned_purchase_qty = moq
-        else:
-            planned_purchase_qty = gross_requirement
+        # else:
+        #     planned_purchase_qty = gross_requirement
 
 
 
