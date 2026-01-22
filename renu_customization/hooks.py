@@ -420,10 +420,8 @@ doc_events = {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
         "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
         
-    },
-    "Purchase Order": {
-        "before_save": "renu_customization.api.fetched_supplier_email_on_purchase_order.set_supplier_email"
     }
+    
 
 
 }
