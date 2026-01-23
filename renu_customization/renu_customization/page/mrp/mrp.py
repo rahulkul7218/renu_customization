@@ -3387,8 +3387,10 @@ def get_mrp_data():
 
         if so_qty == 0 and safety == 0:
             planned_purchase_qty = 0
-        # elif so_qty > 0 and moq <= 0:
-        #     planned_purchase_qty = gross_requirement
+        elif gross_requirement <= 0:
+            planned_purchase_qty = 0
+        elif so_qty > 0 and moq <= 0:
+            planned_purchase_qty = gross_requirement
         # elif so_qty <= 0:
         #     planned_purchase_qty = 0
         elif so_qty >0 and safety == 0 and available == 0 and moq == 0:
@@ -3399,12 +3401,10 @@ def get_mrp_data():
             planned_purchase_qty = so_qty
         elif safety == 0 and available == 0:
             planned_purchase_qty = so_qty
-        elif gross_requirement <= 0:
-            planned_purchase_qty = 0
         elif on_hand == safety:
             planned_purchase_qty = moq
-        elif gross_requirement <= 0:
-            planned_purchase_qty = 0
+        # elif gross_requirement <= 0:
+        #     planned_purchase_qty = 0
         elif gross_requirement < moq:
             planned_purchase_qty = moq
         # else:
