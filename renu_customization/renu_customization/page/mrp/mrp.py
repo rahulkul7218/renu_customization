@@ -3053,6 +3053,8 @@ def create_purchase_order(items, send_email_on_mrp=None):
                 "reason": "Rate is not set in the Price List. The rate must be greater than 0."
             }).insert(ignore_permissions=True)
             frappe.throw(f"Cannot create PO for Item {item_code}: Rate is not set in the Price List. The rate must be greater than 0.")
+        
+        d["rate"] = rate
 
     supplier_map = {}
     for d in items:
@@ -3063,14 +3065,18 @@ def create_purchase_order(items, send_email_on_mrp=None):
         supplier_map[supplier].append({
             "item_code": d["item"],
             "qty": d["planned_qty"],
+            "rate": d.get("rate"),
             "schedule_date": nowdate()
         })
+
+    default_company = frappe.db.get_single_value('Global Defaults', 'default_company') or frappe.db.get_value('Company', {}, 'name')
 
     last_po = None
     for supplier, po_items in supplier_map.items():
         po = frappe.get_doc({
             "doctype": "Purchase Order",
             "supplier": supplier,
+            "company": default_company,
             "schedule_date": nowdate(),
             "items": po_items
         })
@@ -3078,6 +3084,7 @@ def create_purchase_order(items, send_email_on_mrp=None):
         if send_email_on_mrp:
             po.send_email_on_mrp = 1
 
+        po.run_method("set_missing_values")
         po.insert(ignore_permissions=True)
         po.submit()
         last_po = po.name
@@ -3169,9 +3176,11 @@ def auto_create_purchase_orders():
         supplier_map[supplier].append({
             "item_code": item,
             "qty": planned_qty,
+            "rate": rate,
             "schedule_date": nowdate()
         })
 
+    default_company = frappe.db.get_single_value('Global Defaults', 'default_company') or frappe.db.get_value('Company', {}, 'name')
     created_pos = []
 
     for supplier, po_items in supplier_map.items():
@@ -3179,10 +3188,12 @@ def auto_create_purchase_orders():
             po = frappe.get_doc({
                 "doctype": "Purchase Order",
                 "supplier": supplier,
+                "company": default_company,
                 "schedule_date": nowdate(),
                 "items": po_items,
                 "send_email_on_mrp": 1
             })
+            po.run_method("set_missing_values")
             po.insert(ignore_permissions=True)
             
             # Add comment to indicate auto-generation
