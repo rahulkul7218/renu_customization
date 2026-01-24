@@ -3636,11 +3636,12 @@ def auto_create_purchase_orders():
                 })
         except Exception as e:
             # Log full traceback to Error Log (System Console)
+            traceback = frappe.get_traceback()
             frappe.log_error(title="MRP Auto PO Failure")
             
             error_msg = str(e)
             if not error_msg:
-                 error_msg = "Unknown Error (Check Error Log for Traceback)"
+                 error_msg = f"Unknown Error. Traceback: {traceback[-300:] if traceback else 'No traceback'}"
 
             # Log failure if PO creation/submission fails
             for po_item in po_items:
@@ -3648,7 +3649,7 @@ def auto_create_purchase_orders():
                     "item": po_item["item_code"],
                     "run_date": nowdate(),
                     "status": "Failed",
-                    "reason": f"PO creation failed: {str(e)}"
+                    "reason": f"PO creation failed: {error_msg}"
                 })
 
     # Insert all log entries (both success and failure)
