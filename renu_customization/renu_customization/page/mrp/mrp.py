@@ -3601,13 +3601,17 @@ def auto_create_purchase_orders():
 
     for supplier, po_items in supplier_map.items():
         try:
-            po = frappe.get_doc({
-                "doctype": "Purchase Order",
-                "supplier": supplier,
-                "schedule_date": nowdate(),
-                "items": po_items,
-                "send_email_on_mrp": 1
-            })
+            po = frappe.new_doc("Purchase Order")
+            po.supplier = supplier
+            po.schedule_date = nowdate()
+            po.send_email_on_mrp = 1
+
+            for row in po_items:
+                po.append("items", row)
+
+            po.run_method("set_missing_values")
+            po.run_method("calculate_taxes_and_totals")
+
             po.insert(ignore_permissions=True)
             
             # Add comment to indicate auto-generation
