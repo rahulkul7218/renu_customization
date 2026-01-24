@@ -1430,14 +1430,15 @@ frappe.pages['mrp'].on_page_load = function (wrapper) {
     /* Active tab */
     .nav-tabs .nav-link.active {
         background: #BEDBFF;
+        border-bottom: 3px solid #2563EB;
         //color: #fff;
     }
  
     /* Hover effect */
-    // .nav-tabs .nav-link:hover {
-    //     background: #0056b3;
-    //     color: #fff;
-    // }
+    .nav-tabs .nav-link:hover {
+        background: #0056b3;
+        color: #fff;
+    }
 </style>
 `);
 
@@ -1650,6 +1651,7 @@ function load_mrp_scheduler_log(page = 1) {
                     doctype: "MRP Scheduler Log",
                     fields: [
                         "run_date",
+                        "creation",
                         "status",
                         "item",
                         "reason",
@@ -1670,6 +1672,7 @@ function load_mrp_scheduler_log(page = 1) {
                                 <tr>
                                     <th style="border:1px solid #000; background:#BEDBFF;">Item</th>
                                     <th style="border:1px solid #000; background:#BEDBFF;">Date</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Time</th>
                                     <th style="border:1px solid #000; background:#BEDBFF;">Status</th>
                                     <th style="border:1px solid #000; background:#BEDBFF;">PO ID</th>
                                     <th style="border:1px solid #000; background:#BEDBFF;">Reason</th>
@@ -1679,7 +1682,7 @@ function load_mrp_scheduler_log(page = 1) {
                     `;
 
                     if (!logs.length) {
-                        html += `<tr><td colspan="5">No Logs Found</td></tr>`;
+                        html += `<tr><td colspan="6">No Logs Found</td></tr>`;
                     } else {
                         logs.forEach(l => {
                             let po_id = "-";
@@ -1708,10 +1711,26 @@ function load_mrp_scheduler_log(page = 1) {
                                 }
                             }
 
+                            // Format Time
+                            let time_display = "";
+                            if (l.creation) {
+                                // l.creation is "YYYY-MM-DD HH:mm:ss.xxxx"
+                                let parts = l.creation.split(" ")[1];
+                                if (parts) {
+                                    let [h, m] = parts.split(":");
+                                    let hour = parseInt(h);
+                                    let ampm = hour >= 12 ? "PM" : "AM";
+                                    hour = hour % 12;
+                                    hour = hour ? hour : 12;
+                                    time_display = `${hour}:${m} ${ampm}`;
+                                }
+                            }
+
                             html += `
         <tr>
             <td style="border:1px solid #000;">${l.item || "-"}</td>
             <td style="border:1px solid #000;">${l.run_date || ""}</td>
+            <td style="border:1px solid #000;">${time_display}</td>
             <td style="border:1px solid #000; color:${l.status === "Success" ? "green" : "red"}">
                 ${l.status}
             </td>
