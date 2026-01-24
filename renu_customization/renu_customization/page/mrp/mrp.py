@@ -3615,6 +3615,24 @@ def auto_create_purchase_orders():
                 po.append("items", row)
 
             po.run_method("set_missing_values")
+
+            # Explicitly force tax application if template is set but taxes table is empty
+            if po.taxes_and_charges and not po.get("taxes"):
+                 tax_template = frappe.get_doc("Purchase Taxes and Charges Template", po.taxes_and_charges)
+                 for tax in tax_template.taxes:
+                     po.append("taxes", {
+                         "charge_type": tax.charge_type,
+                         "account_head": tax.account_head,
+                         "description": tax.description,
+                         "included_in_print_rate": tax.included_in_print_rate,
+                         "included_in_paid_amount": tax.included_in_paid_amount,
+                         "cost_center": tax.cost_center,
+                         "rate": tax.rate,
+                         "tax_amount": tax.tax_amount,
+                         "category": tax.category,
+                         "add_deduct_tax": tax.add_deduct_tax
+                     })
+
             po.run_method("calculate_taxes_and_totals")
 
             po.insert(ignore_permissions=True)
