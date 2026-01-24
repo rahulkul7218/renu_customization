@@ -3599,10 +3599,15 @@ def auto_create_purchase_orders():
 
     created_pos = []
 
+    # Fetch default company once to use for all POs
+    default_company = frappe.db.get_single_value("Global Defaults", "default_company") or frappe.defaults.get_user_default("Company")
+
     for supplier, po_items in supplier_map.items():
         try:
             po = frappe.new_doc("Purchase Order")
             po.supplier = supplier
+            if default_company:
+                po.company = default_company
             po.schedule_date = nowdate()
             po.send_email_on_mrp = 1
 
@@ -3630,6 +3635,13 @@ def auto_create_purchase_orders():
                     "reason": ""
                 })
         except Exception as e:
+            # Log full traceback to Error Log (System Console)
+            frappe.log_error(title="MRP Auto PO Failure")
+            
+            error_msg = str(e)
+            if not error_msg:
+                 error_msg = "Unknown Error (Check Error Log for Traceback)"
+
             # Log failure if PO creation/submission fails
             for po_item in po_items:
                 log_entries.append({
