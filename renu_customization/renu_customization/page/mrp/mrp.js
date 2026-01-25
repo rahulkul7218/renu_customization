@@ -1430,14 +1430,15 @@ frappe.pages['mrp'].on_page_load = function (wrapper) {
     /* Active tab */
     .nav-tabs .nav-link.active {
         background: #BEDBFF;
+        border-bottom: 3px solid #2563EB;
         //color: #fff;
     }
  
     /* Hover effect */
-    // .nav-tabs .nav-link:hover {
-    //     background: #0056b3;
-    //     color: #fff;
-    // }
+    .nav-tabs .nav-link:hover {
+        background: #0056b3;
+        color: #fff;
+    }
 </style>
 `);
 
@@ -1509,7 +1510,7 @@ function load_mrp_table() {
                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Demand</th>
                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Supply</th>
                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Requirement</th>
-                            <th rowspan="2" style="border:1px solid #000; background:#d9d9d9;">Select</th>
+                            <th style="border:1px solid #000; background:#d9d9d9;">Select</th>
                         </tr>
  
                         <tr>
@@ -1524,6 +1525,9 @@ function load_mrp_table() {
                             <th style="border:1px solid #000; background:#BEDBFF;">Gross Requirement</th>
                             <th style="border:1px solid #000; background:#BEDBFF;">MOQ</th>
                             <th style="border:1px solid #000; background:#BEDBFF;">Planned to Purchase Qty</th>
+                            <th style="border:1px solid #000; background:#BEDBFF; text-align:center; vertical-align:middle;">
+                                <input type="checkbox" id="chk-select-all" style="margin: 0px 0px 0px 0px">
+                            </th>
                         </tr>
                     </thead>
  
@@ -1581,8 +1585,8 @@ function load_mrp_table() {
                                 </a>
                             </td>
  
-                            <td style="border:1px solid #000;">
-                                <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}">
+                            <td style="border:1px solid #000; text-align:center; vertical-align:middle;">
+                                <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}" style="margin: 0px 0px 0px 0px">
                             </td>
                         </tr>
                     `;
@@ -1650,6 +1654,7 @@ function load_mrp_scheduler_log(page = 1) {
                     doctype: "MRP Scheduler Log",
                     fields: [
                         "run_date",
+                        "creation",
                         "status",
                         "item",
                         "reason",
@@ -1670,6 +1675,7 @@ function load_mrp_scheduler_log(page = 1) {
                                 <tr>
                                     <th style="border:1px solid #000; background:#BEDBFF;">Item</th>
                                     <th style="border:1px solid #000; background:#BEDBFF;">Date</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Time</th>
                                     <th style="border:1px solid #000; background:#BEDBFF;">Status</th>
                                     <th style="border:1px solid #000; background:#BEDBFF;">PO ID</th>
                                     <th style="border:1px solid #000; background:#BEDBFF;">Reason</th>
@@ -1679,7 +1685,7 @@ function load_mrp_scheduler_log(page = 1) {
                     `;
 
                     if (!logs.length) {
-                        html += `<tr><td colspan="5">No Logs Found</td></tr>`;
+                        html += `<tr><td colspan="6">No Logs Found</td></tr>`;
                     } else {
                         logs.forEach(l => {
                             let po_id = "-";
@@ -1708,10 +1714,26 @@ function load_mrp_scheduler_log(page = 1) {
                                 }
                             }
 
+                            // Format Time
+                            let time_display = "";
+                            if (l.creation) {
+                                // l.creation is "YYYY-MM-DD HH:mm:ss.xxxx"
+                                let parts = l.creation.split(" ")[1];
+                                if (parts) {
+                                    let [h, m] = parts.split(":");
+                                    let hour = parseInt(h);
+                                    let ampm = hour >= 12 ? "PM" : "AM";
+                                    hour = hour % 12;
+                                    hour = hour ? hour : 12;
+                                    time_display = `${hour}:${m} ${ampm}`;
+                                }
+                            }
+
                             html += `
         <tr>
             <td style="border:1px solid #000;">${l.item || "-"}</td>
             <td style="border:1px solid #000;">${l.run_date || ""}</td>
+            <td style="border:1px solid #000;">${time_display}</td>
             <td style="border:1px solid #000; color:${l.status === "Success" ? "green" : "red"}">
                 ${l.status}
             </td>
@@ -2068,4 +2090,25 @@ function create_purchase_order_from_mrp() {
         }
     });
 }
+
+// ===============================
+// SELECT ALL CHECKBOX
+// ===============================
+$(document).on("change", "#chk-select-all", function () {
+    const isChecked = $(this).is(":checked");
+    $(".mrp-select").prop("checked", isChecked);
+});
+
+// If any item is unchecked, uncheck "Select All"
+$(document).on("change", ".mrp-select", function () {
+    if (!$(this).is(":checked")) {
+        $("#chk-select-all").prop("checked", false);
+    }
+    else {
+        // improved UX: if all checked, check master
+        if ($(".mrp-select:checked").length === $(".mrp-select").length) {
+            $("#chk-select-all").prop("checked", true);
+        }
+    }
+});
 
