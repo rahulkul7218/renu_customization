@@ -36,7 +36,7 @@ def execute():
                  fieldname="port_of_discharge",
                  label="Port Of Discharge",
                  fieldtype="Link",
-                 options="Address",
+                 options="Port of Discharge",
                  insert_after="port_address"
              ),
              
