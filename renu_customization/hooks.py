@@ -291,6 +291,7 @@ after_migrate = [
     # "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
     "renu_customization.patches.v_0.add_fields_invoice_and_delivery_note_on_serial_no.execute",
     "renu_customization.patches.v_0.add_warranty_start_date_on_serial_no.execute",
+    "renu_customization.patches.v_0.add_important_note_on_sales_invoice.execute",
     
     
     

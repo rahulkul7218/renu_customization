@@ -393,12 +393,35 @@
         Authorised Signatory<br/>
         
       </td>
-      <td colspan="3">
+      <!-- <td colspan="3">
           <p>Packing details: -</p>
           <p>No. of Boxes (Nos) : - <span>{{doc.no_of_boxes or 0}}</span></p>
           <p>Total Wt. of Boxes (Kg): - <span>{{doc.total_weight or 0}}</span></p>
           <p>Net Weight  in Kg : - <span>{{doc.net_weight or 0}}</span></p>
-      </td>
+      </td> -->
+      <td colspan="3" class="vertical-space">
+        <div style="width:100%;">
+            <div style="display:flex; justify-content:space-between;">
+            <span>Packing details :</span>
+            <span></span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+            <span>No. of Boxes (Nos)</span>
+            <span>{{ doc.no_of_boxes or 0 }}</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+            <span>Total Wt. of Boxes (Kg)</span>
+            <span>{{ doc.total_weight or 0 }}</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+            <span>Net Weight in Kg</span>
+            <span>{{ doc.net_weight or 0 }}</span>
+            </div>
+         </div>
+        </td>
     </tr>
     
    
