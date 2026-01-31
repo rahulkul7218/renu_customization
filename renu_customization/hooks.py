@@ -283,6 +283,7 @@ after_migrate = [
     "renu_customization.patches.v_0.create_new-field-supplier_invoice_no_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_supplier_invoice_date_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_old_customer_code_field_on_customer.execute",
+    "renu_customization.patches.v_0.shot_close_field_on_sales_order.execute",
     
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
