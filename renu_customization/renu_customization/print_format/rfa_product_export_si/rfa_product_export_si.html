@@ -65,7 +65,7 @@
         <p><b>GST No:</b></p>
         <p><b>PAN:</b></p>
         <p><b>IEC Code:</b></p>
-        <p><b>RBI Code:</b></p>
+        <!-- <p><b>RBI Code:</b></p> -->
       </td>
       <td colspan="4">
         <p>{{doc.name or ""}}</p>
@@ -73,7 +73,7 @@
         <p>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</p>
         <p>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</p>
         <p class="wrap-text">{{ frappe.db.get_value("Company", doc.company, "iec_code") or ""}}</p>
-        {% set banks = frappe.get_list("Bank Account",
+        <!-- {% set banks = frappe.get_list("Bank Account",
             filters={
                 "account_subtype": "INR",
                 "company": doc.company,
@@ -84,7 +84,7 @@
         ) %}
         <p>
             {% if banks %} {{ banks[0].rbi_code or "" }}{% endif %}
-        </p>
+        </p> -->
       </td>
     </tr>
 
