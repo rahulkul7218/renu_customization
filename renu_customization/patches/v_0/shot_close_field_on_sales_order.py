@@ -13,7 +13,7 @@ def execute():
             "label": "Shot Closed Qty",
             "fieldname": "custom_short_closed_qty",
             "fieldtype": "Float",
-            "insert_after": "qty",
+            "insert_after": "production_plan_qty",
         }).insert(ignore_permissions=True)
 
     # Status field
