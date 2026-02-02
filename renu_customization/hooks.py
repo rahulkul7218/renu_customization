@@ -430,7 +430,10 @@ doc_events = {
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
         "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
-        
+    },
+    "Sales Order": {
+        "validate": "renu_customization.api.sales_order_validation.validate_short_close_qty",
+        "before_update_after_submit": "renu_customization.api.sales_order_validation.validate_short_close_qty"
     }
     
     
