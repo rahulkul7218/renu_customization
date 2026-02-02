@@ -134,6 +134,8 @@ frappe.ui.form.on("Sales Order", {
 frappe.ui.form.on("Sales Order Item", {
     qty(frm, cdt, cdn) {
         calculate_single_open_qty(cdt, cdn);
+        let row = frappe.get_doc(cdt, cdn);
+        fetch_picked_qty(frm, row);
     },
     delivered_qty(frm, cdt, cdn) {
         calculate_single_open_qty(cdt, cdn);
@@ -193,4 +195,26 @@ function calculate_single_open_qty(cdt, cdn) {
     }
 
     frappe.model.set_value(cdt, cdn, "open_qty", open_qty);
+}
+
+function fetch_picked_qty(frm, row) {
+    if (!frm.doc.name || !row.name) return;
+
+    frappe.call({
+        method: "renu_customization.api.sales_order_utils.get_picked_not_delivered_qty",
+        args: {
+            sales_order: frm.doc.name,
+            sales_order_item: row.name
+        },
+        callback(r) {
+            if (r.message !== undefined) {
+                frappe.model.set_value(
+                    row.doctype,
+                    row.name,
+                    "custom_picked_but_not_delivered",
+                    r.message
+                );
+            }
+        }
+    });
 }

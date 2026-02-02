@@ -384,7 +384,7 @@ doctype_js = {
 
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
     
-    "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
+    "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js","public/js/calculate_total_short_close_qty.js",
     "public/js/show_relevent_print_format_on_sales_order.js","public/js/read_only_currency_exchange_rate_sales_order.js",
     "public/js/calculate_open_qty_on_so_item.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
     "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"],
@@ -409,8 +409,16 @@ doc_events = {
     "Purchase Invoice": {
         "before_validate": "renu_customization.api.supplier_invoice_no_and_date_fetched_from_receipt.supplier_invoice_no_and_date_fetched_from_receipt"
     },
+    "Pick List": {
+        "on_submit": "renu_customization.api.pick_list_handler.update_sales_order_picked_status",
+        "on_cancel": "renu_customization.api.pick_list_handler.update_sales_order_picked_status"
+    },
     "Pick List Item": {
         "before_insert": "renu_customization.api.fetched_party_item_code.get_party_item_code"
+    },
+    "Delivery Note": {
+        "on_submit": "renu_customization.api.pick_list_handler.update_sales_order_picked_status",
+        "on_cancel": "renu_customization.api.pick_list_handler.update_sales_order_picked_status"
     },
     "Delivery Note Item": {
        "before_insert": "renu_customization.api.fetched_party_item_code_from_picklist_ti_deliverytnote.get_party_item_code_from_picklist"
