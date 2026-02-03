@@ -387,7 +387,8 @@ doctype_js = {
     "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js","public/js/calculate_total_short_close_qty.js",
     "public/js/show_relevent_print_format_on_sales_order.js","public/js/read_only_currency_exchange_rate_sales_order.js",
     "public/js/calculate_open_qty_on_so_item.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
-    "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"],
+    "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js",
+    "public/js/sales_order_short_close.js"],
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
     "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"],
     "Purchase Order": [
