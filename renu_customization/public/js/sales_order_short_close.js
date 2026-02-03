@@ -2,7 +2,7 @@
 frappe.ui.form.on("Sales Order", {
     refresh: function (frm) {
         if (frm.doc.docstatus === 1) { // Only show on submitted Sales Orders
-            frm.add_custom_button(__('Shot Close'), function () {
+            frm.add_custom_button(__('Short Close'), function () {
                 show_short_close_dialog(frm);
             }, __(''));
         }
