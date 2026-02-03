@@ -13,17 +13,49 @@ function show_short_close_dialog(frm) {
     let items = frm.doc.items || [];
 
     let dialog_html = `
-        <table class="table table-bordered table-condensed" style="margin-top: 10px;">
+        <style>
+            .short-close-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+                border: 1px solid #d1d8dd;
+                font-size: 0.9em;
+            }
+            .short-close-table th {
+                background-color: #f8f9fa;
+                text-align: center !important;
+                vertical-align: middle !important;
+                border: 1px solid #d1d8dd !important;
+                padding: 12px 8px !important;
+                font-weight: bold;
+                color: #1d2124;
+            }
+            .short-close-table td {
+                border: 1px solid #d1d8dd !important;
+                padding: 8px 8px !important;
+                vertical-align: middle !important;
+            }
+            .short-close-table .text-right {
+                text-align: right !important;
+            }
+            .short-close-table .text-center {
+                text-align: center !important;
+            }
+            .short-close-table input[type="number"] {
+                text-align: right;
+            }
+        </style>
+        <table class="table short-close-table">
             <thead>
                 <tr>
-                    <th style="width: 30px;"><input type="checkbox" id="select_all_items"></th>
+                    <th style="width: 40px;"><input type="checkbox" id="select_all_items"></th>
                     <th>${__('Item')}</th>
-                    <th class="text-right">${__('Order Qty')}</th>
-                    <th class="text-right">${__('Delivered Qty')}</th>
-                    <th class="text-right">${__('Picked Qty')}</th>
-                    <th class="text-right">${__('Total Short Closed')}</th>
-                    <th class="text-right">${__('Open Qty')}</th>
-                    <th class="text-right" style="width: 120px;">${__('Add Shot Close Qty')}</th>
+                    <th>${__('Order Qty')}</th>
+                    <th>${__('Delivered Qty')}</th>
+                    <th>${__('Picked Qty')}</th>
+                    <th>${__('Total Short Closed')}</th>
+                    <th>${__('Open Qty')}</th>
+                    <th style="width: 130px;">${__('Short Close Qty')}</th>
                 </tr>
             </thead>
             <tbody>
@@ -31,14 +63,14 @@ function show_short_close_dialog(frm) {
         let available_qty = flt(item.qty) - flt(item.delivered_qty) - flt(item.custom_picked_but_not_delivered) - flt(item.total_short_close_qty);
         return `
                         <tr data-idx="${index}">
-                            <td><input type="checkbox" class="item_checkbox" data-idx="${index}"></td>
+                            <td class="text-center"><input type="checkbox" class="item_checkbox" data-idx="${index}"></td>
                             <td>${item.item_code}</td>
                             <td class="text-right">${item.qty}</td>
                             <td class="text-right">${item.delivered_qty || 0}</td>
                             <td class="text-right">${item.custom_picked_but_not_delivered || 0}</td>
                             <td class="text-right">${item.total_short_close_qty || 0}</td>
                             <td class="text-right">${available_qty}</td>
-                            <td>
+                            <td class="text-right">
                                 <input type="number" class="form-control short_close_input" 
                                     data-idx="${index}" 
                                     value="0" 
@@ -55,6 +87,7 @@ function show_short_close_dialog(frm) {
 
     let d = new frappe.ui.Dialog({
         title: __('Short Close Items'),
+        size: 'extra-large',
         fields: [
             {
                 fieldname: 'items_html',
