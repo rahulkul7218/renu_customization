@@ -11,7 +11,7 @@ def execute():
             "label": "Party Item Code",
             "fieldtype": "Data",
             "insert_after": "item_name",
-            "reqd": 1,
+            "reqd": 0,
             "in_list_view": 1,
         })
         frappe.clear_cache(doctype=doctype)
