@@ -143,6 +143,9 @@ frappe.ui.form.on("Sales Order Item", {
     custom_short_closed_qty(frm, cdt, cdn) {
         calculate_single_open_qty(cdt, cdn);
     },
+    total_short_close_qty(frm, cdt, cdn) {
+        calculate_single_open_qty(cdt, cdn);
+    },
     custom_picked_but_not_delivered(frm, cdt, cdn) {
         calculate_single_open_qty(cdt, cdn);
     }
@@ -158,12 +161,14 @@ function calculate_all_open_qty(frm) {
             open_qty =
                 (row.qty || 0) -
                 (row.delivered_qty || 0) -
+                (row.total_short_close_qty || 0) -
                 (row.custom_short_closed_qty || 0);
         } else {
             // ✅ Regular formula
             open_qty =
                 (row.qty || 0) -
                 (row.delivered_qty || 0) -
+                (row.total_short_close_qty || 0) -
                 (row.custom_short_closed_qty || 0) +
                 (row.custom_picked_but_not_delivered || 0);
         }
@@ -184,12 +189,14 @@ function calculate_single_open_qty(cdt, cdn) {
         open_qty =
             (row.qty || 0) -
             (row.delivered_qty || 0) -
+            (row.total_short_close_qty || 0) -
             (row.custom_short_closed_qty || 0);
     } else {
         // ✅ Regular formula
         open_qty =
             (row.qty || 0) -
             (row.delivered_qty || 0) -
+            (row.total_short_close_qty || 0) -
             (row.custom_short_closed_qty || 0) +
             (row.custom_picked_but_not_delivered || 0);
     }

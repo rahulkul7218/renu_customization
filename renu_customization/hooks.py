@@ -434,7 +434,11 @@ doc_events = {
     },
     "Sales Order": {
         "validate": "renu_customization.api.sales_order_validation.validate_short_close_qty",
-        "before_update_after_submit": "renu_customization.api.sales_order_validation.validate_short_close_qty"
+        "before_save": "renu_customization.api.sales_order_utils.sync_short_close_qty",
+        "before_update_after_submit": [
+            "renu_customization.api.sales_order_validation.validate_short_close_qty",
+            "renu_customization.api.sales_order_utils.sync_short_close_qty"
+        ]
     }
     
     

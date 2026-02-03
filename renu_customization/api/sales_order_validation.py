@@ -11,18 +11,23 @@ def validate_short_close_qty(doc, method):
         qty = frappe.utils.flt(row.qty)
         delivered_qty = frappe.utils.flt(row.delivered_qty)
         picked_qty = frappe.utils.flt(row.custom_picked_but_not_delivered)
-        short_closed_qty = frappe.utils.flt(row.custom_short_closed_qty)
+        
+        current_total = frappe.utils.flt(row.total_short_close_qty)
+        new_input = frappe.utils.flt(row.custom_short_closed_qty)
 
-        # Calculate limit
+        # The total short closure after sync will be:
+        pending_total = current_total + new_input
+        
+        # Limit is based on (Qty - Delivered - Picked)
         limit = qty - delivered_qty - picked_qty
         
-        # If user tries to short close more than available
-        if short_closed_qty > limit:
+        # If total short closed exceeds available
+        if pending_total > limit:
             frappe.throw(
-                _("Row #{0} ({1}): 'Short Closed Qty' ({2}) cannot be greater than open quantity ({3}).").format(
+                _("Row #{0} ({1}): Cumulative Short Closed Qty ({2}) cannot be greater than available quantity ({3}).").format(
                     row.idx, 
                     row.item_code, 
-                    short_closed_qty, 
+                    pending_total, 
                     limit
                 )
             )

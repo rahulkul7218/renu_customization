@@ -21,13 +21,14 @@ function show_short_close_dialog(frm) {
                     <th class="text-right">${__('Order Qty')}</th>
                     <th class="text-right">${__('Delivered Qty')}</th>
                     <th class="text-right">${__('Picked Qty')}</th>
+                    <th class="text-right">${__('Total Short Closed')}</th>
                     <th class="text-right">${__('Open Qty')}</th>
-                    <th class="text-right" style="width: 120px;">${__('Shot Close Qty')}</th>
+                    <th class="text-right" style="width: 120px;">${__('Add Shot Close Qty')}</th>
                 </tr>
             </thead>
             <tbody>
                 ${items.map((item, index) => {
-        let available_qty = flt(item.qty) - flt(item.delivered_qty) - flt(item.custom_picked_but_not_delivered);
+        let available_qty = flt(item.qty) - flt(item.delivered_qty) - flt(item.custom_picked_but_not_delivered) - flt(item.total_short_close_qty);
         return `
                         <tr data-idx="${index}">
                             <td><input type="checkbox" class="item_checkbox" data-idx="${index}"></td>
@@ -35,11 +36,12 @@ function show_short_close_dialog(frm) {
                             <td class="text-right">${item.qty}</td>
                             <td class="text-right">${item.delivered_qty || 0}</td>
                             <td class="text-right">${item.custom_picked_but_not_delivered || 0}</td>
+                            <td class="text-right">${item.total_short_close_qty || 0}</td>
                             <td class="text-right">${available_qty}</td>
                             <td>
                                 <input type="number" class="form-control short_close_input" 
                                     data-idx="${index}" 
-                                    value="${item.custom_short_closed_qty || 0}" 
+                                    value="0" 
                                     step="any"
                                     min="0"
                                     max="${available_qty}">
@@ -69,7 +71,7 @@ function show_short_close_dialog(frm) {
                 let idx = $(this).data('idx');
                 let row = items[idx];
                 let input_val = flt(d.wrapper.find(`.short_close_input[data-idx="${idx}"]`).val());
-                let available_qty = flt(row.qty) - flt(row.delivered_qty) - flt(row.custom_picked_but_not_delivered);
+                let available_qty = flt(row.qty) - flt(row.delivered_qty) - flt(row.custom_picked_but_not_delivered) - flt(row.total_short_close_qty);
 
                 if (input_val > available_qty) {
                     frappe.msgprint(__('Shot Close Qty for Item {0} cannot be greater than Open Qty {1}', [row.item_code, available_qty]));
@@ -121,10 +123,10 @@ function show_short_close_dialog(frm) {
         let idx = $(this).data('idx');
         let row = items[idx];
         let val = flt($(this).val());
-        let available_qty = flt(row.qty) - flt(row.delivered_qty) - flt(row.custom_picked_but_not_delivered);
+        let available_qty = flt(row.qty) - flt(row.delivered_qty) - flt(row.custom_picked_but_not_delivered) - flt(row.total_short_close_qty);
         if (val > available_qty) {
             frappe.msgprint(__('Shot Close Qty cannot be greater than Open Qty ({0})', [available_qty]));
-            $(this).val(row.custom_short_closed_qty || 0);
+            $(this).val(0);
         }
     });
 }

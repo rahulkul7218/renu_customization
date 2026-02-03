@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import flt
 
 @frappe.whitelist()
 def get_picked_not_delivered_qty(sales_order, sales_order_item):
@@ -47,9 +48,13 @@ def update_short_close_qty(sales_order, items):
     doc.save()
     return True
 
-def flt(value):
-    if not value: return 0.0
-    try:
-        return float(value)
-    except (ValueError, TypeError):
-        return 0.0
+def sync_short_close_qty(doc, method=None):
+    """
+    Called before save. 
+    Moves custom_short_closed_qty to total_short_close_qty and resets it.
+    """
+    for row in doc.items:
+        val = flt(row.custom_short_closed_qty)
+        if val != 0:
+            row.total_short_close_qty = flt(row.total_short_close_qty) + val
+            row.custom_short_closed_qty = 0
