@@ -283,8 +283,8 @@ after_migrate = [
     "renu_customization.patches.v_0.create_new-field-supplier_invoice_no_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_supplier_invoice_date_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_old_customer_code_field_on_customer.execute",
-    "renu_customization.patches.v_0.shot_close_field_on_sales_order.execute",
-    "renu_customization.patches.v_0.add_picked_but_not_delivered_fiels_on_soi.execute",
+    # "renu_customization.patches.v_0.shot_close_field_on_sales_order.execute",
+    # "renu_customization.patches.v_0.add_picked_but_not_delivered_fiels_on_soi.execute",
     
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
@@ -384,11 +384,10 @@ doctype_js = {
 
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
     
-    "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js","public/js/calculate_total_short_close_qty.js",
-    "public/js/show_relevent_print_format_on_sales_order.js","public/js/read_only_currency_exchange_rate_sales_order.js",
-    "public/js/calculate_open_qty_on_so_item.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
-    "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js",
-    "public/js/sales_order_short_close.js"],
+    "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
+    "public/js/show_relevent_print_format_on_sales_order.js","public/js/read_only_currency_exchange_rate_sales_order.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
+    "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"
+    ],
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
     "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"],
     "Purchase Order": [
@@ -410,17 +409,17 @@ doc_events = {
     "Purchase Invoice": {
         "before_validate": "renu_customization.api.supplier_invoice_no_and_date_fetched_from_receipt.supplier_invoice_no_and_date_fetched_from_receipt"
     },
-    "Pick List": {
-        "on_submit": "renu_customization.api.pick_list_handler.update_sales_order_picked_status",
-        "on_cancel": "renu_customization.api.pick_list_handler.update_sales_order_picked_status"
-    },
+    # "Pick List": {
+    #     "on_submit": "renu_customization.api.pick_list_handler.update_sales_order_picked_status",
+    #     "on_cancel": "renu_customization.api.pick_list_handler.update_sales_order_picked_status"
+    # },
     "Pick List Item": {
         "before_insert": "renu_customization.api.fetched_party_item_code.get_party_item_code"
     },
-    "Delivery Note": {
-        "on_submit": "renu_customization.api.pick_list_handler.update_sales_order_picked_status",
-        "on_cancel": "renu_customization.api.pick_list_handler.update_sales_order_picked_status"
-    },
+    # "Delivery Note": {
+    #     "on_submit": "renu_customization.api.pick_list_handler.update_sales_order_picked_status",
+    #     "on_cancel": "renu_customization.api.pick_list_handler.update_sales_order_picked_status"
+    # },
     "Delivery Note Item": {
        "before_insert": "renu_customization.api.fetched_party_item_code_from_picklist_ti_deliverytnote.get_party_item_code_from_picklist"
     },
@@ -431,15 +430,15 @@ doc_events = {
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
         "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
-    },
-    "Sales Order": {
-        "validate": "renu_customization.api.sales_order_validation.validate_short_close_qty",
-        "before_save": "renu_customization.api.sales_order_utils.sync_short_close_qty",
-        "before_update_after_submit": [
-            "renu_customization.api.sales_order_validation.validate_short_close_qty",
-            "renu_customization.api.sales_order_utils.sync_short_close_qty"
-        ]
     }
+    # "Sales Order": {
+    #     "validate": "renu_customization.api.sales_order_validation.validate_short_close_qty",
+    #     "before_save": "renu_customization.api.sales_order_utils.sync_short_close_qty",
+    #     "before_update_after_submit": [
+    #         "renu_customization.api.sales_order_validation.validate_short_close_qty",
+    #         "renu_customization.api.sales_order_utils.sync_short_close_qty"
+    #     ]
+    # }
     
     
 
