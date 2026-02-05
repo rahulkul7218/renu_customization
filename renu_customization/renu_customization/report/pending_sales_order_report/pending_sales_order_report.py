@@ -269,6 +269,8 @@ def get_columns():
             "width": 70,
             "disable_total": 1
         },
+        _("Supplier PO No.") + ":Link/Purchase Order:150",
+        _("Supplier PO Date") + ":Date:120",
         _("Customer PO No.") + ":Data:170",
         _("Customer PO Date") + ":Date:170",
         _("Customer Code") + ":Link/Customer:150",
@@ -325,6 +327,8 @@ def get_data(filters):
             so.name AS so_no,
             so.transaction_date AS so_date,
             ROW_NUMBER() OVER (PARTITION BY so.name ORDER BY soi.idx) AS sr_no,
+            (SELECT MAX(poi.parent) FROM `tabPurchase Order Item` poi WHERE poi.sales_order_item = soi.name) AS supplier_po_no,
+            (SELECT po.transaction_date FROM `tabPurchase Order` po JOIN `tabPurchase Order Item` poi ON poi.parent = po.name WHERE poi.sales_order_item = soi.name LIMIT 1) AS supplier_po_date,
             so.po_no AS po_no,
             so.po_date AS po_date,
             c.customer_code AS customer_code,
@@ -335,7 +339,8 @@ def get_data(filters):
             REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
             soi.qty AS po_qty,
             soi.delivered_qty AS delivered_qty,
-            (soi.qty - soi.delivered_qty) AS open_qty,
+            
+            (soi.qty - soi.delivered_qty -soi.custom_picked_but_not_delivered - soi.total_short_close_qty) AS open_qty,
             soi.rate AS item_rate,
             so.currency AS currency,
             so.conversion_rate AS exchange_rate,
@@ -464,18 +469,22 @@ def download_xlsx(filters=None, include_filters=1):
     #   NUMERIC COLUMNS MAP
     # -----------------------------
     numeric_index_map = {
-        10: True,
-        11: True,
+        # 10: True,
+        # 11: True,
         12: True,
         13: True,
+        14: True,
         15: True,
-        16: True,
+        # 16: True,
         17: True,
         18: True,
-        20: True
+        19: True,
+        20: True,
+        22: True,
+        # 20: True
     }
  
-    no_total_index_set = {2, 15}
+    no_total_index_set = {2, 17}
     # -----------------------------
     #   DATA ROWS
     # -----------------------------
