@@ -53,6 +53,9 @@ frappe.ui.form.on("Sales Invoice", {
                 if (!frm.doc.lut_expiry_date) {
                     frm.set_value("lut_expiry_date", gst.lut_expiry_date || "");
                 }
+                if (!frm.doc.lut_from_date) {
+                    frm.set_value("lut_from_date", gst.lut_from_date || "");
+                }
             });
     }
 });

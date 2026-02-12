@@ -13,7 +13,6 @@ def execute():
                 "fieldname": "lut_from_date",
                 "fieldtype": "Data",
                 "insert_after": "lut_no",
-                
                 "read_only": 1,
             }
         )
