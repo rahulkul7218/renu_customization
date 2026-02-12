@@ -324,6 +324,7 @@ def get_columns():
         _("Description") + ":Data:250",
         _("Order Quantity") + ":Float:130",
         _("Delivered Qty") + ":Float:120",
+        _("Short Close Qty") + ":Float:120",
         _("Open Qty") + ":Float:120",
         _("Item Rate") + ":Float:120",
         _("Currency") + ":Link/Currency:100",
@@ -409,6 +410,7 @@ def get_data(filters):
             REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
             soi.qty AS po_qty,
             soi.delivered_qty AS delivered_qty,
+            soi.total_short_close_qty AS short_close_qty,
             (soi.qty - soi.delivered_qty -soi.custom_picked_but_not_delivered - soi.total_short_close_qty) AS open_qty,
             soi.rate AS item_rate,
             so.currency AS currency,
@@ -559,14 +561,15 @@ def download_xlsx(filters=None, include_filters=1):
         11: True,
         12: True,
         13: True,
-        15: True,
+        14: True,
         16: True,
         17: True,
         18: True,
-        20: True
+        19: True,
+        21: True
     }
  
-    no_total_index_set = {2, 15}
+    no_total_index_set = {2, 16}
  
     # -----------------------------
     #   DATA ROWS

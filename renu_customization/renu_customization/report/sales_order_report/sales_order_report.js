@@ -208,6 +208,7 @@ frappe.query_reports["Sales Order Report"] = {
 frappe.dom.set_style(`
     [data-fieldname="po_qty"],
     [data-fieldname="delivered_qty"],
+    [data-fieldname="short_close_qty"],
     [data-fieldname="open_qty"],
     [data-fieldname="item_rate"],
     [data-fieldname="exchange_rate"],
