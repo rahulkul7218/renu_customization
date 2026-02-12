@@ -339,7 +339,6 @@ def get_data(filters):
             REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
             soi.qty AS po_qty,
             soi.delivered_qty AS delivered_qty,
-            
             (soi.qty - soi.delivered_qty -soi.custom_picked_but_not_delivered - soi.total_short_close_qty) AS open_qty,
             soi.rate AS item_rate,
             so.currency AS currency,

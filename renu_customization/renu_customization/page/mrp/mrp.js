@@ -1637,11 +1637,15 @@ function load_mrp_scheduler_log(page = 1) {
 
     $("#scheduler-content").html(`<p class="text-muted">Loading...</p>`);
 
+    let ten_days_ago = frappe.datetime.add_days(frappe.datetime.get_today(), -60);
+
     frappe.call({
         method: "frappe.client.get_count",
         args: {
             doctype: "MRP Scheduler Log",
-            filters: []
+            filters: [
+                ["run_date", ">=", ten_days_ago]
+            ]
         },
         callback(res) {
 
@@ -1663,7 +1667,9 @@ function load_mrp_scheduler_log(page = 1) {
                     order_by: "run_date desc",
                     limit_start: (page - 1) * logPageSize,
                     limit_page_length: logPageSize,
-                    filters: []
+                    filters: [
+                        ["run_date", ">=", ten_days_ago]
+                    ]
                 },
                 callback(r) {
 
