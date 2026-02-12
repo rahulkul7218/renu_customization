@@ -14,14 +14,26 @@ def execute():
            
         }).insert(ignore_permissions=True)
     
+    # Create LUT From Date Field
+    if not frappe.db.exists("Custom Field", "GST Settings-lut_from_date"):
+        frappe.get_doc({
+            "doctype": "Custom Field",
+            "dt": "GST Settings",
+            "fieldname": "lut_from_date",
+            "label": "LUT Start Date",
+            "fieldtype": "Date",
+            "insert_after": "lut_no"
+           
+        }).insert(ignore_permissions=True)
+
     # Create LUT Expiry Date Field
     if not frappe.db.exists("Custom Field", "GST Settings-lut_expiry_date"):
         frappe.get_doc({
             "doctype": "Custom Field",
             "dt": "GST Settings",
             "fieldname": "lut_expiry_date",
-            "label": "LUT Expiry Date",
+            "label": "LUT Expire Date",
             "fieldtype": "Date",
-            "insert_after": "lut_no"
+            "insert_after": "lut_from_date"
            
         }).insert(ignore_permissions=True)

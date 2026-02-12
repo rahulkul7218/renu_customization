@@ -1,5 +1,5 @@
 frappe.ui.form.on("GST Settings", {
-    
+
     enable_overseas_transactions(frm) {
         frm.trigger("toggle_lut_fields");
     },
@@ -18,9 +18,11 @@ frappe.ui.form.on("GST Settings", {
         // Show/Hide fields
         frm.toggle_display("lut_no", show);
         frm.toggle_display("lut_expiry_date", show);
+        frm.toggle_display("lut_from_date", show);
 
         // Make Mandatory Only When Checked
         frm.set_df_property("lut_no", "reqd", show);
         frm.set_df_property("lut_expiry_date", "reqd", show);
+        frm.set_df_property("lut_from_date", "reqd", show);
     }
 });
