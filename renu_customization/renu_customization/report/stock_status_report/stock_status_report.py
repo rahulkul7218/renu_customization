@@ -311,16 +311,16 @@ def execute(filters=None):
  
 #             /* Open PO Qty FIXED = SUM(poi.open_qty) */
 #             /* Correct Open PO Qty = SUM(qty - received_qty) */
-#             IFNULL((
-#     SELECT SUM(
-#         (IFNULL(soi.qty, 0) - IFNULL(soi.delivered_qty, 0))
-#     )
-#     FROM `tabSales Order Item` soi
-#     INNER JOIN `tabSales Order` so ON soi.parent = so.name
-#     WHERE soi.item_code = it.item_code
-#       AND so.docstatus = 1
-#       AND so.status NOT IN ('Closed', 'Cancelled', 'Completed')
-# ), 0) AS open_qty,
+            IFNULL((
+                SELECT SUM(
+                    (IFNULL(soi.qty, 0) - IFNULL(soi.delivered_qty, 0))
+                )
+                FROM `tabSales Order Item` soi
+                INNER JOIN `tabSales Order` so ON soi.parent = so.name
+                WHERE soi.item_code = it.item_code
+                AND so.docstatus = 1
+                AND so.status NOT IN ('Closed', 'Cancelled', 'Completed')
+            ), 0) AS open_qty,
  
  
  
@@ -349,14 +349,14 @@ def execute(filters=None):
  
  
             /* Open PO Qty (Supplier End) */
-            IFNULL((
-                SELECT SUM(poi.open_qty)
-                FROM `tabPurchase Order Item` poi
-                INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
-                WHERE poi.item_code = it.item_code
-                  AND po.docstatus = 0
-                  AND (po.status IS NULL OR po.status NOT IN ('Cancelled', 'Stopped'))
-            ), 0) AS open_po_qty,
+            # IFNULL((
+            #     SELECT SUM(poi.open_qty)
+            #     FROM `tabPurchase Order Item` poi
+            #     INNER JOIN `tabPurchase Order` po ON poi.parent = po.name
+            #     WHERE poi.item_code = it.item_code
+            #       AND po.docstatus = 0
+            #       AND (po.status IS NULL OR po.status NOT IN ('Cancelled', 'Stopped'))
+            # ), 0) AS open_po_qty,
  
             /* Free Qty */
             (
@@ -404,7 +404,7 @@ def execute(filters=None):
         {"label": "Safety Stock", "fieldname": "safety_stock", "fieldtype": "Float", "width": 120, "show_totals": 1},
  
         {"label": "PO Booking Qty", "fieldname": "po_booking_qty", "fieldtype": "Float", "width": 150, "show_totals": 1},
-        {"label": "Open PO Qty (Supplier End)", "fieldname": "open_qty", "fieldtype": "Float", "width": 220, "show_totals": 1},
+        {"label": "Open PO Qty (Pending To Dispatch)", "fieldname": "open_qty", "fieldtype": "Float", "width": 220, "show_totals": 1},
  
         {"label": "Free Item Qty", "fieldname": "free_item_qty", "fieldtype": "Float", "width": 120, "show_totals": 1},
         {"label": "Units Sold (Last 6 Months)", "fieldname": "units_sold_last_6_months", "fieldtype": "Float", "width": 210, "show_totals": 1},

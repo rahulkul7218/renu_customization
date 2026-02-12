@@ -147,6 +147,7 @@ def execute(filters=None):
             dn.posting_date AS delivery_date,
  
             c.business_region_name AS business_region_name,
+            
             ad.city AS city,
             ad.state AS state,
             ad.country AS country,

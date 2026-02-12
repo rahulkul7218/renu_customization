@@ -1,32 +1,227 @@
-frappe.ui.form.on("Sales Order", {
-    refresh: function(frm) {
-        calculate_all_open_qty(frm);
-    },
+// frappe.ui.form.on("Sales Order", {
+//     refresh: function(frm) {
+//         calculate_all_open_qty(frm);
+//     },
 
-    before_save: function(frm) {
-        calculate_all_open_qty(frm);
-    }
-});
+//     before_save: function(frm) {
+//         calculate_all_open_qty(frm);
+//     }
+// });
 
-frappe.ui.form.on("Sales Order Item", {
-    qty: function(frm, cdt, cdn) {
-        calculate_single_open_qty(cdt, cdn);
-    },
+// frappe.ui.form.on("Sales Order Item", {
+//     qty: function(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     },
 
-    delivered_qty_qty: function(frm, cdt, cdn) {
-        calculate_single_open_qty(cdt, cdn);
-    }
-});
+//     delivered_qty_qty: function(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     }
+// });
 
-function calculate_all_open_qty(frm) {
-    frm.doc.items.forEach(row => {
-        row.open_qty = (row.qty || 0) - (row.delivered_qty || 0);
-    });
-    frm.refresh_field("items");
-}
+// function calculate_all_open_qty(frm) {
+//     frm.doc.items.forEach(row => {
+//         row.open_qty = (row.qty || 0) - (row.delivered_qty || 0);
+//     });
+//     frm.refresh_field("items");
+// }
 
-function calculate_single_open_qty(cdt, cdn) {
-    let row = frappe.get_doc(cdt, cdn);
-    let value = (row.qty || 0) - (row.delivered_qty || 0);
-    frappe.model.set_value(cdt, cdn, "open_qty", value);
-}
+// function calculate_single_open_qty(cdt, cdn) {
+//     let row = frappe.get_doc(cdt, cdn);
+//     let value = (row.qty || 0) - (row.delivered_qty || 0);
+//     frappe.model.set_value(cdt, cdn, "open_qty", value);
+// }
+
+
+
+// frappe.ui.form.on("Sales Order", {
+//     refresh(frm) {
+//         calculate_all_open_qty(frm);
+//     },
+//     before_save(frm) {
+//         calculate_all_open_qty(frm);
+//     }
+// });
+
+// frappe.ui.form.on("Sales Order Item", {
+//     qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     },
+//     delivered_qty(frm, cdt, cdn) {   // ✅ FIXED
+//         calculate_single_open_qty(cdt, cdn);
+//     },
+//     custom_short_closed_qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     }
+// });
+
+// function calculate_all_open_qty(frm) {
+//     frm.doc.items.forEach(row => {
+//         row.open_qty =
+//             (row.qty || 0) -
+//             (row.delivered_qty || 0) -
+//             (row.custom_short_closed_qty || 0);
+//     });
+//     frm.refresh_field("items");
+// }
+
+// function calculate_single_open_qty(cdt, cdn) {
+//     let row = frappe.get_doc(cdt, cdn);
+//     let value =
+//         (row.qty || 0) -
+//         (row.delivered_qty || 0) -
+//         (row.custom_short_closed_qty || 0);
+
+//     frappe.model.set_value(cdt, cdn, "open_qty", value);
+// }
+
+
+// frappe.ui.form.on("Sales Order", {
+//     refresh(frm) {
+//         calculate_all_open_qty(frm);
+//     },
+//     before_save(frm) {
+//         calculate_all_open_qty(frm);
+//     }
+// });
+
+// frappe.ui.form.on("Sales Order Item", {
+//     qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     },
+//     delivered_qty(frm, cdt, cdn) {   // ✅ FIXED
+//         calculate_single_open_qty(cdt, cdn);
+//     },
+//     custom_short_closed_qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     },
+//     picked_qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     }
+// });
+
+// function calculate_all_open_qty(frm) {
+//     frm.doc.items.forEach(row => {
+//         row.open_qty =
+//             (row.qty || 0) -
+//             (row.delivered_qty || 0) -
+//             (row.custom_short_closed_qty || 0) +
+//              (row.custom_picked_but_not_delivered || 0);
+//     });
+//     frm.refresh_field("items");
+// }
+
+// function calculate_single_open_qty(cdt, cdn) {
+//     let row = frappe.get_doc(cdt, cdn);
+//     let value =
+//         (row.qty || 0) -
+//         (row.delivered_qty || 0) -
+//         (row.custom_short_closed_qty || 0) +
+//         (row.custom_picked_but_not_delivered || 0);
+
+//     frappe.model.set_value(cdt, cdn, "open_qty", value);
+// }
+
+
+// frappe.ui.form.on("Sales Order", {
+//     refresh(frm) {
+//         calculate_all_open_qty(frm);
+//     },
+//     before_save(frm) {
+//         calculate_all_open_qty(frm);
+//     }
+// });
+
+// frappe.ui.form.on("Sales Order Item", {
+//     qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//         let row = frappe.get_doc(cdt, cdn);
+//         fetch_picked_qty(frm, row);
+//     },
+//     delivered_qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     },
+//     custom_short_closed_qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     },
+//     total_short_close_qty(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     },
+//     custom_picked_but_not_delivered(frm, cdt, cdn) {
+//         calculate_single_open_qty(cdt, cdn);
+//     }
+// });
+
+// /* ---------- ALL ROWS ---------- */
+// function calculate_all_open_qty(frm) {
+//     frm.doc.items.forEach(row => {
+//         let open_qty = 0;
+
+//         if ((row.delivered_qty || 0) === 0) {
+//             // ✅ When delivered qty is ZERO
+//             open_qty =
+//                 (row.qty || 0) -
+//                 (row.delivered_qty || 0) -
+//                 (row.total_short_close_qty || 0) -
+//                 (row.custom_short_closed_qty || 0);
+//         } else {
+//             // ✅ Regular formula
+//             open_qty =
+//                 (row.qty || 0) -
+//                 (row.delivered_qty || 0) -
+//                 (row.total_short_close_qty || 0) -
+//                 (row.custom_short_closed_qty || 0) +
+//                 (row.custom_picked_but_not_delivered || 0);
+//         }
+
+//         row.open_qty = open_qty;
+//     });
+
+//     frm.refresh_field("items");
+// }
+
+// /* ---------- SINGLE ROW ---------- */
+// function calculate_single_open_qty(cdt, cdn) {
+//     let row = frappe.get_doc(cdt, cdn);
+//     let open_qty = 0;
+
+//     if ((row.delivered_qty || 0) === 0) {
+//         // ✅ When delivered qty is ZERO
+//         open_qty =
+//             (row.qty || 0) -
+//             (row.delivered_qty || 0) -
+//             (row.total_short_close_qty || 0) -
+//             (row.custom_short_closed_qty || 0);
+//     } else {
+//         // ✅ Regular formula
+//         open_qty =
+//             (row.qty || 0) -
+//             (row.delivered_qty || 0) -
+//             (row.total_short_close_qty || 0) -
+//             (row.custom_short_closed_qty || 0) +
+//             (row.custom_picked_but_not_delivered || 0);
+//     }
+
+//     frappe.model.set_value(cdt, cdn, "open_qty", open_qty);
+// }
+
+// function fetch_picked_qty(frm, row) {
+//     if (!frm.doc.name || !row.name) return;
+
+//     frappe.call({
+//         method: "renu_customization.api.sales_order_utils.get_picked_not_delivered_qty",
+//         args: {
+//             sales_order: frm.doc.name,
+//             sales_order_item: row.name
+//         },
+//         callback(r) {
+//             if (r.message !== undefined) {
+//                 frappe.model.set_value(
+//                     row.doctype,
+//                     row.name,
+//                     "custom_picked_but_not_delivered",
+//                     r.message
+//                 );
+//             }
+//         }
+//     });
+// }

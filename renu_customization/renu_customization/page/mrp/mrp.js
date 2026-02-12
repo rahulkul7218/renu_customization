@@ -1,0 +1,2120 @@
+// frappe.pages['mrp'].on_page_load = function(wrapper) {
+//     var page = frappe.ui.make_app_page({
+//         parent: wrapper,
+//         title: 'MRP 📋',
+//         single_column: true
+//     });
+
+//     page.set_primary_action("Purchase Order", function () {
+//         frappe.set_route("List", "Purchase Order");
+//         // frappe.new_doc("Purchase Order");
+//     });
+
+//     setTimeout(() => {
+//         $(wrapper).find('.btn-primary')
+//             .css({
+//                 "background-color": "#FFE08F",
+//                 "border-color": "#ece7e1ee",
+//                 "color": "#000",
+//                 "font-weight": "600",
+//                 "padding": "10px 20px",
+//                 "font-size": "14px",
+//                 "border-radius": "8px"
+//             })
+//             .hover(
+//                 function () { $(this).css("background-color", "#ffa733"); },
+//                 function () { $(this).css("background-color", "#ffb84d"); }
+//             );
+//     }, 300);
+
+//     $(wrapper).find('.layout-main-section')
+//         .append(`<div id="mrp-table" style="margin-top:20px"></div>`);
+
+//     load_mrp_table();
+// };
+
+// // ===============================
+// // 🚀 LOAD MRP TABLE
+// // ===============================
+// function load_mrp_table() {
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_mrp_data",
+//         callback: function(r) {
+//             if (!r.message) {
+//                 $("#mrp-table").html("<p>No Data Found</p>");
+//                 return;
+//             }
+
+//             let data = r.message;
+
+//             let html = `
+//                 <table class="table table-bordered" style="width:100%; text-align:center;">
+//                     <thead>
+//                         <tr>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Demand</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Supply</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Requirement</th>
+//                             <th rowspan="2" style="border:1px solid #000; background:#d9d9d9;">Select</th>
+//                         </tr>
+
+//                         <tr>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Item</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open SO Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Safety Stock</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">On Hand Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Available Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open PO Qty</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Gross Requirement</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">MOQ</th>
+//                             <th style="border:1px solid #000; background:#8BAE66;">Planned to Purchase Qty</th>
+//                         </tr>
+//                     </thead>
+
+//                     <tbody>
+//             `;
+
+//             data.forEach(row => {
+//                 html += `
+//                     <tr>
+//                         <td style="border:1px solid #000;">${row.item}</td>
+
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);" class="open-so-link" data-item="${row.item}" style="color:#007bff; text-decoration:underline;">
+//                                 ${row.open_sales_order}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">${row.safety_stock}</td>
+//                         <td style="border:1px solid #000;">${row.on_hand_qty}</td>
+//                         <td style="border:1px solid #000;">${row.available_qty}</td>
+
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);" class="open-po-link" data-item="${row.item}" style="color:#007bff; text-decoration:underline;">
+//                                 ${row.po_qty}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);" class="gross-req-link" data-item="${row.item}" data-open-so="${row.open_sales_order}" data-available="${row.available_qty}" data-open-po="${row.po_qty}" style="color:#FF4500; text-decoration:underline;">
+//                                 ${row.gross_requirement}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">${row.moq}</td>
+//                         <td style="border:1px solid #000; color: #08CB00;">${row.planned_purchase_qty}</td>
+
+//                         <td style="border:1px solid #000;">
+//                             <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}">
+//                         </td>
+//                     </tr>
+//                 `;
+//             });
+
+//             html += `</tbody></table>`;
+//             $("#mrp-table").html(html);
+//         }
+//     });
+// }
+
+// // ===============================
+// // Click Handlers
+// // ===============================
+
+// // Open SO Qty
+// $(document).on('click', '.open-so-link', function() {
+//     const item = $(this).data('item');
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_sales_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+//             if(r.message && r.message.length > 0) {
+//                 let content = `<ul>`;
+//                 r.message.forEach(so => { content += `<li>${so.sales_order} : ${so.qty}</li>`; });
+//                 content += `</ul>`;
+//                 new frappe.ui.Dialog({
+//                     title: `Open Sales Orders for ${item}`,
+//                     fields: [{ fieldtype: 'HTML', fieldname: 'so_list', options: content }]
+//                 }).show();
+//             } else frappe.msgprint("No open Sales Orders found for this item.");
+//         }
+//     });
+// });
+
+// // Open PO Qty
+// $(document).on('click', '.open-po-link', function() {
+//     const item = $(this).data('item');
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_purchase_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+//             if(r.message && r.message.length > 0) {
+//                 let content = `<ul>`;
+//                 r.message.forEach(po => { content += `<li>${po.purchase_order} : ${po.qty}</li>`; });
+//                 content += `</ul>`;
+//                 new frappe.ui.Dialog({
+//                     title: `Open Purchase Orders for ${item}`,
+//                     fields: [{ fieldtype: 'HTML', fieldname: 'po_list', options: content }]
+//                 }).show();
+//             } else frappe.msgprint("No open Purchase Orders found for this item.");
+//         }
+//     });
+// });
+
+// // Gross Requirement Click
+// $(document).on('click', '.gross-req-link', function() {
+//     const item = $(this).data('item');
+//     const open_so = $(this).data('open-so');
+//     const available = $(this).data('available');
+//     const open_po = $(this).data('open-po');
+
+//     const gross_formula = `
+//         <p><strong>Gross Requirement Calculation for ${item}:</strong></p>
+//         <p>Formula: <code>Gross Requirement = Open SO Qty - Available Qty - Open PO Qty</code></p>
+//         <p>Values: ${open_so} - ${available} - ${open_po} = ${open_so - available - open_po}</p>
+//     `;
+
+//     new frappe.ui.Dialog({
+//         title: `Gross Requirement Details for ${item}`,
+//         fields: [{ fieldtype: 'HTML', fieldname: 'gross_detail', options: gross_formula }]
+//     }).show();
+// });
+
+// frappe.pages['mrp'].on_page_load = function(wrapper) {
+//     var page = frappe.ui.make_app_page({
+//         parent: wrapper,
+//         title: 'MRP 📋',
+//         single_column: true
+//     });
+
+//     page.set_primary_action("Purchase Order", function () {
+//         frappe.set_route("List", "Purchase Order");
+//     });
+
+//     $(wrapper).find('.layout-main-section')
+//         .append(`<div id="mrp-table" style="margin-top:20px"></div>`);
+
+//     load_mrp_table();
+// };
+
+
+// // ===============================
+// // 🚀 LOAD MRP TABLE
+// // ===============================
+// function load_mrp_table() {
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_mrp_data",
+//         callback: function(r) {
+//             if (!r.message) {
+//                 $("#mrp-table").html("<p>No Data Found</p>");
+//                 return;
+//             }
+
+//             let data = r.message;
+
+//             let html = `
+//                 <table class="table table-bordered" style="width:100%; text-align:center;">
+//                     <thead>
+//                         <tr>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Demand</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Supply</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Requirement</th>
+//                             <th rowspan="2" style="border:1px solid #000; background:#d9d9d9;">Select</th>
+//                         </tr>
+
+//                         <tr>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Item</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open SO Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Safety Stock</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">On Hand Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Available Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open PO Qty</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Gross Requirement</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">MOQ</th>
+//                             <th style="border:1px solid #000; background:#8BAE66;">Planned to Purchase Qty</th>
+//                         </tr>
+//                     </thead>
+
+//                     <tbody>
+//             `;
+
+//             data.forEach(row => {
+//                 html += `
+//                     <tr>
+//                         <td style="border:1px solid #000;">${row.item}</td>
+
+//                         <!-- OPEN SO QTY CLICKABLE -->
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);" 
+//                                class="open-so-link" 
+//                                data-item="${row.item}"
+//                                style="color:#007bff;text-decoration:underline;">
+//                                 ${row.open_sales_order}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">${row.safety_stock}</td>
+
+//                         <td style="border:1px solid #000;">${row.on_hand_qty}</td>
+//                         <td style="border:1px solid #000;">${row.available_qty}</td>
+
+//                         <!-- OPEN PO QTY CLICKABLE -->
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);" 
+//                                class="open-po-link" 
+//                                data-item="${row.item}"
+//                                style="color:#007bff;text-decoration:underline;">
+//                                 ${row.po_qty}
+//                             </a>
+//                         </td>
+
+//                         <!-- GROSS REQUIREMENT CLICK -->
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);"
+//                                class="gross-req-link"
+//                                data-item="${row.item}"
+//                                data-so="${row.open_sales_order}"
+//                                data-avl="${row.available_qty}"
+//                                data-po="${row.po_qty}"
+//                                style="color:#007bff;text-decoration:underline;">
+//                                 ${row.gross_requirement}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">${row.moq}</td>
+
+//                         <!-- PLANNED PURCHASE CLICK -->
+//                         <td style="border:1px solid #000; color:#08CB00;">
+//                             <a href="javascript:void(0);"
+//                                class="planned-purchase-link"
+//                                data-item="${row.item}"
+//                                data-on-hand="${row.on_hand_qty}"
+//                                data-safety="${row.safety_stock}"
+//                                data-gross="${row.gross_requirement}"
+//                                data-moq="${row.moq}"
+//                                data-planned="${row.planned_purchase_qty}"
+//                                style="color:#007bff;text-decoration:underline;">
+//                                 ${row.planned_purchase_qty}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">
+//                             <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}">
+//                         </td>
+//                     </tr>
+//                 `;
+//             });
+
+//             html += `
+//                     </tbody>
+//                 </table>
+//             `;
+
+//             $("#mrp-table").html(html);
+//         }
+//     });
+// }
+
+
+// // ===============================
+// // OPEN SO QTY POPUP
+// // ===============================
+// $(document).on('click', '.open-so-link', function() {
+//     const item = $(this).data('item');
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_sales_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+//             let content = `<ul>`;
+//             (r.message || []).forEach(so => {
+//                 content += `<li>${so.sales_order} → ${so.qty}</li>`;
+//             });
+//             content += `</ul>`;
+
+//             new frappe.ui.Dialog({
+//                 title:`Open Sales Orders for ${item}`,
+//                 fields:[{ fieldtype:'HTML', fieldname:'list', options:content }]
+//             }).show();
+//         }
+//     });
+// });
+
+
+// // ===============================
+// // OPEN PO QTY POPUP
+// // ===============================
+// $(document).on('click', '.open-po-link', function() {
+//     const item = $(this).data('item');
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_purchase_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+//             let content = `<ul>`;
+//             (r.message || []).forEach(po => {
+//                 content += `<li>${po.purchase_order} → ${po.qty}</li>`;
+//             });
+//             content += `</ul>`;
+
+//             new frappe.ui.Dialog({
+//                 title:`Open Purchase Orders for ${item}`,
+//                 fields:[{ fieldtype:'HTML', fieldname:'list', options:content }]
+//             }).show();
+//         }
+//     });
+// });
+
+
+// // ===============================
+// // GROSS REQUIREMENT POPUP
+// // ===============================
+// $(document).on('click', '.gross-req-link', function() {
+//     const item = $(this).data('item');
+//     const so = $(this).data('so');
+//     const avl = $(this).data('avl');
+//     const po = $(this).data('po');
+
+//     const gross = so - avl - po;
+
+//     let content = `
+//         <p><b>Gross Requirement Formula</b></p>
+//         <p>Gross Requirement = Open SO Qty − Available Qty − Open PO Qty</p>
+
+//         <p>
+//             = ${so} − ${avl} − ${po}<br>
+//             = <b>${gross}</b>
+//         </p>
+//     `;
+
+//     new frappe.ui.Dialog({
+//         title:`Gross Requirement Calculation – ${item}`,
+//         fields:[{ fieldtype:'HTML', fieldname:'calc', options:content }]
+//     }).show();
+// });
+
+
+// // ===============================
+// // PLANNED PURCHASE – REASON POPUP
+// // ===============================
+// $(document).on('click', '.planned-purchase-link', function() {
+//     const item = $(this).data('item');
+//     const on_hand = Number($(this).data('on-hand'));
+//     const safety = Number($(this).data('safety'));
+//     const gross = Number($(this).data('gross'));
+//     const moq = Number($(this).data('moq'));
+//     const planned = Number($(this).data('planned'));
+
+//     let steps = [];
+
+//     if(on_hand === safety) {
+//         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+//     } else {
+//         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → FALSE</li>`);
+//     }
+
+//     if(gross <= 0) {
+//         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → TRUE → Planned Qty = 0</li>`);
+//     } else {
+//         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → FALSE</li>`);
+//     }
+
+//     if(gross > 0 && gross < moq) {
+//         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+//     } else {
+//         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → FALSE</li>`);
+//     }
+
+//     if(gross >= moq) {
+//         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → TRUE → Planned Qty = Gross Requirement (${gross})</li>`);
+//     } else {
+//         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → FALSE</li>`);
+//     }
+
+//     const content = `
+//         <p><b>Planned Purchase Qty Decision Logic</b></p>
+//         <ol>${steps.join("")}</ol>
+
+//         <p><b>Final Planned Purchase Qty = ${planned}</b></p>
+//     `;
+
+//     new frappe.ui.Dialog({
+//         title:`Planned Purchase Qty Reason – ${item}`,
+//         fields:[{ fieldtype:'HTML', fieldname:'logic', options:content }]
+//     }).show();
+// });
+
+// Below code is for auto PO generation
+
+// frappe.pages['mrp'].on_page_load = function(wrapper) {
+//     var page = frappe.ui.make_app_page({
+//         parent: wrapper,
+//         title: 'MRP 📋',
+//         single_column: true
+//     });
+
+//     // 🔥 MAIN ACTION BUTTON → CREATE PO
+//     page.set_primary_action("Purchase Order", function () {
+//         create_purchase_order_from_mrp();
+//     });
+
+//     $(wrapper).find('.layout-main-section')
+//         .append(`<div id="mrp-table" style="margin-top:30px"></div>`);
+
+//     load_mrp_table();
+// };
+
+
+// // ===============================
+// // 🚀 LOAD MRP TABLE
+// // ===============================
+// function load_mrp_table() {
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_mrp_data",
+//         callback: function(r) {
+//             if (!r.message) {
+//                 $("#mrp-table").html("<p>No Data Found</p>");
+//                 return;
+//             }
+
+//             let data = r.message;
+
+//             let html = `
+//                 <table class="table table-bordered" style="width:100%; text-align:center;">
+//                     <thead>
+//                         <tr>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Demand</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Supply</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Requirement</th>
+//                             <th rowspan="2" style="border:1px solid #000; background:#d9d9d9;">Select</th>
+
+
+
+//                         </tr>
+
+//                         <tr>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Item</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open SO Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Safety Stock</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">On Hand Stock</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Available Stock</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open PO Qty</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Gross Requirement</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">MOQ</th>
+//                             <th style="border:1px solid #000; background:#8BAE66;">Planned to Purchase Qty</th>
+
+
+
+//                         </tr>
+//                     </thead>
+
+//                     <tbody>
+//             `;
+
+//             data.forEach(row => {
+//                 html += `
+//                     <tr>
+//                         <td style="border:1px solid #000;">${row.item}</td>
+
+//                         <!-- OPEN SO QTY CLICKABLE -->
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);" 
+//                                class="open-so-link" 
+//                                data-item="${row.item}"
+//                                style="color:#007bff;text-decoration:underline;">
+//                                 ${row.open_sales_order}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">${row.safety_stock}</td>
+
+//                         <td style="border:1px solid #000;">${row.on_hand_qty}</td>
+//                         <td style="border:1px solid #000;">${row.available_qty}</td>
+
+//                         <!-- OPEN PO QTY CLICKABLE -->
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);" 
+//                                class="open-po-link" 
+//                                data-item="${row.item}"
+//                                style="color:#007bff;text-decoration:underline;">
+//                                 ${row.po_qty}
+//                             </a>
+//                         </td>
+
+//                         <!-- GROSS REQUIREMENT CLICK -->
+//                         <td style="border:1px solid #000;">
+//                             <a href="javascript:void(0);"
+//                                class="gross-req-link"
+//                                data-item="${row.item}"
+//                                data-so="${row.open_sales_order}"
+//                                data-avl="${row.available_qty}"
+//                                data-po="${row.po_qty}"
+//                                style="color:#007bff;text-decoration:underline;">
+//                                 ${row.gross_requirement}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">${row.moq}</td>
+
+//                         <!-- PLANNED PURCHASE CLICK -->
+//                         <td style="border:1px solid #000; color:#08CB00;">
+//                             <a href="javascript:void(0);"
+//                                class="planned-purchase-link"
+//                                data-item="${row.item}"
+//                                data-on-hand="${row.on_hand_qty}"
+//                                data-safety="${row.safety_stock}"
+//                                data-gross="${row.gross_requirement}"
+//                                data-moq="${row.moq}"
+//                                data-planned="${row.planned_purchase_qty}"
+//                                style="color:#007bff;text-decoration:underline;">
+//                                 ${row.planned_purchase_qty}
+//                             </a>
+//                         </td>
+
+//                         <td style="border:1px solid #000;">
+//                             <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}">
+//                         </td>
+//                     </tr>
+//                 `;
+//             });
+
+//             html += `
+//                     </tbody>
+//                 </table>
+//             `;
+
+//             $("#mrp-table").html(html);
+//         }
+//     });
+// }
+
+
+// // ===============================
+// // OPEN SO QTY POPUP
+// // ===============================
+// $(document).on('click', '.open-so-link', function() {
+//     const item = $(this).data('item');
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_sales_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+//             let content = `<ul>`;
+//             (r.message || []).forEach(so => {
+//                 content += `<li>${so.sales_order} → ${so.qty}</li>`;
+//             });
+//             content += `</ul>`;
+
+//             new frappe.ui.Dialog({
+//                 title:`Open Sales Orders for ${item}`,
+//                 fields:[{ fieldtype:'HTML', fieldname:'list', options:content }]
+//             }).show();
+//         }
+//     });
+// });
+
+
+// // ===============================
+// // OPEN PO QTY POPUP
+// // ===============================
+// $(document).on('click', '.open-po-link', function() {
+//     const item = $(this).data('item');
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_purchase_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+//             let content = `<ul>`;
+//             (r.message || []).forEach(po => {
+//                 content += `<li>${po.purchase_order} → ${po.qty}</li>`;
+//             });
+//             content += `</ul>`;
+
+//             new frappe.ui.Dialog({
+//                 title:`Open Purchase Orders for ${item}`,
+//                 fields:[{ fieldtype:'HTML', fieldname:'list', options:content }]
+//             }).show();
+//         }
+//     });
+// });
+
+
+// // ===============================
+// // GROSS REQUIREMENT POPUP
+// // ===============================
+// $(document).on('click', '.gross-req-link', function() {
+//     const item = $(this).data('item');
+//     const so = $(this).data('so');
+//     const avl = $(this).data('avl');
+//     const po = $(this).data('po');
+
+//     const gross = so - avl - po;
+
+//     let content = `
+//         <p><b>Gross Requirement Formula</b></p>
+//         <p>Gross Requirement = Open SO Qty − Available Qty − Open PO Qty</p>
+
+//         <p>
+//             = ${so} − ${avl} − ${po}<br>
+//             = <b>${gross}</b>
+//         </p>
+//     `;
+
+//     new frappe.ui.Dialog({
+//         title:`Gross Requirement Calculation – ${item}`,
+//         fields:[{ fieldtype:'HTML', fieldname:'calc', options:content }]
+//     }).show();
+// });
+
+
+// // ===============================
+// // PLANNED PURCHASE – REASON POPUP
+// // ===============================
+// $(document).on('click', '.planned-purchase-link', function() {
+//     const item = $(this).data('item');
+//     const on_hand = Number($(this).data('on-hand'));
+//     const safety = Number($(this).data('safety'));
+//     const gross = Number($(this).data('gross'));
+//     const moq = Number($(this).data('moq'));
+//     const planned = Number($(this).data('planned'));
+
+//     let steps = [];
+
+//     if(on_hand === safety) {
+//         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+//     } else {
+//         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → FALSE</li>`);
+//     }
+
+//     if(gross <= 0) {
+//         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → TRUE → Planned Qty = 0</li>`);
+//     } else {
+//         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → FALSE</li>`);
+//     }
+
+//     if(gross > 0 && gross < moq) {
+//         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+//     } else {
+//         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → FALSE</li>`);
+//     }
+
+//     if(gross >= moq) {
+//         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → TRUE → Planned Qty = Gross Requirement (${gross})</li>`);
+//     } else {
+//         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → FALSE</li>`);
+//     }
+
+//     const content = `
+//         <p><b>Planned Purchase Qty Decision Logic</b></p>
+//         <ol>${steps.join("")}</ol>
+
+//         <p><b>Final Planned to Purchase Qty = ${planned}</b></p>
+//     `;
+
+//     new frappe.ui.Dialog({
+//         title:`Planned Purchase Qty Reason – ${item}`,
+//         fields:[{ fieldtype:'HTML', fieldname:'logic', options:content }]
+//     }).show();
+// });
+
+
+// // ===============================
+// // 🚀 CREATE PURCHASE ORDER
+// // ===============================
+// function create_purchase_order_from_mrp() {
+
+//     let selected_items = [];
+
+//     $(".mrp-select:checked").each(function() {
+
+//         let row = $(this).closest("tr");
+
+//         selected_items.push({
+//             item: row.find("td:eq(0)").text(),
+//             planned_qty: Number(row.find(".planned-purchase-link").text())
+//         });
+//     });
+
+//     if(selected_items.length === 0){
+//         frappe.msgprint("Please select at least one item");
+//         return;
+//     }
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.create_purchase_order",
+//         args: {
+//             items: JSON.stringify(selected_items)
+//         },
+//         freeze: true,
+//         freeze_message: "Creating Purchase Order...",
+//         callback: function(r){
+//             if(r.message){
+//                 frappe.msgprint({
+//                     title: "Purchase Order Created",
+//                     message: `<b>${r.message}</b>`,
+//                     indicator: "green"
+//                 });
+
+//                 frappe.set_route("Form", "Purchase Order", r.message);
+//             }
+//         }
+//     });
+// }
+
+//Add hyperlink to item open pi and so qty below script is working till date
+// frappe.pages['mrp'].on_page_load = function(wrapper) {
+//     var page = frappe.ui.make_app_page({
+//         parent: wrapper,
+//         title: 'MRP 📋',
+//         single_column: true
+//     });
+
+//     // 🔥 MAIN ACTION BUTTON → CREATE PO
+//     page.set_primary_action("Purchase Order", function () {
+//         create_purchase_order_from_mrp();
+//     });
+
+//    $(wrapper).find('.layout-main-section')
+//         .append(`<div id="mrp-table" style="margin-top:30px"></div>`);
+
+//     load_mrp_table();
+// };
+// function load_mrp_table() {
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_mrp_data",
+//         callback: function (r) {
+//             if (!r.message) {
+//                 $("#mrp-table").html("<p>No Data Found</p>");
+//                 return;
+//             }
+
+//             let data = r.message;
+//             // 🔥 SORT: Recently updated items at top
+//             data.sort((a, b) => {
+//                 if (!a.modified || !b.modified) return 0;
+//                 return new Date(b.modified) - new Date(a.modified);
+//             });
+
+
+//             let page_size = 20;
+//             let current_page = 1;
+
+//             function render_table(page = 1) {
+//                 current_page = page;
+//                 let start = (page - 1) * page_size;
+//                 let end = start + page_size;
+
+//                 let paginated_data = data.slice(start, end);
+
+//                 let html = `
+//                 <table class="table table-bordered" style="width:100%; text-align:center;">
+//                     <thead>
+//                         <tr>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Demand</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Supply</th>
+//                             <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Requirement</th>
+//                             <th rowspan="2" style="border:1px solid #000; background:#d9d9d9;">Select</th>
+//                         </tr>
+
+//                         <tr>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Item</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open SO Qty</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Safety Stock</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">On Hand Stock</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Available Stock</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Open PO Qty</th>
+
+//                             <th style="border:1px solid #000; background:#FBEFEF;">Gross Requirement</th>
+//                             <th style="border:1px solid #000; background:#FBEFEF;">MOQ</th>
+//                             <th style="border:1px solid #000; background:#8BAE66;">Planned to Purchase Qty</th>
+//                         </tr>
+//                     </thead>
+
+//                     <tbody>
+//                 `;
+
+//                 paginated_data.forEach(row => {
+//                     html += `
+//                         <tr>
+//                             <td style="border:1px solid #000;">
+//                                 <a href="javascript:void(0);" class="item-link" data-item="${row.item}" style="color:#007bff;">
+//                                     ${row.item}
+//                                 </a>
+//                             </td>
+
+//                             <td style="border:1px solid #000; text-align:right;">
+//                                 <a href="javascript:void(0);" class="open-so-link" data-item="${row.item}" style="color:#007bff;">
+//                                     ${row.open_sales_order}
+//                                 </a>
+//                             </td>
+
+//                             <td style="border:1px solid #000; text-align:right;">${row.safety_stock}</td>
+//                             <td style="border:1px solid #000; text-align:right;">${row.on_hand_qty}</td>
+//                             <td style="border:1px solid #000; text-align:right;">${row.available_qty}</td>
+
+//                             <td style="border:1px solid #000; text-align:right;">
+//                                 <a href="javascript:void(0);" class="open-po-link" data-item="${row.item}" style="color:#007bff;">
+//                                     ${row.po_qty}
+//                                 </a>
+//                             </td>
+
+//                             <td style="border:1px solid #000; text-align:right;">
+//                                 <a href="javascript:void(0);" class="gross-req-link"
+//                                    data-item="${row.item}" style="color:#007bff;"
+//                                    data-so="${row.open_sales_order}"
+//                                    data-avl="${row.available_qty}"
+//                                    data-po="${row.po_qty}">
+//                                    ${row.gross_requirement}
+//                                 </a>
+//                             </td>
+
+//                             <td style="border:1px solid #000; text-align:right;">${row.moq}</td>
+
+//                             <td style="border:1px solid #000; color:#08CB00; text-align:right;">
+//                                 <a href="javascript:void(0);" class="planned-purchase-link"
+//                                    data-item="${row.item}"
+//                                    data-on-hand="${row.on_hand_qty}"
+//                                    data-safety="${row.safety_stock}"
+//                                    data-gross="${row.gross_requirement}"
+//                                    data-moq="${row.moq}"
+//                                    data-planned="${row.planned_purchase_qty}">
+//                                    ${row.planned_purchase_qty}
+//                                 </a>
+//                             </td>
+
+//                             <td style="border:1px solid #000;">
+//                                 <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}">
+//                             </td>
+//                         </tr>
+//                     `;
+//                 });
+
+//                 html += `
+//                     </tbody>
+//                 </table>
+//                 `;
+
+//                 // Pagination Controls
+//                 let total_pages = Math.ceil(data.length / page_size);
+
+//                 html += `
+//                     <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+//                         <button class="btn btn-primary" id="prev_page" ${current_page === 1 ? "disabled" : ""}>
+//                             Previous
+//                         </button>
+
+//                         <span style="padding:3px 5px; ">
+//                             Page ${current_page} of ${total_pages}
+//                         </span>
+
+//                         <button class="btn btn-primary" id="next_page" ${current_page === total_pages ? "disabled" : ""}>
+//                             Next
+//                         </button>
+//                     </div>
+//                 `;
+
+//                 $("#mrp-table").html(html);
+
+//                 $("#prev_page").click(() => render_table(current_page - 1));
+//                 $("#next_page").click(() => render_table(current_page + 1));
+//             }
+
+//             // Initial Render
+//             render_table(1);
+//         }
+//     });
+// }
+
+
+// let mrpLogPage = 1;          // Start page as 1
+// const logPageSize = 20;      // Records per page
+// let totalLogPages = 1;
+
+// // Get total count first
+// function load_mrp_scheduler_log(page = 1) {
+
+//     mrpLogPage = page;
+
+//     frappe.call({
+//         method: "frappe.client.get_count",
+//         args: {
+//             doctype: "MRP Scheduler Log",
+//             filters: [["reason","!=","Planned Purchase Qty is 0"]]
+//         },
+//         callback: function(res) {
+
+//             let total_logs = res.message || 0;
+//             totalLogPages = Math.ceil(total_logs / logPageSize);
+
+//             // Now fetch paginated logs
+//             frappe.call({
+//                 method: "frappe.client.get_list",
+//                 args: {
+//                     doctype: "MRP Scheduler Log",
+//                     fields: ["run_date", "status", "item", "reason"],
+//                     order_by: "run_date desc",
+//                     limit_start: (page - 1) * logPageSize,
+//                     limit_page_length: logPageSize,
+//                     filters: [["reason","!=","Planned Purchase Qty is 0"]]
+//                 },
+//                 callback: function(r) {
+
+//                     let logs = r.message || [];
+
+//                     let html = `
+//                         <h5>MRP Scheduler Run Status</h5>
+
+//                         <table class="table table-bordered" style="width:100%; text-align:center;">
+//                             <thead>
+//                                 <tr>
+//                                     <th>Date</th>
+//                                     <th>Status</th>
+//                                     <th>Item</th>
+//                                     <th>Reason</th>
+//                                 </tr>
+//                             </thead>
+//                             <tbody>
+//                     `;
+
+//                     if(!logs.length){
+//                         html += `
+//                             <tr>
+//                                 <td colspan="4">No Scheduler Logs Found</td>
+//                             </tr>`;
+//                     } 
+//                     else {
+//                         logs.forEach(log => {
+//                             html += `
+//                                 <tr>
+//                                     <td>${log.run_date || ""}</td>
+//                                     <td style="color:${log.status==="Success"?"green":"red"}">
+//                                         ${log.status}
+//                                     </td>
+//                                     <td>${log.item || "-"}</td>
+//                                     <td>${log.reason || "-"}</td>
+//                                 </tr>`;
+//                         });
+//                     }
+
+//                     html += `
+//                             </tbody>
+//                         </table>
+
+//                         <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+
+//                             <button class="btn btn-primary" 
+//                                 onclick="load_mrp_scheduler_log(${page - 1})"
+//                                 ${page === 1 ? "disabled" : ""}>
+//                                 Previous
+//                             </button>
+
+//                             <span style="padding:3px 5px;">
+//                                 Page ${page} of ${totalLogPages}
+//                             </span>
+
+//                             <button class="btn btn-primary"
+//                                 onclick="load_mrp_scheduler_log(${page + 1})"
+//                                 ${page === totalLogPages ? "disabled" : ""}>
+//                                 Next
+//                             </button>
+
+//                         </div>
+//                     `;
+
+//                     $("#mrp-scheduler-log").html(html);
+//                 }
+//             });
+//         }
+//     });
+// }
+
+
+
+// // Call this after loading MRP table
+// $(document).ready(function(){
+//     $("#mrp-table").after('<div id="mrp-scheduler-log" style="margin-top:30px;"></div>');
+//     load_mrp_scheduler_log();
+// });
+
+// // ITEM CLICK → OPEN ITEM
+// $(document).on('click', '.item-link', function() {
+//     const item = $(this).data('item');
+//     frappe.set_route("Form", "Item", item);
+// });
+
+
+// // ===============================
+// // ITEM CLICK → OPEN ITEM
+// // ===============================
+// $(document).on('click', '.item-link', function() {
+//     const item = $(this).data('item');
+//     frappe.set_route("Form", "Item", item);
+// });
+
+
+// $(document).on('click', '.open-so-link', function() {
+//     const item = $(this).data('item');
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_sales_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+
+//             let so_list = r.message || [];
+
+//             if(!so_list.length){
+//                 frappe.msgprint("No Open Sales Orders for this Item");
+//                 return;
+//             }
+
+//             let content = `
+//                 <table class="table table-bordered">
+//                     <thead>
+//                         <tr>
+//                             <th>Sales Order</th>
+//                             <th style="text-align:right;">Order Qty</th>
+//                             <th style="text-align:right;">Delivered Qty</th>
+//                             <th style="text-align:right;">Open Qty</th>
+//                             <th>Delivery Date</th>
+//                         </tr>
+//                     </thead>
+//                     <tbody>
+//             `;
+
+//             so_list.forEach(so => {
+//                 content += `
+//                     <tr>
+//                         <td>
+//                             <a href="javascript:void(0);" 
+//                                 onclick="frappe.set_route('Form','Sales Order','${so.sales_order}')"
+//                                 style="color:#007bff;">
+//                                 ${so.sales_order}
+//                             </a>
+//                         </td>
+//                         <td style="text-align:right;">${so.qty}</td>
+//                         <td style="text-align:right;">${so.delivered_qty}</td>
+//                         <td style="text-align:right;">${so.pending_qty}</td>
+//                         <td>${so.delivery_date || "-"}</td>
+//                     </tr>
+//                 `;
+//             });
+
+//             content += `
+//                     </tbody>
+//                 </table>
+//             `;
+
+//             new frappe.ui.Dialog({
+//                 title:`Open Sales Orders for ${item}`,
+//                 fields:[{ fieldtype:'HTML', fieldname:'list', options:content }],
+//                 size: 'large'
+//             }).show();
+//         }
+//     });
+// });
+
+
+
+// // ===============================
+// $(document).on('click', '.open-po-link', function() {
+//     const item = $(this).data('item');
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.get_purchase_orders_for_item",
+//         args: { item_code: item },
+//         callback: function(r) {
+
+//             let po_list = r.message || [];
+
+//             if(!po_list.length){
+//                 frappe.msgprint("No Open Purchase Orders for this Item");
+//                 return;
+//             }
+
+//             let content = `
+//                 <table class="table table-bordered">
+//                     <thead>
+//                         <tr>
+//                             <th>Purchase Order</th>
+//                             <th style="text-align:right;">Order Qty</th>
+//                             <th style="text-align:right;">Received Qty</th>
+//                             <th style="text-align:right;">Open Qty</th>
+//                             <th>Schedule Date</th>
+//                         </tr>
+//                     </thead>
+//                     <tbody>
+//             `;
+
+//             po_list.forEach(po => {
+//                 content += `
+//                     <tr>
+//                         <td>
+//                             <a href="javascript:void(0);"
+//                                 onclick="frappe.set_route('Form','Purchase Order','${po.purchase_order}')"
+//                                 style="color:#007bff;">
+//                                 ${po.purchase_order}
+//                             </a>
+//                         </td>
+//                         <td style="text-align:right;">${po.qty}</td>
+//                         <td style="text-align:right;">${po.received_qty}</td>
+//                         <td style="text-align:right;">${po.pending_qty}</td>
+//                         <td>${po.schedule_date || "-"}</td>
+//                     </tr>
+//                 `;
+//             });
+
+//             content += `
+//                     </tbody>
+//                 </table>
+//             `;
+
+//             new frappe.ui.Dialog({
+//                 title:`Open Purchase Orders for ${item}`,
+//                 fields:[{ fieldtype:'HTML', fieldname:'list', options:content }],
+//                 size: 'large'
+//             }).show();
+//         }
+//     });
+// });
+
+
+
+// // ===============================
+// // GROSS REQUIREMENT POPUP
+
+// $(document).on('click', '.gross-req-link', function() {
+
+//     const item = $(this).data('item');
+//     const so = Number($(this).data('so') || 0);
+//     const avl = Number($(this).data('avl') || 0);
+//     const po = Number($(this).data('po') || 0);
+
+//     const gross = so - avl - po;
+
+//     let content = `
+//         <table class="table table-bordered" style="text-align:center;">
+//             <thead>
+//                 <tr>
+//                     <th colspan="5" style="background:#f5f5f5;">
+//                         Gross Requirement Calculation
+//                     </th>
+//                 </tr>
+//                 <tr>
+//                 <th colspan="5" style="padding:10px;">
+//                     <b>
+//                         Gross Requirement = Open SO Qty − Available Qty − Open PO Qty
+//                     </b>
+//                 </th>
+//             </tr>
+//             </thead>
+
+//             <tbody>
+
+//                 <!-- Header Row -->
+//                 <tr>
+//                     <td><b>Gross Requirement</b></td>
+//                     <td>=</td>
+//                     <td><b>Open SO Qty</b></td>
+//                     <td><b>Available Qty</b></td>
+//                     <td><b>Open PO Qty</b></td>
+//                 </tr>
+
+//                 <!-- Value Row -->
+//                 <tr>
+//                     <td></td>
+//                     <td></td>
+//                     <td>${so}</td>
+//                     <td>${-avl}</td>
+//                     <td>${-po}</td>
+//                 </tr>
+
+//                 <!-- Result Row -->
+//                 <tr>
+//                     <td><b>Gross Requirement</b></td>
+//                     <td>=</td>
+//                     <td colspan="3" style="color:blue;"><b>${gross}</b></td>
+//                 </tr>
+
+//             </tbody>
+//         </table>
+//     `;
+
+//     new frappe.ui.Dialog({
+//         title: `Gross Requirement Details — ${item}`,
+//         fields:[
+//             { fieldtype:'HTML', fieldname:'list', options:content }
+//         ],
+//         size: 'large'
+//     }).show();
+// });
+// /* ⭐⭐⭐ END — GROSS REQUIREMENT POPUP ⭐⭐⭐ */
+
+
+
+// // ===============================
+// // PLANNED PURCHASE – REASON POPUP
+// // ===============================
+// // $(document).on('click', '.planned-purchase-link', function() {
+// //     const item = $(this).data('item');
+// //     const on_hand = Number($(this).data('on-hand'));
+// //     const safety = Number($(this).data('safety'));
+// //     const gross = Number($(this).data('gross'));
+// //     const moq = Number($(this).data('moq'));
+// //     const planned = Number($(this).data('planned'));
+
+// //     let steps = [];
+
+// //     if(on_hand === safety) {
+// //         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+// //     } 
+// //     else {
+// //         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → FALSE</li>`);
+// //     }
+
+// //     if(gross <= 0) {
+// //         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → TRUE → Planned Qty = 0</li>`);
+// //     } 
+// //     else {
+// //         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → FALSE</li>`);
+// //     }
+
+// //     if(gross < moq) {
+// //         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+// //     } 
+// //     else {
+// //         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${gross}) → FALSE</li>`);
+// //     }
+
+// //     if(gross >= moq) {
+// //         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → TRUE → Planned Qty = Gross Requirement (${gross})</li>`);
+// //     } else {
+// //         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → FALSE</li>`);
+// //     }
+
+// //     const content = `
+// //         <p><b>Planned Purchase Qty Decision Logic</b></p>
+// //         <ol>${steps.join("")}</ol>
+
+// //         <p><b>Final Planned to Purchase Qty = ${planned}</b></p>
+// //     `;
+
+// //     new frappe.ui.Dialog({
+// //         title:`Planned Purchase Qty Reason – ${item}`,
+// //         fields:[{ fieldtype:'HTML', fieldname:'logic', options:content }]
+// //     }).show();
+// // });
+
+
+// // ===============================
+// // 🚀 CREATE PURCHASE ORDER
+// // ===============================
+// function create_purchase_order_from_mrp() {
+
+//     let selected_items = [];
+
+//     $(".mrp-select:checked").each(function() {
+
+//         let row = $(this).closest("tr");
+
+//         selected_items.push({
+//             item: row.find("td:eq(0)").text().trim(),
+//             planned_qty: Number(row.find(".planned-purchase-link").text())
+//         });
+//     });
+
+//     if(selected_items.length === 0){
+//         frappe.msgprint("Please select at least one item");
+//         return;
+//     }
+//      // 🔴 CHECK ITEM RATE BEFORE SENDING TO SERVER
+//     let zero_rate_items = [];
+//     selected_items.forEach(d => {
+//         frappe.call({
+//             method: "frappe.client.get_value",
+//             args: {
+//                 doctype: "Item Price",
+//                 filters: { item_code: d.item },
+//                 fieldname: "price_list_rate"
+//             },
+//             async: false,
+//             callback: function(r) {
+//                 let rate = r.message?.price_list_rate || 0;
+//                 if (rate <= 0) zero_rate_items.push(d.item);
+//             }
+//         });
+//     });
+
+//     if (zero_rate_items.length > 0) {
+//         frappe.msgprint(`Cannot create PO. Rate set as 0 or less than 0 in Price List (≤ 0) for: ${zero_rate_items.join(", ")}`);
+//         return;
+//     }
+
+//     frappe.call({
+//         method: "renu_customization.renu_customization.page.mrp.mrp.create_purchase_order",
+//         args: {
+//             items: JSON.stringify(selected_items)
+//         },
+//         freeze: true,
+//         freeze_message: "Creating Purchase Order...",
+//         callback: function(r){
+//             if(r.message){
+//                 frappe.msgprint({
+//                     title: "Purchase Order Created",
+//                     message: `<b>${r.message}</b>`,
+//                     indicator: "green"
+//                 });
+
+//                 frappe.set_route("Form", "Purchase Order", r.message);
+//             }
+//         }
+//     });
+// }
+
+//  Add tab new code
+frappe.pages['mrp'].on_page_load = function (wrapper) {
+
+    const page = frappe.ui.make_app_page({
+        parent: wrapper,
+        title: 'MRP 📋',
+        single_column: true
+    });
+
+    page.set_primary_action("Purchase Order", () => {
+        create_purchase_order_from_mrp();
+    });
+
+
+    $(wrapper).find(".layout-main-section").html(`
+    <ul class="nav nav-tabs">
+        <li class="nav-item">
+            <a class="nav-link active" id="tab-mrp">MRP</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" id="tab-scheduler">Log Status</a>
+        </li>
+    </ul>
+ 
+    <div id="mrp-content" style="margin-top:20px;">
+        <div id="mrp-table"></div>
+    </div>
+ 
+    <div id="scheduler-content" style="margin-top:20px; display:none;">
+        <div id="mrp-scheduler-log"></div>
+    </div>
+    `);
+
+    $(wrapper).append(`
+<style>
+    /* Tab bar background */
+    .nav-tabs {
+        background: #FFFFFF;
+        padding: 8px;
+        border-radius: 6px;
+    }
+ 
+    /* Normal tab */
+    .nav-tabs .nav-link {
+        background: #BEDBFF;
+        color: #333;
+        margin-right: 5px;
+        border-radius: 5px;
+        font-weight: 600;
+    }
+ 
+    /* Active tab */
+    .nav-tabs .nav-link.active {
+        background: #BEDBFF;
+        border-bottom: 3px solid #2563EB;
+        //color: #fff;
+    }
+ 
+    /* Hover effect */
+    .nav-tabs .nav-link:hover {
+        background: #0056b3;
+        color: #fff;
+    }
+</style>
+`);
+
+
+    // Initial Load
+    load_mrp_table();
+
+    // --------------------------------------------------
+    // TAB EVENTS
+    // --------------------------------------------------
+    $("#tab-mrp").on("click", function () {
+        $(".nav-link").removeClass("active");
+        $(this).addClass("active");
+
+        $("#scheduler-content").hide();
+        $("#mrp-content").show();
+
+        page.set_primary_action("Purchase Order", () => {
+            create_purchase_order_from_mrp();
+        });
+    });
+
+    $("#tab-scheduler").on("click", function () {
+        $(".nav-link").removeClass("active");
+        $(this).addClass("active");
+
+        $("#mrp-content").hide();
+        $("#scheduler-content").show();
+
+        page.clear_primary_action();
+
+        load_mrp_scheduler_log(1);
+    });
+};
+
+
+
+function load_mrp_table() {
+    frappe.call({
+        method: "renu_customization.renu_customization.page.mrp.mrp.get_mrp_data",
+        callback: function (r) {
+            if (!r.message) {
+                $("#mrp-table").html("<p>No Data Found</p>");
+                return;
+            }
+
+            let data = r.message;
+            // 🔥 SORT: Recently updated items at top
+            data.sort((a, b) => {
+                if (!a.modified || !b.modified) return 0;
+                return new Date(b.modified) - new Date(a.modified);
+            });
+
+
+            let page_size = 15;
+            let current_page = 1;
+
+            function render_table(page = 1) {
+                current_page = page;
+                let start = (page - 1) * page_size;
+                let end = start + page_size;
+
+                let paginated_data = data.slice(start, end);
+
+                let html = `
+                <table class="table table-bordered" style="width:100%; text-align:center;">
+                    <thead>
+                        <tr>
+                            <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Demand</th>
+                            <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Supply</th>
+                            <th colspan="3" style="border:1px solid #000; background:#d9d9d9;">Requirement</th>
+                            <th style="border:1px solid #000; background:#d9d9d9;">Select</th>
+                        </tr>
+ 
+                        <tr>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Item</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Open SO Qty</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Safety Stock</th>
+ 
+                            <th style="border:1px solid #000; background:#BEDBFF;">On Hand Stock</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Available Stock</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Open PO Qty</th>
+ 
+                            <th style="border:1px solid #000; background:#BEDBFF;">Gross Requirement</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">MOQ</th>
+                            <th style="border:1px solid #000; background:#BEDBFF;">Planned to Purchase Qty</th>
+                            <th style="border:1px solid #000; background:#BEDBFF; text-align:center; vertical-align:middle;">
+                                <input type="checkbox" id="chk-select-all" style="margin: 0px 0px 0px 0px">
+                            </th>
+                        </tr>
+                    </thead>
+ 
+                    <tbody>
+                `;
+
+                paginated_data.forEach(row => {
+                    html += `
+                        <tr>
+                            <td style="border:1px solid #000;">
+                                <a href="javascript:void(0);" class="item-link" data-item="${row.item}" style="text-decoration: underline;">
+                                    ${row.item}
+                                </a>
+                            </td>
+ 
+                            <td style="border:1px solid #000; text-align:right;">
+                                <a href="javascript:void(0);" class="open-so-link" data-item="${row.item}" style="text-decoration: underline;">
+                                    ${row.open_sales_order}
+                                </a>
+                            </td>
+ 
+                            <td style="border:1px solid #000; text-align:right;">${row.safety_stock}</td>
+                            <td style="border:1px solid #000; text-align:right;">${row.on_hand_qty}</td>
+                            <td style="border:1px solid #000; text-align:right;">${row.available_qty}</td>
+ 
+                            <td style="border:1px solid #000; text-align:right;">
+                                <a href="javascript:void(0);" class="open-po-link" data-item="${row.item}" style="text-decoration: underline;">
+                                    ${row.po_qty}
+                                </a>
+                            </td>
+ 
+                            <td style="border:1px solid #000; text-align:right;">
+                                <a href="javascript:void(0);" class="gross-req-link"
+                                   data-item="${row.item}" style="text-decoration: underline;"
+                                   data-so="${row.open_sales_order}"
+                                   data-avl="${row.available_qty}"
+                                   data-po="${row.po_qty}">
+                                   ${row.gross_requirement < 0 ? 0 : row.gross_requirement}
+                                </a>
+                                
+
+                            </td>
+ 
+                            <td style="border:1px solid #000; text-align:right;">${row.moq}</td>
+ 
+                            <td style="border:1px solid #000; color:#08CB00; text-align:right;">
+                                <a href="javascript:void(0);" class="planned-purchase-link"
+                                   data-item="${row.item}"
+                                   data-on-hand="${row.on_hand_qty}"
+                                   data-safety="${row.safety_stock}"
+                                   data-gross="${row.gross_requirement}"
+                                   data-moq="${row.moq}"
+                                   data-planned="${row.planned_purchase_qty}">
+                                   ${row.planned_purchase_qty}
+                                </a>
+                            </td>
+ 
+                            <td style="border:1px solid #000; text-align:center; vertical-align:middle;">
+                                <input type="checkbox" class="form-check-input mrp-select" data-item="${row.item}" style="margin: 0px 0px 0px 0px">
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += `
+                    </tbody>
+                </table>
+                `;
+
+                // Pagination Controls
+                let total_pages = Math.ceil(data.length / page_size);
+
+                html += `
+                    <div style="display:flex; justify-content:center; gap:10px; margin-top:10px;">
+                        <button class="btn btn-primary" id="prev_page" ${current_page === 1 ? "disabled" : ""}>
+                            Previous
+                        </button>
+ 
+                        <span style="padding:3px 5px; ">
+                            Page ${current_page} of ${total_pages}
+                        </span>
+ 
+                        <button class="btn btn-primary" id="next_page" ${current_page === total_pages ? "disabled" : ""}>
+                            Next
+                        </button>
+                    </div>
+                `;
+
+                $("#mrp-table").html(html);
+
+                $("#prev_page").click(() => render_table(current_page - 1));
+                $("#next_page").click(() => render_table(current_page + 1));
+            }
+
+            // Initial Render
+            render_table(1);
+        }
+    });
+}
+
+
+let mrpLogPage = 1;          // Start page as 1
+const logPageSize = 15;      // Records per page
+let totalLogPages = 1;
+
+function load_mrp_scheduler_log(page = 1) {
+
+    $("#scheduler-content").html(`<p class="text-muted">Loading...</p>`);
+
+    let ten_days_ago = frappe.datetime.add_days(frappe.datetime.get_today(), -60);
+
+    frappe.call({
+        method: "frappe.client.get_count",
+        args: {
+            doctype: "MRP Scheduler Log",
+            filters: [
+                ["run_date", ">=", ten_days_ago]
+            ]
+        },
+        callback(res) {
+
+            const total = res.message || 0;
+            totalLogPages = Math.ceil(total / logPageSize);
+
+            frappe.call({
+                method: "frappe.client.get_list",
+                args: {
+                    doctype: "MRP Scheduler Log",
+                    fields: [
+                        "run_date",
+                        "creation",
+                        "status",
+                        "item",
+                        "reason",
+                        "po_id"
+                    ],
+                    order_by: "run_date desc",
+                    limit_start: (page - 1) * logPageSize,
+                    limit_page_length: logPageSize,
+                    filters: [
+                        ["run_date", ">=", ten_days_ago]
+                    ]
+                },
+                callback(r) {
+
+                    const logs = r.message || [];
+
+                    let html = `
+                        <table class="table table-bordered text-center">
+                            <thead style="border:1px solid #000; background:#BEDBFF;">
+                                <tr>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Item</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Date</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Time</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Status</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">PO ID</th>
+                                    <th style="border:1px solid #000; background:#BEDBFF;">Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    if (!logs.length) {
+                        html += `<tr><td colspan="6">No Logs Found</td></tr>`;
+                    } else {
+                        logs.forEach(l => {
+                            let po_id = "-";
+                            let reason_text = l.reason || "-";
+
+                            // 🔥 If status is Success and reason is empty, show Success and PO link if exists
+                            if (l.status === "Success") {
+                                // If reason contains PO ID, extract it
+                                if (l.reason) {
+                                    const match = l.reason.match(/PO-\d+/);
+                                    if (match) {
+                                        po_id = `<a href="/app/purchase-order/${match[0]}" target="_blank">${match[0]}</a>`;
+                                    }
+                                    reason_text = ""; // If PO generated, leave reason blank
+                                } else if (l.po_id) { // Optional: if you have a separate field storing PO ID
+                                    po_id = `<a href="/app/purchase-order/${l.po_id}" target="_blank">${l.po_id}</a>`;
+                                    reason_text = "";
+                                }
+                            } else {
+                                // If not success, extract PO ID from reason if exists
+                                if (l.reason) {
+                                    const match = l.reason.match(/PO-\d+/);
+                                    if (match) {
+                                        po_id = `<a href="/app/purchase-order/${match[0]}" target="_blank">${match[0]}</a>`;
+                                    }
+                                }
+                            }
+
+                            // Format Time
+                            let time_display = "";
+                            if (l.creation) {
+                                // l.creation is "YYYY-MM-DD HH:mm:ss.xxxx"
+                                let parts = l.creation.split(" ")[1];
+                                if (parts) {
+                                    let [h, m] = parts.split(":");
+                                    let hour = parseInt(h);
+                                    let ampm = hour >= 12 ? "PM" : "AM";
+                                    hour = hour % 12;
+                                    hour = hour ? hour : 12;
+                                    time_display = `${hour}:${m} ${ampm}`;
+                                }
+                            }
+
+                            html += `
+        <tr>
+            <td style="border:1px solid #000;">${l.item || "-"}</td>
+            <td style="border:1px solid #000;">${l.run_date || ""}</td>
+            <td style="border:1px solid #000;">${time_display}</td>
+            <td style="border:1px solid #000; color:${l.status === "Success" ? "green" : "red"}">
+                ${l.status}
+            </td>
+            <td style="border:1px solid #000; text-decoration: underline;">${po_id}</td>
+            <td style="border:1px solid #000;">${reason_text}</td>
+        </tr>`;
+                        });
+
+                    }
+
+                    html += `
+                            </tbody>
+                        </table>
+ 
+                        <div class="text-center">
+                            <button class="btn btn-sm btn-primary"
+                                ${page === 1 ? "disabled" : ""}
+                                onclick="load_mrp_scheduler_log(${page - 1})">
+                                Previous
+                            </button>
+ 
+                            <span class="mx-2">Page ${page} of ${totalLogPages}</span>
+ 
+                            <button class="btn btn-sm btn-primary"
+                                ${page === totalLogPages ? "disabled" : ""}
+                                onclick="load_mrp_scheduler_log(${page + 1})">
+                                Next
+                            </button>
+                        </div>
+                    `;
+
+                    $("#scheduler-content").html(html);
+                }
+            });
+        }
+    });
+}
+
+// Call this after loading MRP table
+$(document).ready(function () {
+    $("#mrp-table").after('<div id="mrp-scheduler-log" style="margin-top:30px;"></div>');
+    load_mrp_scheduler_log();
+});
+
+// ITEM CLICK → OPEN ITEM
+$(document).on('click', '.item-link', function () {
+    const item = $(this).data('item');
+    frappe.set_route("Form", "Item", item);
+});
+
+
+// ===============================
+// ITEM CLICK → OPEN ITEM
+// ===============================
+$(document).on('click', '.item-link', function () {
+    const item = $(this).data('item');
+    frappe.set_route("Form", "Item", item);
+});
+
+
+$(document).on('click', '.open-so-link', function () {
+    const item = $(this).data('item');
+
+    frappe.call({
+        method: "renu_customization.renu_customization.page.mrp.mrp.get_sales_orders_for_item",
+        args: { item_code: item },
+        callback: function (r) {
+
+            let so_list = r.message || [];
+
+            if (!so_list.length) {
+                frappe.msgprint("No Open Sales Orders for this Item");
+                return;
+            }
+
+            let content = `
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Sales Order</th>
+                            <th style="text-align:right;">Order Qty</th>
+                            <th style="text-align:right;">Delivered Qty</th>
+                            <th style="text-align:right;">Open Qty</th>
+                            <th>Delivery Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            so_list.forEach(so => {
+                content += `
+                    <tr>
+                        <td>
+                            <a href="javascript:void(0);"
+                                onclick="frappe.set_route('Form','Sales Order','${so.sales_order}')"
+                                style="color:#007bff;">
+                                ${so.sales_order}
+                            </a>
+                        </td>
+                        <td style="text-align:right;">${so.qty}</td>
+                        <td style="text-align:right;">${so.delivered_qty}</td>
+                        <td style="text-align:right;">${so.pending_qty}</td>
+                        <td>${so.delivery_date || "-"}</td>
+                    </tr>
+                `;
+            });
+
+            content += `
+                    </tbody>
+                </table>
+            `;
+
+            new frappe.ui.Dialog({
+                title: `Open Sales Orders for ${item}`,
+                fields: [{ fieldtype: 'HTML', fieldname: 'list', options: content }],
+                size: 'large'
+            }).show();
+        }
+    });
+});
+
+
+
+// ===============================
+$(document).on('click', '.open-po-link', function () {
+    const item = $(this).data('item');
+
+    frappe.call({
+        method: "renu_customization.renu_customization.page.mrp.mrp.get_purchase_orders_for_item",
+        args: { item_code: item },
+        callback: function (r) {
+
+            let po_list = r.message || [];
+
+            if (!po_list.length) {
+                frappe.msgprint("No Open Purchase Orders for this Item");
+                return;
+            }
+
+            let content = `
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Purchase Order</th>
+                            <th style="text-align:right;">Order Qty</th>
+                            <th style="text-align:right;">Received Qty</th>
+                            <th style="text-align:right;">Open Qty</th>
+                            <th>Schedule Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            po_list.forEach(po => {
+                content += `
+                    <tr>
+                        <td>
+                            <a href="javascript:void(0);"
+                                onclick="frappe.set_route('Form','Purchase Order','${po.purchase_order}')"
+                                style="color:#007bff;">
+                                ${po.purchase_order}
+                            </a>
+                        </td>
+                        <td style="text-align:right;">${po.qty}</td>
+                        <td style="text-align:right;">${po.received_qty}</td>
+                        <td style="text-align:right;">${po.pending_qty}</td>
+                        <td>${po.schedule_date || "-"}</td>
+                    </tr>
+                `;
+            });
+
+            content += `
+                    </tbody>
+                </table>
+            `;
+
+            new frappe.ui.Dialog({
+                title: `Open Purchase Orders for ${item}`,
+                fields: [{ fieldtype: 'HTML', fieldname: 'list', options: content }],
+                size: 'large'
+            }).show();
+        }
+    });
+});
+
+
+
+// ===============================
+// GROSS REQUIREMENT POPUP
+
+$(document).on('click', '.gross-req-link', function () {
+
+    const item = $(this).data('item');
+    const so = Number($(this).data('so') || 0);
+    const avl = Number($(this).data('avl') || 0);
+    const po = Number($(this).data('po') || 0);
+
+    const gross = so - avl - po;
+
+    let content = `
+        <table class="table table-bordered" style="text-align:center;">
+            <thead>
+                <tr>
+                    <th colspan="5" style="background:#f5f5f5;">
+                        Gross Requirement Calculation
+                    </th>
+                </tr>
+                <tr>
+                <th colspan="5" style="padding:10px;">
+                    <b>
+                        Gross Requirement = Open SO Qty − Available Qty − Open PO Qty
+                    </b>
+                </th>
+            </tr>
+            </thead>
+ 
+            <tbody>
+ 
+                <!-- Header Row -->
+                <tr>
+                    <td><b>Gross Requirement</b></td>
+                    <td>=</td>
+                    <td><b>Open SO Qty</b></td>
+                    <td><b>Available Qty</b></td>
+                    <td><b>Open PO Qty</b></td>
+                </tr>
+ 
+                <!-- Value Row -->
+                <tr>
+                    <td></td>
+                    <td></td>
+                    <td>${so}</td>
+                    <td>${avl}</td>
+                    <td>${po}</td>
+                </tr>
+ 
+                <!-- Result Row -->
+                <tr>
+                    <td><b>Gross Requirement</b></td>
+                    <td>=</td>
+                    <td colspan="3" style="color:blue;"><b>${gross}</b></td>
+                </tr>
+ 
+            </tbody>
+        </table>
+    `;
+
+    new frappe.ui.Dialog({
+        title: `Gross Requirement Details — ${item}`,
+        fields: [
+            { fieldtype: 'HTML', fieldname: 'list', options: content }
+        ],
+        size: 'large'
+    }).show();
+});
+/* ⭐⭐⭐ END — GROSS REQUIREMENT POPUP ⭐⭐⭐ */
+
+
+
+// ===============================
+// PLANNED PURCHASE – REASON POPUP
+// ===============================
+// $(document).on('click', '.planned-purchase-link', function() {
+//     const item = $(this).data('item');
+//     const on_hand = Number($(this).data('on-hand'));
+//     const safety = Number($(this).data('safety'));
+//     const gross = Number($(this).data('gross'));
+//     const moq = Number($(this).data('moq'));
+//     const planned = Number($(this).data('planned'));
+
+//     let steps = [];
+
+//     if(on_hand === safety) {
+//         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+//     }
+//     else {
+//         steps.push(`<li>Rule 1: On Hand (${on_hand}) = Safety Stock (${safety}) → FALSE</li>`);
+//     }
+
+//     if(gross <= 0) {
+//         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → TRUE → Planned Qty = 0</li>`);
+//     }
+//     else {
+//         steps.push(`<li>Rule 2: Gross Requirement (${gross}) ≤ 0 → FALSE</li>`);
+//     }
+
+//     if(gross < moq) {
+//         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${moq}) → TRUE → Planned Qty = MOQ (${moq})</li>`);
+//     }
+//     else {
+//         steps.push(`<li>Rule 3: Gross Requirement (${gross}) < MOQ (${gross}) → FALSE</li>`);
+//     }
+
+//     if(gross >= moq) {
+//         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → TRUE → Planned Qty = Gross Requirement (${gross})</li>`);
+//     } else {
+//         steps.push(`<li>Rule 4: Gross Requirement (${gross}) ≥ MOQ (${moq}) → FALSE</li>`);
+//     }
+
+//     const content = `
+//         <p><b>Planned Purchase Qty Decision Logic</b></p>
+//         <ol>${steps.join("")}</ol>
+
+//         <p><b>Final Planned to Purchase Qty = ${planned}</b></p>
+//     `;
+
+//     new frappe.ui.Dialog({
+//         title:`Planned Purchase Qty Reason – ${item}`,
+//         fields:[{ fieldtype:'HTML', fieldname:'logic', options:content }]
+//     }).show();
+// });
+
+
+// ===============================
+// 🚀 CREATE PURCHASE ORDER
+// ===============================
+function create_purchase_order_from_mrp() {
+
+    let selected_items = [];
+
+    $(".mrp-select:checked").each(function () {
+
+        let row = $(this).closest("tr");
+
+        selected_items.push({
+            item: row.find("td:eq(0)").text().trim(),
+            planned_qty: Number(row.find(".planned-purchase-link").text())
+        });
+    });
+
+    if (selected_items.length === 0) {
+        frappe.msgprint("Please select at least one item");
+        return;
+    }
+    // 🔴 Validation removed to prioritize server-side checks and logging
+
+    frappe.call({
+        method: "renu_customization.renu_customization.page.mrp.mrp.create_purchase_order",
+        args: {
+            items: JSON.stringify(selected_items)
+        },
+        freeze: true,
+        freeze_message: "Creating Purchase Order...",
+        callback: function (r) {
+            if (r.message) {
+                frappe.msgprint({
+                    title: "Purchase Order Created",
+                    message: `<b>${r.message}</b>`,
+                    indicator: "green"
+                });
+
+                frappe.set_route("Form", "Purchase Order", r.message);
+            }
+        }
+    });
+}
+
+// ===============================
+// SELECT ALL CHECKBOX
+// ===============================
+$(document).on("change", "#chk-select-all", function () {
+    const isChecked = $(this).is(":checked");
+    $(".mrp-select").prop("checked", isChecked);
+});
+
+// If any item is unchecked, uncheck "Select All"
+$(document).on("change", ".mrp-select", function () {
+    if (!$(this).is(":checked")) {
+        $("#chk-select-all").prop("checked", false);
+    }
+    else {
+        // improved UX: if all checked, check master
+        if ($(".mrp-select:checked").length === $(".mrp-select").length) {
+            $("#chk-select-all").prop("checked", true);
+        }
+    }
+});
+

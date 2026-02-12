@@ -47,6 +47,8 @@ after_migrate = [
     "renu_customization.patches.v_0.create_new-field-supplier_invoice_no_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_supplier_invoice_date_on_purchase_receipt.execute",
     "renu_customization.patches.v_0.create_old_customer_code_field_on_customer.execute",
+    # "renu_customization.patches.v_0.shot_close_field_on_sales_order.execute",
+    # "renu_customization.patches.v_0.add_picked_but_not_delivered_fiels_on_soi.execute",
     
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
@@ -55,6 +57,7 @@ after_migrate = [
     # "renu_customization.patches.v_0.add_warranty_field_on_so.execute",
     "renu_customization.patches.v_0.add_fields_invoice_and_delivery_note_on_serial_no.execute",
     "renu_customization.patches.v_0.add_warranty_start_date_on_serial_no.execute",
+    "renu_customization.patches.v_0.add_important_note_on_sales_invoice.execute",
     
     
     
@@ -83,8 +86,14 @@ after_migrate = [
     "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_order.execute",
     "renu_customization.patches.v_0.add_port_of_landing_and_port_of_discharge_field_on_sales_invoice.execute",
     "renu_customization.patches.v_0.add_is_service_item_checkbox_on_item.execute",
-    
-   
+    "renu_customization.patches.v_0.add_mrp_checkbox_on_item.execute",
+    "renu_customization.patches.v_0.add_section_and_enable_mrp_field_on_stock_setting.execute",
+    "renu_customization.patches.v_0.consider_draft_so_and_po_field_on_stock_setting.execute",
+    "renu_customization.patches.v_0.add_lut_start_date_on_sales_invoice.execute",
+    # "renu_customization.patches.v_0.add_auto_email_send_checkbox_on_supplier.execute",
+    # "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
+    # "renu_customization.patches.v_0.send_email_mrp.execute",
+    # "renu_customization.patches.v_0.manually_send_email_to_supplier.execute",
   
 
     
@@ -96,6 +105,11 @@ after_migrate = [
     "renu_customization.patches.v_0.add_delivery_term_field_in_si.execute",
     "renu_customization.patches.v_0.add_delivery_term_field_in_so.execute",
     "renu_customization.patches.v_0.add_fields_in_si_docket_no.execute",
+    "renu_customization.patches.v_0.add_port_of_loading_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.add_port_of_discharge_field_on_delivery_note.execute",
+    "renu_customization.patches.v_0.add_pre_carriage_by_field_on_delivery_note.execute",
+    
+    
     
    #Naming series
     # "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
@@ -136,12 +150,16 @@ doctype_js = {
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
     
     "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
-    "public/js/show_relevent_print_format_on_sales_order.js","public/js/read_only_currency_exchange_rate_sales_order.js",
-    "public/js/calculate_open_qty_on_so_item.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
-    "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"],
+    "public/js/show_relevent_print_format_on_sales_order.js","public/js/read_only_currency_exchange_rate_sales_order.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
+    "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js"
+    ],
     "Pick List": "public.js/fetched_warranty_details_on_salesorder_picklistitem.js",
     "Serial No": ["public/js/hide_warranty_field_onserial_no.js","public/js/make_warranty_expiry_date_read_only.js"],
-    "Purchase Order": "public/js/calculate_open_qty_on_purchase_order.js",
+    "Purchase Order": [
+        "public/js/calculate_open_qty_on_purchase_order.js",
+        "public/js/fetched_supplier_email_on_purchase_order.js",
+        "public/js/validate_po_item_rate.js"
+    ],
     "Company": ["public/js/only_show_enable_lut_number.js","public/js/only_show_enable_epcg_no.js"],
     "GST Settings": "public/js/if_enable_overseas_transactions_checked_show_lut_expiry_date.js"
    
@@ -156,9 +174,17 @@ doc_events = {
     "Purchase Invoice": {
         "before_validate": "renu_customization.api.supplier_invoice_no_and_date_fetched_from_receipt.supplier_invoice_no_and_date_fetched_from_receipt"
     },
+    # "Pick List": {
+    #     "on_submit": "renu_customization.api.pick_list_handler.update_sales_order_picked_status",
+    #     "on_cancel": "renu_customization.api.pick_list_handler.update_sales_order_picked_status"
+    # },
     "Pick List Item": {
         "before_insert": "renu_customization.api.fetched_party_item_code.get_party_item_code"
     },
+    # "Delivery Note": {
+    #     "on_submit": "renu_customization.api.pick_list_handler.update_sales_order_picked_status",
+    #     "on_cancel": "renu_customization.api.pick_list_handler.update_sales_order_picked_status"
+    # },
     "Delivery Note Item": {
        "before_insert": "renu_customization.api.fetched_party_item_code_from_picklist_ti_deliverytnote.get_party_item_code_from_picklist"
     },
@@ -169,20 +195,33 @@ doc_events = {
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
         "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
-        
-        
     }
+    # "Sales Order": {
+    #     "validate": "renu_customization.api.sales_order_validation.validate_short_close_qty",
+    #     "before_save": "renu_customization.api.sales_order_utils.sync_short_close_qty",
+    #     "before_update_after_submit": [
+    #         "renu_customization.api.sales_order_validation.validate_short_close_qty",
+    #         "renu_customization.api.sales_order_utils.sync_short_close_qty"
+    #     ]
+    # }
+    
+    
 
 
 }
 
 app_include_js = [
     "/assets/renu_customization/js/uat_banner.js",
-    "/assets/renu_customization/js/serial_no_track_on_packing_slip.js"
+    # "/assets/renu_customization/js/serial_no_track_on_packing_slip.js"
 ]
 
 
 
-# override_doctype_class = {
-#     "Packing Slip": "renu_customization.overrides.packing_slip.PackingSlipOverride"
-# }
+
+scheduler_events = {
+    "cron": {
+        "0 0 * * *": [
+            "renu_customization.renu_customization.page.mrp.mrp.auto_create_purchase_orders"
+        ]
+    }
+}

@@ -65,7 +65,7 @@
         <p><b>GST No:</b></p>
         <p><b>PAN:</b></p>
         <p><b>IEC Code:</b></p>
-        <p><b>RBI Code:</b></p>
+        <!-- <p><b>RBI Code:</b></p> -->
       </td>
       <td colspan="4">
         <p>{{doc.name or ""}}</p>
@@ -73,7 +73,7 @@
         <p>{{ frappe.db.get_value("Company", doc.company, "gstin") or ""}}</p>
         <p>{{ frappe.db.get_value("Company", doc.company, "pan") or ""}}</p>
         <p class="wrap-text">{{ frappe.db.get_value("Company", doc.company, "iec_code") or ""}}</p>
-        {% set banks = frappe.get_list("Bank Account",
+        <!-- {% set banks = frappe.get_list("Bank Account",
             filters={
                 "account_subtype": "INR",
                 "company": doc.company,
@@ -84,7 +84,7 @@
         ) %}
         <p>
             {% if banks %} {{ banks[0].rbi_code or "" }}{% endif %}
-        </p>
+        </p> -->
       </td>
     </tr>
 
@@ -197,7 +197,7 @@
               <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST
                 {% if frappe.db.get_value("Customer", doc.customer, "gst_category") != "Overseas"
             and frappe.db.get_value("Customer", doc.customer, "tax_category") != "Overseas With IGST" %}
-            ( {{ doc.lut_no or "" }} Dt. {{ doc.lut_expiry_date or "" }} )
+            ( {{ doc.lut_no or "" }} Dt. {{ doc.lut_from_date or "" }} )
         {% else %}
             {{ "" }}
         {% endif %}
@@ -402,6 +402,10 @@
       <td colspan="5"><b>Terms: {{doc.tc_name or ""}}</b></td>
       <td colspan="4"><b>Payment Due: {{doc.payment_terms_template or ""}}</b></td>
     </tr>
+    <!-- <tr>
+      <td colspan="9"><b>Important Note:  &nbsp;{{doc.important_notes or ""}}</b></td>
+      
+    </tr> -->
 
     <!-- Signature -->
     <tr>
@@ -409,14 +413,38 @@
         <b>For {{doc.company or ""}}</b><br/><br/><br/>
         Authorised Signatory<br/>
       </td>
-      <td colspan="3" class=" vertical-space">
+      <!-- <td colspan="3" class=" vertical-space">
         <div>
           <span>Packing details: -</span><br/>
           <span>No. of Boxes (Nos) : - </span><span style="padding-left: 20px;">{{doc.no_of_boxes or 0}}</span><br/>
           <span>Total Wt. of Boxes (Kg): - </span><span style="padding-left: 20px;">{{doc.total_weight or 0}}</span><br/>
-          <span>Net Weight  in Kg : -</span> <span style="padding-left: 20px;">{{doc.net_weight or 0}}</span><br/>
+          <span>Net Weight in Kg : -</span> <span style="padding-left: 20px;">{{doc.net_weight or 0}}</span><br/>
           </div>
-      </td>
+      </td> -->
+      <td colspan="3" class="vertical-space">
+        <div style="width:100%;">
+            <div style="display:flex; justify-content:space-between;">
+            <span>Packing details :</span>
+            <span></span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+            <span>No. of Boxes (Nos)</span>
+            <span>{{ doc.no_of_boxes or 0 }}</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+            <span>Total Wt. of Boxes (Kg)</span>
+            <span>{{ doc.total_weight or 0 }}</span>
+            </div>
+
+            <div style="display:flex; justify-content:space-between;">
+            <span>Net Weight in Kg</span>
+            <span>{{ doc.net_weight or 0 }}</span>
+            </div>
+         </div>
+        </td>
+
     </tr>
     
    
