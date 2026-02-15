@@ -194,7 +194,12 @@
               <!-- {% set gst = frappe.get_doc("GST Settings") %} -->
 
               <!-- <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST{%if frappe.db.get_value("Customer", doc.customer, "gst_category")!="Overseas" and frappe.db.get_value("Customer", doc.customer, "tax_category") != "Overseas With IGST" %}({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}}){%else%} {{""}} {%endif%}</strong></td> -->
-              <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST
+               {% set gst_settings = frappe.get_doc("GST Settings") %}
+               {% set lut_from_date = frappe.utils.formatdate(
+                    gst_settings.lut_from_date, "dd-MM-yy"
+                ) if gst_settings and gst_settings.lut_from_date else "" %}
+
+              <!-- <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST
                 {% if frappe.db.get_value("Customer", doc.customer, "gst_category") != "Overseas"
             and frappe.db.get_value("Customer", doc.customer, "tax_category") != "Overseas With IGST" %}
             ( {{ doc.lut_no or "" }} Dt. {{ doc.lut_from_date or "" }} )
@@ -202,7 +207,19 @@
             {{ "" }}
         {% endif %}
     </strong>
+</td> -->
+            <td colspan="6">
+  <strong>
+    Supply for Export Under Letter Of Undertaking without payment of IGST
+    {% if frappe.db.get_value("Customer", doc.customer, "gst_category") != "Overseas"
+      and frappe.db.get_value("Customer", doc.customer, "tax_category") != "Overseas With IGST" %}
+        ( {{ doc.lut_no or "" }} Dt. {{ lut_from_date }} )
+    {% else %}
+        {{ "" }}
+    {% endif %}
+  </strong>
 </td>
+
 
               
 

@@ -212,7 +212,7 @@
                         </tr>
                     </tfoot>
                      
-                    <tfoot>
+                    <!-- <tfoot>
                         <tr>
                             <td colspan="7">
                                 <b>
@@ -223,7 +223,26 @@
                             </td>
                             <td colspan="1"></td>
                         </tr>
-                    </tfoot>
+                    </tfoot> -->
+                    <tfoot>
+    <tr>
+        <td colspan="7">
+            <b>
+                Supply for Export Under Letter of Undertaking without payment of IGST
+                ( ARN No. {{ doc.lut_no }}
+                &nbsp;
+                Dt. {{
+                    frappe.utils.formatdate(
+                        gst.lut_from_date,
+                        "dd-MM-yy"
+                    ) if gst.lut_from_date else ""
+                }}
+                )
+            </b>
+        </td>
+        <td colspan="1"></td>
+    </tr>
+</tfoot>
                     <tfoot>
                         <tr>
                             <td colspan="3"><b>Remission of Duties and Taxes on Exported Products (RoDTEP)</b></td>
