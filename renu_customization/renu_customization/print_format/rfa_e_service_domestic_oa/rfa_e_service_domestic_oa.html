@@ -147,13 +147,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% set pending_items = [] %}
                         {% for row in doc.items %}
-                        {% if row.open_qty > 0 %}
-                        {% set _ = pending_items.append(row) %}
-                        {% endif %}
-                        {% endfor %}
-                        {% for row in pending_items %}
                         <tr>
                             <td>{{loop.index}}</td>
                             <td>{{ row.item_code or "" }}</td>
