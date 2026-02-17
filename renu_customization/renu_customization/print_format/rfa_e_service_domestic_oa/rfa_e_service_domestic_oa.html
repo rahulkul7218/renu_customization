@@ -147,9 +147,12 @@
                         </tr>
                     </thead>
                     <tbody>
+                        {% set ns = namespace(sr_no=0) %}
                         {% for row in doc.items %}
+                        {% if row.open_qty and row.open_qty != 0 %}
+                        {% set ns.sr_no = ns.sr_no + 1 %}
                         <tr>
-                            <td>{{loop.index}}</td>
+                            <td>{{ns.sr_no}}</td>
                             <td>{{ row.item_code or "" }}</td>
                             <td>{{ row.item_name or ""}}<br>
                                 {{row.party_item_code or ""}}
@@ -168,6 +171,7 @@
                             <td>{{row.uom or ""}}</td>
                             <td>{{ "{:,.2f}".format(row.amount | float) or 0}}</td>
                         </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                     <tfoot>
