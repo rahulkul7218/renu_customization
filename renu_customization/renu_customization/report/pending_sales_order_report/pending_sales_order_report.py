@@ -339,7 +339,7 @@ def get_data(filters):
             REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
             soi.qty AS po_qty,
             soi.delivered_qty AS delivered_qty,
-            (soi.qty - soi.delivered_qty -soi.custom_picked_but_not_delivered - soi.total_short_close_qty) AS open_qty,
+            (soi.qty - soi.delivered_qty - IFNULL(soi.custom_picked_but_not_delivered, 0) - IFNULL(soi.total_short_close_qty, 0)) AS open_qty,
             soi.rate AS item_rate,
             so.currency AS currency,
             so.conversion_rate AS exchange_rate,
@@ -377,7 +377,7 @@ def get_data(filters):
                 )
         # AND i.is_stock_item = 1
         AND NOT (i.is_stock_item = 0 AND i.custom_is_freight_item = 1)
-        AND (soi.qty - soi.delivered_qty) > 0
+        AND (soi.qty - soi.delivered_qty - IFNULL(soi.custom_picked_but_not_delivered, 0) - IFNULL(soi.total_short_close_qty, 0)) > 0
         # AND (so.amended_from IS NULL OR so.name = (
         #     SELECT MAX(name)
         #     FROM `tabSales Order`
