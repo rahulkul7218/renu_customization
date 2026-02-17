@@ -2,9 +2,7 @@
 {%include "renu_customization/renu_customization/print_format/rfa_e_service_export_si/rfa_e_service_export_si.css" %}
 </style>
 
-{% set copies = ["Original Copy", "Duplicate Copy", "Triplicate Copy", "Extra Copy"] %}
- 
-{% for copy in copies %}
+
 
 {% set company = frappe.get_doc("Company", doc.company) %}
 {% set billing_address = frappe.get_doc("Address", doc.customer_address) if doc.customer_address else "" %}
@@ -16,7 +14,7 @@
     <tr > 
       <td class="no-border"></td>
       <td colspan="6" class="no-border center bold heading"><span style="text-align: center;">EXPORT INVOICE</span></td>
-      <td colspan="2" class="no-border  copy-label">{{ copy }}</td>
+     
     </tr>
 
     <!-- Exporter / Transport -->
@@ -192,7 +190,11 @@
             <tr>
               <!-- {% set gst = frappe.get_doc("GST Settings") %} -->
               <!-- <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST({{frappe.db.get_value("LUT Number", company.lut_number, "arn_no") or ""}} Dt. {{frappe.db.get_value("LUT Number", company.lut_number, "date") or ""}})</strong></td> -->
-             <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST
+               {% set gst_settings = frappe.get_doc("GST Settings") %}
+               {% set lut_from_date = frappe.utils.formatdate(
+                    gst_settings.lut_from_date, "dd-MM-yy"
+                ) if gst_settings and gst_settings.lut_from_date else "" %}
+             <!-- <td colspan="6"><strong>Supply for Export Under Letter Of Undertaking without payment of IGST
                 {% if frappe.db.get_value("Customer", doc.customer, "gst_category") != "Overseas"
             and frappe.db.get_value("Customer", doc.customer, "tax_category") != "Overseas With IGST" %}
             ( {{ doc.lut_no or "" }} Dt. {{ doc.lut_from_date or "" }} )
@@ -200,6 +202,17 @@
             {{ "" }}
         {% endif %}
     </strong>
+</td> -->
+            <td colspan="6">
+  <strong>
+    Supply for Export Under Letter Of Undertaking without payment of IGST
+    {% if frappe.db.get_value("Customer", doc.customer, "gst_category") != "Overseas"
+      and frappe.db.get_value("Customer", doc.customer, "tax_category") != "Overseas With IGST" %}
+        ( {{ doc.lut_no or "" }} Dt. {{ lut_from_date }} )
+    {% else %}
+        {{ "" }}
+    {% endif %}
+  </strong>
 </td>
             
 
@@ -428,8 +441,4 @@
     <tr ><td colspan="9" style="font-size: 9px; text-align: center;">Place of Business :-  
    {{frappe.db.get_value("Address", doc.company_address, "address_line1") or ""}}, {{frappe.db.get_value("Address", doc.company_address, "pincode") or ""}}  Website:- {{company.website or ""}}</td></tr>
   </table>
-</div><br/>
-{% if not loop.last %}
-<div style="page-break-after: always;"></div>
-{% endif %}
-{% endfor %}
+</div>
