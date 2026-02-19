@@ -11,6 +11,7 @@ def execute():
         "fieldname": "open_qty",
         "label": "Open Qty",
         "fieldtype": "Float",
+        "allow_on_submit": 1,
         "insert_after": "delivered_qty",
         "in_list_view": 1
     }).insert(ignore_permissions=True)
