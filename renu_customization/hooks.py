@@ -370,7 +370,7 @@ doctype_js = {
     "Item":["public/js/when_under_development_check_disable_checkbox_checked.js","public/js/onlyshow_purchase_warranty.js","public/js/only_show_sales_warranty.js",
     "public/js/show_purchase_warranty_only_serialno_and_allow_purchase_checked.js",
     "public/js/show_sale_warranty_only_serialno_and_allow_sale_checked.js","public/js/fetched_warrantydays_of_purchase.js",
-    "public/js/fetched_warrantydays_of_sales.js","public/js/hard_where_revision_on_item.js"],
+    "public/js/fetched_warrantydays_of_sales.js"],
     "Address":"public/js/make_mandatory_fields_on_address.js",
     "Purchase Receipt":"public/js/upload_bulk_serial_no.js",
     "Delivery Note":["public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js",
