@@ -428,6 +428,9 @@ doc_events = {
         "before_insert": "renu_customization.api.fetched_partitemcode_from_deliverynote_to_salesinvoice.get_party_item_code_from_dn"
         
     },
+    "Pick List": {
+        "before_save": "renu_customization.api.pick_list_serial_handler.distribute_serial_nos"
+    },
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
         "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
