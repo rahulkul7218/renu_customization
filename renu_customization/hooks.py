@@ -325,6 +325,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_section_and_enable_mrp_field_on_stock_setting.execute",
     "renu_customization.patches.v_0.consider_draft_so_and_po_field_on_stock_setting.execute",
     "renu_customization.patches.v_0.add_lut_start_date_on_sales_invoice.execute",
+    "renu_customization.patches.v_0.add_revised_from_field_on_item.execute",
     # "renu_customization.patches.v_0.add_auto_email_send_checkbox_on_supplier.execute",
     # "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
     # "renu_customization.patches.v_0.send_email_mrp.execute",
@@ -426,6 +427,9 @@ doc_events = {
     "Sales Invoice Item": {
         "before_insert": "renu_customization.api.fetched_partitemcode_from_deliverynote_to_salesinvoice.get_party_item_code_from_dn"
         
+    },
+    "Pick List": {
+        "before_save": "renu_customization.api.pick_list_serial_handler.distribute_serial_nos"
     },
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
