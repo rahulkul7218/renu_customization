@@ -1,11 +1,13 @@
 <style>
-    {% include "renu_customization/renu_customization/print_format/rfa_scomet/rfa_scomet.css" %}
+    {
+        % include "renu_customization/renu_customization/print_format/rfa_scomet/rfa_scomet.css" %
+    }
 </style>
 
 <div class="letter-body">
- 
-    <p class="text-right"><b>Date :</b> {{ doc.posting_date }}</p>
- 
+
+    <p class="text-right">Date : {{ doc.posting_date }}</p>
+
     <p>
 
         To,<br>
@@ -17,51 +19,55 @@
         Andheri (E),<br>
 
         Mumbai
-</p>
- 
+    </p>
+
     <p>
-<b>Sub:</b> SCOMET declaration<br>
-<b>Ref:</b> AWB &nbsp;&nbsp;&nbsp; Inv No. {{ doc.name }} Dt. {{ doc.posting_date }}
-</p>
- 
+        Sub: SCOMET declaration<br>
+        AWB No.<br>Inv No. {{ doc.name }} Dt. {{ doc.posting_date }}
+    </p>
+
     <p>
 
-        Respected Sir / Madam,<br><br>
- 
-        We are exporting (export items) to our customer 
-<b>{{ doc.customer_name }}</b> covered under {{doc.freight_prepared_by or ""}} &  
+        Respected Sir / Madam,<br>
 
-        These are electronic products used in factory floor automation & many other applications such as control systems, pharmaceuticals, SPMs etc.
- 
+        We are exporting (export items) to our customer
+        <b>{{ doc.customer_name }}</b> covered under {{doc.freight_prepared_by or ""}} &
+
+        These are electronic products used in factory floor automation & many other applications such as control
+        systems, pharmaceuticals, SPMs etc.
+
         <br><br>
 
-        We hereby declare that these contents do Not fall under 
-SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies).
-</p>
- 
+        We hereby declare that these contents do Not fall under
+        SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies).
+    </p>
+
     <p class="mt-20">
 
         You are requested to allow the same for export.
-</p>
- 
+    </p>
+
     <p class="mt-20">
 
         Thanking you,
-<br><br>
+        <br><br>
 
         Yours faithfully,
-</p><br><br>
- 
+    </p><br><br>
+
     <p class="mt-40">
-{% set sign = frappe.get_doc("Authorised Signatory", doc.authorised_signatory) %}
- 
-<b>Name:</b> {{ sign.name1 }}<br>
-<b>Designation:</b> {{ sign.designation }}<br>
-<b>Authorized Signatory</b>
-</p><br>
+        {% set sign = frappe.get_doc("Authorised Signatory", doc.authorised_signatory) %}
 
-<p>We are exporting (export items) to our customer <b>{{ doc.customer_name }}</b> Inc.covered under {{doc.freight_prepared_by or ""}} & These are electronic products used in factory floor automation & many other applications such as control systems pharmaceuticals,SPMs etc.We hereby declare that these contents do not fall under SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies).<p>
+        Name: {{ sign.name1 }}<br>
+        Designation: {{ sign.designation }}<br>
+        Authorized Signatory
+    </p><br>
 
- 
+    <p>We are exporting (export items) to our customer <b>{{ doc.customer_name }}</b> Inc.covered under
+        {{doc.freight_prepared_by or ""}} & These are electronic products used in factory floor automation & many other
+        applications such as control systems pharmaceuticals,SPMs etc.We hereby declare that these contents do not fall
+        under SCOMET List (Special Chemicals, Organisms, Materials, Equipment and Technologies).
+    <p>
+
+
 </div>
- 
