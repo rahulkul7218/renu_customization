@@ -124,7 +124,15 @@
     width: 50%;
 }
 .qrcode-section{
-    width: 20%;
+    width: 100%;
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.qrcode {
+    width: 140px;
+    height: 140px;
 }
 .address-section{
     padding: 1px;
