@@ -147,7 +147,7 @@
               <th style="width:5%;">Sr. No.</th>
               <th style="width:12%;">Item Code</th>
               <th style="width:25%;">Description of Goods</th>
-              <th style="width:10%;">Ref. / PO No.</th>
+              <th style="width:12%;">Ref. / PO No.</th>
               <th style="width:12%;">HSN Code</th>
               <th style="width:10%;">Qty</th>
               <th style="width:15%;">Unit Rate in ({{doc.currency}})</th>
@@ -164,7 +164,22 @@
                 <small> {%if row.party_item_code %}  {{row.party_item_code or ""}} {%endif%}</small>
               </td>
               
-              <td class="center">{{doc.po_no or ""}}</td>
+              <!-- <td class="center">{{doc.po_no or ""}}</td> -->
+               <td class="center">
+    {% if row.sales_order %}
+        {% set po_details = frappe.db.get_value(
+            "Sales Order",
+            row.sales_order,
+            ["po_no", "po_date"],
+            as_dict=1
+        ) %}
+        {{ po_details.po_no if po_details else "" }}<br>
+<small>{{ po_details.po_date if po_details else "" }}</small>
+    {% else %}
+        {{ doc.po_no or "" }}<br>
+<small>{{ doc.po_date or "" }}</small>
+    {% endif %}
+</td>
               <td class="center">{{row.gst_hsn_code or ""}}</td>
               <td class="right">{{row.qty or 0}}</td>
               <td class="right" style="width: 20%;">{{ "{:,.2f}".format(row.rate or 0) }}</td>
@@ -203,7 +218,7 @@
         {% endif %}
     </strong>
 </td> -->
-            <td colspan="6">
+            <td colspan="9">
   <strong>
     Supply for Export Under Letter Of Undertaking without payment of IGST
     {% if frappe.db.get_value("Customer", doc.customer, "gst_category") != "Overseas"
@@ -216,7 +231,7 @@
 </td>
             
 
-              <td colspan="3"></td>
+              <!-- <td colspan="3"></td> -->
             </tr>
           </tbody>
         </table>

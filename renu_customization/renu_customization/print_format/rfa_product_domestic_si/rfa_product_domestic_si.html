@@ -97,7 +97,7 @@
 
                     {%- set invoice_data = dict(json.loads(e_invoice_log.invoice_data)) -%}
 
-                    <img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=2) }}"
+                    <img src="data:image/png;base64,{{ get_qr_code(e_invoice_log.signed_qr_code, scale=5) }}"
                         class="qrcode">
                     {% endif %}
                 </div>

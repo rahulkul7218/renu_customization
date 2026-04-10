@@ -171,7 +171,22 @@
             {% endif %} <br />
             <small> {%if row.party_item_code %} {{row.party_item_code or ""}} {%endif%}</small>
           </td>
-          <td class="center">{{doc.po_no or ""}}<br /> <small>{{doc.po_date or ""}}</small></td>
+          <!-- <td class="center">{{doc.po_no or ""}}<br /> <small>{{doc.po_date or ""}}</small></td> -->
+           <td class="center">
+    {% if row.sales_order %}
+        {% set po_details = frappe.db.get_value(
+            "Sales Order",
+            row.sales_order,
+            ["po_no", "po_date"],
+            as_dict=1
+        ) %}
+        {{ po_details.po_no if po_details else "" }}<br>
+<small>{{ po_details.po_date if po_details else "" }}</small>
+    {% else %}
+        {{ doc.po_no or "" }}<br>
+<small>{{ doc.po_date or "" }}</small>
+    {% endif %}
+</td>
           <td class="center">{{row.gst_hsn_code or ""}}</td>
           <td class="center">{{row.qty or 0}}</td>
           <td class="right" style="width: 15%;">{{ "{:,.2f}".format(row.rate or 0) }}</td>
