@@ -7,9 +7,9 @@
  "modified": "2026-04-06 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Renu Customization",
- "name": "revenue_dashboard",
+ "name": "sales_revenue_dashboard",
  "owner": "Administrator",
- "page_name": "revenue_dashboard",
+ "page_name": "sales_revenue_dashboard",
  "roles": [
   {
    "role": "System Manager"
@@ -18,5 +18,5 @@
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "Revenue Dashboard"
+ "title": "Sales Revenue Dashboard"
 }
