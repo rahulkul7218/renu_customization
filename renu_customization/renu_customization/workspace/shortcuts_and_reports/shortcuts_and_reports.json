@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"UaaXwP-m5M\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Shortcuts and Reports</span>\",\"col\":12}},{\"id\":\"YBF8HYWcJQ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Aging Report\",\"col\":3}},{\"id\":\"ryApkPQTcy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Dashboard\",\"col\":3}}]",
+ "content": "[{\"id\":\"UaaXwP-m5M\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Shortcuts and Reports</span>\",\"col\":12}},{\"id\":\"YBF8HYWcJQ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Aging Report\",\"col\":3}},{\"id\":\"ryApkPQTcy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Dashboard\",\"col\":3}},{\"id\":\"ceSDfjurUS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Order Booking Dashboard\",\"col\":3}}]",
  "creation": "2026-04-15 17:31:35.106441",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Shortcuts and Reports",
  "links": [],
- "modified": "2026-04-15 17:50:25.741479",
+ "modified": "2026-04-16 15:48:50.117144",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "Shortcuts and Reports",
@@ -32,6 +32,13 @@
    "link_to": "Sales Revenue Aging Report",
    "report_ref_doctype": "Sales Invoice",
    "type": "Report"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Sales Order Booking Dashboard",
+   "link_to": "sales_order_booking_dashboard",
+   "type": "Page"
   },
   {
    "color": "Grey",

@@ -9,6 +9,13 @@ from io import BytesIO
 import base64
 import json
 
+@frappe.whitelist()
+def export_to_pdf(html):
+	frappe.response.filename = "sales_revenue_dashboard.pdf"
+	frappe.response.type = "binary"
+	frappe.response.filecontent = frappe.utils.pdf.get_pdf(html, {"orientation": "Landscape"})
+
+
 def prepare_filters(filters):
     if not filters:
         filters = {}
@@ -83,9 +90,9 @@ def get_dashboard_data(filters=None):
             else: 
                 dom_exp_map[i.name] = ""
 
-    if filters.get("customer_group") or filters.get("territory"):
-        cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"])
-        customer_map = {c.name: c for c in cust_list}
+    # Fetch customer info for classification and filtering
+    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"])
+    customer_map = {c.name: c for c in cust_list}
         
     if filters.get("item_group"):
         item_list = frappe.get_all("Item", fields=["name", "item_group"])
@@ -195,24 +202,33 @@ def get_dashboard_data(filters=None):
     total_rev = 0
     dom_rev = 0
     exp_rev = 0
-    total_qty = 0
+    cp_rev = 0
     unique_invoices = set()
 
     for row in data:
         amt = flt(row.get("base_amount"))
         total_rev += amt
-        total_qty += flt(row.get("qty"))
-        unique_invoices.add(row.get("invoice_id") or row.get("name") or row.get("parent"))
+        inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
+        unique_invoices.add(inv_id)
 
         if row.get("dom_exp") == "Domestic":
             dom_rev += amt
         elif row.get("dom_exp") == "Export":
             exp_rev += amt
+            
+        # Channel Partner (System Integrator, Distributor) - Robust matching
+        cust_id = invoice_map.get(inv_id)
+        cust_info = customer_map.get(cust_id)
+        if cust_info and cust_info.customer_group:
+            cg = cust_info.customer_group.lower()
+            if "system integrator" in cg or "distributor" in cg or "distributer" in cg:
+                cp_rev += amt
 
     report_summary = [
         {"label": _("Total Revenue"), "value": total_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Domestic Revenue"), "value": dom_rev, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Export Revenue"), "value": exp_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"}
+        {"label": _("Export Revenue"), "value": exp_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Channel Partner"), "value": cp_rev, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
 
     sp_revenue = {}
@@ -228,9 +244,9 @@ def get_dashboard_data(filters=None):
         cust = row.get("customer") or row.get("customer_name") or ""
         cust_revenue[cust] = cust_revenue.get(cust, 0) + amt
         
-        prod_code = row.get("item_code") or row.get("item") or ""
-        prod_revenue[prod_code] = prod_revenue.get(prod_code, 0) + amt
-        prod_names[prod_code] = row.get("item_name") or ""
+        prod_name = row.get("item_name") or row.get("item_code") or ""
+        prod_revenue[prod_name] = prod_revenue.get(prod_name, 0) + amt
+        prod_names[prod_name] = row.get("item_name") or ""
 
     def get_chart_def(title, data_dict, label_key, limit=10):
         sorted_items = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
@@ -239,7 +255,7 @@ def get_dashboard_data(filters=None):
             "title": title,
             "data": {
                 "labels": [x[0] for x in top_items],
-                "datasets": [{"name": title, "values": [x[1] for x in top_items]}]
+                "datasets": [{"name": title, "values": [flt(x[1], 2) for x in top_items]}]
             },
             "type": "donut",
             "height": 300,
@@ -249,7 +265,7 @@ def get_dashboard_data(filters=None):
     return {
         "summary": report_summary,
         "charts": {
-            "top_5_salesperson": get_chart_def("Top 5 Salesperson by Revenue", sp_revenue, "sales_person", limit=5),
+            "top_10_salesperson": get_chart_def("Top 10 Salesperson by Revenue", sp_revenue, "sales_person", limit=10),
             "top_10_customers": get_chart_def("Top 10 Customers by Revenue", cust_revenue, "customer", limit=10),
             "top_10_products": get_chart_def("Top 10 Products by Revenue", prod_revenue, "item_code", limit=10)
         },

@@ -184,7 +184,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		.page-title{color: #000 !important; }
         .page-head { border-bottom: 1px solid #ddd !important; background: #fff !important; color: #000}
         .dashboard-content { padding: 20px; background: #fff; min-height: 100vh; }
-        .summary-wrapper { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .summary-wrapper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .summary-card { 
             background: #fff; border: 1px solid var(--border-color); border-radius: 12px; 
             padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
@@ -202,18 +202,100 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .bg-cyan { background-color: #1abc9c; }
         .bg-purple { background-color: #9b59b6; }
         .bg-red { background-color: #e74c3c; }
+        
+        /* Standard chart text */
+        .frappe-chart text { font-size: 11px !important; }
+        .frappe-chart .legend-dataset-text { font-size: 11px !important; }
 
-        .charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; }
+        .charts-row { display: grid; grid-template-columns: 1fr; gap: 20px; }
         .chart-card { 
             background: var(--card-bg); border: 1px solid var(--border-color); border-radius: var(--border-radius-md); 
             padding: 24px; box-shadow: var(--shadow-sm); min-height: 400px; transition: transform 0.2s;
+            width: 100%; margin-bottom: 20px;
         }
         .chart-card:hover { transform: translateY(-2px); }
         .chart-card .title { font-size: var(--text-md); font-weight: 600; color: #000; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
         .chart-actions, .table-actions { display: flex; gap: 12px; align-items: center; }
-        .chart-card .reset-btn, .chart-card .export-btn, .table-card .export-btn { font-size: 11px; cursor: pointer; color: var(--primary); font-weight: 500; }
-        .chart-card .export-btn, .table-card .export-btn { color: var(--text-muted); }
-        .chart-card .export-btn:hover, .table-card .export-btn:hover { color: var(--primary); }
+        .chart-card .reset-btn, .chart-card .export-btn, .table-card .header .export-btn, .table-card .header .pdf-btn { 
+            font-size: 11px; cursor: pointer; color: #1a1a1a; font-weight: 500; 
+            padding: 4px 12px; border-radius: 4px; transition: all 0.2s;
+            display: inline-block;
+        }
+        .chart-card .export-btn, .table-card .header .export-btn, .table-card .header .pdf-btn { 
+            color: #6c757d; border: 1px solid transparent; 
+        }
+        .chart-card .export-btn:hover, .table-card .header .export-btn:hover, .table-card .header .pdf-btn:hover { 
+            color: #2b6cb0 !important; background: #ebf8ff !important; border-color: #bee3f8 !important; 
+        }
+
+        @media print {
+            /* 1. Global Reset & Orientation */
+            @page { size: landscape; margin: 5mm; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            body { background: #fff !important; margin: 0 !important; padding: 0 !important; font-family: Inter, sans-serif !important; width: 100% !important; }
+            
+            /* 2. Hide Dashboard UI Elements & Menu Overlap */
+            .dashboard-filter-area, .page-head, .refresh-btn, .btn, .chart-actions, .table-actions, 
+            .pill-status, .indicator-pill.red, .reset-btn, .no-print, .table-filters, .export-btn, #table_export_btn,
+            .frappe-control, .card-header .d-flex, .menu-btn-group, .page-actions-menu, .standard-actions, 
+            .btn-group, [data-label="Menu"] { display: none !important; }
+            
+            /* 3. Container Unwrapping */
+            html, body, .page-container, .layout-main-section, .layout-main, .dashboard-content, .table-card, .table-container { 
+                height: auto !important; 
+                overflow: visible !important; 
+                display: block !important; 
+                max-height: none !important;
+                max-width: none !important;
+                width: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-shadow: none !important;
+            }
+
+            /* 4. KPI Cards */
+            .summary-wrapper { display: flex !important; flex-wrap: nowrap !important; gap: 8px !important; margin: 10px 0 25px 0 !important; width: 100% !important; }
+            .summary-card { flex: 1 !important; border: 1px solid #ddd !important; padding: 10px !important; border-radius: 4px !important; page-break-inside: avoid !important; }
+
+            /* 5. Chart Preservation */
+            .chart-card { border: 1px solid #eee !important; margin-bottom: 25px !important; padding: 10px !important; page-break-inside: avoid !important; }
+            .frappe-chart, .frappe-chart svg { width: 100% !important; height: auto !important; overflow: visible !important; }
+
+            /* 6. TABLE OPTIMIZATION - No Truncation */
+            .table-card { border: none !important; margin-bottom: 30px !important; width: 100% !important; }
+            .card-header { display: block !important; border-bottom: 1.5pt solid #000 !important; margin-bottom: 8px !important; padding: 5px 0 !important; }
+            .card-header h6 { font-size: 14pt !important; font-weight: bold !important; color: #000 !important; margin: 0 !important; }
+
+            .dashboard-table { 
+                width: 100% !important; 
+                border: 0.5pt solid #000 !important; 
+                border-collapse: collapse !important; 
+                table-layout: auto !important;
+                margin: 0 !important;
+            }
+            
+            /* Scaling to fit 11-12 columns in Landscape */
+            .month-revenue-container .dashboard-table { 
+                zoom: 0.75; 
+            }
+            
+            .dashboard-table th, .dashboard-table td { 
+                border: 0.5pt solid #000 !important; 
+                padding: 3pt 5pt !important; 
+                font-size: 8.5pt !important; 
+                color: #000 !important;
+                word-wrap: break-word !important;
+            }
+            
+            /* Column Widths to prevent cramping */
+            .dashboard-table th:nth-child(1), .dashboard-table td:nth-child(1) { width: 18% !important; min-width: 160px !important; } /* Customer */
+            .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { width: 12% !important; min-width: 120px !important; } /* Sales Person */
+            .dashboard-table th:nth-child(3), .dashboard-table td:nth-child(3) { width: 20% !important; min-width: 180px !important; } /* Product */
+            
+            .dashboard-table th { background-color: #f8f8f8 !important; font-weight: bold !important; position: static !important; }
+            .total-col, .sticky-total, .sticky-total-header { background: #fff !important; position: static !important; font-weight: bold !important; }
+            .month-col, .total-col { text-align: right !important; }
+        }
 
         .table-card { 
             background: #fff; 
@@ -246,12 +328,13 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             width: 100%; 
             max-width: 100%;
             position: relative;
-            max-height: 500px;
             background: #fff;
             border-bottom-left-radius: 8px;
             border-bottom-right-radius: 8px;
             z-index: 2;
         }
+        .table-container.month-revenue-container { max-height: 480px; }
+        .table-container.invoice-list-container { max-height: 500px; }
         .dashboard-table { 
             width: 100%; 
             border-collapse: separate; 
@@ -367,10 +450,34 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				let card = $(`
                     <div class="summary-card">
                         <div class="label"><span class="indicator bg-${metric.indicator.toLowerCase()}"></span>${metric.label}</div>
-                        <div class="value">${frappe.format(metric.value, metric)}</div>
+                        <div class="value">${format_currency_short(metric.value, metric.fieldtype)}</div>
                     </div>
                 `).appendTo(summary_row);
 			});
+		}
+
+		function format_currency_short(num, fieldtype) {
+			if (!num && num !== 0) return "0.00";
+			if (fieldtype === "Int") return num;
+
+			let suffix = "";
+			let value = num;
+			if (num >= 1000000000) {
+				value = num / 1000000000;
+				suffix = " B";
+			} else if (num >= 1000000) {
+				value = num / 1000000;
+				suffix = " M";
+			} else if (num >= 1000) {
+				value = num / 1000;
+				suffix = " K";
+			}
+			return (
+				value.toLocaleString("en-IN", {
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2,
+				}) + suffix
+			);
 		}
 
 		// 2. Charts Row
@@ -378,7 +485,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 		// Render each chart object provided by the standard controller
 		const chart_config = {
-			top_5_salesperson: { field: "sales_person", title: "Salesperson" },
+			top_10_salesperson: { field: "sales_person", title: "Salesperson" },
 			top_10_customers: { field: "customer", title: "Customer" },
 			top_10_products: { field: "item_code", title: "Product" },
 		};
@@ -406,9 +513,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                 </div>
             `).appendTo(charts_row);
 
+			page.chart_instances = page.chart_instances || {};
 			setTimeout(() => {
 				try {
-					new frappe.Chart(`#wrapper_${chart_id}`, {
+					page.chart_instances[chart_id] = new frappe.Chart(`#wrapper_${chart_id}`, {
 						data: chart_obj.data,
 						type: chart_obj.type || "donut",
 						height: 300,
@@ -419,6 +527,9 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 								page.filter_group.set_value(config.field, event.label);
 								page.refresh();
 							}
+						},
+						tooltipOptions: {
+							formatTooltipY: (d) => format_currency_short(d),
 						},
 					});
 				} catch (e) {
@@ -455,9 +566,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <div id="filter_customer_link" style="width: 200px;"></div>
                         <div id="filter_sp_link" style="width: 200px;"></div>
                         <div id="filter_product_link" style="width: 200px;"></div>
+                        <span class="export-btn" id="export_month_table" title="Export this table to Excel" style="align-self: center; margin-left: 10px;">Export</span>
                     </div>
                 </div>
-                <div class="table-container" style="max-height: 480px; flex: 1; overflow-y: auto;">
+                <div class="table-container month-revenue-container">
                     <table class="dashboard-table" id="consolidated_table">
                         <thead>
                             <tr>
@@ -478,9 +590,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                     <span>Sales Invoices</span>
                     <div class="table-actions">
                         <span class="text-muted" id="invoice_count_label" style="font-size: 12px; font-weight: 400; margin-right: 15px;"></span>
+                        <span class="export-btn" id="export_invoice_table" title="Export this table to Excel">Export</span>
                     </div>
                 </div>
-                <div class="table-container" style="max-height: 500px;">
+                <div class="table-container invoice-list-container">
                     <table class="dashboard-table">
                         <thead>
                             <tr>
@@ -493,7 +606,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 150px;">Item</th>
                                 <th style="min-width: 140px;">Sales Person</th>
                                 <th style="text-align: right; min-width: 100px;">Qty</th>
-                                <th style="text-align: right; min-width: 160px; border-right: none;">Amount (INR)</th>
+                                <th style="text-align: right; min-width: 160px; border-right: none;">Amount</th>
                             </tr>
                         </thead>
                         <tbody id="invoice_table_body"></tbody>
@@ -543,7 +656,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 						.map((m) => {
 							let val = row.months[m.key] || 0;
 							total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
-							return `<td class="month-col">${frappe.format(val, { fieldtype: "Currency", currency: "INR" })}</td>`;
+							return `<td class="month-col">${format_currency_short(val)}</td>`;
 						})
 						.join("");
 
@@ -557,7 +670,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 </div>
                             </td>
                             ${month_cells}
-                            <td class="total-col">${frappe.format(row.total, { fieldtype: "Currency", currency: "INR" })}</td>
+                            <td class="total-col">${format_currency_short(row.total)}</td>
                         </tr>
                     `);
 				});
@@ -565,14 +678,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				let footer_cells = months
 					.map(
 						(m) =>
-							`<td class="month-col" style="font-weight: 700;">${frappe.format(total_month_amts[m.key] || 0, { fieldtype: "Currency", currency: "INR" })}</td>`,
+							`<td class="month-col" style="font-weight: 700;">${format_currency_short(total_month_amts[m.key] || 0)}</td>`,
 					)
 					.join("");
 				tbody_summary.append(`
                     <tr class="sticky-total">
                         <td colspan="3" style="text-align: right; font-weight: 700;">Grand Total</td>
                         ${footer_cells}
-                        <td class="total-col">${frappe.format(grand_total, { fieldtype: "Currency", currency: "INR" })}</td>
+                        <td class="total-col">${format_currency_short(grand_total)}</td>
                     </tr>
                 `);
 			}
@@ -622,7 +735,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             <td><span class="text-muted">${row.item_code}</span></td>
                             <td>${row.sales_person || "-"}</td>
                             <td style="text-align: right;">${frappe.format(row.qty, { fieldtype: "Float" })}</td>
-                            <td style="text-align: right; font-weight: 600;">${frappe.format(row.base_amount, { fieldtype: "Currency", currency: "INR" })}</td>
+                            <td style="text-align: right; font-weight: 600;">${format_currency_short(row.base_amount)}</td>
                         </tr>
                     `);
 				});
@@ -631,7 +744,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                     <tr class="sticky-total">
                         <td colspan="8" style="text-align: right; font-weight: 700;">Total</td>
                         <td style="text-align: right; font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
-                        <td style="text-align: right; font-weight: 700; color: var(--primary); white-space: nowrap;">${frappe.format(total_amt, { fieldtype: "Currency", currency: "INR" })}</td>
+                        <td style="text-align: right; font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
                     </tr>
                 `);
 			}
@@ -663,8 +776,9 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		};
 
 		const make_hybrid_filter = (parent_id, placeholder, options) => {
+			let parent = card.find("#" + parent_id);
 			let ctrl = frappe.ui.form.make_control({
-				parent: card.find("#" + parent_id),
+				parent: parent,
 				df: {
 					fieldtype: "Autocomplete",
 					placeholder: placeholder,
@@ -674,16 +788,35 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				render_input: true,
 			});
 
+			parent.css("position", "relative");
 			if (ctrl.$input) {
+				let control_input = parent.find(".control-input");
+				control_input.css("position", "relative");
+				ctrl.$input.css({ "padding-right": "24px" });
+
+				let clear_btn = $(
+					'<span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #adb5bd; font-size: 16px; font-weight: 600; display: none; line-height: 1; user-select: none;">&times;</span>',
+				).appendTo(control_input);
+
 				// Capture all possible ways the value can change
 				ctrl.$input.on("input change", () => {
+					if (ctrl.$input.val()) clear_btn.show();
+					else clear_btn.hide();
 					apply_local_filters();
 				});
 
 				// Specifically handle selection from the Frappe/Awesomplete dropdown
 				ctrl.$input.on("awesomplete-selectcomplete", () => {
+					if (ctrl.$input.val()) clear_btn.show();
+					else clear_btn.hide();
 					// Small delay to ensure the value is fully committed to the input field
 					setTimeout(() => apply_local_filters(), 10);
+				});
+
+				clear_btn.on("click", function () {
+					ctrl.$input.val("").trigger("change");
+					ctrl.$input.focus();
+					clear_btn.hide();
 				});
 			}
 			return ctrl;
@@ -755,7 +888,9 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			html += `<h3>Key Performance Indicators</h3><table><tr>`;
 			data.summary.forEach((m) => (html += `<th>${m.label}</th>`));
 			html += `</tr><tr>`;
-			data.summary.forEach((m) => (html += `<td>${m.value}</td>`));
+			data.summary.forEach(
+				(m) => (html += `<td>${format_currency_short(m.value, m.fieldtype)}</td>`),
+			);
 			html += `</tr></table>`;
 
 			// II. Charts Section (Visual Data - Using Tables for Excel Compatibility)
@@ -765,26 +900,25 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			let sales_person_summary = {};
 			if (
 				data.charts &&
-				data.charts.top_5_salesperson &&
-				data.charts.top_5_salesperson.data
+				data.charts.top_10_salesperson &&
+				data.charts.top_10_salesperson.data
 			) {
-				const d = data.charts.top_5_salesperson.data;
+				const d = data.charts.top_10_salesperson.data;
 				d.labels.forEach((label, i) => {
 					sales_person_summary[label] = d.datasets[0].values[i];
 				});
 			}
 
 			if (Object.keys(sales_person_summary).length) {
-				html += `<h4>Top 5 Salesperson by Revenue</h4><table border="1" style="width: 100%;">
-					<tr style="background: #f4f4f4;"><th>Sales Person</th><th>Amount (INR)</th><th style="width: 30%;">Revenue Share</th></tr>`;
+				html += `<h4>Top 10 Salesperson by Revenue</h4><table border="1" style="width: 100%;">
+					<tr style="background: #f4f4f4;"><th>Sales Person</th><th>Amount</th><th>Share %</th></tr>`;
 				const entries = Object.entries(sales_person_summary)
 					.sort((a, b) => b[1] - a[1])
-					.slice(0, 5);
-				const max_val = entries[0] ? entries[0][1] : 1;
+					.slice(0, 10);
+				const total_top = entries.reduce((acc, curr) => acc + curr[1], 0);
 				entries.forEach(([name, val]) => {
-					const pct = (val / max_val) * 100;
-					html += `<tr><td>${name}</td><td>${frappe.format(val, { fieldtype: "Currency", currency: "INR" })}</td>
-						<td style="background: #ffffff;"><div style="background: #3498db; width: ${pct}%; height: 18px; color: #ffffff; font-size: 10px; padding-left: 4px; font-weight: bold;">${Math.round(pct)}%</div></td></tr>`;
+					const pct = total_top > 0 ? (val / total_top) * 100 : 0;
+					html += `<tr><td>${name}</td><td>${format_currency_short(val)}</td><td>${pct.toFixed(1)}%</td></tr>`;
 				});
 				html += `</table><br>`;
 			}
@@ -800,15 +934,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			if (Object.keys(customer_summary).length) {
 				html += `<h4>Top 10 Customers by Revenue</h4><table border="1" style="width: 100%;">
-					<tr style="background: #f4f4f4;"><th>Customer</th><th>Amount (INR)</th><th style="width: 30%;">Revenue Share</th></tr>`;
+					<tr style="background: #f4f4f4;"><th>Customer</th><th>Amount</th><th>Share %</th></tr>`;
 				const entries = Object.entries(customer_summary)
 					.sort((a, b) => b[1] - a[1])
 					.slice(0, 10);
-				const max_val = entries[0] ? entries[0][1] : 1;
+				const total_top = entries.reduce((acc, curr) => acc + curr[1], 0);
 				entries.forEach(([name, val]) => {
-					const pct = (val / max_val) * 100;
-					html += `<tr><td>${name}</td><td>${frappe.format(val, { fieldtype: "Currency", currency: "INR" })}</td>
-						<td style="background: #ffffff;"><div style="background: #2ecc71; width: ${pct}%; height: 18px; color: #ffffff; font-size: 10px; padding-left: 4px; font-weight: bold;">${Math.round(pct)}%</div></td></tr>`;
+					const pct = total_top > 0 ? (val / total_top) * 100 : 0;
+					html += `<tr><td>${name}</td><td>${format_currency_short(val)}</td><td>${pct.toFixed(1)}%</td></tr>`;
 				});
 				html += `</table><br>`;
 			}
@@ -824,15 +957,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			if (Object.keys(product_summary).length) {
 				html += `<h4>Top 10 Products by Revenue</h4><table border="1" style="width: 100%;">
-					<tr style="background: #f4f4f4;"><th>Product (Item)</th><th>Amount (INR)</th><th style="width: 30%;">Revenue Share</th></tr>`;
+					<tr style="background: #f4f4f4;"><th>Product (Item)</th><th>Amount</th><th>Share %</th></tr>`;
 				const entries = Object.entries(product_summary)
 					.sort((a, b) => b[1] - a[1])
 					.slice(0, 10);
-				const max_val = entries[0] ? entries[0][1] : 1;
+				const total_top = entries.reduce((acc, curr) => acc + curr[1], 0);
 				entries.forEach(([name, val]) => {
-					const pct = (val / max_val) * 100;
-					html += `<tr><td>${name}</td><td>${frappe.format(val, { fieldtype: "Currency", currency: "INR" })}</td>
-						<td style="background: #ffffff;"><div style="background: #e67e22; width: ${pct}%; height: 18px; color: #ffffff; font-size: 10px; padding-left: 4px; font-weight: bold;">${Math.round(pct)}%</div></td></tr>`;
+					const pct = total_top > 0 ? (val / total_top) * 100 : 0;
+					html += `<tr><td>${name}</td><td>${format_currency_short(val)}</td><td>${pct.toFixed(1)}%</td></tr>`;
 				});
 				html += `</table><br>`;
 			}
@@ -844,7 +976,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			// V. Detailed Records
 			html += `<h3>Detailed Sales Invoices List</h3><table><thead><tr>
-				<th>Invoice ID</th><th>Date</th><th>Type</th><th>Invoice Type</th><th>Status</th><th>Customer</th><th>Item</th><th>Sales Person</th><th>Qty</th><th>Amount (INR)</th>
+				<th>Invoice ID</th><th>Date</th><th>Type</th><th>Invoice Type</th><th>Status</th><th>Customer</th><th>Item</th><th>Sales Person</th><th>Qty</th><th>Amount</th>
 			</tr></thead><tbody>`;
 			export_data.forEach((row) => {
 				html += `<tr>
@@ -857,7 +989,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					<td>${row.item_code}</td>
 					<td>${row.sales_person || ""}</td>
 					<td>${row.qty}</td>
-					<td>${row.base_amount}</td>
+					<td>${format_currency_short(row.base_amount || 0)}</td>
 				</tr>`;
 			});
 			html += `</tbody></table></body></html>`;
@@ -870,25 +1002,217 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			link.click();
 		};
 
-		// Button Management
+		// 0. Button Management - Clear existing to avoid duplicates
 		page.clear_inner_toolbar();
 		page.clear_menu();
 		page.clear_custom_actions();
 
-		// 1. Primary Export Action
-		page.set_primary_action(__("Export to Excel"), () => export_to_excel());
+		// 1. Primary Action: Refresh
+		page.set_primary_action(__("Refresh"), () => page.refresh());
 
-		// 2. Secondary Refresh
-		page.add_inner_button(__("Refresh"), () => {
-			page.refresh();
+		// 2. Export Menu Options
+		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+
+		page.add_menu_item(__("Export to PDF"), async () => {
+			const report_date = frappe.datetime.now_datetime();
+			const period = page.filter_group.get_values().date_range
+				? page.filter_group.get_values().date_range.join(" to ")
+				: "All Time";
+
+			// Robust SVG to PNG Converter (Preserves Aspect Ratio)
+			const get_chart_png = (chart_id) => {
+				return new Promise((resolve) => {
+					const svg_el = document.querySelector(`#wrapper_${chart_id} svg`);
+					if (!svg_el) return resolve("");
+
+					try {
+						// Get actual dimensions to preserve aspect ratio
+						const bbox = svg_el.getBoundingClientRect();
+						const width = bbox.width || 800;
+						const height = bbox.height || 450;
+
+						const svg_data = new XMLSerializer().serializeToString(svg_el);
+						const canvas = document.createElement("canvas");
+						const ctx = canvas.getContext("2d");
+						const img = new Image();
+
+						img.onload = () => {
+							// Use a high-quality 2x multiplier
+							canvas.width = width * 2;
+							canvas.height = height * 2;
+							ctx.fillStyle = "#ffffff";
+							ctx.fillRect(0, 0, canvas.width, canvas.height);
+							ctx.drawImage(img, 0, 0, width * 2, height * 2);
+							resolve(canvas.toDataURL("image/png"));
+						};
+
+						img.onerror = () => resolve("");
+						img.src =
+							"data:image/svg+xml;base64," +
+							btoa(unescape(encodeURIComponent(svg_data)));
+					} catch (e) {
+						resolve("");
+					}
+				});
+			};
+
+			// Wait for all charts to be converted to PNG
+			frappe.show_alert({ message: __("Preparing charts for PDF..."), indicator: "blue" });
+			const [png1, png2, png3] = await Promise.all([
+				get_chart_png("top_10_salesperson"),
+				get_chart_png("top_10_customers"),
+				get_chart_png("top_10_products"),
+			]);
+
+			const chart_html = (png, title) => {
+				if (!png)
+					return `<div style="padding: 20px; border: 1px dashed #ccc; margin-bottom: 20px;">[Chart: ${title} Not Loaded]</div>`;
+				return `
+					<div style="text-align: center; margin-bottom: 40px; page-break-inside: avoid; border-bottom: 1.5pt solid #eee; padding-bottom: 25px;">
+						<h4 style="margin-bottom: 10px; font-size: 16px; color: #000; text-transform: uppercase;">${title}</h4>
+						<img src="${png}" style="width: 850px; height: auto; max-width: 100%; border:none; display: block; margin: 0 auto;">
+					</div>
+				`;
+			};
+
+			let html = `
+				<html>
+				<head>
+					<meta charset="utf-8">
+					<style>
+						body { font-family: sans-serif; padding: 20px; color: #333; margin: 0; }
+						.report-header { text-align: center; margin-bottom: 30px; border-bottom: 2pt solid #000; padding-bottom: 12px; }
+						.kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 12px; margin-bottom: 30px; }
+						.kpi-card { display: table-cell; border: 1px solid #ccc; padding: 15px; text-align: center; background: #f9f9f9; width: 25%; }
+						.kpi-label { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; }
+						.kpi-value { font-size: 18px; font-weight: bold; color: #000; }
+						
+						h3 { margin-top: 30px; border-bottom: 1pt solid #000; padding-bottom: 6px; color: #000; font-size: 16px; page-break-after: avoid; }
+						h4 { margin: 15px 0 10px 0; color: #444; font-size: 13px; border-bottom: 0.5pt solid #eee; }
+						table { width: 100%; border-collapse: collapse; margin-bottom: 25px; table-layout: auto; }
+						th, td { border: 0.5pt solid #000; padding: 6px 10px; text-align: left; font-size: 10px; line-height: 1.3; }
+						th { background-color: #f2f2f2; font-weight: bold; text-transform: uppercase; }
+						
+						.page-break { page-break-after: always; }
+						.row { display: table; width: 100%; table-layout: fixed; }
+						.col { display: table-cell; vertical-align: top; padding: 5px; }
+					</style>
+				</head>
+				<body>
+					<div class="report-header">
+						<h1 style="margin:0; font-size: 24px;">Sales Revenue Dashboard</h1>
+						<p style="font-size: 14px; color: #555; margin: 8px 0;">${period}</p>
+						<p style="font-size: 11px; color: #999; margin: 0;">Generated: ${report_date}</p>
+					</div>
+
+					<div class="kpi-wrapper">
+						${data.summary
+							.map(
+								(m) => `
+							<div class="kpi-card">
+								<div class="kpi-label">${m.label}</div>
+								<div class="kpi-value">${format_currency_short(m.value, m.fieldtype)}</div>
+							</div>
+						`,
+							)
+							.join("")}
+					</div>
+
+					<h3>Visual Analytics</h3>
+					<div style="text-align: center;">
+						${chart_html(png1, "Top 10 Salesperson Performance")}
+						${chart_html(png2, "Top 10 Customers Performance")}
+						${chart_html(png3, "Top 10 Products Performance")}
+					</div>
+
+					<div class="page-break"></div>
+
+					<h3>Data Summary Breakdown</h3>
+					<div class="row">
+						<div class="col" style="padding-right: 15px;">
+							<h4>Top 10 Salesperson by Revenue</h4>
+							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
+							${(data.charts.top_10_salesperson.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_salesperson.data.datasets[0].values[i])}</td></tr>`).join("")}
+							</tbody></table>
+						</div>
+						<div class="col" style="padding-right: 15px;">
+							<h4>Top 10 Customers by Revenue</h4>
+							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
+							${(data.charts.top_10_customers.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_customers.data.datasets[0].values[i])}</td></tr>`).join("")}
+							</tbody></table>
+						</div>
+						<div class="col">
+							<h4>Top 10 Products by Revenue</h4>
+							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
+							${(data.charts.top_10_products.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_products.data.datasets[0].values[i])}</td></tr>`).join("")}
+							</tbody></table>
+						</div>
+					</div>
+
+					<div class="page-break"></div>
+
+					<h3>Month-Wise Revenue Breakdown</h3>
+					<table>
+						${card.find("#consolidated_table").html()}
+					</table>
+
+					<h3>Detailed Sales Invoices List</h3>
+					<table>
+						<thead>${$("#invoice_table_body").closest("table").find("thead").html()}</thead>
+						<tbody>${$("#invoice_table_body").html()}</tbody>
+					</table>
+				</body>
+				</html>
+			`;
+
+			const method_url =
+				"/api/method/renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.export_to_pdf";
+			const $form =
+				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
+				<input type="hidden" name="html" value="">
+				<input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
+			</form>`).appendTo("body");
+
+			$form.find('input[name="html"]').val(html);
+			$form.submit();
+			$form.remove();
 		});
 
-		// 3. Force-remove default duplicates
-		$(".page-head .menu-btn-group").hide();
+		// 3. Single Table Export Handlers
+		card.find("#export_month_table").on("click", () => {
+			let html = `<html><head><meta charset="utf-8"></head><body><h3>Month-Wise Revenue</h3><table border="1">`;
+			html += card.find("#consolidated_table").html();
+			html += `</table></body></html>`;
+			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+			const url = window.URL.createObjectURL(blob);
+			const btn = document.createElement("a");
+			btn.href = url;
+			btn.download = `Month_Wise_Revenue_${frappe.datetime.now_date()}.xls`;
+			btn.click();
+		});
+
+		card.find("#export_invoice_table").on("click", () => {
+			let html = `<html><head><meta charset="utf-8"></head><body><h3>Sales Invoices</h3><table border="1">`;
+			// Use the table without the filter icons if possible, but the current table has headers and body
+			html +=
+				"<thead>" +
+				card.find("#invoice_table_body").closest("table").find("thead").html() +
+				"</thead>";
+			html += "<tbody>" + card.find("#invoice_table_body").html() + "</tbody>";
+			html += `</table></body></html>`;
+			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
+			const url = window.URL.createObjectURL(blob);
+			const btn = document.createElement("a");
+			btn.href = url;
+			btn.download = `Sales_Invoices_${frappe.datetime.now_date()}.xls`;
+			btn.click();
+		});
+
+		// 5. Force-remove default duplicates (be specific to avoid hiding our own menu)
 		$(".page-head .standard-actions .btn-secondary:contains('Refresh')").hide();
 
-		// 4. Remove small local buttons
-		$(".chart-card .export-btn, .row-export-btn, #table_export_btn").remove();
+		// 6. Remove small local buttons (except the ones we just added in headers)
+		$(".chart-card .export-btn, .row-export-btn").remove();
 	}
 
 	// Trigger initial load automatically
