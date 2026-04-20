@@ -1,7 +1,7 @@
 frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Sales Revenue Dashboard"),
+		title: __("Sales Revenue Dashboard (Million INR)"),
 		single_column: true,
 	});
 
@@ -457,26 +457,18 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		}
 
 		function format_currency_short(num, fieldtype) {
-			if (!num && num !== 0) return "0.00";
+			if (!num && num !== 0) return "₹ 0.00 M";
 			if (fieldtype === "Int") return num;
 
-			let suffix = "";
-			let value = num;
-			if (num >= 1000000000) {
-				value = num / 1000000000;
-				suffix = " B";
-			} else if (num >= 1000000) {
-				value = num / 1000000;
-				suffix = " M";
-			} else if (num >= 1000) {
-				value = num / 1000;
-				suffix = " K";
-			}
+			// Convert to Million INR
+			let value = flt(num) / 1000000;
+			
 			return (
-				value.toLocaleString("en-IN", {
+				"₹ " +
+				value.toLocaleString("en-US", {
 					minimumFractionDigits: 2,
 					maximumFractionDigits: 2,
-				}) + suffix
+				}) + " M"
 			);
 		}
 
@@ -577,7 +569,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 180px;">Sales Person</th>
                                 <th style="min-width: 280px;">Product</th>
                                 ${months.map((m) => `<th class="month-col">${m.key}</th>`).join("")}
-                                <th class="total-col sticky-total-header">Total</th>
+                                <th class="total-col sticky-total-header">Total (M)</th>
                             </tr>
                         </thead>
                         <tbody id="consolidated_table_body"></tbody>
@@ -606,7 +598,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 150px;">Item</th>
                                 <th style="min-width: 140px;">Sales Person</th>
                                 <th style="text-align: right; min-width: 100px;">Qty</th>
-                                <th style="text-align: right; min-width: 160px; border-right: none;">Amount</th>
+                                <th style="text-align: right; min-width: 160px; border-right: none;">Amount (M)</th>
                             </tr>
                         </thead>
                         <tbody id="invoice_table_body"></tbody>
@@ -1130,19 +1122,19 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					<h3>Data Summary Breakdown</h3>
 					<div class="row">
 						<div class="col" style="padding-right: 15px;">
-							<h4>Top 10 Salesperson by Revenue</h4>
+							<h4>Top 10 Salesperson by Revenue (M)</h4>
 							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
 							${(data.charts.top_10_salesperson.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_salesperson.data.datasets[0].values[i])}</td></tr>`).join("")}
 							</tbody></table>
 						</div>
 						<div class="col" style="padding-right: 15px;">
-							<h4>Top 10 Customers by Revenue</h4>
+							<h4>Top 10 Customers by Revenue (M)</h4>
 							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
 							${(data.charts.top_10_customers.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_customers.data.datasets[0].values[i])}</td></tr>`).join("")}
 							</tbody></table>
 						</div>
 						<div class="col">
-							<h4>Top 10 Products by Revenue</h4>
+							<h4>Top 10 Products by Revenue (M)</h4>
 							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
 							${(data.charts.top_10_products.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_products.data.datasets[0].values[i])}</td></tr>`).join("")}
 							</tbody></table>
@@ -1151,12 +1143,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 					<div class="page-break"></div>
 
-					<h3>Month-Wise Revenue Breakdown</h3>
+					<h3>Month-Wise Revenue Breakdown (M)</h3>
 					<table>
 						${card.find("#consolidated_table").html()}
 					</table>
 
-					<h3>Detailed Sales Invoices List</h3>
+					<h3>Detailed Sales Invoices List (M)</h3>
 					<table>
 						<thead>${$("#invoice_table_body").closest("table").find("thead").html()}</thead>
 						<tbody>${$("#invoice_table_body").html()}</tbody>

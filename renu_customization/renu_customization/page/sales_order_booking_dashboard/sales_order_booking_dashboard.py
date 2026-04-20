@@ -88,6 +88,18 @@ def get_dashboard_data(filters=None):
         sos = frappe.get_all("Sales Order", filters={"name": ("in", so_names)}, fields=so_fields)
         so_info_map = {s.name: s for s in sos}
 
+    so_item_map = {}
+    if so_names:
+        so_items = frappe.get_all("Sales Order Item", 
+            filters={"parent": ("in", so_names)}, 
+            fields=["parent", "item_code", "returned_qty", "base_rate"]
+        )
+        for item in so_items:
+            key = (item.parent, item.item_code)
+            if key not in so_item_map:
+                so_item_map[key] = []
+            so_item_map[key].append(item)
+
     cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"])
     customer_map = {c.name: c for c in cust_list}
 
@@ -99,6 +111,25 @@ def get_dashboard_data(filters=None):
         row["customer"] = s_info.get("customer")
         row["per_billed"] = s_info.get("per_billed", 0)
         row["invoice_type"] = row.get("invoice_type") or s_info.get("invoice_type")
+
+        # Explicitly exclude Cancelled and Draft
+        if row["status"] in ("Cancelled", "Draft"):
+            keep = False
+
+        # Calculate Returns
+        item_code = row.get("item_code")
+        base_amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
+        returned_val = 0
+        
+        if so_id and item_code and (so_id, item_code) in so_item_map:
+            matched_items = so_item_map[(so_id, item_code)]
+            if matched_items:
+                mi = matched_items.pop(0)
+                returned_val = flt(mi.get("returned_qty", 0)) * flt(mi.get("base_rate", 0))
+        
+        net_amt = max(0, base_amt - returned_val)
+        row["po_total"] = net_amt
+        row["total_net_amount_(inr)"] = net_amt
         
         # Classification for Domestic/Export (In Sales Order report it is 'domestic/export')
         row["dom_exp"] = row.get("domestic/export") or row.get("domestic_export")
