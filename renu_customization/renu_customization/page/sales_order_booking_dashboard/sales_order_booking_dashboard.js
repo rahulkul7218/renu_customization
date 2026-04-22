@@ -678,12 +678,29 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		};
 
 		let html = `<html><head><style>
-			body { font-family: sans-serif; padding: 20px; }
-			.header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
-			table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px; }
-			th, td { border: 1px solid #ddd; padding: 6px 8px; }
-			th { background: #f8f9fa; font-weight: bold; }
-			h3 { margin-top: 30px; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+			body { font-family: sans-serif; padding: 20px; color: #333; margin: 0; }
+			.header { text-align: center; border-bottom: 2pt solid #000; margin-bottom: 30px; padding-bottom: 12px; }
+			table { width: 100%; border-collapse: collapse; margin-bottom: 25px; table-layout: fixed; border: 0.5pt solid #000; }
+			th, td { border: 0.5pt solid #000; padding: 4px 6px; text-align: left; font-size: 8.5pt; line-height: 1.2; word-wrap: break-word; overflow-wrap: break-word; white-space: normal !important; vertical-align: top; }
+			th { background: #f2f2f2; font-weight: bold; text-transform: uppercase; }
+            
+            /* Month Table */
+            .month-table th:nth-child(1), .month-table td:nth-child(1) { width: 18%; }
+            .month-table th:nth-child(2), .month-table td:nth-child(2) { width: 12%; }
+            .month-table th:nth-child(3), .month-table td:nth-child(3) { width: 22%; }
+            .month-table .month-col { text-align: right; }
+
+            /* Detailed List Table */
+            .so-list-table th:nth-child(1), .so-list-table td:nth-child(1) { width: 12%; } /* Order ID */
+            .so-list-table th:nth-child(2), .so-list-table td:nth-child(2) { width: 9%; }  /* Date */
+            .so-list-table th:nth-child(3), .so-list-table td:nth-child(3) { width: 8%; }  /* Status */
+            .so-list-table th:nth-child(4), .so-list-table td:nth-child(4) { width: 16%; } /* Customer */
+            .so-list-table th:nth-child(5), .so-list-table td:nth-child(5) { width: 14%; } /* Item */
+            .so-list-table th:nth-child(6), .so-list-table td:nth-child(6) { width: 15%; } /* SP */
+            .so-list-table th:nth-child(7), .so-list-table td:nth-child(7) { width: 6%; text-align: right; } /* Qty */
+            .so-list-table th:nth-child(8), .so-list-table td:nth-child(8) { width: 10%; text-align: right; } /* Amt */
+
+			h3 { margin-top: 30px; margin-bottom: 15px; border-bottom: 1pt solid #ddd; padding-bottom: 5px; font-size: 14pt; }
 		</style></head><body>
 			<div class="header"><h1>Sales Order Booking Dashboard (Million INR)</h1></div>
 			${chart_h(p1, "Salesperson Order Value (M)")}
@@ -696,10 +713,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			${chart_t("top_10_products", "Top 10 Products by Order Value (M)")}
 			
 			<h3>Month-Wise Order Value (M)</h3>
-			<table>${page.container.find("#so_month_body").closest("table").html()}</table>
+			<table class="month-table">${page.container.find("#so_month_body").closest("table").html()}</table>
 			
 			<h3>Sales Order Details (M)</h3>
-			<table>${page.container.find("#so_list_body").closest("table").html()}</table>
+			<table class="so-list-table">${page.container.find("#so_list_body").closest("table").html()}</table>
 		</body></html>`;
 
 		const method =

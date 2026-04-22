@@ -6,7 +6,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 	});
 
 	page.set_primary_action(__("Refresh"), () => page.refresh());
-	page.add_menu_item(__("Export to Excel"), () => download_excel());
 
 	// Standard Frappe Filters - Using a dedicated container to avoid conflicts with standard page styles
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
@@ -274,23 +273,29 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                 margin: 0 !important;
             }
             
-            /* Scaling to fit 11-12 columns in Landscape */
-            .month-revenue-container .dashboard-table { 
-                zoom: 0.75; 
+            /* Scaling to fit all columns in Landscape */
+            .table-container { overflow: visible !important; }
+            .dashboard-table { 
+                table-layout: fixed !important;
+                width: 100% !important;
+                zoom: 0.8; 
             }
             
             .dashboard-table th, .dashboard-table td { 
                 border: 0.5pt solid #000 !important; 
-                padding: 3pt 5pt !important; 
-                font-size: 8.5pt !important; 
+                padding: 2pt 4pt !important; 
+                font-size: 7.5pt !important; 
                 color: #000 !important;
                 word-wrap: break-word !important;
+                overflow-wrap: break-word !important;
+                white-space: normal !important;
+                vertical-align: top !important;
             }
             
-            /* Column Widths to prevent cramping */
-            .dashboard-table th:nth-child(1), .dashboard-table td:nth-child(1) { width: 18% !important; min-width: 160px !important; } /* Customer */
-            .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { width: 12% !important; min-width: 120px !important; } /* Sales Person */
-            .dashboard-table th:nth-child(3), .dashboard-table td:nth-child(3) { width: 20% !important; min-width: 180px !important; } /* Product */
+            /* Column Widths to ensure fit */
+            .dashboard-table th:nth-child(1), .dashboard-table td:nth-child(1) { width: 15% !important; } /* Customer */
+            .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { width: 12% !important; } /* Sales Person */
+            .dashboard-table th:nth-child(3), .dashboard-table td:nth-child(3) { width: 18% !important; } /* Product */
             
             .dashboard-table th { background-color: #f8f8f8 !important; font-weight: bold !important; position: static !important; }
             .total-col, .sticky-total, .sticky-total-header { background: #fff !important; position: static !important; font-weight: bold !important; }
@@ -418,7 +423,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .month-col { min-width: 140px; text-align: right !important; white-space: nowrap; }
         .total-col { min-width: 160px; text-align: right !important; font-weight: 700; color: var(--primary); white-space: nowrap; }
         .dashboard-table th, .dashboard-table td { min-width: 120px; }
-        .dashboard-table th:first-child, .dashboard-table td:first-child { min-width: 250px; }
+        .dashboard-table th:first-child, .dashboard-table td:first-child { min-width: 50px !important; width: 50px !important; text-align: center !important; }
+        #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { min-width: 250px; }
     </style>`).appendTo(page.main);
 
 	function render_dashboard(data) {
@@ -565,6 +571,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                     <table class="dashboard-table" id="consolidated_table">
                         <thead>
                             <tr>
+                                <th style="width: 50px; text-align: center;">S.No.</th>
                                 <th style="min-width: 250px;">Customer</th>
                                 <th style="min-width: 180px;">Sales Person</th>
                                 <th style="min-width: 280px;">Product</th>
@@ -589,6 +596,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                     <table class="dashboard-table">
                         <thead>
                             <tr>
+                                <th style="width: 50px; text-align: center;">S.No.</th>
                                 <th style="min-width: 140px;">Invoice ID</th>
                                 <th style="min-width: 110px;">Date</th>
                                 <th style="min-width: 100px;">Type</th>
@@ -642,7 +650,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					`<tr><td colspan="${4 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
-				summary_list.slice(0, 100).forEach((row) => {
+				summary_list.slice(0, 100).forEach((row, idx) => {
 					grand_total += row.total;
 					let month_cells = months
 						.map((m) => {
@@ -654,6 +662,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 					tbody_summary.append(`
                         <tr>
+                            <td style="text-align: center;">${idx + 1}</td>
                             <td><div class="text-truncate" style="max-width: 200px;" title="${row.cust}">${row.cust}</div></td>
                             <td><div class="text-truncate" style="max-width: 150px;" title="${row.sp}">${row.sp}</div></td>
                             <td>
@@ -675,7 +684,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					.join("");
 				tbody_summary.append(`
                     <tr class="sticky-total">
-                        <td colspan="3" style="text-align: right; font-weight: 700;">Grand Total</td>
+                        <td colspan="4" style="text-align: right; font-weight: 700;">Grand Total</td>
                         ${footer_cells}
                         <td class="total-col">${format_currency_short(grand_total)}</td>
                     </tr>
@@ -692,7 +701,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					`<tr><td colspan="10" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
-				results.forEach((row) => {
+				results.forEach((row, idx) => {
 					total_qty += flt(row.qty);
 					total_amt += flt(row.base_amount);
 
@@ -710,6 +719,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 					tbody_detail.append(`
                         <tr>
+                            <td style="text-align: center;">${idx + 1}</td>
                             <td style="width: 140px;">
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <a href="/app/sales-invoice/${row.invoice_id}" style="color: var(--primary); font-weight: 500;">${row.invoice_id}</a>
@@ -734,7 +744,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 				tbody_detail.append(`
                     <tr class="sticky-total">
-                        <td colspan="8" style="text-align: right; font-weight: 700;">Total</td>
+                        <td colspan="9" style="text-align: right; font-weight: 700;">Total</td>
                         <td style="text-align: right; font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
                         <td style="text-align: right; font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
                     </tr>
@@ -835,164 +845,36 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		apply_local_filters();
 
 		// 5. Global Export Logic
-		const export_to_excel = async () => {
-			const c_val = (f_cust_ctrl.$input ? f_cust_ctrl.$input.val() : "")
-				.toLowerCase()
-				.trim();
-			const s_val = (f_sp_ctrl.$input ? f_sp_ctrl.$input.val() : "").toLowerCase().trim();
-			const i_val = (f_item_ctrl.$input ? f_item_ctrl.$input.val() : "")
-				.toLowerCase()
-				.trim();
+		const export_to_excel = () => {
+			let filters = page.filter_group.get_values();
+			
+			frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
-			let export_data = data.results.filter((row) => {
-				const cust_match =
-					!c_val ||
-					(row.customer_name || "").toLowerCase().includes(c_val) ||
-					(row.customer || "").toLowerCase().includes(c_val);
-				const sp_match = !s_val || (row.sales_person || "").toLowerCase().includes(s_val);
-				const item_match =
-					!i_val ||
-					(row.item_code || "").toLowerCase().includes(i_val) ||
-					(row.item_name || "").toLowerCase().includes(i_val);
-				return cust_match && sp_match && item_match;
+			frappe.call({
+				method: "renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.export_to_excel",
+				args: { filters: filters },
+				callback: function (r) {
+					if (r.message) {
+						const { filename, filecontent } = r.message;
+						const byteCharacters = atob(filecontent);
+						const byteNumbers = new Array(byteCharacters.length);
+						for (let i = 0; i < byteCharacters.length; i++) {
+							byteNumbers[i] = byteCharacters.charCodeAt(i);
+						}
+						const byteArray = new Uint8Array(byteNumbers);
+						const blob = new Blob([byteArray], {
+							type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+						});
+						const link = document.createElement("a");
+						link.href = URL.createObjectURL(blob);
+						link.download = filename;
+						link.click();
+						frappe.show_alert({ message: __("Excel Report Generated Successfully"), indicator: "green" });
+					}
+				},
 			});
-
-			if (!export_data.length) {
-				frappe.msgprint(__("No data to export"));
-				return;
-			}
-
-			// Helper: Capture SVG chart as Image (Pseudo-implementation for visual reference)
-			const get_chart_image = (selector) => {
-				const svg = $(selector).find("svg")[0];
-				if (!svg) return "";
-
-				// Return a labeled text placeholder if the browser doesn't support easy SVG->Canvas export in this context
-				// But we will try to provide the tables for charts as requested too
-				return `<div style="padding: 10px; border: 1px dashed #ccc; text-align: center; background: #fafafa;"><b>Graph View: ${selector.replace("#", "")}</b></div>`;
-			};
-
-			let html = `<html><head><meta charset="utf-8"><style>table { border-collapse: collapse; width: 100%; margin-bottom: 20px; } th, td { border: 1px solid #ccc; padding: 8px; text-align: left; } th { background: #f4f4f4; }</style></head><body>`;
-			html += `<h2>Sales Revenue Dashboard Report</h2>`;
-			html += `<p>Date: ${frappe.datetime.now_datetime()}</p>`;
-
-			// I. Metrics
-			html += `<h3>Key Performance Indicators</h3><table><tr>`;
-			data.summary.forEach((m) => (html += `<th>${m.label}</th>`));
-			html += `</tr><tr>`;
-			data.summary.forEach(
-				(m) => (html += `<td>${format_currency_short(m.value, m.fieldtype)}</td>`),
-			);
-			html += `</tr></table>`;
-
-			// II. Charts Section (Visual Data - Using Tables for Excel Compatibility)
-			html += `<h3>Visual Analytics (Chart Data)</h3>`;
-
-			// 1. Salesperson Breakdown
-			let sales_person_summary = {};
-			if (
-				data.charts &&
-				data.charts.top_10_salesperson &&
-				data.charts.top_10_salesperson.data
-			) {
-				const d = data.charts.top_10_salesperson.data;
-				d.labels.forEach((label, i) => {
-					sales_person_summary[label] = d.datasets[0].values[i];
-				});
-			}
-
-			if (Object.keys(sales_person_summary).length) {
-				html += `<h4>Top 10 Salesperson by Revenue</h4><table border="1" style="width: 100%;">
-					<tr style="background: #f4f4f4;"><th>Sales Person</th><th>Amount</th><th>Share %</th></tr>`;
-				const entries = Object.entries(sales_person_summary)
-					.sort((a, b) => b[1] - a[1])
-					.slice(0, 10);
-				const total_top = entries.reduce((acc, curr) => acc + curr[1], 0);
-				entries.forEach(([name, val]) => {
-					const pct = total_top > 0 ? (val / total_top) * 100 : 0;
-					html += `<tr><td>${name}</td><td>${format_currency_short(val)}</td><td>${pct.toFixed(1)}%</td></tr>`;
-				});
-				html += `</table><br>`;
-			}
-
-			// 2. Customer Breakdown
-			let customer_summary = {};
-			if (data.charts && data.charts.top_10_customers && data.charts.top_10_customers.data) {
-				const d = data.charts.top_10_customers.data;
-				d.labels.forEach((label, i) => {
-					customer_summary[label] = d.datasets[0].values[i];
-				});
-			}
-
-			if (Object.keys(customer_summary).length) {
-				html += `<h4>Top 10 Customers by Revenue</h4><table border="1" style="width: 100%;">
-					<tr style="background: #f4f4f4;"><th>Customer</th><th>Amount</th><th>Share %</th></tr>`;
-				const entries = Object.entries(customer_summary)
-					.sort((a, b) => b[1] - a[1])
-					.slice(0, 10);
-				const total_top = entries.reduce((acc, curr) => acc + curr[1], 0);
-				entries.forEach(([name, val]) => {
-					const pct = total_top > 0 ? (val / total_top) * 100 : 0;
-					html += `<tr><td>${name}</td><td>${format_currency_short(val)}</td><td>${pct.toFixed(1)}%</td></tr>`;
-				});
-				html += `</table><br>`;
-			}
-
-			// 3. Product Breakdown
-			let product_summary = {};
-			if (data.charts && data.charts.top_10_products && data.charts.top_10_products.data) {
-				const d = data.charts.top_10_products.data;
-				d.labels.forEach((label, i) => {
-					product_summary[label] = d.datasets[0].values[i];
-				});
-			}
-
-			if (Object.keys(product_summary).length) {
-				html += `<h4>Top 10 Products by Revenue</h4><table border="1" style="width: 100%;">
-					<tr style="background: #f4f4f4;"><th>Product (Item)</th><th>Amount</th><th>Share %</th></tr>`;
-				const entries = Object.entries(product_summary)
-					.sort((a, b) => b[1] - a[1])
-					.slice(0, 10);
-				const total_top = entries.reduce((acc, curr) => acc + curr[1], 0);
-				entries.forEach(([name, val]) => {
-					const pct = total_top > 0 ? (val / total_top) * 100 : 0;
-					html += `<tr><td>${name}</td><td>${format_currency_short(val)}</td><td>${pct.toFixed(1)}%</td></tr>`;
-				});
-				html += `</table><br>`;
-			}
-
-			// IV. Summarized Revenue
-			html += `<h3>Month-Wise Consolidated Revenue</h3><table>`;
-			html += card.find("#consolidated_table").html();
-			html += `</table>`;
-
-			// V. Detailed Records
-			html += `<h3>Detailed Sales Invoices List</h3><table><thead><tr>
-				<th>Invoice ID</th><th>Date</th><th>Type</th><th>Invoice Type</th><th>Status</th><th>Customer</th><th>Item</th><th>Sales Person</th><th>Qty</th><th>Amount</th>
-			</tr></thead><tbody>`;
-			export_data.forEach((row) => {
-				html += `<tr>
-					<td>${row.invoice_id}</td>
-					<td>${row.invoice_date}</td>
-					<td>${row.dom_exp}</td>
-					<td>${row.invoice_type || ""}</td>
-					<td>${row.status}</td>
-					<td>${row.customer_name}</td>
-					<td>${row.item_code}</td>
-					<td>${row.sales_person || ""}</td>
-					<td>${row.qty}</td>
-					<td>${format_currency_short(row.base_amount || 0)}</td>
-				</tr>`;
-			});
-			html += `</tbody></table></body></html>`;
-
-			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-			const url = window.URL.createObjectURL(blob);
-			const link = document.createElement("a");
-			link.href = url;
-			link.download = `Sales_Dashboard_Full_Report_${frappe.datetime.now_date()}.xls`;
-			link.click();
 		};
+
 
 		// 0. Button Management - Clear existing to avoid duplicates
 		page.clear_inner_toolbar();
@@ -1056,34 +938,103 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				get_chart_png("top_10_products"),
 			]);
 
-			const chart_html = (png, title) => {
-				if (!png)
-					return `<div style="padding: 20px; border: 1px dashed #ccc; margin-bottom: 20px;">[Chart: ${title} Not Loaded]</div>`;
+			const chart_h = (png, title) => {
+				if (!png) return `<div style="padding: 20px; border: 1px dashed #ccc; margin-bottom: 20px;">[Chart: ${title} Not Loaded]</div>`;
 				return `
-					<div style="text-align: center; margin-bottom: 40px; page-break-inside: avoid; border-bottom: 1.5pt solid #eee; padding-bottom: 25px;">
+					<div style="text-align: center; margin-bottom: 20px; page-break-inside: avoid;">
 						<h4 style="margin-bottom: 10px; font-size: 16px; color: #000; text-transform: uppercase;">${title}</h4>
 						<img src="${png}" style="width: 850px; height: auto; max-width: 100%; border:none; display: block; margin: 0 auto;">
 					</div>
 				`;
 			};
 
-			let html = `
+			const chart_t = (chart_key, title) => {
+				const chart = data.charts[chart_key];
+				if (!chart || !chart.data.labels.length) return "";
+				const total_revenue = data.summary[0].value || 1;
+				return `
+					<div style="page-break-inside: avoid; margin-bottom: 40px;">
+						<h4 style="margin-bottom: 10px; color: #333;">${title} Data</h4>
+						<table>
+							<thead>
+								<tr>
+									<th style="width: 35px; text-align: center;">S.No.</th>
+									<th>Name</th>
+									<th style="width: 100px; text-align: right;">Amount (M)</th>
+									<th style="width: 60px; text-align: right;">Share %</th>
+								</tr>
+							</thead>
+							<tbody>
+								${chart.data.labels
+									.map((l, i) => {
+										const val = chart.data.datasets[0].values[i];
+										const share = ((val / total_revenue) * 100).toFixed(1);
+										return `<tr><td style="text-align: center;">${i + 1}</td><td>${l}</td><td style="text-align: right;">${format_currency_short(val)}</td><td style="text-align: right;">${share}%</td></tr>`;
+									})
+									.join("")}
+							</tbody>
+						</table>
+					</div>
+				`;
+			};
+let html = `
 				<html>
 				<head>
 					<meta charset="utf-8">
 					<style>
-						body { font-family: sans-serif; padding: 20px; color: #333; margin: 0; }
+						body { font-family: sans-serif; padding: 20px; color: #333; margin: 0; background-color: #ffffff !important; }
 						.report-header { text-align: center; margin-bottom: 30px; border-bottom: 2pt solid #000; padding-bottom: 12px; }
+						
+						/* KPI Cards Styling */
 						.kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 12px; margin-bottom: 30px; }
-						.kpi-card { display: table-cell; border: 1px solid #ccc; padding: 15px; text-align: center; background: #f9f9f9; width: 25%; }
-						.kpi-label { font-size: 11px; color: #666; text-transform: uppercase; margin-bottom: 6px; font-weight: bold; }
-						.kpi-value { font-size: 18px; font-weight: bold; color: #000; }
+						.kpi-card { 
+							display: table-cell; 
+							padding: 18px; 
+							background: #ffffff; 
+							border: 1px solid #e2e8f0; 
+							border-radius: 12px;
+							width: 25%; 
+							vertical-align: top;
+							box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+						}
+						.kpi-label { font-size: 10px; color: #64748b; text-transform: uppercase; margin-bottom: 8px; font-weight: 700; letter-spacing: 0.5px; }
+						.kpi-value { font-size: 16px; font-weight: 800; color: #1e293b; }
+						.kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
 						
 						h3 { margin-top: 30px; border-bottom: 1pt solid #000; padding-bottom: 6px; color: #000; font-size: 16px; page-break-after: avoid; }
 						h4 { margin: 15px 0 10px 0; color: #444; font-size: 13px; border-bottom: 0.5pt solid #eee; }
-						table { width: 100%; border-collapse: collapse; margin-bottom: 25px; table-layout: auto; }
-						th, td { border: 0.5pt solid #000; padding: 6px 10px; text-align: left; font-size: 10px; line-height: 1.3; }
-						th { background-color: #f2f2f2; font-weight: bold; text-transform: uppercase; }
+						
+						table { width: 100%; border-collapse: collapse; margin-bottom: 25px; table-layout: fixed; border: 0.5pt solid #000; }
+						th, td { border: 0.5pt solid #000; padding: 5px 8px; text-align: left; font-size: 8.5pt; line-height: 1.3; word-wrap: break-word; overflow-wrap: break-word; white-space: normal !important; vertical-align: top; }
+						th { background-color: #f8f9fa; font-weight: bold; text-transform: uppercase; color: #475569; }
+
+                        /* Status Pills */
+                        .indicator-pill { padding: 2px 6px; border-radius: 4px; font-size: 8pt; font-weight: 600; white-space: nowrap !important; }
+                        .indicator-pill.green { background: #dcfce7; color: #166534; }
+                        .indicator-pill.blue { background: #dbeafe; color: #1e40af; }
+                        .indicator-pill.orange { background: #fef3c7; color: #92400e; }
+                        .indicator-pill.red { background: #fee2e2; color: #991b1b; }
+                        .indicator-pill.gray { background: #f1f5f9; color: #475569; }
+
+                        /* Month-wise Consolidated Table */
+                        #consolidated_table th:nth-child(1), #consolidated_table td:nth-child(1) { width: 5%; text-align: center; }
+                        #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { width: 18%; }
+                        #consolidated_table th:nth-child(3), #consolidated_table td:nth-child(3) { width: 12%; }
+                        #consolidated_table th:nth-child(4), #consolidated_table td:nth-child(4) { width: 22%; }
+                        #consolidated_table .month-col { text-align: right; }
+
+                        /* Detailed Invoice List Table */
+                        .invoice-list-table th:nth-child(1), .invoice-list-table td:nth-child(1) { width: 4%; text-align: center; }
+                        .invoice-list-table th:nth-child(2), .invoice-list-table td:nth-child(2) { width: 12%; } /* ID */
+                        .invoice-list-table th:nth-child(3), .invoice-list-table td:nth-child(3) { width: 10%; } /* Date */
+                        .invoice-list-table th:nth-child(4), .invoice-list-table td:nth-child(4) { width: 10%; } /* Type */
+                        .invoice-list-table th:nth-child(5), .invoice-list-table td:nth-child(5) { width: 10%; } /* Inv Type */
+                        .invoice-list-table th:nth-child(6), .invoice-list-table td:nth-child(6) { width: 10%; } /* Status */
+                        .invoice-list-table th:nth-child(7), .invoice-list-table td:nth-child(7) { width: 15%; } /* Customer */
+                        .invoice-list-table th:nth-child(8), .invoice-list-table td:nth-child(8) { width: 12%; } /* Item */
+                        .invoice-list-table th:nth-child(9), .invoice-list-table td:nth-child(9) { width: 12%; } /* SP */
+                        .invoice-list-table th:nth-child(10), .invoice-list-table td:nth-child(10) { width: 7%; text-align: right; } /* Qty */
+                        .invoice-list-table th:nth-child(11), .invoice-list-table td:nth-child(11) { width: 12%; text-align: right; font-weight: bold; } /* Amt */
 						
 						.page-break { page-break-after: always; }
 						.row { display: table; width: 100%; table-layout: fixed; }
@@ -1099,46 +1050,34 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 					<div class="kpi-wrapper">
 						${data.summary
-							.map(
-								(m) => `
+							.map((m) => {
+								let color = "#3498db";
+								if (m.indicator === "green") color = "#2ecc71";
+								if (m.indicator === "orange") color = "#e67e22";
+								if (m.indicator === "purple") color = "#9b59b6";
+								return `
 							<div class="kpi-card">
-								<div class="kpi-label">${m.label}</div>
+								<div class="kpi-label">
+									<span class="kpi-dot" style="background: ${color};"></span>
+									${m.label}
+								</div>
 								<div class="kpi-value">${format_currency_short(m.value, m.fieldtype)}</div>
 							</div>
-						`,
-							)
+						`;
+							})
 							.join("")}
 					</div>
 
-					<h3>Visual Analytics</h3>
+					<h3>Visual Analytics Breakdown</h3>
 					<div style="text-align: center;">
-						${chart_html(png1, "Top 10 Salesperson Performance")}
-						${chart_html(png2, "Top 10 Customers Performance")}
-						${chart_html(png3, "Top 10 Products Performance")}
-					</div>
+						${chart_h(png1, "Top 10 Salesperson Performance")}
+						${chart_t("top_10_salesperson", "Top 10 Salesperson")}
 
-					<div class="page-break"></div>
+						${chart_h(png2, "Top 10 Customers Performance")}
+						${chart_t("top_10_customers", "Top 10 Customers")}
 
-					<h3>Data Summary Breakdown</h3>
-					<div class="row">
-						<div class="col" style="padding-right: 15px;">
-							<h4>Top 10 Salesperson by Revenue (M)</h4>
-							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
-							${(data.charts.top_10_salesperson.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_salesperson.data.datasets[0].values[i])}</td></tr>`).join("")}
-							</tbody></table>
-						</div>
-						<div class="col" style="padding-right: 15px;">
-							<h4>Top 10 Customers by Revenue (M)</h4>
-							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
-							${(data.charts.top_10_customers.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_customers.data.datasets[0].values[i])}</td></tr>`).join("")}
-							</tbody></table>
-						</div>
-						<div class="col">
-							<h4>Top 10 Products by Revenue (M)</h4>
-							<table><thead><tr><th>Name</th><th>Amount</th></tr></thead><tbody>
-							${(data.charts.top_10_products.data.labels || []).map((l, i) => `<tr><td>${l}</td><td>${format_currency_short(data.charts.top_10_products.data.datasets[0].values[i])}</td></tr>`).join("")}
-							</tbody></table>
-						</div>
+						${chart_h(png3, "Top 10 Products Performance")}
+						${chart_t("top_10_products", "Top 10 Products")}
 					</div>
 
 					<div class="page-break"></div>
@@ -1149,7 +1088,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					</table>
 
 					<h3>Detailed Sales Invoices List (M)</h3>
-					<table>
+					<table class="invoice-list-table">
 						<thead>${$("#invoice_table_body").closest("table").find("thead").html()}</thead>
 						<tbody>${$("#invoice_table_body").html()}</tbody>
 					</table>
@@ -1170,38 +1109,9 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			$form.remove();
 		});
 
-		// 3. Single Table Export Handlers
-		card.find("#export_month_table").on("click", () => {
-			let html = `<html><head><meta charset="utf-8"></head><body><h3>Month-Wise Revenue</h3><table border="1">`;
-			html += card.find("#consolidated_table").html();
-			html += `</table></body></html>`;
-			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-			const url = window.URL.createObjectURL(blob);
-			const btn = document.createElement("a");
-			btn.href = url;
-			btn.download = `Month_Wise_Revenue_${frappe.datetime.now_date()}.xls`;
-			btn.click();
-		});
-
-		card.find("#export_invoice_table").on("click", () => {
-			let html = `<html><head><meta charset="utf-8"></head><body><h3>Sales Invoices</h3><table border="1">`;
-			// Use the table without the filter icons if possible, but the current table has headers and body
-			html +=
-				"<thead>" +
-				card.find("#invoice_table_body").closest("table").find("thead").html() +
-				"</thead>";
-			html += "<tbody>" + card.find("#invoice_table_body").html() + "</tbody>";
-			html += `</table></body></html>`;
-			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-			const url = window.URL.createObjectURL(blob);
-			const btn = document.createElement("a");
-			btn.href = url;
-			btn.download = `Sales_Invoices_${frappe.datetime.now_date()}.xls`;
-			btn.click();
-		});
-
-		// 5. Force-remove default duplicates (be specific to avoid hiding our own menu)
+		// 3. Force-remove default duplicates (be specific to avoid hiding our own menu)
 		$(".page-head .standard-actions .btn-secondary:contains('Refresh')").hide();
+
 
 		// 6. Remove small local buttons (except the ones we just added in headers)
 		$(".chart-card .export-btn, .row-export-btn").remove();
