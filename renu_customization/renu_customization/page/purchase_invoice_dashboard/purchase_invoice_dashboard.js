@@ -420,6 +420,31 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
             </tr>
         `);
 
+		const export_to_excel = () => {
+			frappe.call({
+				method: "renu_customization.renu_customization.page.purchase_invoice_dashboard.purchase_invoice_dashboard.export_to_excel",
+				args: { filters: page.filter_group.get_values() },
+				callback: function (r) {
+					if (r.message) {
+						const { filename, filecontent } = r.message;
+						const byteCharacters = atob(filecontent);
+						const byteNumbers = new Array(byteCharacters.length);
+						for (let i = 0; i < byteCharacters.length; i++) {
+							byteNumbers[i] = byteCharacters.charCodeAt(i);
+						}
+						const byteArray = new Uint8Array(byteNumbers);
+						const blob = new Blob([byteArray], {
+							type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+						});
+						const link = document.createElement("a");
+						link.href = window.URL.createObjectURL(blob);
+						link.download = filename;
+						link.click();
+					}
+				},
+			});
+		};
+
 		$("#main_excel_export, #export_month_table").on("click", () => export_to_excel());
 
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
