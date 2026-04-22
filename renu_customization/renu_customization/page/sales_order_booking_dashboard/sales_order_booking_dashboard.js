@@ -1,7 +1,7 @@
 frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Sales Order Booking Dashboard"),
+		title: __("Sales Order Booking Dashboard (Million INR)"),
 		single_column: true,
 	});
 
@@ -44,7 +44,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Fiscal Year",
 			placeholder: __("Select Year"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			label: __("Customer"),
 			fieldname: "customer",
@@ -52,7 +51,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Customer",
 			placeholder: __("Select Customer"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "customer_group",
 			label: __("Customer Group"),
@@ -60,7 +58,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Customer Group",
 			placeholder: __("Select Group"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			label: __("Product (Item)"),
 			fieldname: "item_code",
@@ -68,7 +65,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Item",
 			placeholder: __("Select Item"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "item_group",
 			label: __("Product Group"),
@@ -76,7 +72,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Item Group",
 			placeholder: __("Select Product Group"),
 		},
-		{ fieldtype: "Section Break" },
 		{
 			label: __("Sales Person"),
 			fieldname: "sales_person",
@@ -84,7 +79,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Sales Person",
 			placeholder: __("Select Sales Person"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "territory",
 			label: __("Territory"),
@@ -92,7 +86,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Territory",
 			placeholder: __("Select Territory"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "status",
 			label: __("Status"),
@@ -108,7 +101,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			],
 			placeholder: __("Select Statuses"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "dom_exp",
 			label: __("Type"),
@@ -119,8 +111,14 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		{
 			fieldname: "invoice_type",
 			label: __("Invoice Type"),
-			fieldtype: "Link",
-			options: "Sales Invoice Type",
+			fieldtype: "Select",
+			options: [
+				"",
+				"Product Domestic",
+				"Product Export",
+				"Engineering Service Domestic",
+				"Engineering Service Export",
+			],
 			placeholder: __("Select Invoice Type"),
 		},
 	];
@@ -131,15 +129,55 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 	});
 	page.filter_group.make();
 
+	$("<style>")
+		.text(
+			`
+		.dashboard-filter-area .form-section .section-body {
+			display: grid !important;
+			grid-template-columns: repeat(5, minmax(0, 2fr)) !important;
+			// gap: 10px !important;
+			// padding: 10px !important;
+			// align-items: flex-end !important;
+		}
+		.dashboard-filter-area .form-column {
+			display: contents !important;
+		}
+		.dashboard-filter-area .form-column form {
+			display: contents !important;
+		}
+		.dashboard-filter-area .frappe-control {
+			margin-bottom: 0 !important;
+			width: auto !important;
+		}
+		.dashboard-filter-area .frappe-control .form-group {
+			margin-bottom: 0 !important;
+			width: auto !important;
+		}
+		.dashboard-filter-area .control-input,
+		.dashboard-filter-area .awesomplete,
+		.dashboard-filter-area input,
+		
+		.dashboard-filter-area label,
+		.dashboard-filter-area form-label {
+			width: auto !important;
+			max-width: none !important;
+		}
+		.dashboard-filter-area select {
+			width: auto !important;
+			max-width: 250px !important;
+		}
+	`,
+		)
+
+		.appendTo(filter_parent);
+
 	Object.keys(page.filter_group.fields_dict).forEach((key) => {
 		let field = page.filter_group.fields_dict[key];
-		if (!["Column Break", "Section Break"].includes(field.df.fieldtype)) {
-			field.on_change = () => page.refresh();
-			if (field.$input) {
-				field.$input.on("change input blur", () => {
-					setTimeout(() => page.refresh(), 50);
-				});
-			}
+		field.on_change = () => page.refresh();
+		if (field.$input) {
+			field.$input.on("change input blur", () => {
+				setTimeout(() => page.refresh(), 50);
+			});
 		}
 	});
 
@@ -151,16 +189,18 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
 	$(`<style>
-        .page-head .title-text, .page-head .breadcrumb-text { color: #1a1a1a !important; font-weight: 700 !important; }
-		.page-title { color: #000 !important; }
-        .page-head { border-bottom: 1px solid #ddd !important; background: #fff !important; color: #000 }
-        .dashboard-content { padding: 20px; background: #fff; min-height: 100vh; }
+        .page-head { border-bottom: 1px solid #e2e8f0 !important; background: #fff !important; padding: 12px 20px !important; }
+        .page-head .title-text { color: #1e293b !important; font-weight: 800 !important; font-size: 20px !important; }
+        .page-head .breadcrumb-text { display: none !important; }
+        .dashboard-content { padding: 24px; background: #f8fafc; min-height: 100vh; }
         .summary-wrapper { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .summary-card { 
-            background: #fff; border: 1px solid var(--border-color); border-radius: 12px; 
-            padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            transition: transform 0.2s, box-shadow 0.2s;
+            background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; 
+            padding: 24px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
         }
+        .summary-card:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+
         .summary-card .label { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
         .summary-card .value { font-size: 24px; font-weight: 700; color: #000; }
         .summary-card .indicator { display: inline-block; width: 10px; height: 10px; border-radius: 50%; }
@@ -207,10 +247,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
         .dashboard-table tr.sticky-total td.total-col { z-index: 7; background: #e9ecef !important; }
 
-        .hybrid-filter-container { display: flex; gap: 10px; align-items: center; }
-        .hybrid-filter-container .frappe-control { margin-bottom: 0 !important; width: 180px; }
+        .hybrid-filter-container { display: flex; gap: 12px; align-items: center; }
+        .hybrid-filter-container .frappe-control { margin-bottom: 0 !important; width: 220px; }
+		.hybrid-filter-container .frappe-control .label-area { display: none !important; }
         .hybrid-filter-container .form-group { margin-bottom: 0 !important; }
-        .hybrid-filter-container input { height: 28px; font-size: 12px; background: #f8f9fa; border: 1px solid #dee2e6; }
+        .hybrid-filter-container input { height: 34px; font-size: 13px; background: #f8fafc; border: 1px solid #cbd5e0; border-radius: 6px; padding: 0 12px; }
+        .hybrid-filter-container input:focus { border-color: #3b82f6; background: #fff; box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1); outline: none; }
+
     </style>`).appendTo(page.main);
 
 	function render_dashboard(data) {
@@ -301,7 +344,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th style="min-width: 150px;">Sales Person</th>
                                 <th style="min-width: 200px;">Product</th>
                                 ${months.map((m) => `<th class="month-col">${m.key}</th>`).join("")}
-                                <th class="total-col">Total</th>
+                                <th class="total-col">Total (M)</th>
                             </tr>
                         </thead>
                         <tbody id="so_month_body"></tbody>
@@ -328,7 +371,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th style="min-width: 150px;">Item</th>
                                 <th style="min-width: 140px;">Sales Person</th>
                                 <th style="min-width: 100px; text-align: right;">Qty</th>
-                                <th style="min-width: 160px; text-align: right;">Amount</th>
+                                <th style="min-width: 160px; text-align: right;">Amount (M)</th>
                             </tr>
                         </thead>
                         <tbody id="so_list_body"></tbody>
@@ -361,7 +404,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			let summary_grand_total = 0;
 
 			if (summary_list.length === 0) {
-				tbody_month.append(`<tr><td colspan="${4 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`);
+				tbody_month.append(
+					`<tr><td colspan="${4 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
+				);
 			} else {
 				summary_list.forEach((row) => {
 					summary_grand_total += row.total;
@@ -404,7 +449,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				total_amt = 0;
 
 			if (filtered_data.length === 0) {
-				tbody_list.append(`<tr><td colspan="8" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`);
+				tbody_list.append(
+					`<tr><td colspan="8" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
+				);
 			} else {
 				filtered_data.forEach((row) => {
 					let status_color = "gray";
@@ -469,9 +516,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 		// Hybrid Filter Logic
 		const apply_local_filters = () => {
-			const c_val = (f_cust_ctrl.$input ? f_cust_ctrl.$input.val() || "" : "").toLowerCase().trim();
-			const s_val = (f_sp_ctrl.$input ? f_sp_ctrl.$input.val() || "" : "").toLowerCase().trim();
-			const i_val = (f_item_ctrl.$input ? f_item_ctrl.$input.val() || "" : "").toLowerCase().trim();
+			const c_val = (f_cust_ctrl.$input ? f_cust_ctrl.$input.val() || "" : "")
+				.toLowerCase()
+				.trim();
+			const s_val = (f_sp_ctrl.$input ? f_sp_ctrl.$input.val() || "" : "")
+				.toLowerCase()
+				.trim();
+			const i_val = (f_item_ctrl.$input ? f_item_ctrl.$input.val() || "" : "")
+				.toLowerCase()
+				.trim();
 
 			let filtered = data.results.filter((row) => {
 				const cust_match =
@@ -505,14 +558,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 			parent.css("position", "relative");
 			if (ctrl.$input) {
-				let control_input = parent.find('.control-input');
+				let control_input = parent.find(".control-input");
 				control_input.css("position", "relative");
-				ctrl.$input.css({"padding-right": "24px"});
-				
-				let clear_btn = $('<span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #adb5bd; font-size: 16px; font-weight: 600; display: none; line-height: 1; user-select: none;">&times;</span>')
-					.appendTo(control_input);
+				ctrl.$input.css({ "padding-right": "24px" });
 
-				ctrl.$input.on("input change awesomplete-selectcomplete", function() {
+				let clear_btn = $(
+					'<span style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #adb5bd; font-size: 16px; font-weight: 600; display: none; line-height: 1; user-select: none;">&times;</span>',
+				).appendTo(control_input);
+
+				ctrl.$input.on("input change awesomplete-selectcomplete", function () {
 					if ($(this).val()) {
 						clear_btn.show();
 					} else {
@@ -520,7 +574,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					}
 				});
 
-				clear_btn.on("click", function() {
+				clear_btn.on("click", function () {
 					ctrl.$input.val("").trigger("change");
 					ctrl.$input.focus();
 					clear_btn.hide();
@@ -562,22 +616,16 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 	}
 
 	function format_currency_short(num, fieldtype) {
-		if (!num && num !== 0) return "0.00";
-		let suffix = "";
-		let value = num;
-		if (num >= 10000000) {
-			value = num / 10000000;
-			suffix = " Cr";
-		} else if (num >= 100000) {
-			value = num / 100000;
-			suffix = " L";
-		} else if (num >= 1000) {
-			value = num / 1000;
-			suffix = " K";
-		}
+		if (!num && num !== 0) return "₹ 0.00 M";
+		if (fieldtype === "Int") return num;
+
+		// Convert to Million INR
+		let value = flt(num) / 1000000;
+
 		return (
-			value.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-			suffix
+			"₹ " +
+			value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+			" M"
 		);
 	}
 
@@ -613,7 +661,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 		const chart_h = (p, t) =>
 			`<div style="page-break-inside: avoid; text-align:center; margin-bottom: 20px;"><h4 style="text-transform:uppercase;">${t}</h4><img src="${p}" style="width:850px; height:auto;"></div>`;
-			
+
 		const chart_t = (chart_key, title) => {
 			if (!page.dashboard_data || !page.dashboard_data.charts[chart_key]) return "";
 			let c_data = page.dashboard_data.charts[chart_key].data;
@@ -622,7 +670,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			let html = `<div style="page-break-inside: avoid; margin-bottom: 40px;"><h4 style="margin-bottom: 10px; color: #333;">${title} Data</h4><table><thead><tr><th style="text-align:left">${title.replace("Top 10 ", "").replace(" by Order Value", "")}</th><th style="text-align:right; width: 120px;">Amount</th><th style="text-align:right; width: 80px;">Share %</th></tr></thead><tbody>`;
 			c_data.labels.forEach((label, idx) => {
 				let val = c_data.datasets[0].values[idx];
-				let share = total_val > 0 ? ((val / total_val) * 100).toFixed(2) + '%' : '0%';
+				let share = total_val > 0 ? ((val / total_val) * 100).toFixed(2) + "%" : "0%";
 				html += `<tr><td>${label}</td><td style="text-align:right">${format_currency_short(val)}</td><td style="text-align:right">${share}</td></tr>`;
 			});
 			html += `</tbody></table></div>`;
@@ -630,28 +678,45 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		};
 
 		let html = `<html><head><style>
-			body { font-family: sans-serif; padding: 20px; }
-			.header { text-align: center; border-bottom: 2px solid #000; margin-bottom: 20px; padding-bottom: 10px; }
-			table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10px; }
-			th, td { border: 1px solid #ddd; padding: 6px 8px; }
-			th { background: #f8f9fa; font-weight: bold; }
-			h3 { margin-top: 30px; margin-bottom: 15px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+			body { font-family: sans-serif; padding: 20px; color: #333; margin: 0; }
+			.header { text-align: center; border-bottom: 2pt solid #000; margin-bottom: 30px; padding-bottom: 12px; }
+			table { width: 100%; border-collapse: collapse; margin-bottom: 25px; table-layout: fixed; border: 0.5pt solid #000; }
+			th, td { border: 0.5pt solid #000; padding: 4px 6px; text-align: left; font-size: 8.5pt; line-height: 1.2; word-wrap: break-word; overflow-wrap: break-word; white-space: normal !important; vertical-align: top; }
+			th { background: #f2f2f2; font-weight: bold; text-transform: uppercase; }
+            
+            /* Month Table */
+            .month-table th:nth-child(1), .month-table td:nth-child(1) { width: 18%; }
+            .month-table th:nth-child(2), .month-table td:nth-child(2) { width: 12%; }
+            .month-table th:nth-child(3), .month-table td:nth-child(3) { width: 22%; }
+            .month-table .month-col { text-align: right; }
+
+            /* Detailed List Table */
+            .so-list-table th:nth-child(1), .so-list-table td:nth-child(1) { width: 12%; } /* Order ID */
+            .so-list-table th:nth-child(2), .so-list-table td:nth-child(2) { width: 9%; }  /* Date */
+            .so-list-table th:nth-child(3), .so-list-table td:nth-child(3) { width: 8%; }  /* Status */
+            .so-list-table th:nth-child(4), .so-list-table td:nth-child(4) { width: 16%; } /* Customer */
+            .so-list-table th:nth-child(5), .so-list-table td:nth-child(5) { width: 14%; } /* Item */
+            .so-list-table th:nth-child(6), .so-list-table td:nth-child(6) { width: 15%; } /* SP */
+            .so-list-table th:nth-child(7), .so-list-table td:nth-child(7) { width: 6%; text-align: right; } /* Qty */
+            .so-list-table th:nth-child(8), .so-list-table td:nth-child(8) { width: 10%; text-align: right; } /* Amt */
+
+			h3 { margin-top: 30px; margin-bottom: 15px; border-bottom: 1pt solid #ddd; padding-bottom: 5px; font-size: 14pt; }
 		</style></head><body>
-			<div class="header"><h1>Sales Order Booking Dashboard</h1></div>
-			${chart_h(p1, "Salesperson Order Value")}
-			${chart_t("top_10_salesperson", "Top 10 Salesperson by Order Value")}
+			<div class="header"><h1>Sales Order Booking Dashboard (Million INR)</h1></div>
+			${chart_h(p1, "Salesperson Order Value (M)")}
+			${chart_t("top_10_salesperson", "Top 10 Salesperson by Order Value (M)")}
 			
-			${chart_h(p2, "Customer Order Value")}
-			${chart_t("top_10_customers", "Top 10 Customers by Order Value")}
+			${chart_h(p2, "Customer Order Value (M)")}
+			${chart_t("top_10_customers", "Top 10 Customers by Order Value (M)")}
 			
-			${chart_h(p3, "Product Order Value")}
-			${chart_t("top_10_products", "Top 10 Products by Order Value")}
+			${chart_h(p3, "Product Order Value (M)")}
+			${chart_t("top_10_products", "Top 10 Products by Order Value (M)")}
 			
-			<h3>Month-Wise Order Value</h3>
-			<table>${page.container.find("#so_month_body").closest("table").html()}</table>
+			<h3>Month-Wise Order Value (M)</h3>
+			<table class="month-table">${page.container.find("#so_month_body").closest("table").html()}</table>
 			
-			<h3>Sales Order Details</h3>
-			<table>${page.container.find("#so_list_body").closest("table").html()}</table>
+			<h3>Sales Order Details (M)</h3>
+			<table class="so-list-table">${page.container.find("#so_list_body").closest("table").html()}</table>
 		</body></html>`;
 
 		const method =
