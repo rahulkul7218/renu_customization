@@ -30,13 +30,13 @@ def execute(filters=None):
     if filters.get("invoice_id"):
         conditions += " AND si.name = %(invoice_id)s"
  
-    # Invoice Date From
+    # Invoice Date From (Prioritize Delivery Date / Item Posting Date)
     if filters.get("from_date"):
-        conditions += " AND si.posting_date >= %(from_date)s"
+        conditions += " AND IFNULL(dn.posting_date, si.posting_date) >= %(from_date)s"
  
     # Invoice Date To
     if filters.get("to_date"):
-        conditions += " AND si.posting_date <= %(to_date)s"
+        conditions += " AND IFNULL(dn.posting_date, si.posting_date) <= %(to_date)s"
  
     # Customer Name
     if filters.get("customer_name"):
@@ -152,6 +152,11 @@ def execute(filters=None):
             ad.state AS state,
             ad.country AS country,
             st.sales_person AS sales_person,
+            st.allocated_percentage AS allocated_percentage,
+            dn.posting_date AS delivery_date,
+            si.is_return AS is_return,
+            si.base_net_total AS si_net_total,
+            si.base_grand_total AS si_grand_total,
  
             CASE WHEN ad.country = 'India' THEN 'Domestic' ELSE 'Export' END AS dom_exp,
  

@@ -253,9 +253,9 @@ def get_dashboard_data(filters=None):
 
     sorted_months = sorted(monthly_stats.keys())
     trend_labels = [monthly_stats[m]["label"] for m in sorted_months]
-    trend_rev = [flt(monthly_stats[m]["rev"] / 1000000, 2) for m in sorted_months]
-    trend_cogs = [flt(monthly_stats[m]["cogs"] / 1000000, 2) for m in sorted_months]
-    trend_margin = [flt(monthly_stats[m]["margin"] / 1000000, 2) for m in sorted_months]
+    trend_rev = [flt(monthly_stats[m]["rev"], 2) for m in sorted_months]
+    trend_cogs = [flt(monthly_stats[m]["cogs"], 2) for m in sorted_months]
+    trend_margin = [flt(monthly_stats[m]["margin"], 2) for m in sorted_months]
 
     def get_chart_def(title, data_dict, label_key, limit=10):
         sorted_items = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
@@ -264,7 +264,7 @@ def get_dashboard_data(filters=None):
             "title": title,
             "data": {
                 "labels": [x[0] for x in top_items],
-                "datasets": [{"name": title, "values": [flt(x[1] / 1000000, 2) for x in top_items]}]
+                "datasets": [{"name": title, "values": [flt(x[1], 2) for x in top_items]}]
             },
             "type": "donut",
             "height": 300,
@@ -313,65 +313,10 @@ def export_to_excel(filters=None):
     ws_overview = wb.active
     ws_overview.title = "Dashboard Overview"
     
-    #    # --- Sheet 2: Month-Wise Margin ---
     ws2 = wb.create_sheet("Month-Wise Margin")
-    months = []
-    months_map = {}
-    for r in data:
-        m_key = moment_date(r.get("invoice_date") or r.get("posting_date"))
-        if m_key not in months_map:
-            months_map[m_key] = 1
-            months.append(m_key)
-    months.sort(key=lambda x: datetime.datetime.strptime(x, "%b %Y"))
-
-    headers2 = ["Customer", "Sales Person", "Product"] + months + ["Total Margin (M)", "Total Margin %"]
-    ws2.append(headers2)
-    for cell in ws2[1]: cell.font = header_font; cell.fill = header_fill; cell.alignment = center_align
-
-    merged = {}
-    for r in data:
-        sp = r.get("sales_person") or "-"
-        cust = r.get("customer_name") or r.get("customer") or "-"
-        prod = r.get("item_code") or "-"
-        key = (sp, cust, prod)
-        if key not in merged: merged[key] = {"months": {m: 0 for m in months}, "total": 0, "total_rev": 0}
-        m_key = moment_date(r.get("invoice_date") or r.get("posting_date"))
-        merged[key]["months"][m_key] += flt(r.get("margin"))
-        merged[key]["total"] += flt(r.get("margin"))
-        merged[key]["total_rev"] += flt(r.get("base_amount"))
-
-    for i, (key, val) in enumerate(merged.items()):
-        row_data = [key[1], key[0], key[2]] + [flt(val["months"][m] / 1000000, 2) for m in months] + [flt(val["total"] / 1000000, 2), flt((val["total"] / val["total_rev"]) * 100 if val["total_rev"] else 0, 2)]
-        ws2.append(row_data)
-        if i % 2 == 1:
-            for cell in ws2[ws2.max_row]: cell.fill = zebra_fill
-    
-    # --- Sheet 3: Detailed List ---
     ws3 = wb.create_sheet("Detailed List")
-    headers3 = ["S.No.", "Invoice", "Date", "Customer", "Item", "Qty", "Revenue (M)", "COGS (M)", "Margin (M)", "Margin %"]
-    ws3.append(headers3)
-    for cell in ws3[1]: cell.font = header_font; cell.fill = header_fill; cell.alignment = center_align
 
-    for i, r in enumerate(data):
-        row_data = [
-            i + 1,
-            r.get("invoice_id"),
-            r.get("invoice_date"),
-            r.get("customer_name"),
-            r.get("item_code"),
-            flt(r.get("qty")),
-            flt(r.get("base_amount") / 1000000, 2),
-            flt(r.get("cogs") / 1000000, 2),
-            flt(r.get("margin") / 1000000, 2),
-            flt(r.get("margin_pct"), 2)
-        ]
-        ws3.append(row_data)
-        if i % 2 == 1:
-            for cell in ws3[ws3.max_row]: cell.fill = zebra_fill
-
-    # Sheet 3: Sales Invoices List
-    ws_list = wb.create_sheet("Sales Invoices List")
-    
+    # Styling Helpers
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="2c3e50", fill_type="solid")
     title_font = Font(bold=True, size=14)
@@ -470,7 +415,7 @@ def export_to_excel(filters=None):
 
     # Sheet 2: Month-Wise Margin
     row_idx = 1
-    ws_months.cell(row=row_idx, column=1, value="Month-Wise Consolidated Margin (Million INR)").font = section_font
+    ws2.cell(row=row_idx, column=1, value="Month-Wise Consolidated Margin (Million INR)").font = section_font
     row_idx += 1
     
     merged_data = {}
@@ -499,16 +444,16 @@ def export_to_excel(filters=None):
     headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total Margin (M)"]
     
     for idx, h in enumerate(headers, start=1):
-        cell = ws_months.cell(row=row_idx, column=idx, value=h)
+        cell = ws2.cell(row=row_idx, column=idx, value=h)
         cell.font = header_font; cell.fill = header_fill; cell.alignment = Alignment(horizontal="center"); cell.border = table_border
     row_idx += 1
         
     for r_idx, row in enumerate(sorted(merged_data.values(), key=lambda x: x["total"], reverse=True)):
         row_fill = zebra_fill if r_idx % 2 != 0 else None
-        c_no = ws_months.cell(row=row_idx, column=1, value=r_idx + 1)
-        c1 = ws_months.cell(row=row_idx, column=2, value=row["cust"])
-        c2 = ws_months.cell(row=row_idx, column=3, value=row["sp"])
-        c3 = ws_months.cell(row=row_idx, column=4, value=row["prod"])
+        c_no = ws2.cell(row=row_idx, column=1, value=r_idx + 1)
+        c1 = ws2.cell(row=row_idx, column=2, value=row["cust"])
+        c2 = ws2.cell(row=row_idx, column=3, value=row["sp"])
+        c3 = ws2.cell(row=row_idx, column=4, value=row["prod"])
         for c in [c_no, c1, c2, c3]:
             c.border = table_border
             if row_fill: c.fill = row_fill
@@ -516,19 +461,19 @@ def export_to_excel(filters=None):
         col_idx = 5
         for m_key in sorted_months:
             v_m = flt(row["months"].get(m_key, 0)) / 1000000
-            c = ws_months.cell(row=row_idx, column=col_idx, value=v_m)
+            c = ws2.cell(row=row_idx, column=col_idx, value=v_m)
             c.number_format = '"₹ "#,##0.00" M"'; c.border = table_border; c.alignment = Alignment(horizontal="right")
             if row_fill: c.fill = row_fill
             col_idx += 1
             
         tot_m = flt(row["total"]) / 1000000
-        c_tot = ws_months.cell(row=row_idx, column=col_idx, value=tot_m)
+        c_tot = ws2.cell(row=row_idx, column=col_idx, value=tot_m)
         c_tot.number_format = '"₹ "#,##0.00" M"'; c_tot.font = Font(bold=True); c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid"); c_tot.border = table_border; c_tot.alignment = Alignment(horizontal="right")
         row_idx += 1
 
-    # Sheet 3: Sales Invoices List
+    # Sheet 3: Detailed List
     row_idx = 1
-    ws_list.cell(row=row_idx, column=1, value="Detailed Gross Margin List (Million INR)").font = section_font
+    ws3.cell(row=row_idx, column=1, value="Detailed Gross Margin List (Million INR)").font = section_font
     row_idx += 1
     
     ui_columns = [
@@ -545,9 +490,9 @@ def export_to_excel(filters=None):
     ]
     
     for idx, col in enumerate(ui_columns, start=1):
-        cell = ws_list.cell(row=row_idx, column=idx, value=col["label"])
+        cell = ws3.cell(row=row_idx, column=idx, value=col["label"])
         cell.font = header_font; cell.fill = header_fill; cell.alignment = Alignment(horizontal="center"); cell.border = table_border
-        ws_list.column_dimensions[get_column_letter(idx)].width = col["width"]
+        ws3.column_dimensions[get_column_letter(idx)].width = col["width"]
     row_idx += 1
     
     for r_idx, row in enumerate(data):
@@ -556,7 +501,7 @@ def export_to_excel(filters=None):
             fname = col["fieldname"]
             val = row.get(fname)
             if fname == "sr_no_idx": val = r_idx + 1
-            cell = ws_list.cell(row=row_idx, column=idx)
+            cell = ws3.cell(row=row_idx, column=idx)
             cell.border = table_border
             if row_fill: cell.fill = row_fill
             
