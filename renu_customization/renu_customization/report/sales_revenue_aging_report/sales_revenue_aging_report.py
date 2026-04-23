@@ -54,7 +54,7 @@ def get_columns(filters):
 
     # Add Total column
     columns.append({
-        "label": _("Total"),
+        "label": _("Gross Total"),
         "fieldname": "total_revenue",
         "fieldtype": "Currency",
         "options": "Company:currency",
@@ -121,6 +121,17 @@ def get_periods(from_date, to_date, period_type):
             fieldname = f"fy_{fy_start_year}_{fy_start_year + 1}"
             current_date = add_months(period_start, 12)
 
+        elif period_type == "Aging":
+            # Standard Aging Buckets
+            aging_periods = [
+                {"label": "0-30 Days", "fieldname": "aging_0_30", "min_days": 0, "max_days": 30},
+                {"label": "31-60 Days", "fieldname": "aging_31_60", "min_days": 31, "max_days": 60},
+                {"label": "61-90 Days", "fieldname": "aging_61_90", "min_days": 61, "max_days": 90},
+                {"label": "91-120 Days", "fieldname": "aging_91_120", "min_days": 91, "max_days": 120},
+                {"label": "Above 120 Days", "fieldname": "aging_121_plus", "min_days": 121, "max_days": 99999}
+            ]
+            return aging_periods
+
 
         if period_end > to_date:
             period_end = to_date
@@ -157,7 +168,9 @@ def get_data(filters, columns):
             st.sales_person,
             sii.item_code,
             si.posting_date,
-            SUM(sii.base_amount) as amount
+            sii.base_amount,
+            si.base_net_total,
+            si.base_grand_total
         FROM `tabSales Invoice` si
         JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
         LEFT JOIN `tabSales Team` st ON st.parent = si.name
@@ -168,7 +181,7 @@ def get_data(filters, columns):
         AND si.posting_date >= %(from_date)s 
         AND si.posting_date <= %(to_date)s
         {conditions}
-        GROUP BY si.customer, st.sales_person, sii.item_code, si.posting_date
+        ORDER BY si.posting_date DESC
     """
     
     invoices = frappe.db.sql(query, filters, as_dict=True)
@@ -193,13 +206,32 @@ def get_data(filters, columns):
             for p in periods:
                 data_map[row_key][p['fieldname']] = 0.0
         
+        # Calculate distributed Gross Total (including taxes proportionally)
+        net_total = flt(inv.base_net_total)
+        grand_total = flt(inv.base_grand_total)
+        item_base = flt(inv.base_amount)
+        
+        # Factor to scale net line amount to grand total share
+        factor = grand_total / net_total if net_total else 1
+        distributed_amount = item_base * factor
+        
         # Determine which period this invoice falls into
         inv_date = getdate(inv.posting_date)
-        for p in periods:
-            if p['from_date'] <= inv_date <= p['to_date']:
-                data_map[row_key][p['fieldname']] += flt(inv.amount)
-                data_map[row_key]["total_revenue"] += flt(inv.amount)
-                break
+        today = getdate()
+        
+        if period_type == "Aging":
+            days_diff = (today - inv_date).days
+            for p in periods:
+                if p['min_days'] <= days_diff <= p['max_days']:
+                    data_map[row_key][p['fieldname']] += distributed_amount
+                    data_map[row_key]["total_revenue"] += distributed_amount
+                    break
+        else:
+            for p in periods:
+                if p['from_date'] <= inv_date <= p['to_date']:
+                    data_map[row_key][p['fieldname']] += distributed_amount
+                    data_map[row_key]["total_revenue"] += distributed_amount
+                    break
                 
     # Convert map to list
     data = list(data_map.values())

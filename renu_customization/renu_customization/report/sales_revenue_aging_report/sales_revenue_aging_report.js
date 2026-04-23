@@ -93,8 +93,8 @@ frappe.query_reports["Sales Revenue Aging Report"] = {
 			"fieldname": "period_type",
 			"label": __("Period Type"),
 			"fieldtype": "Select",
-			"options": ["Monthly", "Quarterly", "Yearly", "Fiscal Year"],
-			"default": "Monthly",
+			"options": ["Monthly", "Quarterly", "Yearly", "Fiscal Year", "Aging"],
+			"default": "Aging",
 			"reqd": 1,
 			"on_change": () => frappe.query_report.refresh()
 		}
