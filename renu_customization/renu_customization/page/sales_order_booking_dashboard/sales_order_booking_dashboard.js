@@ -7,8 +7,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	window.cur_page = page;
 	page.set_primary_action(__("Refresh"), () => page.refresh());
-	page.add_menu_item(__("Export to PDF"), () => export_pdf());
-	page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 
 	// Standard Frappe Filters
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
@@ -398,6 +396,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	function render_dashboard(data) {
 		page.container.empty();
+        page.clear_menu();
 		if (!data.results || data.results.length === 0) {
 			$(
 				`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found for the selected filters")}</div></div>`,
@@ -686,19 +685,22 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			}
 		};
         
-        const export_pdf = async () => {
-			const report_date = moment().format("YYYY-MM-DD HH:mm");
+		const export_pdf = async () => {
+			const report_date = frappe.datetime.now_datetime();
 			const filters = page.filter_group.get_values();
 			let period = "Custom Period";
 			if (filters.fiscal_year) period = filters.fiscal_year;
 			if (filters.from_date && filters.to_date) period = `${filters.from_date} to ${filters.to_date}`;
 
 			const get_chart_png = (id) => {
-				const svg = document.querySelector(`#wrapper_${id} svg`);
-				if (!svg) return null;
+				const svg_el = document.querySelector(`#wrapper_${id} svg`);
+				if (!svg_el) return null;
+                const clone = svg_el.cloneNode(true);
+                const internal_legend = clone.querySelector('.chart-legend, .legend, .frappe-chart-legend');
+                if (internal_legend) internal_legend.style.display = 'none';
 				const canvas = document.createElement("canvas");
 				const context = canvas.getContext("2d");
-				const svg_data = new XMLSerializer().serializeToString(svg);
+				const svg_data = new XMLSerializer().serializeToString(clone);
 				const img = new Image();
 				return new Promise((resolve) => {
 					img.onload = () => {
@@ -719,7 +721,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				get_chart_png("top_10_products"),
 			]);
 
-			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">${title}</h4><img src="${src}" style="width:100%; max-width:700px; border:1px solid #f1f5f9; border-radius:12px; padding: 10px; background: #fff;"></div>` : "";
+			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>` : "";
 			
             const chart_l = (chart_id) => {
                 const c_obj = data.charts[chart_id];
@@ -771,8 +773,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				<html>
 				<head>
 					<style>
-						body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 20px; color: #1e293b; line-height: 1.4; }
-						.report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
+                        @page { size: landscape; margin: 10mm; }
+                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 10px; color: #1e293b; line-height: 1.2; zoom: 0.9; }
+                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
                         .indicator-pill.red { background: #fee2e2; color: #991b1b; }
                         
                         .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 15px; table-layout: fixed; }
@@ -780,6 +783,33 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
                         .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; white-space: nowrap; }
                         .kpi-value { font-size: 14px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+                        
+                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 30px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
+                        
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: fixed; }
+						th, td { border: 1px solid #e2e8f0; padding: 6px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
+						th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
+                        td { background: #fff; }
+                        
+                        .col-sno { width: 25px; text-align: center; }
+                        .col-customer { width: 110px; font-weight: 600; }
+                        .col-sp { width: 80px; }
+                        .col-prod { width: 90px; }
+                        .col-amt { width: 55px; text-align: right; white-space: nowrap; }
+                        .total-net-col, .grand-total-col { width: 65px; text-align: right; font-weight: 700; white-space: nowrap; }
+                        
+						.text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .font-weight-bold { font-weight: 700; }
+						.page-break { page-break-after: always; }
+
+                        /* Legend Styles for PDF */
+                        .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+                        .pdf-legend-item { display: inline-block; width: 30%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
+                        .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+                        .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
+                        .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                        .pdf-legend-val { font-size: 9px; color: #64748b; }
 					</style>
 				</head>
 				<body>
@@ -860,7 +890,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			const url = window.URL.createObjectURL(blob);
 			const btn = document.createElement("a");
 			btn.href = url;
-			btn.download = `Month_Wise_Orders_${moment().format("YYYY-MM-DD")}.xls`;
+			btn.download = `Month_Wise_Orders_${frappe.datetime.now_date()}.xls`;
 			btn.click();
 		});
 
@@ -872,7 +902,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			const url = window.URL.createObjectURL(blob);
 			const btn = document.createElement("a");
 			btn.href = url;
-			btn.download = `Sales_Orders_List_${moment().format("YYYY-MM-DD")}.xls`;
+			btn.download = `Sales_Orders_List_${frappe.datetime.now_date()}.xls`;
 			btn.click();
 		});
 
@@ -974,135 +1004,20 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 		// Table Action Handlers
 		tables_container.on("click", "#export_month_table", () => export_to_excel());
-		tables_container.on("click", "#pdf_month_table", () => page.menu_item_pdf.click()); // Trigger the existing menu PDF function
+		tables_container.on("click", "#pdf_month_table", () => export_pdf());
 		tables_container.on("click", "#export_list_table", () => export_to_excel());
 
 		// Initial table render
 		render_filtered_view(data.results);
 		init_hybrid_ui();
+
+		page.add_menu_item(__("Export to PDF"), () => export_pdf());
+		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 	}
 
 
 
-	// Double Export Menus
-	page.menu_item_pdf = page.add_menu_item(__("Export to PDF"), async () => {
-		frappe.show_alert({ message: __("Preparing Booking Report PDF..."), indicator: "blue" });
-		const get_png = async (id) => {
-			const svg = document.querySelector(`#wrapper_${id} svg`);
-			if (!svg) return "";
-			return new Promise((res) => {
-				const bbox = svg.getBoundingClientRect();
-				const canvas = document.createElement("canvas");
-				const ctx = canvas.getContext("2d");
-				const img = new Image();
-				img.onload = () => {
-					canvas.width = bbox.width * 2;
-					canvas.height = bbox.height * 2;
-					ctx.fillStyle = "#ffffff";
-					ctx.fillRect(0, 0, canvas.width, canvas.height);
-					ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-					res(canvas.toDataURL("image/png"));
-				};
-				img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(new XMLSerializer().serializeToString(svg))));
-			});
-		};
-		const [p1, p2, p3] = await Promise.all([
-			get_png("top_10_salesperson"),
-			get_png("top_10_customers"),
-			get_png("top_10_products"),
-		]);
-
-		const chart_h = (p, t) =>
-			`<div style="page-break-inside: avoid; text-align:center; margin-bottom: 30px; border: 1pt solid #e2e8f0; padding: 20px; border-radius: 12px; background: #fff;">
-                <h4 style="text-transform:uppercase; color: #475569; letter-spacing: 1px; margin-top: 0;">${t}</h4>
-                <img src="${p}" style="width: 100%; max-width: 900px; height: auto;">
-            </div>`;
-
-		const chart_t = (chart_key, title) => {
-			if (!page.dashboard_data || !page.dashboard_data.charts[chart_key]) return "";
-			let c_data = page.dashboard_data.charts[chart_key].data;
-			if (!c_data.labels || !c_data.labels.length) return "";
-			let total_val = c_data.datasets[0].values.reduce((a, b) => a + b, 0);
-			let html = `<div style="page-break-inside: avoid; margin-bottom: 40px;"><h4 style="margin-bottom: 12px; color: #1e293b; border-left: 4px solid #4338ca; padding-left: 10px;">${title} Analysis</h4><table class="analysis-table"><thead><tr><th style="width: 50px;">S.No.</th><th style="text-align:left">${title.replace("Top 10 ", "")}</th><th style="text-align:right; width: 150px;">Amount</th><th style="text-align:right; width: 100px;">Share %</th></tr></thead><tbody>`;
-			c_data.labels.forEach((label, idx) => {
-				let val = c_data.datasets[0].values[idx];
-				let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
-				html += `<tr><td style="text-align:center; color: #64748b;">${idx + 1}</td><td style="font-weight: 600;">${label}</td><td style="text-align:right; font-weight: 700;">${format_currency_short(val)}</td><td style="text-align:right; color: #4338ca; font-weight: 600;">${share}</td></tr>`;
-			});
-			html += `</tbody></table></div>`;
-			return html;
-		};
-
-        let summary_html = `<div style="width: 100%; margin-bottom: 30px;">`;
-        let s_data = page.dashboard_data.summary;
-        for (let i = 0; i < s_data.length; i += 4) {
-            summary_html += `<div style="display: block; width: 100%; clear: both; margin-bottom: 10px;">`;
-            for (let j = i; j < i + 4 && j < s_data.length; j++) {
-                let s = s_data[j];
-                summary_html += `<div style="float: left; width: 23%; margin-right: 2%; border: 1pt solid #e2e8f0; padding: 12px; border-radius: 8px; background: #f8fafc; box-sizing: border-box;">
-                    <div style="font-size: 8pt; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; height: 25px; overflow: hidden;">${s.label}</div>
-                    <div style="font-size: 14pt; font-weight: 800; color: #0f172a;">${format_currency_short(s.value)}</div>
-                </div>`;
-            }
-            summary_html += `<div style="clear: both;"></div></div>`;
-        }
-		summary_html += `</div>`;
-
-		let html = `<html><head><style>
-			@page { size: landscape; margin: 10mm; }
-			body { font-family: 'Inter', sans-serif; padding: 0; color: #1e293b; line-height: 1.4; zoom: 0.8; }
-			.header-main { text-align: center; margin-bottom: 35px; padding-bottom: 15px; border-bottom: 3pt solid #0f172a; }
-			.header-main h1 { margin: 0; font-size: 24pt; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 2px; }
-			
-			table { width: 100%; border-collapse: collapse; margin-bottom: 25px; table-layout: fixed; }
-			th, td { padding: 8px 10px; text-align: left; font-size: 9pt; border-bottom: 0.5pt solid #e2e8f0; word-wrap: break-word; }
-			th { background: #f8fafc; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 8pt; letter-spacing: 0.5px; border-top: 1pt solid #cbd5e1; border-bottom: 1pt solid #cbd5e1; }
-			
-			.analysis-table td { border-bottom: 0.5pt solid #f1f5f9; }
-			.analysis-table tr:last-child td { border-bottom: none; }
-			
-			.month-table th:first-child, .month-table td:first-child { width: 40px; }
-			.month-table th:nth-child(2), .month-table td:nth-child(2) { width: 180px; }
-			
-            .sticky-total td { background: #f8fafc; font-weight: 800; color: #0f172a !important; border-top: 1.5pt solid #0f172a; border-bottom: 1.5pt solid #0f172a; }
-            .grand-total-col { background: #eef2ff !important; color: #4338ca !important; }
-
-			h3 { margin-top: 40px; margin-bottom: 15px; font-size: 16pt; font-weight: 800; color: #0f172a; border-left: 6px solid #0f172a; padding-left: 15px; text-transform: uppercase; }
-		</style></head><body>
-			<div class="header-main"><h1>Sales Order Booking Dashboard</h1><div style="font-weight: 600; color: #64748b;">Million INR | ${moment().format("MMMM Do YYYY")}</div></div>
-			
-			${summary_html}
-
-			${chart_h(p1, "Booking by Salesperson")}
-			${chart_t("top_10_salesperson", "Top Salesperson")}
-			
-			<div style="page-break-before: always;"></div>
-			${chart_h(p2, "Booking by Customer")}
-			${chart_t("top_10_customers", "Top Customers")}
-			
-			<div style="page-break-before: always;"></div>
-			${chart_h(p3, "Booking by Product")}
-			${chart_t("top_10_products", "Top Products")}
-			
-			<div style="page-break-before: always;"></div>
-			<h3>Month-Wise Booking Breakdown</h3>
-			<table class="month-table">${page.container.find("#booking_month_body").closest("table").html()}</table>
-			
-			<div style="page-break-before: always;"></div>
-			<h3>Detailed Sales Orders List</h3>
-			<table class="list-table">${page.container.find("#so_list_body").closest("table").html()}</table>
-		</body></html>`;
-
-		const method = "renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.export_to_pdf";
-		$(`<form action="/api/method/${method}" method="POST" target="_blank"><input type="hidden" name="html" value=""><input type="hidden" name="csrf_token" value="${frappe.csrf_token}"></form>`)
-			.appendTo("body")
-			.find('input[name="html"]')
-			.val(html)
-			.closest("form")
-			.submit()
-			.remove();
-	});
-	page.add_menu_item(__("Export to Excel"), () => {
+	const export_to_excel = () => {
 		frappe.call({
 			method: "renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.export_to_excel",
 			args: { filters: page.filter_group.get_values() },
@@ -1116,7 +1031,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				}
 			},
 		});
-	});
+	};
 
 	setTimeout(() => page.refresh(), 100);
 };

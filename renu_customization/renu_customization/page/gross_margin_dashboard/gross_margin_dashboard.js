@@ -8,8 +8,6 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 	});
 
 	page.set_primary_action(__("Refresh"), () => page.refresh());
-	page.add_menu_item(__("Export to PDF"), () => export_pdf());
-	page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 
 	// Standard Frappe Filters
 	const filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
@@ -131,6 +129,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
 	function render_dashboard(data) {
 		page.container.empty();
+		page.clear_menu();
 		if (!data.results || data.results.length === 0) {
 			$(`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found")}</div></div>`).appendTo(page.container);
 			return;
@@ -356,18 +355,21 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         };
 
         const export_pdf = async () => {
-			const report_date = moment().format("YYYY-MM-DD HH:mm");
+			const report_date = frappe.datetime.now_datetime();
 			const filters = page.filter_group.get_values();
 			let period = "Custom Period";
 			if (filters.fiscal_year) period = filters.fiscal_year;
 			if (filters.from_date && filters.to_date) period = `${filters.from_date} to ${filters.to_date}`;
 
 			const get_chart_png = (id) => {
-				const svg = document.querySelector(`#wrapper_${id} svg`);
-				if (!svg) return null;
+				const svg_el = document.querySelector(`#wrapper_${id} svg`);
+				if (!svg_el) return null;
+                const clone = svg_el.cloneNode(true);
+                const internal_legend = clone.querySelector('.chart-legend, .legend, .frappe-chart-legend');
+                if (internal_legend) internal_legend.style.display = 'none';
 				const canvas = document.createElement("canvas");
 				const context = canvas.getContext("2d");
-				const svg_data = new XMLSerializer().serializeToString(svg);
+				const svg_data = new XMLSerializer().serializeToString(clone);
 				const img = new Image();
 				return new Promise((resolve) => {
 					img.onload = () => {
@@ -389,7 +391,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 				get_chart_png("top_10_products"),
 			]);
 
-			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px;">${title}</h4><img src="${src}" style="width:100%; max-width:700px; border:1px solid #f1f5f9; border-radius:12px; padding: 10px; background: #fff;"></div>` : "";
+			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>` : "";
 			
             const chart_l = (chart_id) => {
                 const c_obj = data.charts[chart_id];
@@ -450,6 +452,37 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
                         .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; white-space: nowrap; }
                         .kpi-value { font-size: 15px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+                        
+                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 30px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
+                        
+                        @page { size: landscape; margin: 10mm; }
+                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 10px; color: #1e293b; line-height: 1.2; zoom: 0.9; }
+                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
+                        
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: fixed; }
+						th, td { border: 1px solid #e2e8f0; padding: 6px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
+						th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
+                        td { background: #fff; }
+                        
+                        .col-sno { width: 25px; text-align: center; }
+                        .col-customer { width: 110px; font-weight: 600; }
+                        .col-sp { width: 80px; }
+                        .col-prod { width: 90px; }
+                        .col-amt { width: 55px; text-align: right; white-space: nowrap; }
+                        .total-net-col, .grand-total-col { width: 65px; text-align: right; font-weight: 700; white-space: nowrap; }
+                        
+						.text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .font-weight-bold { font-weight: 700; }
+						.page-break { page-break-after: always; }
+
+                        /* Legend Styles for PDF */
+                        .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+                        .pdf-legend-item { display: inline-block; width: 30%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
+                        .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+                        .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
+                        .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                        .pdf-legend-val { font-size: 9px; color: #64748b; }
 					</style>
 					</style>
 				</head>
@@ -523,6 +556,9 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
             page.filter_group.set_value(field, "");
             page.refresh();
         });
+
+        page.add_menu_item(__("Export to PDF"), () => export_pdf());
+        page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 	}
 
 	function b64toBlob(b64Data, contentType = "", sliceSize = 512) {
