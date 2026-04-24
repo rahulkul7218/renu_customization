@@ -129,7 +129,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		}
 		.dashboard-filter-area .control-input,
 		.dashboard-filter-area .awesomplete,
-		.dashboard-filter-area input,
+		.dashboard-filter-area input:not([type="checkbox"]),
 		.dashboard-filter-area select {
 			width: 100% !important;
 			max-width: 100% !important;
@@ -142,6 +142,35 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 			margin-bottom: 6px !important;
 			display: block !important;
 			white-space: nowrap !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] {
+			display: flex !important;
+			align-items: center !important;
+			padding-bottom: 4px !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .control-label {
+			display: none !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .form-group {
+			margin-bottom: 0 !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .checkbox {
+			margin: 0 !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] label {
+			display: flex !important;
+			align-items: center !important;
+			margin-bottom: 0 !important;
+			cursor: pointer !important;
+			white-space: normal !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] input[type="checkbox"] {
+			width: 16px !important;
+			height: 16px !important;
+			margin: 0 8px 0 0 !important;
+			cursor: pointer !important;
+			flex-shrink: 0 !important;
 		}
 	`,
 		)
