@@ -47,24 +47,21 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Fiscal Year"),
 			options: "Fiscal Year",
 		},
-		{ fieldtype: "Column Break" },
-		{
+				{
 			label: __("Customer"),
 			placeholder: __("Select Customer"),
 			fieldname: "customer",
 			fieldtype: "Link",
 			options: "Customer",
 		},
-		{ fieldtype: "Column Break" },
-		{
+				{
 			fieldname: "customer_group",
 			label: __("Customer Group"),
 			placeholder: __("Select Customer Group"),
 			fieldtype: "Link",
 			options: "Customer Group",
 		},
-		{ fieldtype: "Column Break" },
-		{
+				{
 			label: __("Product (Item)"),
 			placeholder: __("Select Product"),
 			fieldname: "item_code",
@@ -72,8 +69,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			options: "Item",
 		},
 
-		{ fieldtype: "Column Break" },
-
+		
 		{
 			fieldname: "item_group",
 			label: __("Product Group"),
@@ -81,8 +77,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Link",
 			options: "Item Group",
 		},
-		{ fieldtype: "Section Break" },
-
+		
 		{
 			label: __("Sales Person"),
 			placeholder: __("Select Sales Person"),
@@ -90,25 +85,16 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Link",
 			options: "Sales Person",
 		},
-		{ fieldtype: "Column Break" },
-		{
+				{
 			fieldname: "territory",
 			label: __("Territory"),
 			placeholder: __("Select Territory"),
 			fieldtype: "Link",
 			options: "Territory",
 		},
-		{ fieldtype: "Column Break" },
-		{
-			fieldname: "status",
-			label: __("Status"),
-			placeholder: __("Select Status"),
-			fieldtype: "MultiSelect",
-			options: ["Draft", "To Bill", "To Deliver and Bill", "To Deliver", "Completed"],
-		},
+		
 
-		{ fieldtype: "Column Break" },
-
+		
 		{
 			fieldname: "dom_exp",
 			label: __("Type"),
@@ -116,8 +102,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Select",
 			options: ["", "Domestic", "Export"],
 		},
-		{ fieldtype: "Column Break" },
-
+		
 		{
 			fieldname: "invoice_type",
 			label: __("Invoice Type"),
@@ -138,6 +123,58 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		fields: filter_fields,
 	});
 	page.filter_group.make();
+
+	$("<style>")
+		.text(
+			`
+		.dashboard-filter-area {
+			padding: 15px 20px 5px 20px !important;
+			background-color: #fff !important;
+			border-bottom: 1px solid #e2e8f0 !important;
+		}
+		.dashboard-filter-area .form-section .section-body,
+		.dashboard-filter-area .section-body,
+		.dashboard-filter-area .form-column {
+			display: block !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .form-column form {
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 15px !important;
+			align-items: flex-end !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
+		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
+			display: none !important;
+		}
+		.dashboard-filter-area .frappe-control {
+			margin-bottom: 10px !important;
+			width: calc(20% - 12px) !important;
+		}
+		.dashboard-filter-area .frappe-control .form-group {
+			margin-bottom: 0 !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .control-input,
+		.dashboard-filter-area .awesomplete,
+		.dashboard-filter-area input,
+		.dashboard-filter-area select {
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		.dashboard-filter-area label,
+		.dashboard-filter-area .control-label {
+			font-size: 12px !important;
+			font-weight: 600 !important;
+			color: #475569 !important;
+			margin-bottom: 6px !important;
+			display: block !important;
+			white-space: nowrap !important;
+		}
+	`
+		)
+		.appendTo(filter_parent);
 
 	// ENSURE LIVE FILTERING WORKS - Attaching robust listeners to all controls
 	Object.keys(page.filter_group.fields_dict).forEach((key) => {

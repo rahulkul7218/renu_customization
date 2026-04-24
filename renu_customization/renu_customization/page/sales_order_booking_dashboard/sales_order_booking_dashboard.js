@@ -86,21 +86,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Territory",
 			placeholder: __("Select Territory"),
 		},
-		{
-			fieldname: "status",
-			label: __("Status"),
-			fieldtype: "MultiSelect",
-			options: [
-				"Draft",
-				"To Deliver and Bill",
-				"To Deliver",
-				"To Bill",
-				"Completed",
-				"Closed",
-				"Cancelled",
-			],
-			placeholder: __("Select Statuses"),
-		},
+
 		{
 			fieldname: "dom_exp",
 			label: __("Type"),
@@ -132,39 +118,50 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 	$("<style>")
 		.text(
 			`
-		.dashboard-filter-area .form-section .section-body {
-			display: grid !important;
-			grid-template-columns: repeat(5, minmax(0, 2fr)) !important;
-			// gap: 10px !important;
-			// padding: 10px !important;
-			// align-items: flex-end !important;
+		.dashboard-filter-area {
+			padding: 15px 20px 5px 20px !important;
+			background-color: #fff !important;
+			border-bottom: 1px solid #e2e8f0 !important;
 		}
+		.dashboard-filter-area .form-section .section-body,
+		.dashboard-filter-area .section-body,
 		.dashboard-filter-area .form-column {
-			display: contents !important;
+			display: block !important;
+			width: 100% !important;
 		}
 		.dashboard-filter-area .form-column form {
-			display: contents !important;
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 15px !important;
+			align-items: flex-end !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
+		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
+			display: none !important;
 		}
 		.dashboard-filter-area .frappe-control {
-			margin-bottom: 0 !important;
-			width: auto !important;
+			margin-bottom: 10px !important;
+			width: calc(20% - 12px) !important;
 		}
 		.dashboard-filter-area .frappe-control .form-group {
 			margin-bottom: 0 !important;
-			width: auto !important;
+			width: 100% !important;
 		}
 		.dashboard-filter-area .control-input,
 		.dashboard-filter-area .awesomplete,
 		.dashboard-filter-area input,
-		
-		.dashboard-filter-area label,
-		.dashboard-filter-area form-label {
-			width: auto !important;
-			max-width: none !important;
-		}
 		.dashboard-filter-area select {
-			width: auto !important;
-			max-width: 250px !important;
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		.dashboard-filter-area label,
+		.dashboard-filter-area .control-label {
+			font-size: 12px !important;
+			font-weight: 600 !important;
+			color: #475569 !important;
+			margin-bottom: 6px !important;
+			display: block !important;
+			white-space: nowrap !important;
 		}
 	`,
 		)

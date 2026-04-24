@@ -35,28 +35,71 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{ fieldname: "fiscal_year", label: __("Fiscal Year"), fieldtype: "Link", options: "Fiscal Year" },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer" },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group" },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "item_code", label: __("Product (Item)"), fieldtype: "Link", options: "Item" },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "item_group", label: __("Product Group"), fieldtype: "Link", options: "Item Group" },
-		{ fieldtype: "Section Break" },
-		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person" },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "territory", label: __("Territory"), fieldtype: "Link", options: "Territory" },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "status", label: __("Status"), fieldtype: "MultiSelect", options: "Draft\nTo Bill\nTo Deliver and Bill\nTo Deliver\nCompleted" },
-		{ fieldtype: "Column Break" },
+				{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer" },
+				{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group" },
+				{ fieldname: "item_code", label: __("Product (Item)"), fieldtype: "Link", options: "Item" },
+				{ fieldname: "item_group", label: __("Product Group"), fieldtype: "Link", options: "Item Group" },
+				{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person" },
+				{ fieldname: "territory", label: __("Territory"), fieldtype: "Link", options: "Territory" },
+		
 		{ fieldname: "dom_exp", label: __("Type"), fieldtype: "Select", options: "\nDomestic\nExport" },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "invoice_type", label: __("Invoice Type"), fieldtype: "Select", options: "\nProduct Domestic\nProduct Export\nEngineering Service Domestic\nEngineering Service Export" },
+				{ fieldname: "invoice_type", label: __("Invoice Type"), fieldtype: "Select", options: "\nProduct Domestic\nProduct Export\nEngineering Service Domestic\nEngineering Service Export" },
 	];
 
 	page.filter_group = new frappe.ui.FieldGroup({ parent: filter_parent, fields: filter_fields });
 	page.filter_group.make();
+
+	$("<style>")
+		.text(
+			`
+		.dashboard-filter-area {
+			padding: 15px 20px 5px 20px !important;
+			background-color: #fff !important;
+			border-bottom: 1px solid #e2e8f0 !important;
+		}
+		.dashboard-filter-area .form-section .section-body,
+		.dashboard-filter-area .section-body,
+		.dashboard-filter-area .form-column {
+			display: block !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .form-column form {
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 15px !important;
+			align-items: flex-end !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
+		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
+			display: none !important;
+		}
+		.dashboard-filter-area .frappe-control {
+			margin-bottom: 10px !important;
+			width: calc(20% - 12px) !important;
+		}
+		.dashboard-filter-area .frappe-control .form-group {
+			margin-bottom: 0 !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .control-input,
+		.dashboard-filter-area .awesomplete,
+		.dashboard-filter-area input,
+		.dashboard-filter-area select {
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		.dashboard-filter-area label,
+		.dashboard-filter-area .control-label {
+			font-size: 12px !important;
+			font-weight: 600 !important;
+			color: #475569 !important;
+			margin-bottom: 6px !important;
+			display: block !important;
+			white-space: nowrap !important;
+		}
+	`
+		)
+		.appendTo(filter_parent);
 
 	Object.keys(page.filter_group.fields_dict).forEach((key) => {
 		let field = page.filter_group.fields_dict[key];
@@ -181,7 +224,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 					height: 350,
 					colors: chart_obj.colors,
                     legend: 0,
-					tooltipOptions: { formatTooltipY: (d) => format_currency_short(d) },
+					tooltipOptions: { formatTooltipY: (d) => "₹ " + flt(d).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M" },
 					onClick: (event) => {
 						if (config && config.field && event.label) {
 							page.filter_group.set_value(config.field, event.label);
@@ -206,7 +249,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 <span class="dot" style="background: ${chart_obj.colors[idx % chart_obj.colors.length]}"></span>
                                 <div class="info">
                                     <span class="label">${display_label}</span>
-                                    <span class="val">${format_currency_short(val)} (${share})</span>
+                                    <span class="val">₹ ${flt(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M (${share})</span>
                                 </div>
                             </div>
                         `).appendTo(legend_container);
@@ -287,6 +330,14 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                     </tr>
                 `);
 			});
+
+            let grand_total_row = `<tr class="sticky-total">
+                <td colspan="4" class="text-right">GRAND TOTAL</td>
+                ${months.map(m => `<td class="text-right">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
+                <td class="text-right sticky-right-2">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + r.total, 0))}</td>
+                <td class="text-right sticky-right-1"></td>
+            </tr>`;
+            tbody.append(grand_total_row);
 		};
 
 		render_table(data.results);
@@ -332,6 +383,16 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 </tr>
                             `).join("")}
                         </tbody>
+                        <tfoot>
+                            <tr class="sticky-total">
+                                <td colspan="5" class="text-right">GRAND TOTAL</td>
+                                <td class="text-right">${data.results.reduce((sum, r) => sum + flt(r.qty), 0).toFixed(2)}</td>
+                                <td class="text-right">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
+                                <td class="text-right">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>
+                                <td class="text-right font-weight-bold">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.margin), 0))}</td>
+                                <td class="text-right">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) * 100) : 0).toFixed(2)}%</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>

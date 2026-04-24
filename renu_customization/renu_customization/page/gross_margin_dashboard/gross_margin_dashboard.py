@@ -253,9 +253,9 @@ def get_dashboard_data(filters=None):
 
     sorted_months = sorted(monthly_stats.keys())
     trend_labels = [monthly_stats[m]["label"] for m in sorted_months]
-    trend_rev = [flt(monthly_stats[m]["rev"], 2) for m in sorted_months]
-    trend_cogs = [flt(monthly_stats[m]["cogs"], 2) for m in sorted_months]
-    trend_margin = [flt(monthly_stats[m]["margin"], 2) for m in sorted_months]
+    trend_rev = [flt(monthly_stats[m]["rev"] / 1000000.0, 2) for m in sorted_months]
+    trend_cogs = [flt(monthly_stats[m]["cogs"] / 1000000.0, 2) for m in sorted_months]
+    trend_margin = [flt(monthly_stats[m]["margin"] / 1000000.0, 2) for m in sorted_months]
 
     def get_chart_def(title, data_dict, label_key, limit=10):
         sorted_items = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
@@ -264,7 +264,7 @@ def get_dashboard_data(filters=None):
             "title": title,
             "data": {
                 "labels": [x[0] for x in top_items],
-                "datasets": [{"name": title, "values": [flt(x[1], 2) for x in top_items]}]
+                "datasets": [{"name": title, "values": [flt(x[1] / 1000000.0, 2) for x in top_items]}]
             },
             "type": "donut",
             "height": 300,
@@ -471,6 +471,39 @@ def export_to_excel(filters=None):
         c_tot.number_format = '"₹ "#,##0.00" M"'; c_tot.font = Font(bold=True); c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid"); c_tot.border = table_border; c_tot.alignment = Alignment(horizontal="right")
         row_idx += 1
 
+    # Add Total Row for Month-Wise Margin
+    c_tot_label = ws2.cell(row=row_idx, column=1, value="Total")
+    c_tot_label.font = Font(bold=True)
+    ws2.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+    for c in range(1, 5):
+        ws2.cell(row=row_idx, column=c).fill = header_fill
+        ws2.cell(row=row_idx, column=c).font = header_font
+        ws2.cell(row=row_idx, column=c).border = table_border
+        if c == 1:
+            ws2.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
+            
+    col_idx = 5
+    for m_key in sorted_months:
+        total_m = sum(flt(row["months"].get(m_key, 0)) for row in merged_data.values()) / 1000000
+        c = ws2.cell(row=row_idx, column=col_idx, value=total_m)
+        c.number_format = '"₹ "#,##0.00" M"'
+        c.font = Font(bold=True)
+        c.fill = header_fill
+        c.font = header_font
+        c.border = table_border
+        c.alignment = Alignment(horizontal="right")
+        col_idx += 1
+        
+    grand_total = sum(flt(row["total"]) for row in merged_data.values()) / 1000000
+    c_tot = ws2.cell(row=row_idx, column=col_idx, value=grand_total)
+    c_tot.number_format = '"₹ "#,##0.00" M"'
+    c_tot.font = Font(bold=True)
+    c_tot.fill = header_fill
+    c_tot.font = header_font
+    c_tot.border = table_border
+    c_tot.alignment = Alignment(horizontal="right")
+    row_idx += 1
+
     # Sheet 3: Detailed List
     row_idx = 1
     ws3.cell(row=row_idx, column=1, value="Detailed Gross Margin List (Million INR)").font = section_font
@@ -517,6 +550,43 @@ def export_to_excel(filters=None):
             else:
                 cell.value = str(val) if val is not None else ""; cell.alignment = Alignment(horizontal="left")
         row_idx += 1
+
+    # Add Total Row for Detailed List
+    c_tot_label = ws3.cell(row=row_idx, column=1, value="Total")
+    c_tot_label.font = Font(bold=True)
+    ws3.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+    for c in range(1, 6):
+        ws3.cell(row=row_idx, column=c).fill = header_fill
+        ws3.cell(row=row_idx, column=c).font = header_font
+        ws3.cell(row=row_idx, column=c).border = table_border
+        if c == 1:
+            ws3.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right", vertical="center")
+
+    total_qty = sum(flt(row.get("qty") or 0) for row in data)
+    c_qty = ws3.cell(row=row_idx, column=6, value=total_qty)
+    c_qty.font = header_font; c_qty.fill = header_fill; c_qty.border = table_border; c_qty.alignment = Alignment(horizontal="right")
+    c_qty.number_format = "#,##0.00"
+
+    total_rev = sum(flt(row.get("base_amount") or 0) for row in data) / 1000000
+    c_rev = ws3.cell(row=row_idx, column=7, value=total_rev)
+    c_rev.font = header_font; c_rev.fill = header_fill; c_rev.border = table_border; c_rev.alignment = Alignment(horizontal="right")
+    c_rev.number_format = '"₹ "#,##0.00" M"'
+    
+    total_cogs = sum(flt(row.get("cogs") or 0) for row in data) / 1000000
+    c_cogs = ws3.cell(row=row_idx, column=8, value=total_cogs)
+    c_cogs.font = header_font; c_cogs.fill = header_fill; c_cogs.border = table_border; c_cogs.alignment = Alignment(horizontal="right")
+    c_cogs.number_format = '"₹ "#,##0.00" M"'
+
+    total_margin = sum(flt(row.get("margin") or 0) for row in data) / 1000000
+    c_margin = ws3.cell(row=row_idx, column=9, value=total_margin)
+    c_margin.font = header_font; c_margin.fill = header_fill; c_margin.border = table_border; c_margin.alignment = Alignment(horizontal="right")
+    c_margin.number_format = '"₹ "#,##0.00" M"'
+
+    avg_margin_pct = (total_margin / total_rev * 100) if total_rev else 0
+    c_margin_pct = ws3.cell(row=row_idx, column=10, value=avg_margin_pct)
+    c_margin_pct.font = header_font; c_margin_pct.fill = header_fill; c_margin_pct.border = table_border; c_margin_pct.alignment = Alignment(horizontal="right")
+    c_margin_pct.number_format = '0.00"%"'
+    row_idx += 1
 
     output = BytesIO()
     wb.save(output)

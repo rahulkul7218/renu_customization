@@ -41,49 +41,34 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Fiscal Year"),
 			options: "Fiscal Year",
 		},
-		{ fieldtype: "Column Break" },
-		{
+				{
 			fieldname: "date_range",
 			label: __("Date Range"),
 			fieldtype: "DateRange",
 			placeholder: [__("Start Date"), __("End Date")],
 		},
-		{ fieldtype: "Column Break" },
-		{
+				{
 			fieldname: "supplier",
 			label: __("Supplier"),
 			fieldtype: "Link",
 			placeholder: __("Select Supplier"),
 			options: "Supplier",
 		},
-		{ fieldtype: "Column Break" },
-		{
+				{
 			fieldname: "item_code",
 			label: __("Product"),
 			fieldtype: "Link",
 			placeholder: __("Select Product"),
 			options: "Item",
 		},
-		{ fieldtype: "Column Break" },
-		{
+				{
 			fieldname: "supplier_group",
 			label: __("Supplier Group"),
 			fieldtype: "Link",
 			placeholder: __("Select Supplier Group"),
 			options: "Supplier Group",
 		},
-		{ fieldtype: "Column Break" },
-		{
-			fieldname: "status",
-			label: __("Status"),
-			fieldtype: "MultiSelect",
-			placeholder: __("Select Status"),
-			options: ["Draft", "To Pay", "Completed", "Cancelled"],
-		},
-		{ fieldtype: "Column Break" },
-		{ fieldtype: "Column Break" },
-		{ fieldtype: "Column Break" },
-	];
+									];
 
 	page.filter_group = new frappe.ui.FieldGroup({
 		parent: filter_parent,
@@ -123,35 +108,51 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
         .page-head .title-text, .page-head .breadcrumb-text { color: #1a1a1a !important; font-weight: 700 !important; }
 		.page-title { color: #000 !important; }
         .page-head { border-bottom: 1px solid #ddd !important; background: #fff !important; color: #000}
-        .dashboard-filter-area {
-            // padding: 20px 25px 5px 25px !important;
-            background-color: #fff !important;
-            border-bottom: 1px solid #ddd !important;
-        }
-        .dashboard-filter-area .section-body {
-            display: grid !important;
-            grid-template-columns: repeat(5, 1fr) !important;
-            // gap: 20px !important;
-            align-items: end !important;
-        }
-        .dashboard-filter-area .section-body .form-column {
-            width: 180px !important;
-            padding: 0 !important;
-            margin: 5px !important;
-            flex: none !important;
-            min-width: 0 !important;
-        }
-        .dashboard-filter-area .frappe-control {
-            margin-bottom: 5px !important;
-			width: 180px !important;
-        }
-        .dashboard-filter-area .control-label {
-            font-size: 12px !important;
-            font-weight: 600 !important;
-            color: #555 !important;
-            margin-bottom: 6px !important;
-            white-space: nowrap !important;
-        }
+		.dashboard-filter-area {
+			padding: 15px 20px 5px 20px !important;
+			background-color: #fff !important;
+			border-bottom: 1px solid #e2e8f0 !important;
+		}
+		.dashboard-filter-area .form-section .section-body,
+		.dashboard-filter-area .section-body,
+		.dashboard-filter-area .form-column {
+			display: block !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .form-column form {
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 15px !important;
+			align-items: flex-end !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
+		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
+			display: none !important;
+		}
+		.dashboard-filter-area .frappe-control {
+			margin-bottom: 10px !important;
+			width: calc(20% - 12px) !important;
+		}
+		.dashboard-filter-area .frappe-control .form-group {
+			margin-bottom: 0 !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .control-input,
+		.dashboard-filter-area .awesomplete,
+		.dashboard-filter-area input,
+		.dashboard-filter-area select {
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		.dashboard-filter-area label,
+		.dashboard-filter-area .control-label {
+			font-size: 12px !important;
+			font-weight: 600 !important;
+			color: #475569 !important;
+			margin-bottom: 6px !important;
+			display: block !important;
+			white-space: nowrap !important;
+		}
         .dashboard-content { padding: 24px; background: #fff; min-height: 100vh; }
         
         /* KPI Cards Styling */
