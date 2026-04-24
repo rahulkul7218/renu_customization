@@ -199,9 +199,9 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 
 	let filter_parent = $('<div class="dashboard-filter-area border-bottom" style="background: transparent; padding: 0;"></div>').prependTo(page.main);
 	const filter_fields = [
-		{ fieldname: "from_date", label: __("From Date"), fieldtype: "Date", default: frappe.datetime.add_months(frappe.datetime.get_today(), -1) },
+		{ fieldname: "from_date", label: __("From Date"), fieldtype: "Date" },
 		{ fieldtype: "Column Break" },
-		{ fieldname: "to_date", label: __("To Date"), fieldtype: "Date", default: frappe.datetime.get_today() },
+		{ fieldname: "to_date", label: __("To Date"), fieldtype: "Date" },
 		{ fieldtype: "Column Break" },
 		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer" },
 		{ fieldtype: "Column Break" },

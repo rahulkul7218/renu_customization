@@ -1,0 +1,22 @@
+{
+ "content": null,
+ "creation": "2026-04-24 15:30:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2026-04-24 15:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Renu Customization",
+ "name": "overdue_receivables",
+ "owner": "Administrator",
+ "page_name": "overdue_receivables",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Overdue Receivables"
+}
