@@ -100,6 +100,12 @@ def get_dashboard_data(filters=None):
     cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"])
     customer_map = {c.name: c for c in cust_list}
 
+    item_codes = list(set([d.get("item_code") for d in processed_raw_data if d.get("item_code")]))
+    item_group_map = {}
+    if item_codes:
+        items = frappe.get_all("Item", filters={"name": ("in", item_codes)}, fields=["name", "item_group"])
+        item_group_map = {i.name: i.item_group for i in items}
+
     for row in processed_raw_data:
         keep = True
         so_id = row.get("so_no")
@@ -171,6 +177,27 @@ def get_dashboard_data(filters=None):
             row_prod_code = str(row.get("item_code") or "").strip().lower()
             row_prod_name = str(row.get("item_name") or "").strip().lower()
             if f_prod != row_prod_code and f_prod != row_prod_name and f_prod not in row_prod_name:
+                keep = False
+
+        # 4. Product Group
+        ig_filter = filters.get("item_group")
+        if keep and ig_filter:
+            row_item_group = item_group_map.get(row.get("item_code"))
+            if str(row_item_group) != str(ig_filter):
+                keep = False
+
+        # 5. Customer Group
+        cg_filter = filters.get("customer_group")
+        if keep and cg_filter:
+            cust_info = customer_map.get(row.get("customer"))
+            if not cust_info or str(cust_info.customer_group) != str(cg_filter):
+                keep = False
+
+        # 6. Territory
+        terr_filter = filters.get("territory")
+        if keep and terr_filter:
+            cust_info = customer_map.get(row.get("customer"))
+            if not cust_info or str(cust_info.territory) != str(terr_filter):
                 keep = False
 
         # Type (Domestic/Export)
