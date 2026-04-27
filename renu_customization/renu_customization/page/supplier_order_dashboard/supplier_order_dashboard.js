@@ -359,9 +359,125 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             `).appendTo(summary_row);
 		});
 
+		// 2. Charts Row
+		let charts_row = $('<div class="charts-row"></div>').appendTo(page.container);
+		if (data.charts) {
+			Object.keys(data.charts).forEach((chart_id) => {
+				let chart_obj = data.charts[chart_id];
+				if (!chart_obj.data.labels || chart_obj.data.labels.length === 0) return;
+
+				$(`
+					<div class="chart-card">
+						<div class="title"><span>${chart_obj.title || chart_id.replace(/_/g, ' ').toUpperCase()}</span></div>
+						<div id="wrapper_${chart_id}" style="height: 350px;"></div>
+						<div id="legend_${chart_id}" class="custom-legend"></div>
+					</div>
+				`).appendTo(charts_row);
+
+				setTimeout(() => {
+					let is_currency = chart_obj.is_currency || false;
+					let c_data = Object.assign({}, chart_obj.data);
+					
+					if (is_currency) {
+						c_data.datasets = c_data.datasets.map(ds => ({
+							name: ds.name,
+							values: ds.values.map(v => parseFloat((v / 1000000).toFixed(2)))
+						}));
+					}
+
+					new frappe.Chart(`#wrapper_${chart_id}`, {
+						data: c_data,
+						type: chart_obj.type || "donut",
+						height: 350,
+						colors: chart_obj.colors,
+						valuesOverPoints: 1,
+						isNavigable: 1,
+						legend: 0,
+						show_legend: 0, 
+						legendOptions: { showLegend: false },
+						tooltipOptions: { 
+							formatTooltipY: (d) => is_currency ? format_currency(d, "INR") + " M" : d 
+						},
+					});
+
+					let legend_container = page.container.find(`#legend_${chart_id}`);
+					let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+					
+					chart_obj.data.labels.forEach((label, idx) => {
+						let val = chart_obj.data.datasets[0].values[idx];
+						let color = chart_obj.colors[idx % chart_obj.colors.length];
+						let share = ((val / total_val) * 100).toFixed(1) + "%";
+						
+						let val_str = is_currency ? format_currency(val / 1000000, "INR") + " M" : val;
+						
+						legend_container.append(`
+							<div class="legend-item">
+								<span class="dot" style="background: ${color}"></span>
+								<div class="info">
+									<span class="label">${label}</span>
+									<span class="val">${val_str} (${share})</span>
+								</div>
+							</div>
+						`);
+					});
+
+					// Append 'M' to Y-axis ticks and values-over-points in SVG
+					if (is_currency) {
+						const append_m_to_svg = () => {
+							page.container.find(`#wrapper_${chart_id} text`).each(function() {
+								let t = $(this).text();
+								if (!isNaN(t) && t.trim() !== '' && t.trim() !== '0' && !t.includes('M')) {
+									// Exclude x-axis labels to avoid altering supplier names that might be numbers
+									if ($(this).closest('.x-axis').length === 0) {
+										$(this).text(t + 'M');
+									}
+								}
+							});
+						};
+						setTimeout(append_m_to_svg, 300);
+						setTimeout(append_m_to_svg, 1000); // secondary check in case of slow render
+					}
+				}, 100);
+			});
+		}
+
 		let tables_container = $('<div class="tables-view"></div>').appendTo(page.container);
 
+		let months = [];
+		let months_map = {};
+		data.results.forEach((row) => {
+			if (row.transaction_date) {
+				let d = moment(row.transaction_date);
+				let m_key = d.format("MMM YYYY");
+				let m_sort = d.format("YYYYMM");
+				if (!months_map[m_key]) {
+					months_map[m_key] = m_sort;
+					months.push({ key: m_key, sort: m_sort });
+				}
+			}
+		});
+		months.sort((a, b) => a.sort - b.sort);
+
 		let tables_html = $(`
+            <div class="table-card" style="margin-top: 24px; overflow: visible;">
+                <div class="header" style="overflow: visible;">
+                    <span style="font-size: 15px;">${__("Month-Wise Order Breakdown")}</span>
+                </div>
+                <div class="table-container">
+                    <table class="dashboard-table month-table">
+                        <thead>
+                            <tr>
+                                <th class="col-sno">S.No.</th>
+                                <th class="col-supplier">Supplier</th>
+                                ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
+                                <th class="col-amt" style="position: sticky; right: 0; background: #f8fafc; z-index: 60; text-align: right;">Total (Net)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="po_month_body"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="table-card" style="margin-top: 32px;">
                 <div class="header">
                     <span style="font-size: 15px;">${__("Supplier Orders")}</span>
@@ -391,6 +507,57 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                 </div>
             </div>
         `).appendTo(tables_container);
+
+		let tbody_month = tables_container.find("#po_month_body");
+		tbody_month.empty();
+
+		let merged_data = {};
+		data.results.forEach((row) => {
+			let supp = row.supplier || "-";
+			let amt = flt(row.net_total);
+			let m_key = row.transaction_date ? moment(row.transaction_date).format("MMM YYYY") : "Unknown";
+			
+			if (!merged_data[supp]) {
+				merged_data[supp] = { supp: supp, months: {}, total: 0 };
+			}
+			merged_data[supp].months[m_key] = (merged_data[supp].months[m_key] || 0) + amt;
+			merged_data[supp].total += amt;
+		});
+
+		let summary_list = Object.values(merged_data).sort((a, b) => b.total - a.total);
+		let total_month_amts = {};
+		let g_total_net = 0;
+
+		if (summary_list.length === 0) {
+			tbody_month.append(`<tr><td colspan="${3 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`);
+		} else {
+			summary_list.forEach((row, idx) => {
+				g_total_net += row.total;
+				let cells = months.map((m) => {
+					let val = row.months[m.key] || 0;
+					total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
+					return `<td class="col-amt" style="text-align: right;">${format_currency(val / 1000000, "INR")} M</td>`;
+				}).join("");
+
+				tbody_month.append(`
+					<tr>
+						<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
+						<td class="col-supplier" style="font-weight: 600; color: #0f172a;">${row.supp}</td>
+						${cells}
+						<td class="col-amt" style="position: sticky; right: 0; background: #f8fafc; font-weight: 700; color: #4338ca; text-align: right; border-left: 1px solid #e2e8f0;">${format_currency(row.total / 1000000, "INR")} M</td>
+					</tr>
+				`);
+			});
+
+			tbody_month.append(`
+				<tr class="sticky-total">
+					<td class="col-sno">-</td>
+					<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL</td>
+					${months.map(m => `<td class="col-amt" style="text-align: right;">${format_currency((total_month_amts[m.key] || 0) / 1000000, "INR")} M</td>`).join("")}
+					<td class="col-amt" style="position: sticky; right: 0; background: #f0f4ff !important; z-index: 80; text-align: right; border-left: 1px solid #e2e8f0;">${format_currency(g_total_net / 1000000, "INR")} M</td>
+				</tr>
+			`);
+		}
 
 		let tbody_list = tables_container.find("#po_list_body");
         tbody_list.empty();
@@ -455,19 +622,91 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             });
         };
 
-        const export_to_pdf = () => {
+        const export_to_pdf = async () => {
             const report_date = frappe.datetime.now_datetime();
+            
+            const get_chart_png = (id) => {
+				const svg_el = document.querySelector(`#wrapper_${id} svg`);
+				if (!svg_el) return null;
+                const clone = svg_el.cloneNode(true);
+                const internal_legend = clone.querySelector('.chart-legend, .legend, .frappe-chart-legend');
+                if (internal_legend) internal_legend.style.display = 'none';
+				const canvas = document.createElement("canvas");
+				const context = canvas.getContext("2d");
+				const svg_data = new XMLSerializer().serializeToString(clone);
+				const img = new Image();
+				return new Promise((resolve) => {
+					img.onload = () => {
+						canvas.width = img.width * 2;
+						canvas.height = img.height * 2;
+						context.fillStyle = "white";
+						context.fillRect(0, 0, canvas.width, canvas.height);
+						context.drawImage(img, 0, 0, canvas.width, canvas.height);
+						resolve(canvas.toDataURL("image/png"));
+					};
+					img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
+				});
+			};
+
+			const [png1, png2] = await Promise.all([
+				get_chart_png("top_10_suppliers"),
+				get_chart_png("order_status")
+			]);
+
+			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>` : "";
+			
+            const chart_l = (chart_id) => {
+                const c_obj = data.charts[chart_id];
+                if (!c_obj || !c_obj.data.labels.length) return "";
+                const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+                let is_currency = c_obj.is_currency || false;
+                
+                let legend_html = '<div class="pdf-legend">';
+                c_obj.data.labels.forEach((l, i) => {
+                    const val = c_obj.data.datasets[0].values[i];
+                    const color = c_obj.colors[i % c_obj.colors.length];
+                    const share = ((val / total_val) * 100).toFixed(1);
+                    const val_str = is_currency ? format_currency(val / 1000000, "INR") + " M" : val;
+                    legend_html += `
+                        <div class="pdf-legend-item">
+                            <span class="pdf-dot" style="background: ${color}"></span>
+                            <div class="pdf-legend-info">
+                                <div class="pdf-legend-label">${l}</div>
+                                <div class="pdf-legend-val">${val_str} (${share}%)</div>
+                            </div>
+                        </div>
+                    `;
+                });
+                legend_html += '</div>';
+                return legend_html;
+            };
+
+            const chart_t = (chart_id, title) => {
+				const c_obj = data.charts[chart_id];
+				if (!c_obj || !c_obj.data.labels.length) return "";
+				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+                let is_currency = c_obj.is_currency || false;
+				let rows = c_obj.data.labels.map((l, i) => {
+						const val = c_obj.data.datasets[0].values[i];
+						const share = ((val / total_val) * 100).toFixed(1);
+                        const val_str = is_currency ? format_currency(val / 1000000, "INR") + " M" : val;
+						return `<tr><td style="text-align:center;">${i + 1}</td><td>${l}</td><td style="text-align:right;">${val_str}</td><td style="text-align:right;">${share}%</td></tr>`;
+					}).join("");
+				return `<div style="margin-top:10px; page-break-inside: avoid;"><table style="width:80%; margin: 10px auto; border-collapse: collapse; font-size: 10px; border: 1px solid #eee;"><thead><tr style="background: #f8f9fa;"><th style="width: 40px; text-align:center; border-bottom:2px solid #3b82f6;">S.No.</th><th style="text-align:left; border-bottom:2px solid #3b82f6;">${title}</th><th style="width: 120px; text-align:right; border-bottom:2px solid #3b82f6;">Value</th><th style="width: 80px; text-align:right; border-bottom:2px solid #3b82f6;">Share %</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+			};
+
             const html = `
                 <html>
                 <head>
                     <style>
-                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 20px; color: #1e293b; line-height: 1.4; }
-                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
+                        @page { size: landscape; margin: 10mm; }
+                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 10px; color: #1e293b; line-height: 1.2; zoom: 0.9; }
+                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
                         
-                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
+                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 15px; table-layout: fixed; }
                         .kpi-card { display: table-cell; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
                         .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; white-space: nowrap; }
-                        .kpi-value { font-size: 15px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+                        .kpi-value { font-size: 14px; font-weight: 800; color: #0f172a; white-space: nowrap; }
                         
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 30px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
@@ -476,7 +715,16 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                         th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
                         td { background: #fff; }
                         
+                        .page-break { page-break-after: always; }
                         .indicator-pill { padding: 4px 8px; border-radius: 9999px; font-size: 9px; font-weight: 600; text-transform: uppercase; display: inline-block; border: 1px solid #e2e8f0; }
+
+                        /* Legend Styles for PDF */
+                        .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+                        .pdf-legend-item { display: inline-block; width: 30%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
+                        .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
+                        .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
+                        .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                        .pdf-legend-val { font-size: 9px; color: #64748b; }
                     </style>
                 </head>
                 <body>
@@ -494,9 +742,27 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                         `).join("")}
                     </div>
 
+                    <h3>Visual Analytics</h3>
+					${chart_h(png1, "Top 10 Suppliers")}
+                    ${chart_l("top_10_suppliers")}
+					${chart_t("top_10_suppliers", "Supplier Data")}
+                    <div class="page-break"></div>
+
+                    ${chart_h(png2, "Order Status")}
+                    ${chart_l("order_status")}
+					${chart_t("order_status", "Status Data")}
+                    <div class="page-break"></div>
+
+                    <h3>Month-Wise Order Breakdown</h3>
+                    <table>
+                        <thead>${tables_html.find(".month-table thead").html()}</thead>
+                        <tbody>${tables_html.find("#po_month_body").html()}</tbody>
+                    </table>
+                    <div class="page-break"></div>
+
                     <h3>Supplier Orders List</h3>
                     <table>
-                        <thead>${tables_html.find(".dashboard-table thead").html()}</thead>
+                        <thead>${tables_html.find(".dashboard-table").not(".month-table").find("thead").html()}</thead>
                         <tbody>${tables_html.find("#po_list_body").html()}</tbody>
                         <tfoot>${tables_html.find("#po_list_tfoot").html()}</tfoot>
                     </table>

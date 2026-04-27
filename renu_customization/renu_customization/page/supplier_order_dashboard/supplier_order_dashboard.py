@@ -163,7 +163,8 @@ def get_dashboard_data(filters=None):
                 "datasets": [{"name": "Amount", "values": [x[1] for x in top_10_suppliers]}]
             },
             "type": "bar",
-            "colors": ["#3b82f6"]
+            "colors": ["#3b82f6"],
+            "is_currency": True
         },
         "order_status": {
             "data": {
@@ -249,6 +250,78 @@ def export_to_excel(filters=None):
             val_c.border = table_border
             val_c.number_format = '"₹ "#,##0.00" M"'
             r_idx += 1
+
+    ws_months = wb.create_sheet("Month-Wise Booking")
+    row_idx = 1
+    ws_months.cell(row=row_idx, column=1, value="Month-Wise Booking Breakdown (Million INR)").font = section_font
+    row_idx += 2
+    
+    merged_data = {}
+    months_set = set()
+    for row in data:
+        supp = row.get("supplier") or "-"
+        amt = flt(row.get("net_total") or 0)
+        try:
+            d = frappe.utils.getdate(row.get("transaction_date"))
+            m_key, m_sort = d.strftime("%b %Y"), d.strftime("%Y%m")
+        except: m_key, m_sort = "Unknown", "000000"
+        
+        if row.get("transaction_date"):
+            months_set.add((m_sort, m_key))
+            
+        if supp not in merged_data: merged_data[supp] = {"supp": supp, "months": {}, "total": 0}
+        merged_data[supp]["months"][m_key] = merged_data[supp]["months"].get(m_key, 0) + amt
+        merged_data[supp]["total"] += amt
+        
+    sorted_months = [x[1] for x in sorted(list(months_set), key=lambda x: x[0])]
+    headers = ["S.No.", "Supplier"] + sorted_months + ["Total (Net)"]
+    for idx, h in enumerate(headers, start=1):
+        cell = ws_months.cell(row=row_idx, column=idx, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = table_border
+    row_idx += 1
+        
+    for r_idx, row in enumerate(sorted(merged_data.values(), key=lambda x: x["total"], reverse=True)):
+        fill = zebra_fill if r_idx % 2 == 0 else None
+        ws_months.cell(row=row_idx, column=1, value=r_idx + 1).border = table_border
+        ws_months.cell(row=row_idx, column=2, value=row["supp"]).border = table_border
+        if fill:
+            ws_months.cell(row=row_idx, column=1).fill = fill
+            ws_months.cell(row=row_idx, column=2).fill = fill
+        col_idx = 3
+        for m_key in sorted_months:
+            c = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["months"].get(m_key, 0))/1000000)
+            c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
+            if fill: c.fill = fill
+            col_idx += 1
+        c_n = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
+        c_n.number_format, c_n.font, c_n.border = '"₹ "#,##0.00" M"', Font(bold=True), table_border
+        if fill: c_n.fill = fill
+        col_idx += 1
+        row_idx += 1
+
+    ws_months.cell(row=row_idx, column=1, value="Grand Total").font = Font(bold=True)
+    ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=2)
+    m_totals_net = {}
+    g_total_net = sum(r["total"] for r in merged_data.values())
+    
+    for r in merged_data.values():
+        for mk, mv in r["months"].items(): m_totals_net[mk] = m_totals_net.get(mk, 0) + mv
+
+    col_idx = 3
+    for m_key in sorted_months:
+        c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
+        c.number_format, c.font, c.border = '"₹ "#,##0.00" M"', Font(bold=True), table_border
+        col_idx += 1
+    c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
+    c_gn.number_format, c_gn.font, c_gn.border = '"₹ "#,##0.00" M"', Font(bold=True), table_border
+    
+    ws_months.column_dimensions["A"].width = 8
+    ws_months.column_dimensions["B"].width = 35
+    for i in range(3, 3 + len(sorted_months) + 1):
+        ws_months.column_dimensions[get_column_letter(i)].width = 22
 
     ws = wb.create_sheet("Supplier Orders List")
     row_idx = 1
