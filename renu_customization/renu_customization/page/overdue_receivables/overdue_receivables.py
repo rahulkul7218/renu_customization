@@ -75,10 +75,6 @@ def get_dashboard_data(filters=None):
         if filters.get("sales_person") and filters.get("sales_person") not in inv_sales_persons:
             continue
             
-        # Apply Amount Filter
-        if filters.get("min_amount") and flt(inv.outstanding_amount) < flt(filters.get("min_amount")):
-            continue
-            
         # Apply Days Filter
         if filters.get("min_days") and int(inv["days_overdue"]) < int(filters.get("min_days")):
             continue

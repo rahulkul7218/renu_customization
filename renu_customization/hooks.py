@@ -457,8 +457,6 @@ app_include_js = [
 ]
 
 
-
-
 scheduler_events = {
     "cron": {
         "0 0 * * *": [

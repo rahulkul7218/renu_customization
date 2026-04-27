@@ -192,12 +192,6 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 		},
 		{ fieldtype: "Column Break" },
 		{
-			fieldname: "min_amount",
-			label: __("Min Amount"),
-			fieldtype: "Currency",
-		},
-		{ fieldtype: "Column Break" },
-		{
 			fieldname: "min_days",
 			label: __("Min Days Overdue"),
 			fieldtype: "Int",

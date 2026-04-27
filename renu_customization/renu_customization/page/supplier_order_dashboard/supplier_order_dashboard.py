@@ -215,7 +215,7 @@ def export_to_excel(filters=None):
         val_cell = summary_ws.cell(row=r_idx, column=2, value=item.get("value") / 1000000 if item.get("fieldtype") == "Currency" else item.get("value"))
         val_cell.border = table_border
         if item.get("fieldtype") == "Currency":
-            val_cell.number_format = '"₹ "#,##0.00" M"'
+            val_cell.number_format = '[$₹-en-IN] #,##0.00 "M"'
         r_idx += 1
         
     r_idx += 2
@@ -223,15 +223,19 @@ def export_to_excel(filters=None):
     r_idx += 1
     summary_ws.cell(row=r_idx, column=1, value="Status").font = header_font; summary_ws.cell(row=r_idx, column=1).fill = header_fill; summary_ws.cell(row=r_idx, column=1).border = table_border
     summary_ws.cell(row=r_idx, column=2, value="Count").font = header_font; summary_ws.cell(row=r_idx, column=2).fill = header_fill; summary_ws.cell(row=r_idx, column=2).border = table_border
+    summary_ws.cell(row=r_idx, column=3, value="Share %").font = header_font; summary_ws.cell(row=r_idx, column=3).fill = header_fill; summary_ws.cell(row=r_idx, column=3).border = table_border
     r_idx += 1
     
     charts = dashboard_data.get("charts", {})
     if "order_status" in charts:
         labels = charts["order_status"]["data"]["labels"]
         vals = charts["order_status"]["data"]["datasets"][0]["values"]
+        total_val = sum(vals) or 1
         for l, v in zip(labels, vals):
             summary_ws.cell(row=r_idx, column=1, value=l).border = table_border
             summary_ws.cell(row=r_idx, column=2, value=v).border = table_border
+            share_c = summary_ws.cell(row=r_idx, column=3, value=(v / total_val))
+            share_c.border = table_border; share_c.number_format = '0.0%'
             r_idx += 1
 
     r_idx += 2
@@ -239,16 +243,20 @@ def export_to_excel(filters=None):
     r_idx += 1
     summary_ws.cell(row=r_idx, column=1, value="Supplier").font = header_font; summary_ws.cell(row=r_idx, column=1).fill = header_fill; summary_ws.cell(row=r_idx, column=1).border = table_border
     summary_ws.cell(row=r_idx, column=2, value="Amount (M)").font = header_font; summary_ws.cell(row=r_idx, column=2).fill = header_fill; summary_ws.cell(row=r_idx, column=2).border = table_border
+    summary_ws.cell(row=r_idx, column=3, value="Share %").font = header_font; summary_ws.cell(row=r_idx, column=3).fill = header_fill; summary_ws.cell(row=r_idx, column=3).border = table_border
     r_idx += 1
     
     if "top_10_suppliers" in charts:
         labels = charts["top_10_suppliers"]["data"]["labels"]
         vals = charts["top_10_suppliers"]["data"]["datasets"][0]["values"]
+        total_val = sum(vals) or 1
         for l, v in zip(labels, vals):
             summary_ws.cell(row=r_idx, column=1, value=l).border = table_border
             val_c = summary_ws.cell(row=r_idx, column=2, value=v / 1000000)
             val_c.border = table_border
-            val_c.number_format = '"₹ "#,##0.00" M"'
+            val_c.number_format = '[$₹-en-IN] #,##0.00 "M"'
+            share_c = summary_ws.cell(row=r_idx, column=3, value=(v / total_val))
+            share_c.border = table_border; share_c.number_format = '0.0%'
             r_idx += 1
 
     ws_months = wb.create_sheet("Month-Wise Booking")
@@ -293,11 +301,11 @@ def export_to_excel(filters=None):
         col_idx = 3
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["months"].get(m_key, 0))/1000000)
-            c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
+            c.number_format, c.border = '[$₹-en-IN] #,##0.00 "M"', table_border
             if fill: c.fill = fill
             col_idx += 1
         c_n = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
-        c_n.number_format, c_n.font, c_n.border = '"₹ "#,##0.00" M"', Font(bold=True), table_border
+        c_n.number_format, c_n.font, c_n.border = '[$₹-en-IN] #,##0.00 "M"', Font(bold=True), table_border
         if fill: c_n.fill = fill
         col_idx += 1
         row_idx += 1
@@ -313,10 +321,10 @@ def export_to_excel(filters=None):
     col_idx = 3
     for m_key in sorted_months:
         c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
-        c.number_format, c.font, c.border = '"₹ "#,##0.00" M"', Font(bold=True), table_border
+        c.number_format, c.font, c.border = '[$₹-en-IN] #,##0.00 "M"', Font(bold=True), table_border
         col_idx += 1
     c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-    c_gn.number_format, c_gn.font, c_gn.border = '"₹ "#,##0.00" M"', Font(bold=True), table_border
+    c_gn.number_format, c_gn.font, c_gn.border = '[$₹-en-IN] #,##0.00 "M"', Font(bold=True), table_border
     
     ws_months.column_dimensions["A"].width = 8
     ws_months.column_dimensions["B"].width = 35
@@ -362,7 +370,7 @@ def export_to_excel(filters=None):
             if fname == "net_total":
                 num_val = flt(val or 0) / 1000000
                 total_amt += flt(val or 0)
-                cell.number_format = '"₹ "#,##0.00" M"'
+                cell.number_format = '[$₹-en-IN] #,##0.00 "M"'
                 cell.value = num_val; cell.alignment = Alignment(horizontal="right")
             elif fname in ["transaction_date", "schedule_date", "supplier_agreed_time", "delivery_time_as_per_po", "actual_delivery_time"]:
                 cell.value = str(val) if val else "-"; cell.alignment = Alignment(horizontal="center")
@@ -383,7 +391,7 @@ def export_to_excel(filters=None):
 
     c_tot_amt = ws.cell(row=row_idx, column=10, value=total_amt / 1000000)
     c_tot_amt.font = header_font; c_tot_amt.fill = header_fill; c_tot_amt.border = table_border; c_tot_amt.alignment = Alignment(horizontal="right")
-    c_tot_amt.number_format = '"₹ "#,##0.00" M"'
+    c_tot_amt.number_format = '[$₹-en-IN] #,##0.00 "M"'
 
     output = BytesIO()
     wb.save(output)
