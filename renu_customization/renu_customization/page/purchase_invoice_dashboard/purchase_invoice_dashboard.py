@@ -300,17 +300,22 @@ def export_to_excel(filters=None):
             col_idx += 1
         tot_m = flt(row["total"]) / 1000000
         grand_total_overall += flt(row["total"])
-        c_tot = ws_months.cell(row=row_idx, column=col_idx, value=tot_m); c_tot.number_format = '"₹ "#,##0.00" M"'; c_tot.font = Font(bold=True); c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid"); c_tot.border = table_border; c_tot.alignment = Alignment(horizontal="right")
+        c_tot = ws_months.cell(row=row_idx, column=col_idx, value=tot_m)
+        c_tot.number_format = '"₹ "#,##0.00" M"'
+        c_tot.font = Font(bold=True)
+        c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
+        c_tot.border = table_border
+        c_tot.alignment = Alignment(horizontal="right")
         row_idx += 1
 
     # Add Grand Total Row for Sheet 2
-    ws_months.cell(row=row_idx, column=1, value="Grand Total").font = Font(bold=True)
+    ws_months.cell(row=row_idx, column=1, value="Grand Total").font = header_font
     ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=3)
     for c_i in range(1, col_idx + 1): 
         cell = ws_months.cell(row=row_idx, column=c_i)
-        cell.fill = PatternFill(start_color="f1c40f", fill_type="solid")
+        cell.fill = header_fill
         cell.border = table_border
-        cell.font = Font(bold=True)
+        cell.font = header_font
         if c_i >= 4:
             cell.alignment = Alignment(horizontal="right")
     
@@ -366,13 +371,13 @@ def export_to_excel(filters=None):
         row_idx += 1
 
     # Add Total Row for Sheet 3
-    ws_list.cell(row=row_idx, column=1, value="Total").font = Font(bold=True)
+    ws_list.cell(row=row_idx, column=1, value="Total").font = header_font
     ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
     for c_i in range(1, 9): 
         cell = ws_list.cell(row=row_idx, column=c_i)
-        cell.fill = PatternFill(start_color="f1c40f", fill_type="solid")
+        cell.fill = header_fill
         cell.border = table_border
-        cell.font = Font(bold=True)
+        cell.font = header_font
         if c_i >= 7:
             cell.alignment = Alignment(horizontal="right")
     
@@ -381,6 +386,9 @@ def export_to_excel(filters=None):
     
     c_a = ws_list.cell(row=row_idx, column=8, value=total_amt_list / 1000000)
     c_a.number_format = '"₹ "#,##0.00" M"'
+    c_a.font = header_font
+    c_a.fill = header_fill
+    c_a.border = table_border
     row_idx += 1
     for i in range(1, 10): ws_overview.column_dimensions[get_column_letter(i)].width = 20; ws_months.column_dimensions[get_column_letter(i)].width = 20
     output = BytesIO(); wb.save(output); output.seek(0)

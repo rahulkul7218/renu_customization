@@ -192,6 +192,18 @@ def get_dashboard_data(filters=None):
 
 
         if keep:
+            # Add metadata for frontend dynamic summaries
+            cust_id = row.get("customer") or invoice_map.get(inv_id)
+            c_info = customer_map.get(cust_id)
+            row["customer_group"] = c_info.customer_group if c_info else ""
+            
+            is_cp = False
+            if row["customer_group"]:
+                cg = row["customer_group"].lower()
+                if any(term in cg for term in ["system integrator", "distributor", "distributer"]):
+                    is_cp = True
+            row["is_channel_partner"] = is_cp
+            
             data.append(row)
 
     if not data:
@@ -200,32 +212,58 @@ def get_dashboard_data(filters=None):
 
     # Calculate Summaries (KPIs)
     total_rev = 0
+    total_grand_rev = 0
     dom_rev = 0
     exp_rev = 0
     cp_rev = 0
-    unique_invoices = set()
-
+    
+    # Track revenue by category to ensure consistency
     for row in data:
-        amt = flt(row.get("base_amount"))
+        # 1. Get allocated percentage (split revenue for multi-member teams)
+        alloc_p = flt(row.get("allocated_percentage") or 100)
+        
+        # 2. Get base net amount (Revenue is Net)
+        is_return = flt(row.get("is_return") or 0)
+        base_amt = flt(row.get("base_amount") or 0)
+        
+        # In ERPNext, return amounts might be stored as positive, so we flip them
+        if is_return:
+            base_amt = -abs(base_amt)
+            
+        amt = base_amt * (alloc_p / 100)
+        
+        # 3. Calculate Gross Amount (Grand Total including Taxes)
+        # Proportionally distribute taxes based on item net amount
+        si_net = flt(row.get("si_net_total") or 0)
+        si_grand = flt(row.get("si_grand_total") or 0)
+        gross_factor = (si_grand / si_net) if si_net else 1.0
+        gross_amt = amt * gross_factor
+        
+        # Store for frontend
+        row["gross_amount"] = gross_amt
+        
         total_rev += amt
+        total_grand_rev += gross_amt
+        
         inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
-        unique_invoices.add(inv_id)
-
-        if row.get("dom_exp") == "Domestic":
+        dom_exp = row.get("dom_exp")
+        
+        if dom_exp == "Domestic":
             dom_rev += amt
-        elif row.get("dom_exp") == "Export":
+        elif dom_exp == "Export":
             exp_rev += amt
             
-        # Channel Partner (System Integrator, Distributor) - Robust matching
+        # Channel Partner matching
         cust_id = invoice_map.get(inv_id)
         cust_info = customer_map.get(cust_id)
         if cust_info and cust_info.customer_group:
             cg = cust_info.customer_group.lower()
-            if "system integrator" in cg or "distributor" in cg or "distributer" in cg:
+            if any(term in cg for term in ["system integrator", "distributor", "distributer"]):
                 cp_rev += amt
 
     report_summary = [
-        {"label": _("Total Revenue"), "value": total_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Net Revenue"), "value": total_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Grand Total"), "value": total_grand_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Domestic Revenue"), "value": dom_rev, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Export Revenue"), "value": exp_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Channel Partner"), "value": cp_rev, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
@@ -237,14 +275,22 @@ def get_dashboard_data(filters=None):
     prod_names = {}
     
     for row in data:
-        sp = row.get("sales_person") or ""
-        amt = flt(row.get("base_amount"))
+        sp = row.get("sales_person") or "No Sales Person"
+        alloc_p = flt(row.get("allocated_percentage") or 100)
+        
+        is_return = flt(row.get("is_return") or 0)
+        base_amt = flt(row.get("base_amount") or 0)
+        if is_return:
+            base_amt = -abs(base_amt)
+            
+        amt = base_amt * (alloc_p / 100)
+        
         sp_revenue[sp] = sp_revenue.get(sp, 0) + amt
         
-        cust = row.get("customer") or row.get("customer_name") or ""
+        cust = row.get("customer_name") or row.get("customer") or "Unknown Customer"
         cust_revenue[cust] = cust_revenue.get(cust, 0) + amt
         
-        prod_name = row.get("item_name") or row.get("item_code") or ""
+        prod_name = row.get("item_name") or row.get("item_code") or "Unknown Product"
         prod_revenue[prod_name] = prod_revenue.get(prod_name, 0) + amt
         prod_names[prod_name] = row.get("item_name") or ""
 
@@ -305,6 +351,7 @@ def export_to_excel(filters=None):
     header_fill = PatternFill(start_color="2c3e50", fill_type="solid")
     title_font = Font(bold=True, size=14)
     section_font = Font(bold=True, size=12)
+    footer_font = Font(bold=True, color="000000")
     thin_side = Side(style='thin')
     table_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
     zebra_fill = PatternFill(start_color="f8f9fa", fill_type="solid")
@@ -415,8 +462,17 @@ def export_to_excel(filters=None):
         sp = row.get("sales_person") or "-"
         cust = row.get("customer_name") or row.get("customer") or "-"
         prod = row.get("item_name") or row.get("item_code") or "-"
-        amt = flt(row.get("base_amount") or 0)
-        date_str = str(row.get("invoice_date") or row.get("posting_date") or "")
+        alloc_p = flt(row.get("allocated_percentage") or 100)
+        base_amt = flt(row.get("base_amount") or 0)
+        if flt(row.get("is_return") or 0):
+            base_amt = -abs(base_amt)
+        amt = base_amt * (alloc_p / 100)
+        
+        si_net = flt(row.get("si_net_total") or 0)
+        si_grand = flt(row.get("si_grand_total") or 0)
+        gross_amt = amt * (si_grand / si_net) if si_net else amt
+
+        date_str = str(row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date") or "")
         try:
             d = frappe.utils.getdate(date_str)
             m_key = d.strftime("%b %Y")
@@ -428,12 +484,13 @@ def export_to_excel(filters=None):
         months_set.add((m_sort, m_key))
         key = f"{cust}|{sp}|{prod}"
         if key not in merged_data:
-            merged_data[key] = {"cust": cust, "sp": sp, "prod": prod, "months": {}, "total": 0}
+            merged_data[key] = {"cust": cust, "sp": sp, "prod": prod, "months": {}, "total": 0, "total_gross": 0}
         merged_data[key]["months"][m_key] = merged_data[key]["months"].get(m_key, 0) + amt
         merged_data[key]["total"] += amt
+        merged_data[key]["total_gross"] += gross_amt
         
     sorted_months = [x[1] for x in sorted(list(months_set), key=lambda x: x[0])]
-    headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total (M)"]
+    headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total (Net)", "Grand Total (Gross)"]
     
     for idx, h in enumerate(headers, start=1):
         cell = ws_months.cell(row=row_idx, column=idx, value=h)
@@ -471,11 +528,113 @@ def export_to_excel(filters=None):
         c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
         c_tot.border = table_border
         c_tot.alignment = Alignment(horizontal="right")
+        col_idx += 1
+        
+        tot_g = flt(row["total_gross"]) / 1000000
+        c_g = ws_months.cell(row=row_idx, column=col_idx, value=tot_g)
+        c_g.number_format = '"₹ "#,##0.00" M"'
+        c_g.font = Font(bold=True)
+        c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid") # Slightly different for gross
+        c_g.border = table_border
+        c_g.alignment = Alignment(horizontal="right")
+        
         row_idx += 1
 
-    # -------------------------------------------------------------------------
-    # Sheet 3: Sales Invoices List
-    # -------------------------------------------------------------------------
+    # Add Footer Rows in Excel
+    ws_months.cell(row=row_idx, column=1, value="Grand Total (Net)").font = header_font
+    ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+    for c in range(1, 5):
+        ws_months.cell(row=row_idx, column=c).fill = header_fill
+        ws_months.cell(row=row_idx, column=c).border = table_border
+    
+    col_idx = 5
+    m_totals_net = {}
+    m_totals_gross = {}
+    g_total_net = 0
+    g_total_gross = 0
+    
+    # Pre-calculate totals for footer
+    for r in merged_data.values():
+        g_total_net += r["total"]
+        g_total_gross += r["total_gross"]
+        for mk, mv in r["months"].items():
+            m_totals_net[mk] = m_totals_net.get(mk, 0) + mv
+            
+    # We need to calculate monthly gross totals properly too
+    for row in data:
+        date_str = str(row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date") or "")
+        try:
+            d = frappe.utils.getdate(date_str)
+            m_key = d.strftime("%b %Y")
+        except: m_key = "Unknown"
+        
+        amt = flt(row.get("base_amount") or 0) * (flt(row.get("allocated_percentage") or 100) / 100)
+        if flt(row.get("is_return") or 0): amt = -abs(amt)
+        
+        si_net = flt(row.get("si_net_total") or 0)
+        si_grand = flt(row.get("si_grand_total") or 0)
+        gross_amt = amt * (si_grand / si_net) if si_net else amt
+        m_totals_gross[m_key] = m_totals_gross.get(m_key, 0) + gross_amt
+
+    for m_key in sorted_months:
+        v_net = flt(m_totals_net.get(m_key, 0)) / 1000000
+        c = ws_months.cell(row=row_idx, column=col_idx, value=v_net)
+        c.number_format = '"₹ "#,##0.00" M"'
+        c.font = header_font
+        c.fill = header_fill
+        c.border = table_border
+        c.alignment = Alignment(horizontal="right")
+        col_idx += 1
+        
+    c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
+    c_gn.number_format = '"₹ "#,##0.00" M"'
+    c_gn.font = header_font
+    c_gn.fill = header_fill
+    c_gn.border = table_border
+    c_gn.alignment = Alignment(horizontal="right")
+    col_idx += 1
+    
+    c_sep = ws_months.cell(row=row_idx, column=col_idx, value="-")
+    c_sep.font = header_font
+    c_sep.fill = header_fill
+    c_sep.border = table_border
+    c_sep.alignment = Alignment(horizontal="center")
+    
+    row_idx += 1
+    
+    # Second footer row for Gross
+    ws_months.cell(row=row_idx, column=1, value="Grand Total (Gross)").font = header_font
+    ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+    for c in range(1, 5):
+        ws_months.cell(row=row_idx, column=c).fill = header_fill
+        ws_months.cell(row=row_idx, column=c).border = table_border
+    
+    col_idx = 5
+    for m_key in sorted_months:
+        v_gross = flt(m_totals_gross.get(m_key, 0)) / 1000000
+        c = ws_months.cell(row=row_idx, column=col_idx, value=v_gross)
+        c.number_format = '"₹ "#,##0.00" M"'
+        c.font = header_font
+        c.fill = header_fill
+        c.border = table_border
+        c.alignment = Alignment(horizontal="right")
+        col_idx += 1
+
+    c_sep2 = ws_months.cell(row=row_idx, column=col_idx, value="-")
+    c_sep2.font = header_font
+    c_sep2.fill = header_fill
+    c_sep2.border = table_border
+    c_sep2.alignment = Alignment(horizontal="center")
+    col_idx += 1
+    
+    c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
+    c_gg.number_format = '"₹ "#,##0.00" M"'
+    c_gg.font = header_font
+    c_gg.fill = header_fill
+    c_gg.border = table_border
+    c_gg.alignment = Alignment(horizontal="right")
+    
+    row_idx += 2
     row_idx = 1
     ws_list.cell(row=row_idx, column=1, value="Detailed Sales Invoices List (Million INR)").font = section_font
     row_idx += 1
@@ -511,6 +670,8 @@ def export_to_excel(filters=None):
             
             if fname == "sr_no_idx":
                 val = r_idx + 1
+            elif fname == "invoice_date":
+                val = row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date")
             
             cell = ws_list.cell(row=row_idx, column=idx)
             cell.border = table_border
@@ -519,7 +680,12 @@ def export_to_excel(filters=None):
             if fname in ["qty", "base_amount"]:
                 num_val = flt(val or 0)
                 if fname == "base_amount":
-                    num_val = num_val / 1000000
+                    # Correctly apply allocation and returns for consistency
+                    alloc_p = flt(row.get("allocated_percentage") or 100)
+                    is_return = flt(row.get("is_return") or 0)
+                    if is_return:
+                        num_val = -abs(num_val)
+                    num_val = (num_val * (alloc_p / 100)) / 1000000
                     cell.number_format = '"₹ "#,##0.00" M"'
                 else:
                     cell.number_format = "#,##0.00"
@@ -529,6 +695,31 @@ def export_to_excel(filters=None):
                 cell.value = str(val) if val is not None else ""
                 cell.alignment = Alignment(horizontal="left")
         row_idx += 1
+    
+    # -------------------------------------------------------------------------
+    # Add Total Row for Detailed Invoice List
+    # -------------------------------------------------------------------------
+    ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
+    ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=10)
+    for c in range(1, 11):
+        ws_list.cell(row=row_idx, column=c).fill = header_fill
+        ws_list.cell(row=row_idx, column=c).border = table_border
+
+    # Calculate Total Amount for the list
+    total_list_amt = 0
+    for row in data:
+        alloc_p = flt(row.get("allocated_percentage") or 100)
+        is_return = flt(row.get("is_return") or 0)
+        num_val = flt(row.get("base_amount") or 0)
+        if is_return: num_val = -abs(num_val)
+        total_list_amt += (num_val * (alloc_p / 100))
+
+    cell_total = ws_list.cell(row=row_idx, column=11, value=total_list_amt / 1000000)
+    cell_total.font = header_font
+    cell_total.fill = header_fill
+    cell_total.number_format = '"₹ "#,##0.00" M"'
+    cell_total.alignment = Alignment(horizontal="right")
+    cell_total.border = table_border
 
     # Final Column Widths Adjustments
     for i in range(1, 10):
