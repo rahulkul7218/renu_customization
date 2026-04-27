@@ -100,7 +100,10 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                     
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 15px; border-top: 1px solid #f1f5f9; margin-top: 20px; text-align: left; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 20px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 20px; page-break-inside: auto; }
+                    tr { page-break-inside: avoid; page-break-after: auto; }
+                    thead { display: table-header-group; }
+                    tfoot { display: table-row-group; }
                     th { background: #f1f5f9; padding: 10px; text-align: left; border-bottom: 2px solid #3b82f6; color: #64748b; text-transform: uppercase; }
                     td { padding: 10px; border-bottom: 1px solid #eee; }
                     .analytics-table { margin-top: 20px; border: 1px solid #eee; }

@@ -97,7 +97,10 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                     .chart-img { max-width: 400px; margin-bottom: 20px; }
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 15px; border-top: 1px solid #f1f5f9; margin-top: 20px; text-align: left; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; page-break-inside: auto; }
+                    tr { page-break-inside: avoid; page-break-after: auto; }
+                    thead { display: table-header-group; }
+                    tfoot { display: table-row-group; }
                     th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; }
                     td { padding: 8px; border-bottom: 1px solid #eee; }
                     .text-right { text-align: right; }
@@ -154,6 +157,13 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                             </tr>
                         `).join('')}
                     </tbody>
+                    <tfoot>
+                        <tr style="background: #f8fafc; font-weight: bold;">
+                            <td colspan="5" class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">Total</td>
+                            <td class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">${format_currency(data.results.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0))}</td>
+                            <td colspan="2" style="border-top: 2px solid #e2e8f0;"></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </body>
             </html>
@@ -376,6 +386,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                     background: #fff; 
                 }
 				.dashboard-table tr:hover td { background: #f8fafc; }
+				.dashboard-table tfoot td { position: sticky; bottom: -1px; z-index: 10; background: #f8fafc; border-top: 2px solid #e2e8f0; border-bottom: 2px solid #e2e8f0; }
 				.text-right { text-align: right; }
                 .text-center { text-align: center; }
 				
@@ -463,24 +474,27 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th>${__("Invoice ID")}</th>
-                                <th>${__("Date")}</th>
-                                <th>${__("Customer")}</th>
-                                <th>${__("Sales Person")}</th>
-                                <th class="text-center">${__("Type")}</th>
-                                <th class="text-right">${__("Outstanding (M)")}</th>
-                                <th class="text-right">${__("Due Date")}</th>
-                                <th class="text-right">${__("Days")}</th>
+                                <th width="12%">${__("Invoice ID")}</th>
+                                <th width="10%">${__("Date")}</th>
+                                <th width="23%">${__("Customer")}</th>
+                                <th width="15%">${__("Sales Person")}</th>
+                                <th width="10%" class="text-center">${__("Type")}</th>
+                                <th width="15%" class="text-right" style="white-space: nowrap;">${__("Outstanding (M)")}</th>
+                                <th width="10%" class="text-right">${__("Due Date")}</th>
+                                <th width="5%" class="text-right">${__("Days")}</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
+                        <tfoot></tfoot>
                     </table>
                 </div>
             </div>
         `).appendTo(page.container);
 
 		let tbody = table_card.find('tbody');
+        let total_outstanding = 0;
 		data.results.forEach(row => {
+            total_outstanding += flt(row.outstanding_amount);
 			$(`
 				<tr>
 					<td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
@@ -496,6 +510,15 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 				</tr>
 			`).appendTo(tbody);
 		});
+
+        let tfoot = table_card.find('tfoot');
+        $(`
+            <tr>
+                <td colspan="5" class="text-right" style="padding: 12px 16px; font-size: 13px; color: #0f172a; font-weight: 700;">${__("Total")}</td>
+                <td class="text-right" style="padding: 12px 16px; font-size: 14px; color: #0f172a; font-weight: 800;">${format_currency(total_outstanding)}</td>
+                <td colspan="2"></td>
+            </tr>
+        `).appendTo(tfoot);
 
         table_card.find("#export_excel_table").click(() => export_to_excel());
 	}

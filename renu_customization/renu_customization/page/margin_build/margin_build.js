@@ -96,7 +96,10 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                     .chart-img { max-width: 400px; margin-bottom: 20px; }
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 15px; border-top: 1px solid #f1f5f9; margin-top: 20px; text-align: left; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; }
+                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; page-break-inside: auto; }
+                    tr { page-break-inside: avoid; page-break-after: auto; }
+                    thead { display: table-header-group; }
+                    tfoot { display: table-row-group; }
                     th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 2px solid #10b981; color: #64748b; text-transform: uppercase; }
                     td { padding: 8px; border-bottom: 1px solid #eee; }
                     .text-right { text-align: right; }

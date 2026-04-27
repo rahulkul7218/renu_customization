@@ -206,6 +206,24 @@ def export_to_excel(filters=None):
         ws_list.cell(row=row_idx, column=9, value=row['days_overdue']).border = table_border
         row_idx += 1
 
+    # Add Total Row
+    ws_list.cell(row=row_idx, column=1, value="Total").font = Font(bold=True)
+    ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+    for c in range(1, 7):
+        cell = ws_list.cell(row=row_idx, column=c)
+        cell.border = table_border
+        if c == 1:
+            cell.alignment = Alignment(horizontal="right")
+            
+    total_amt = sum(flt(r['outstanding_amount']) for r in data) / 1000000
+    total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
+    total_cell.font = Font(bold=True)
+    total_cell.number_format, total_cell.border = '"₹ "#,##0.00" M"', table_border
+    
+    ws_list.cell(row=row_idx, column=8, value="").border = table_border
+    ws_list.cell(row=row_idx, column=9, value="").border = table_border
+    row_idx += 1
+
     # Column Widths
     for i in range(1, 10):
         ws_overview.column_dimensions[get_column_letter(i)].width = 25
