@@ -96,7 +96,7 @@ def get_dashboard_data(filters=None):
     chart = {
         "title": _("Collection Breakdown (Export vs Domestic)"),
         "data": {
-            "labels": [_("Export Collection"), _("Domestic Collection")],
+            "labels": [_("Export"), _("Domestic")],
             "datasets": [
                 {
                     "name": _("Collection"),

@@ -1,7 +1,7 @@
-frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
+frappe.pages["margin_build"].on_page_load = function(wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Overdue Receivables (Million INR)"),
+		title: __("Margin Build (Million INR)"),
 		single_column: true
 	});
 
@@ -13,7 +13,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
         frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 		frappe.call({
-			method: "renu_customization.renu_customization.page.overdue_receivables.overdue_receivables.export_to_excel",
+			method: "renu_customization.renu_customization.page.margin_build.margin_build.export_to_excel",
 			args: { filters: filters },
 			callback: function (r) {
 				if (r.message) {
@@ -41,10 +41,10 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 		if (!page.dashboard_data) return;
 
 		const report_date = moment().format("YYYY-MM-DD HH:mm");
-		const filters = page.filter_group.get_values();
+		const data = page.dashboard_data;
 		
 		const get_chart_png = () => {
-			const svg = document.querySelector(`#overdue-chart svg`);
+			const svg = document.querySelector(`#margin-chart svg`);
 			if (!svg) return null;
 			const canvas = document.createElement("canvas");
 			const context = canvas.getContext("2d");
@@ -64,13 +64,12 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 		};
 
 		const chart_png = await get_chart_png();
-		const data = page.dashboard_data;
-        const total_val = data.charts.overdue_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+        const total_val = data.charts.margin_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
 
         // Generate Legend Box HTML for PDF
-        const legend_box_html = data.charts.overdue_breakdown.data.labels.map((label, i) => {
-            const val = data.charts.overdue_breakdown.data.datasets[0].values[i];
-            const color = data.charts.overdue_breakdown.colors[i % data.charts.overdue_breakdown.colors.length];
+        const legend_box_html = data.charts.margin_breakdown.data.labels.map((label, i) => {
+            const val = data.charts.margin_breakdown.data.datasets[0].values[i];
+            const color = data.charts.margin_breakdown.colors[i % data.charts.margin_breakdown.colors.length];
             const share = ((val / total_val) * 100).toFixed(1) + "%";
             return `
                 <div style="display: inline-block; width: 45%; margin: 5px 2%; vertical-align: top; text-align: left;">
@@ -88,7 +87,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
             <head>
                 <style>
                     body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #1e293b; }
-                    .header { text-align: center; border-bottom: 3px solid #ef4444; padding-bottom: 20px; margin-bottom: 30px; }
+                    .header { text-align: center; border-bottom: 3px solid #10b981; padding-bottom: 20px; margin-bottom: 30px; }
                     .kpi-wrapper { display: flex; justify-content: space-between; margin-bottom: 30px; }
                     .kpi-card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 10px; flex: 1; margin: 0 10px; text-align: center; background: #f8fafc; }
                     .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
@@ -98,7 +97,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 15px; border-top: 1px solid #f1f5f9; margin-top: 20px; text-align: left; }
                     
                     table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; }
-                    th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; }
+                    th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 2px solid #10b981; color: #64748b; text-transform: uppercase; }
                     td { padding: 8px; border-bottom: 1px solid #eee; }
                     .text-right { text-align: right; }
                     .text-center { text-align: center; }
@@ -106,7 +105,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
             </head>
             <body>
                 <div class="header">
-                    <h1 style="margin:0;">Overdue Receivables Report (Million INR)</h1>
+                    <h1 style="margin:0;">Margin Build Report (Million INR)</h1>
                     <p style="font-size:10px; color:#999;">Generated: ${report_date}</p>
                 </div>
                 <div class="kpi-wrapper">
@@ -119,25 +118,24 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                 </div>
                 
                 <div class="chart-container">
-                    <h3 style="color:#334155; text-transform:uppercase; font-size:14px; margin-top:0;">${data.charts.overdue_breakdown.title}</h3>
+                    <h3 style="color:#334155; text-transform:uppercase; font-size:14px; margin-top:0;">${data.charts.margin_breakdown.title}</h3>
                     <img src="${chart_png}" class="chart-img">
                     <div class="pdf-legend-box">
                         ${legend_box_html}
                     </div>
                 </div>
 
-                <h3 style="color:#334155; text-transform:uppercase; font-size:14px;">Detailed Overdue List</h3>
+                <h3 style="color:#334155; text-transform:uppercase; font-size:14px;">Detailed Margin List</h3>
                 <table>
                     <thead>
                         <tr>
                             <th>Invoice ID</th>
                             <th>Date</th>
                             <th>Customer</th>
-                            <th>Sales Person</th>
                             <th class="text-center">Type</th>
-                            <th class="text-right">Outstanding (M)</th>
-                            <th class="text-right">Due Date</th>
-                            <th class="text-right">Days</th>
+                            <th class="text-right">Revenue (M)</th>
+                            <th class="text-right">COGS (M)</th>
+                            <th class="text-right">Margin (M)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -146,11 +144,10 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                                 <td>${row.name}</td>
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
                                 <td>${row.customer_name || row.customer}</td>
-                                <td>${row.sales_person || '-'}</td>
                                 <td class="text-center">${row.type}</td>
-                                <td class="text-right">${format_currency(row.outstanding_amount)}</td>
-                                <td class="text-right">${frappe.datetime.str_to_user(row.due_date)}</td>
-                                <td class="text-right">${row.days_overdue}</td>
+                                <td class="text-right">${format_currency(row.revenue)}</td>
+                                <td class="text-right">${format_currency(row.cogs)}</td>
+                                <td class="text-right" style="font-weight: bold; color: ${row.margin < 0 ? '#ef4444' : '#10b981'}">${format_currency(row.margin)}</td>
                             </tr>
                         `).join('')}
                     </tbody>
@@ -159,7 +156,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
             </html>
         `;
 
-		const method_url = "/api/method/renu_customization.renu_customization.page.overdue_receivables.overdue_receivables.export_to_pdf";
+		const method_url = "/api/method/renu_customization.renu_customization.page.margin_build.margin_build.export_to_pdf";
 		const $form = $(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
             <input type="hidden" name="html" value="">
             <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
@@ -178,29 +175,24 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 
 	const filter_fields = [
 		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.add_months(frappe.datetime.get_today(), -1)
+		},
+		{ fieldtype: "Column Break" },
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.get_today()
+		},
+		{ fieldtype: "Column Break" },
+		{
 			fieldname: "customer",
 			label: __("Customer"),
 			fieldtype: "Link",
 			options: "Customer",
-		},
-		{ fieldtype: "Column Break" },
-		{
-			fieldname: "sales_person",
-			label: __("Sales Person"),
-			fieldtype: "Link",
-			options: "Sales Person",
-		},
-		{ fieldtype: "Column Break" },
-		{
-			fieldname: "min_amount",
-			label: __("Min Amount"),
-			fieldtype: "Currency",
-		},
-		{ fieldtype: "Column Break" },
-		{
-			fieldname: "min_days",
-			label: __("Min Days Overdue"),
-			fieldtype: "Int",
 		},
 		{ fieldtype: "Column Break" },
 		{
@@ -235,7 +227,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 		let filters = page.filter_group.get_values();
 		
 		frappe.call({
-			method: "renu_customization.renu_customization.page.overdue_receivables.overdue_receivables.get_dashboard_data",
+			method: "renu_customization.renu_customization.page.margin_build.margin_build.get_dashboard_data",
 			args: { filters: filters },
 			callback: function(r) {
 				if (r.message) {
@@ -249,8 +241,8 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 	function render_dashboard(data) {
 		page.container.empty();
 
-		if (!$('#overdue-dashboard-style').length) {
-			$(`<style id="overdue-dashboard-style">
+		if (!$('#margin-dashboard-style').length) {
+			$(`<style id="margin-dashboard-style">
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
                 
                 .dashboard-content { 
@@ -283,6 +275,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 				.summary-card.border-orange { border-left-color: #f59e0b; }
 				.summary-card.border-blue { border-left-color: #3b82f6; }
 				.summary-card.border-green { border-left-color: #10b981; }
+				.summary-card.border-purple { border-left-color: #8b5cf6; }
 				
                 .summary-card .label { 
                     font-size: 11px; 
@@ -394,8 +387,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                 }
                 .indicator-pill.Domestic { background: #e0f2fe; color: #0369a1; }
                 .indicator-pill.Export { background: #fef3c7; color: #92400e; }
-                
-                .overdue-days { color: #ef4444; font-weight: 700; }
+                .indicator-pill.Other { background: #f1f5f9; color: #475569; }
 
                 .export-btn { 
                     font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; 
@@ -420,28 +412,28 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 
 		let chart_card = $(`
             <div class="chart-card">
-                <div class="title">${data.charts.overdue_breakdown.title}</div>
-                <div id="overdue-chart" style="height: 350px;"></div>
-                <div id="overdue-legend" class="custom-legend"></div>
+                <div class="title">${data.charts.margin_breakdown.title}</div>
+                <div id="margin-chart" style="height: 350px;"></div>
+                <div id="margin-legend" class="custom-legend"></div>
             </div>
         `).appendTo(page.container);
         
 		setTimeout(() => {
-            let chart = new frappe.Chart("#overdue-chart", {
-                data: data.charts.overdue_breakdown.data,
+            let chart = new frappe.Chart("#margin-chart", {
+                data: data.charts.margin_breakdown.data,
                 type: 'donut',
                 height: 350,
-                colors: data.charts.overdue_breakdown.colors,
+                colors: data.charts.margin_breakdown.colors,
                 legend: 0,
             });
 
             // Render Custom Legend
-            let legend_container = chart_card.find("#overdue-legend");
-            let total_val = data.charts.overdue_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
+            let legend_container = chart_card.find("#margin-legend");
+            let total_val = data.charts.margin_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
 
-            data.charts.overdue_breakdown.data.labels.forEach((label, idx) => {
-                let val = data.charts.overdue_breakdown.data.datasets[0].values[idx];
-                let color = data.charts.overdue_breakdown.colors[idx % data.charts.overdue_breakdown.colors.length];
+            data.charts.margin_breakdown.data.labels.forEach((label, idx) => {
+                let val = data.charts.margin_breakdown.data.datasets[0].values[idx];
+                let color = data.charts.margin_breakdown.colors[idx % data.charts.margin_breakdown.colors.length];
                 let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
                 
                 legend_container.append(`
@@ -460,7 +452,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 		let table_card = $(`
             <div class="table-card">
                 <div class="header">
-                    <span>${__("Detailed Overdue List")}</span>
+                    <span>${__("Detailed Margin List")}</span>
                     <div class="export-btn" id="export_excel_table">
                         <i class="fa fa-file-excel-o"></i> Export
                     </div>
@@ -472,11 +464,10 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                                 <th>${__("Invoice ID")}</th>
                                 <th>${__("Date")}</th>
                                 <th>${__("Customer")}</th>
-                                <th>${__("Sales Person")}</th>
                                 <th class="text-center">${__("Type")}</th>
-                                <th class="text-right">${__("Outstanding (M)")}</th>
-                                <th class="text-right">${__("Due Date")}</th>
-                                <th class="text-right">${__("Days")}</th>
+                                <th class="text-right">${__("Revenue (M)")}</th>
+                                <th class="text-right">${__("COGS (M)")}</th>
+                                <th class="text-right">${__("Margin (M)")}</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -492,13 +483,12 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 					<td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
 					<td style="white-space: nowrap;">${frappe.datetime.str_to_user(row.posting_date)}</td>
 					<td style="font-weight: 500;">${row.customer_name || row.customer}</td>
-					<td>${row.sales_person || '-'}</td>
                     <td class="text-center">
                         <span class="indicator-pill ${row.type}">${__(row.type)}</span>
                     </td>
-					<td class="text-right" style="font-weight: 700; color: #0f172a;">${format_currency(row.outstanding_amount)}</td>
-					<td class="text-right" style="white-space: nowrap;">${frappe.datetime.str_to_user(row.due_date)}</td>
-					<td class="text-right overdue-days">${row.days_overdue}</td>
+					<td class="text-right">${format_currency(row.revenue)}</td>
+					<td class="text-right">${format_currency(row.cogs)}</td>
+					<td class="text-right" style="font-weight: 700; color: ${row.margin < 0 ? '#ef4444' : '#10b981'};">${format_currency(row.margin)}</td>
 				</tr>
 			`).appendTo(tbody);
 		});
@@ -509,7 +499,6 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 	function format_currency(v) {
 		if (!v && v !== 0) return "₹ 0.00 M";
 		
-		// Convert to Million INR
 		let value = flt(v) / 1000000;
 		
 		return (

@@ -23,13 +23,39 @@ frappe.ui.form.on('Sales Invoice', {
                     primary_action_label: __('Export'),
                     primary_action(values) {
                         d.hide();
-                        let url = '/api/method/renu_customization.api.export_excel.export_to_excel?' +
-                            $.param({
+                        frappe.call({
+                            method: 'renu_customization.api.export_excel.export_to_excel',
+                            args: {
                                 doctype: frm.doc.doctype,
                                 name: frm.doc.name,
                                 print_format: values.export_option
-                            });
-                        window.open(url, '_blank');
+                            },
+                            callback: function(r) {
+                                if (r.message && r.message.filecontent) {
+                                    let b64toBlob = (b64Data, contentType='', sliceSize=512) => {
+                                        const byteCharacters = atob(b64Data);
+                                        const byteArrays = [];
+                                        for (let offset = 0; offset < byteCharacters.length; offset += sliceSize) {
+                                            const slice = byteCharacters.slice(offset, offset + sliceSize);
+                                            const byteNumbers = new Array(slice.length);
+                                            for (let i = 0; i < slice.length; i++) {
+                                                byteNumbers[i] = slice.charCodeAt(i);
+                                            }
+                                            const byteArray = new Uint8Array(byteNumbers);
+                                            byteArrays.push(byteArray);
+                                        }
+                                        return new Blob(byteArrays, {type: contentType});
+                                    };
+                                    let blob = b64toBlob(r.message.filecontent, "application/vnd.ms-excel");
+                                    let link = document.createElement("a");
+                                    link.href = window.URL.createObjectURL(blob);
+                                    link.download = r.message.filename;
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    document.body.removeChild(link);
+                                }
+                            }
+                        });
                     }
                 });
                 d.show();

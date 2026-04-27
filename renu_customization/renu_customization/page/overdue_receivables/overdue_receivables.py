@@ -155,7 +155,7 @@ def export_to_excel(filters=None):
     table_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
     
     # 1. Overview Sheet
-    ws_overview.cell(row=1, column=1, value="Overdue Receivables Dashboard").font = title_font
+    ws_overview.cell(row=1, column=1, value="Overdue Receivables Dashboard (Million INR)").font = title_font
     ws_overview.cell(row=1, column=4, value="Generated On: " + now_datetime().strftime("%Y-%m-%d %H:%M"))
     
     ws_overview.cell(row=3, column=1, value="Overdue Metrics Summary").font = section_font
@@ -174,10 +174,12 @@ def export_to_excel(filters=None):
         ws_overview.merge_cells(start_row=r, start_column=c, end_row=r, end_column=c+1)
         
         val = s.get('value')
-        cell_v = ws_overview.cell(row=r+1, column=c, value=flt(val) if s.get('fieldtype') == 'Currency' else val)
-        cell_v.font = Font(bold=True, size=11)
         if s.get('fieldtype') == 'Currency':
-            cell_v.number_format = '"₹ "#,##0.00'
+            cell_v = ws_overview.cell(row=r+1, column=c, value=flt(val) / 1000000)
+            cell_v.number_format = '"₹ "#,##0.00" M"'
+        else:
+            cell_v = ws_overview.cell(row=r+1, column=c, value=val)
+        cell_v.font = Font(bold=True, size=11)
         cell_v.alignment = Alignment(horizontal="center")
         cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
         ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
@@ -187,7 +189,7 @@ def export_to_excel(filters=None):
     ws_list.cell(row=row_idx, column=1, value="Detailed Overdue List").font = section_font
     row_idx += 2
     
-    headers = ["S.No.", "Invoice ID", "Date", "Customer", "Sales Person", "Type", "Outstanding", "Due Date", "Days Overdue"]
+    headers = ["S.No.", "Invoice ID", "Date", "Customer", "Sales Person", "Type", "Outstanding (M)", "Due Date", "Days Overdue"]
     for idx, h in enumerate(headers, start=1):
         cell = ws_list.cell(row=row_idx, column=idx, value=h)
         cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
@@ -201,8 +203,8 @@ def export_to_excel(filters=None):
         ws_list.cell(row=row_idx, column=5, value=row['sales_person']).border = table_border
         ws_list.cell(row=row_idx, column=6, value=row['type']).border = table_border
         
-        amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['outstanding_amount']))
-        amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00', table_border
+        amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['outstanding_amount']) / 1000000)
+        amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00" M"', table_border
         
         ws_list.cell(row=row_idx, column=8, value=row['due_date']).border = table_border
         ws_list.cell(row=row_idx, column=9, value=row['days_overdue']).border = table_border

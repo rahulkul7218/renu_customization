@@ -3,7 +3,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
     console.log("Collection Report Dashboard - Version 3.3 (Full PDF Sync)");
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Collection Report"),
+		title: __("Collection Report (Million INR)"),
 		single_column: true,
 	});
 
@@ -79,7 +79,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: ${color}; margin-right: 8px;"></span>
                     <div style="display: inline-block; vertical-align: top;">
                         <div style="font-size: 11px; font-weight: 600; color: #475569;">${label}</div>
-                        <div style="font-size: 10px; color: #94a3b8;">${frappe.format(val, { fieldtype: "Currency", currency: "INR" })} (${share})</div>
+                        <div style="font-size: 10px; color: #94a3b8;">${format_currency_short(val)} (${share})</div>
                     </div>
                 </div>
             `;
@@ -116,7 +116,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                     ${data.summary.map(m => `
                         <div class="kpi-card">
                             <div class="kpi-label">${m.label}</div>
-                            <div class="kpi-value">${frappe.format(m.value, { fieldtype: "Currency", currency: "INR" })}</div>
+                            <div class="kpi-value">${format_currency_short(m.value)}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -144,7 +144,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                                 return `<tr>
                                     <td>${i+1}</td>
                                     <td style="font-weight:bold;">${label.toUpperCase()}</td>
-                                    <td style="text-align:right; font-weight:bold;">${frappe.format(val, { fieldtype: "Currency", currency: "INR" })}</td>
+                                    <td style="text-align:right; font-weight:bold;">${format_currency_short(val)}</td>
                                     <td style="text-align:right;">${((val / total_val) * 100).toFixed(1)}%</td>
                                 </tr>`;
                             }).join('')}
@@ -172,7 +172,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
                                 <td>${row.customer}</td>
                                 <td>${row.sales_person || '-'}</td>
-                                <td style="text-align:right;">${frappe.format(row.base_grand_total, { fieldtype: "Currency", currency: "INR" })}</td>
+                                <td style="text-align:right;">${format_currency_short(row.base_grand_total)}</td>
                                 <td>${row.is_export ? 'Export' : 'Domestic'}</td>
                             </tr>
                         `).join('')}
@@ -243,7 +243,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
         .legend-item .dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; margin-top: 2px; }
         .legend-item .info { display: flex; flex-direction: column; line-height: 1.2; }
         .legend-item .label { font-size: 11px; font-weight: 600; color: #475569; }
-        .legend-item .val { font-size: 10px; color: #94a3b8; }
+        .legend-item .val-pct { font-size: 10px !important; color: #94a3b8 !important; font-weight: 500 !important; }
         .analytics-table-wrapper { margin-top: 30px; overflow: hidden; border: 1px solid #f1f5f9; border-radius: 8px; }
         .analytics-table { width: 100%; border-collapse: collapse; }
         .analytics-table th { background: #f8fafc; padding: 10px 15px; text-align: left; font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; }
@@ -257,6 +257,12 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
         .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; background: #fff; }
         .dashboard-table tr:hover td { background: #f8fafc; }
     </style>`).appendTo(page.main);
+
+    function format_currency_short(num) {
+        if (!num && num !== 0) return "₹ 0.00 M";
+        let value = flt(num) / 1000000;
+        return "₹ " + value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M";
+    }
 
 	page.refresh = function () {
 		let filters = page.filter_group.get_values();
@@ -284,7 +290,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 			$(`
                 <div class="summary-card ${metric.indicator.toLowerCase()}">
                     <div class="label">${metric.label}</div>
-                    <div class="value">${frappe.format(metric.value, { fieldtype: "Currency", currency: "INR" })}</div>
+                    <div class="value">${format_currency_short(metric.value)}</div>
                 </div>
             `).appendTo(summary_row);
 		});
@@ -318,6 +324,9 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 				height: 350,
 				colors: data.chart.colors,
 				legend: 0,
+                tooltipOptions: {
+                    formatTooltipY: (d) => format_currency_short(d),
+                },
 			});
 
 			let legend_container = chart_card.find("#chart_legend");
@@ -334,7 +343,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                         <span class="dot" style="background: ${color}"></span>
                         <div class="info">
                             <span class="label">${label}</span>
-                            <span class="val">${frappe.format(val, { fieldtype: "Currency", currency: "INR" })} (${share})</span>
+                            <span class="val-pct">${format_currency_short(val)} (${share})</span>
                         </div>
                     </div>
                 `);
@@ -343,7 +352,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                     <tr>
                         <td>${idx + 1}</td>
                         <td style="font-weight: 500;">${label}</td>
-                        <td style="text-align: right; font-weight: 600;">${frappe.format(val, { fieldtype: "Currency", currency: "INR" })}</td>
+                        <td style="text-align: right; font-weight: 600;">${format_currency_short(val)}</td>
                         <td style="text-align: right; color: #64748b;">${share}</td>
                     </tr>
                 `);
@@ -385,7 +394,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                     <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
                     <td style="font-weight: 500;">${row.customer}</td>
                     <td>${row.sales_person || "-"}</td>
-                    <td style="text-align: right; font-weight: 700; color: #0f172a;">${frappe.format(row.base_grand_total, { fieldtype: "Currency", currency: "INR" })}</td>
+                    <td style="text-align: right; font-weight: 700; color: #0f172a;">${format_currency_short(row.base_grand_total)}</td>
                     <td style="text-align: center;"><span class="indicator-pill ${type_label}">${__(type_label)}</span></td>
                 </tr>
             `).appendTo(tbody);
