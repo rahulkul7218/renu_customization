@@ -223,6 +223,30 @@ def export_to_excel(filters=None):
         
         row_idx += 1
 
+    # Add Grand Total Row for Margin List
+    ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
+    ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+    for c in range(1, 6):
+        ws_list.cell(row=row_idx, column=c).fill = header_fill
+        ws_list.cell(row=row_idx, column=c).border = table_border
+        
+    total_rev = sum(flt(row['revenue']) for row in data) / 1000000
+    c_rev = ws_list.cell(row=row_idx, column=6, value=total_rev)
+    c_rev.number_format, c_rev.font, c_rev.fill, c_rev.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
+    c_rev.alignment = Alignment(horizontal="right")
+    
+    total_cogs = sum(flt(row['cogs']) for row in data) / 1000000
+    c_cogs = ws_list.cell(row=row_idx, column=7, value=total_cogs)
+    c_cogs.number_format, c_cogs.font, c_cogs.fill, c_cogs.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
+    c_cogs.alignment = Alignment(horizontal="right")
+    
+    total_margin = sum(flt(row['margin']) for row in data) / 1000000
+    c_margin = ws_list.cell(row=row_idx, column=8, value=total_margin)
+    c_margin.number_format, c_margin.font, c_margin.fill, c_margin.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
+    c_margin.alignment = Alignment(horizontal="right")
+    
+    row_idx += 1
+
     for i in range(1, 9):
         ws_overview.column_dimensions[get_column_letter(i)].width = 25
         ws_list.column_dimensions[get_column_letter(i)].width = 20

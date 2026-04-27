@@ -141,7 +141,7 @@ def export_to_excel(filters=None):
     table_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
     
     # 1. Overview Sheet
-    ws_overview.cell(row=1, column=1, value="Collection Report Dashboard").font = title_font
+    ws_overview.cell(row=1, column=1, value="Collection Report Dashboard (Million INR)").font = title_font
     ws_overview.cell(row=1, column=4, value="Generated On: " + now_datetime().strftime("%Y-%m-%d %H:%M"))
     
     ws_overview.cell(row=3, column=1, value="Collection Metrics Summary").font = section_font
@@ -159,9 +159,9 @@ def export_to_excel(filters=None):
         cell_l.alignment = Alignment(horizontal="center")
         ws_overview.merge_cells(start_row=r, start_column=c, end_row=r, end_column=c+1)
         
-        cell_v = ws_overview.cell(row=r+1, column=c, value=flt(s.get('value')))
+        cell_v = ws_overview.cell(row=r+1, column=c, value=flt(s.get('value')) / 1000000)
         cell_v.font = Font(bold=True, size=11)
-        cell_v.number_format = '"₹ "#,##0.00'
+        cell_v.number_format = '"₹ "#,##0.00" M"'
         cell_v.alignment = Alignment(horizontal="center")
         cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
         ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
@@ -171,7 +171,7 @@ def export_to_excel(filters=None):
     ws_list.cell(row=row_idx, column=1, value="Detailed Collection List").font = section_font
     row_idx += 2
     
-    headers = ["S.No.", "Invoice ID", "Date", "Customer", "Sales Person", "Amount", "Type", "Status"]
+    headers = ["S.No.", "Invoice ID", "Date", "Customer", "Sales Person", "Amount (M)", "Type", "Status"]
     for idx, h in enumerate(headers, start=1):
         cell = ws_list.cell(row=row_idx, column=idx, value=h)
         cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
@@ -184,12 +184,33 @@ def export_to_excel(filters=None):
         ws_list.cell(row=row_idx, column=4, value=row['customer']).border = table_border
         ws_list.cell(row=row_idx, column=5, value=row['sales_person']).border = table_border
         
-        amt_cell = ws_list.cell(row=row_idx, column=6, value=flt(row['base_grand_total']))
-        amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00', table_border
+        amt_cell = ws_list.cell(row=row_idx, column=6, value=flt(row['base_grand_total']) / 1000000)
+        amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00" M"', table_border
         
         ws_list.cell(row=row_idx, column=7, value="Export" if row['is_export'] else "Domestic").border = table_border
         ws_list.cell(row=row_idx, column=8, value=row['status']).border = table_border
         row_idx += 1
+
+    # Add Total Row
+    ws_list.cell(row=row_idx, column=1, value="Total").font = header_font
+    ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
+    for c in range(1, 6):
+        ws_list.cell(row=row_idx, column=c).fill = header_fill
+        ws_list.cell(row=row_idx, column=c).border = table_border
+        if c == 1:
+            ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
+            
+    total_amt = sum(flt(r['base_grand_total']) for r in data) / 1000000
+    total_cell = ws_list.cell(row=row_idx, column=6, value=total_amt)
+    total_cell.font = header_font
+    total_cell.fill = header_fill
+    total_cell.number_format, total_cell.border = '"₹ "#,##0.00" M"', table_border
+    
+    ws_list.cell(row=row_idx, column=7, value="").fill = header_fill
+    ws_list.cell(row=row_idx, column=7, value="").border = table_border
+    ws_list.cell(row=row_idx, column=8, value="").fill = header_fill
+    ws_list.cell(row=row_idx, column=8, value="").border = table_border
+    row_idx += 1
 
     # Column Widths
     for i in range(1, 10):
@@ -199,14 +220,8 @@ def export_to_excel(filters=None):
     output = BytesIO()
     wb.save(output)
     output.seek(0)
-    
-    # Set response for Form Submit / direct download
     content = output.read()
-    frappe.response.filename = f"Collection_Report_{nowdate()}.xlsx"
-    frappe.response.filecontent = content
-    frappe.response.type = "download"
     
-    # Also return for frappe.call compatibility (it will be ignored if frappe.response is used by browser)
     return {
         "filename": f"Collection_Report_{nowdate()}.xlsx",
         "filecontent": base64.b64encode(content).decode()

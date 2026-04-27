@@ -34,16 +34,15 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 	}
 
 	const filter_fields = [
-		{ fieldname: "fiscal_year", label: __("Fiscal Year"), fieldtype: "Link", options: "Fiscal Year" },
-				{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer" },
-				{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group" },
-				{ fieldname: "item_code", label: __("Product (Item)"), fieldtype: "Link", options: "Item" },
-				{ fieldname: "item_group", label: __("Product Group"), fieldtype: "Link", options: "Item Group" },
-				{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person" },
-				{ fieldname: "territory", label: __("Territory"), fieldtype: "Link", options: "Territory" },
-		
-		{ fieldname: "dom_exp", label: __("Type"), fieldtype: "Select", options: "\nDomestic\nExport" },
-				{ fieldname: "invoice_type", label: __("Invoice Type"), fieldtype: "Select", options: "\nProduct Domestic\nProduct Export\nEngineering Service Domestic\nEngineering Service Export" },
+		{ fieldname: "fiscal_year", label: __("Fiscal Year"), fieldtype: "Link", options: "Fiscal Year", placeholder: __("Select Fiscal Year") },
+		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer", placeholder: __("Select Customer") },
+		{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group", placeholder: __("Select Customer Group") },
+		{ fieldname: "item_code", label: __("Product (Item)"), fieldtype: "Link", options: "Item", placeholder: __("Select Product") },
+		{ fieldname: "item_group", label: __("Product Group"), fieldtype: "Link", options: "Item Group", placeholder: __("Select Product Group") },
+		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person", placeholder: __("Select Sales Person") },
+		{ fieldname: "territory", label: __("Territory"), fieldtype: "Link", options: "Territory", placeholder: __("Select Territory") },
+		{ fieldname: "dom_exp", label: __("Type"), fieldtype: "Select", options: "\nDomestic\nExport", placeholder: __("Select Type") },
+		{ fieldname: "invoice_type", label: __("Invoice Type"), fieldtype: "Select", options: "\nProduct Domestic\nProduct Export\nEngineering Service Domestic\nEngineering Service Export", placeholder: __("Select Invoice Type") },
 	];
 
 	page.filter_group = new frappe.ui.FieldGroup({ parent: filter_parent, fields: filter_fields });
@@ -113,13 +112,60 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
 	$(`<style>
         .dashboard-content { padding: 24px; background: #fff; min-height: 100vh; }
-        .summary-wrapper { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 16px; margin-bottom: 24px; width: 100% !important; }
-        .summary-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); border-left: 4px solid #cbd5e1; transition: all 0.2s ease; }
-        .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
-        .summary-card .label { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-        .summary-card .value { font-size: 20px; font-weight: 800; color: #0f172a; }
+        .summary-wrapper { 
+            display: grid !important; 
+            grid-template-columns: repeat(4, 1fr) !important; 
+            gap: 16px; 
+            margin-bottom: 24px; 
+            width: 100% !important; 
+        }
+        .summary-card { 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 12px; 
+            padding: 16px; 
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); 
+            border-left: 5px solid #cbd5e1; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .summary-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
+        }
+        
+        /* Consistent Border Colors */
+        .summary-card.blue { border-left-color: #3b82f6; }
+        .summary-card.green { border-left-color: #10b981; }
+        .summary-card.orange { border-left-color: #f59e0b; }
+        .summary-card.cyan { border-left-color: #06b6d4; }
+        .summary-card.purple { border-left-color: #8b5cf6; }
+        .summary-card.red { border-left-color: #ef4444; }
+
+        .summary-card .label { 
+            font-size: 11px; 
+            color: #64748b; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 0.05em; 
+            margin-bottom: 8px; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
+        }
+        .summary-card .value { 
+            font-size: 20px; 
+            font-weight: 800; 
+            color: #0f172a; 
+        }
         .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-        .bg-blue { background-color: #3b82f6; } .bg-green { background-color: #10b981; } .bg-orange { background-color: #f59e0b; } .bg-purple { background-color: #8b5cf6; }
+        
+        .bg-blue { background-color: #3b82f6; }
+        .bg-green { background-color: #10b981; }
+        .bg-orange { background-color: #f59e0b; }
+        .bg-cyan { background-color: #06b6d4; }
+        .bg-purple { background-color: #8b5cf6; }
+        .bg-red { background-color: #ef4444; }
 
         .charts-row { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; width: 100%; }
         .chart-card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
@@ -182,9 +228,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 		if (data.summary) {
 			let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 			data.summary.forEach((m) => {
+				let indicator = (m.indicator || "blue").toLowerCase();
 				$(`
-                    <div class="summary-card">
-                        <div class="label"><span class="indicator bg-${m.indicator.toLowerCase()}"></span>${m.label}</div>
+                    <div class="summary-card ${indicator}">
+                        <div class="label"><span class="indicator bg-${indicator}"></span>${m.label}</div>
                         <div class="value">${format_currency_short(m.value, m.fieldtype)}</div>
                     </div>
                 `).appendTo(summary_row);
@@ -223,7 +270,6 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 					type: chart_obj.type || "donut",
 					height: 350,
 					colors: chart_obj.colors,
-                    legend: 0,
 					tooltipOptions: { formatTooltipY: (d) => "₹ " + flt(d).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M" },
 					onClick: (event) => {
 						if (config && config.field && event.label) {
@@ -474,7 +520,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                             <span class="pdf-dot" style="background: ${color}"></span>
                             <div class="pdf-legend-info">
                                 <div class="pdf-legend-label">${display_label}</div>
-                                <div class="pdf-legend-val">${format_currency_short(val)} (${share}%)</div>
+                                <div class="pdf-legend-val">${format_currency_short(val * 1000000)} (${share}%)</div>
                             </div>
                         </div>
                     `;
@@ -495,7 +541,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                             let parts = l.split(' - ');
                             if (parts[0] === parts[1]) display_label = parts[0];
                         }
-						return `<tr><td style="text-align:center;">${i + 1}</td><td>${display_label}</td><td style="text-align:right;">${format_currency_short(val)}</td><td style="text-align:right;">${share}%</td></tr>`;
+						return `<tr><td style="text-align:center;">${i + 1}</td><td>${display_label}</td><td style="text-align:right;">${format_currency_short(val * 1000000)}</td><td style="text-align:right;">${share}%</td></tr>`;
 					}).join("");
 				return `<div style="margin-top:10px; page-break-inside: avoid;"><table style="width:80%; margin: 10px auto; border-collapse: collapse; font-size: 10px; border: 1px solid #eee;"><thead><tr style="background: #f8f9fa;"><th style="width: 40px; text-align:center; border-bottom:2px solid #3498db;">S.No.</th><th style="text-align:left; border-bottom:2px solid #3498db;">${title}</th><th style="width: 120px; text-align:right; border-bottom:2px solid #3498db;">Margin (M)</th><th style="width: 80px; text-align:right; border-bottom:2px solid #3498db;">Share %</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 			};
@@ -520,11 +566,12 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 10px; color: #1e293b; line-height: 1.2; zoom: 0.9; }
                         .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
                         
-                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: fixed; page-break-inside: auto; }
-                        tr { page-break-inside: avoid; page-break-after: auto; }
+                        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
+                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
-						th, td { border: 1px solid #e2e8f0; padding: 6px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
+						th, td { border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
 						th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
                         td { background: #fff; }
                         

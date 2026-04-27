@@ -208,17 +208,61 @@ def export_to_excel(filters=None):
     summary_ws.cell(row=r_idx, column=1, value="Supplier Order Dashboard - Summary").font = section_font
     r_idx += 2
     
-    summary_ws.cell(row=r_idx, column=1, value="Key Performance Indicators").font = Font(bold=True)
-    r_idx += 1
-    for item in dashboard_data.get("summary", []):
-        summary_ws.cell(row=r_idx, column=1, value=item.get("label")).border = table_border
-        val_cell = summary_ws.cell(row=r_idx, column=2, value=item.get("value") / 1000000 if item.get("fieldtype") == "Currency" else item.get("value"))
-        val_cell.border = table_border
-        if item.get("fieldtype") == "Currency":
-            val_cell.number_format = '[$₹-en-IN] #,##0.00 "M"'
-        r_idx += 1
-        
+    summary_ws.cell(row=r_idx, column=1, value="Key Performance Indicators").font = section_font
     r_idx += 2
+    
+    # Map colors to match dashboard indicators
+    indicator_colors = {
+        "blue": "3b82f6",
+        "green": "10b981",
+        "red": "ef4444",
+        "orange": "f59e0b",
+        "purple": "8b5cf6",
+        "cyan": "06b6d4"
+    }
+    
+    for i, item in enumerate(dashboard_data.get("summary", [])):
+        # Calculate row and column for 2x2 grid
+        grid_row = r_idx + (i // 2) * 3
+        grid_col = 1 + (i % 2) * 2
+        
+        indicator = item.get("indicator", "blue").lower()
+        bg_color = indicator_colors.get(indicator, "3b82f6")
+        
+        # Label cell
+        cell_l = summary_ws.cell(row=grid_row, column=grid_col, value=item.get("label"))
+        cell_l.font = Font(bold=True, color="FFFFFF")
+        cell_l.fill = PatternFill(start_color=bg_color, fill_type="solid")
+        cell_l.border = table_border
+        cell_l.alignment = Alignment(horizontal="center")
+        
+        # Value cell
+        val = item.get("value")
+        val_col = grid_col + 1
+        if item.get("fieldtype") == "Currency":
+            val_display = flt(val) / 1000000
+            val_cell = summary_ws.cell(row=grid_row, column=val_col, value=val_display)
+            val_cell.number_format = '[$₹-en-IN] #,##0.00 "M"'
+        else:
+            val_cell = summary_ws.cell(row=grid_row, column=val_col, value=val)
+            
+        val_cell.font = Font(bold=True)
+        val_cell.border = table_border
+        val_cell.alignment = Alignment(horizontal="center")
+        
+        # Add a colored bottom border to the value cell to match dashboard card style
+        val_cell.border = Border(
+            left=thin_side, 
+            right=thin_side, 
+            top=thin_side, 
+            bottom=Side(style='medium', color=bg_color)
+        )
+
+    # Adjust r_idx for next section (Status Breakdown)
+    r_idx += 7
+    
+    summary_ws.column_dimensions["C"].width = 30
+    summary_ws.column_dimensions["D"].width = 20
     summary_ws.cell(row=r_idx, column=1, value="Order Status Breakdown").font = Font(bold=True)
     r_idx += 1
     summary_ws.cell(row=r_idx, column=1, value="Status").font = header_font; summary_ws.cell(row=r_idx, column=1).fill = header_fill; summary_ws.cell(row=r_idx, column=1).border = table_border
@@ -305,13 +349,19 @@ def export_to_excel(filters=None):
             if fill: c.fill = fill
             col_idx += 1
         c_n = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
-        c_n.number_format, c_n.font, c_n.border = '[$₹-en-IN] #,##0.00 "M"', Font(bold=True), table_border
-        if fill: c_n.fill = fill
+        c_n.number_format = '[$₹-en-IN] #,##0.00 "M"'
+        c_n.font = Font(bold=True)
+        c_n.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
+        c_n.border = table_border
         col_idx += 1
         row_idx += 1
 
-    ws_months.cell(row=row_idx, column=1, value="Grand Total").font = Font(bold=True)
+    ws_months.cell(row=row_idx, column=1, value="Grand Total").font = header_font
     ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=2)
+    for c in range(1, 3):
+        ws_months.cell(row=row_idx, column=c).fill = header_fill
+        ws_months.cell(row=row_idx, column=c).border = table_border
+        
     m_totals_net = {}
     g_total_net = sum(r["total"] for r in merged_data.values())
     
@@ -321,10 +371,16 @@ def export_to_excel(filters=None):
     col_idx = 3
     for m_key in sorted_months:
         c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
-        c.number_format, c.font, c.border = '[$₹-en-IN] #,##0.00 "M"', Font(bold=True), table_border
+        c.number_format = '[$₹-en-IN] #,##0.00 "M"'
+        c.font = header_font
+        c.fill = header_fill
+        c.border = table_border
         col_idx += 1
     c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-    c_gn.number_format, c_gn.font, c_gn.border = '[$₹-en-IN] #,##0.00 "M"', Font(bold=True), table_border
+    c_gn.number_format = '[$₹-en-IN] #,##0.00 "M"'
+    c_gn.font = header_font
+    c_gn.fill = header_fill
+    c_gn.border = table_border
     
     ws_months.column_dimensions["A"].width = 8
     ws_months.column_dimensions["B"].width = 35

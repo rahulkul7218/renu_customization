@@ -56,21 +56,25 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 			fieldname: "expected_delivery_date",
 			label: __("Expected Delivery Date"),
 			fieldtype: "Date",
+			placeholder: __("Select Date")
 		},
 		{
 			fieldname: "actual_delivery_time",
 			label: __("Actual Delivery Time"),
 			fieldtype: "Date",
+			placeholder: __("Select Date")
 		},
 		{
 			fieldname: "delivery_time_as_per_po",
 			label: __("Delivery Time as per PO"),
 			fieldtype: "Date",
+			placeholder: __("Select Date")
 		},
 		{
 			fieldname: "supplier_agreed_time",
 			label: __("Supplier Agreed Time"),
 			fieldtype: "Date",
+			placeholder: __("Select Date")
 		},
 		{
 			fieldname: "open_po_details",
@@ -219,9 +223,16 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             border-radius: 12px; 
             padding: 16px; 
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            border-left: 4px solid #cbd5e1;
+            border-left: 5px solid #cbd5e1;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .summary-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
         }
         
+        /* Consistent Border Colors */
         .summary-card.blue { border-left-color: #3b82f6; }
         .summary-card.purple { border-left-color: #8b5cf6; }
         .summary-card.green { border-left-color: #10b981; }
@@ -233,15 +244,26 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             font-size: 11px; 
             color: #64748b; 
             font-weight: 700; 
-            margin-bottom: 6px; 
+            margin-bottom: 8px; 
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .summary-card .value { 
             font-size: 20px; 
             font-weight: 800; 
             color: #0f172a; 
         }
+        .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+        
+        .bg-blue { background-color: #3b82f6; }
+        .bg-green { background-color: #10b981; }
+        .bg-orange { background-color: #f59e0b; }
+        .bg-cyan { background-color: #06b6d4; }
+        .bg-purple { background-color: #8b5cf6; }
+        .bg-red { background-color: #ef4444; }
 
         .charts-row { 
             display: grid; 
@@ -348,12 +370,14 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		}
 
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
-		data.summary.forEach((metric) => {
-            let indicator = (metric.indicator || "blue").toLowerCase();
-            let val = metric.fieldtype === 'Currency' ? format_currency(metric.value / 1000000, "INR") + " M" : metric.value;
+		data.summary.forEach((m) => {
+            let indicator = (m.indicator || "blue").toLowerCase();
+            let val = m.fieldtype === 'Currency' 
+                ? "₹ " + (flt(m.value) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M" 
+                : m.value;
 			$(`
                 <div class="summary-card ${indicator}">
-                    <div class="label">${metric.label}</div>
+                    <div class="label"><span class="indicator bg-${indicator}"></span>${m.label}</div>
                     <div class="value">${val}</div>
                 </div>
             `).appendTo(summary_row);
@@ -426,16 +450,28 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						const append_m_to_svg = () => {
 							page.container.find(`#wrapper_${chart_id} text`).each(function() {
 								let t = $(this).text();
-								if (!isNaN(t) && t.trim() !== '' && t.trim() !== '0' && !t.includes('M')) {
+								// Strip commas for isNaN check
+								let clean_t = t.replace(/,/g, '').trim();
+								if (!isNaN(clean_t) && clean_t !== '' && clean_t !== '0' && !t.includes('M')) {
 									// Exclude x-axis labels to avoid altering supplier names that might be numbers
 									if ($(this).closest('.x-axis').length === 0) {
-										$(this).text(t + 'M');
+										$(this).text(t + ' M');
 									}
 								}
 							});
 						};
-						setTimeout(append_m_to_svg, 300);
-						setTimeout(append_m_to_svg, 1000); // secondary check in case of slow render
+						
+						// Run initially
+						setTimeout(append_m_to_svg, 100);
+						
+						// Observe SVG for animations/re-renders
+						let wrapperNode = document.querySelector(`#wrapper_${chart_id}`);
+						if (wrapperNode) {
+							let observer = new MutationObserver(() => {
+								append_m_to_svg();
+							});
+							observer.observe(wrapperNode, { childList: true, subtree: true, characterData: true });
+						}
 					}
 				}, 100);
 			});
@@ -710,11 +746,12 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                         
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 30px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
-                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto; }
-                        tr { page-break-inside: avoid; page-break-after: auto; }
+                        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
+                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
-                        th, td { border: 1px solid #e2e8f0; padding: 6px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
+                        th, td { border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
                         th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
                         td { background: #fff; }
                         

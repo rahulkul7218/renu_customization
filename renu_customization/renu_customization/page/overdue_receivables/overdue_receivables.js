@@ -97,8 +97,9 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                     .chart-img { max-width: 400px; margin-bottom: 20px; }
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 15px; border-top: 1px solid #f1f5f9; margin-top: 20px; text-align: left; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; page-break-inside: auto; }
-                    tr { page-break-inside: avoid; page-break-after: auto; }
+                    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 10px; margin-top: 20px; page-break-inside: auto !important; }
+                    tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                    td, th { page-break-inside: avoid !important; }
                     thead { display: table-header-group; }
                     tfoot { display: table-row-group; }
                     th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; }
@@ -192,6 +193,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 			label: __("Customer"),
 			fieldtype: "Link",
 			options: "Customer",
+			placeholder: __("Select Customer")
 		},
 		{ fieldtype: "Column Break" },
 		{
@@ -199,19 +201,22 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 			label: __("Sales Person"),
 			fieldtype: "Link",
 			options: "Sales Person",
+			placeholder: __("Select Sales Person")
 		},
 		{ fieldtype: "Column Break" },
 		{
 			fieldname: "min_days",
 			label: __("Min Days Overdue"),
 			fieldtype: "Int",
+			placeholder: __("Enter Days")
 		},
 		{ fieldtype: "Column Break" },
 		{
 			fieldname: "type",
 			label: __("Type"),
 			fieldtype: "Select",
-			options: ["", "Domestic", "Export"]
+			options: ["", "Domestic", "Export"],
+			placeholder: __("Select Type")
 		}
 	];
 
@@ -279,14 +284,22 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                     border-radius: 12px; 
                     padding: 16px; 
                     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); 
-                    border-left: 4px solid #cbd5e1; 
-                    transition: transform 0.2s;
+                    border-left: 5px solid #cbd5e1; 
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
 				}
-                .summary-card:hover { transform: translateY(-2px); }
-				.summary-card.border-red { border-left-color: #ef4444; }
-				.summary-card.border-orange { border-left-color: #f59e0b; }
-				.summary-card.border-blue { border-left-color: #3b82f6; }
-				.summary-card.border-green { border-left-color: #10b981; }
+                .summary-card:hover { 
+                    transform: translateY(-4px); 
+                    box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
+                }
+                
+                /* Consistent Border Colors */
+                .summary-card.blue { border-left-color: #3b82f6; }
+                .summary-card.green { border-left-color: #10b981; }
+                .summary-card.orange { border-left-color: #f59e0b; }
+                .summary-card.cyan { border-left-color: #06b6d4; }
+                .summary-card.purple { border-left-color: #8b5cf6; }
+                .summary-card.red { border-left-color: #ef4444; }
 				
                 .summary-card .label { 
                     font-size: 11px; 
@@ -295,12 +308,23 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                     text-transform: uppercase; 
                     letter-spacing: 0.05em; 
                     margin-bottom: 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
                 }
 				.summary-card .value { 
                     font-size: 20px; 
                     font-weight: 800; 
                     color: #0f172a; 
                 }
+                .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+                
+                .bg-blue { background-color: #3b82f6; }
+                .bg-green { background-color: #10b981; }
+                .bg-orange { background-color: #f59e0b; }
+                .bg-cyan { background-color: #06b6d4; }
+                .bg-purple { background-color: #8b5cf6; }
+                .bg-red { background-color: #ef4444; }
 
 				.chart-card { 
                     background: #fff; 
@@ -415,9 +439,10 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 		data.summary.forEach(s => {
+                    let indicator = (s.indicator || "blue").toLowerCase();
 			$(`
-				<div class="summary-card border-${s.indicator.toLowerCase()}">
-					<div class="label">${s.label}</div>
+				<div class="summary-card ${indicator}">
+					<div class="label"><span class="indicator bg-${indicator}"></span>${s.label}</div>
 					<div class="value">${s.fieldtype === 'Currency' ? format_currency(s.value) : s.value}</div>
 				</div>
 			`).appendTo(summary_row);

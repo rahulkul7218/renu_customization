@@ -468,7 +468,11 @@ def export_to_excel(filters=None):
             
         tot_m = flt(row["total"]) / 1000000
         c_tot = ws2.cell(row=row_idx, column=col_idx, value=tot_m)
-        c_tot.number_format = '"₹ "#,##0.00" M"'; c_tot.font = Font(bold=True); c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid"); c_tot.border = table_border; c_tot.alignment = Alignment(horizontal="right")
+        c_tot.number_format = '"₹ "#,##0.00" M"'
+        c_tot.font = Font(bold=True)
+        c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
+        c_tot.border = table_border
+        c_tot.alignment = Alignment(horizontal="right")
         row_idx += 1
 
     # Add Total Row for Month-Wise Margin
@@ -497,9 +501,8 @@ def export_to_excel(filters=None):
     grand_total = sum(flt(row["total"]) for row in merged_data.values()) / 1000000
     c_tot = ws2.cell(row=row_idx, column=col_idx, value=grand_total)
     c_tot.number_format = '"₹ "#,##0.00" M"'
-    c_tot.font = Font(bold=True)
+    c_tot.font = Font(bold=True, color="FFFFFF")
     c_tot.fill = header_fill
-    c_tot.font = header_font
     c_tot.border = table_border
     c_tot.alignment = Alignment(horizontal="right")
     row_idx += 1

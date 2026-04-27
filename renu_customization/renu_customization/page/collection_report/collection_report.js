@@ -100,8 +100,9 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                     
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 15px; border-top: 1px solid #f1f5f9; margin-top: 20px; text-align: left; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 20px; page-break-inside: auto; }
-                    tr { page-break-inside: avoid; page-break-after: auto; }
+                    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 11px; margin-top: 20px; page-break-inside: auto !important; }
+                    tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                    td, th { page-break-inside: avoid !important; }
                     thead { display: table-header-group; }
                     tfoot { display: table-row-group; }
                     th { background: #f1f5f9; padding: 10px; text-align: left; border-bottom: 2px solid #3b82f6; color: #64748b; text-transform: uppercase; }
@@ -202,15 +203,15 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 
 	let filter_parent = $('<div class="dashboard-filter-area border-bottom" style="background: transparent; padding: 0;"></div>').prependTo(page.main);
 	const filter_fields = [
-		{ fieldname: "from_date", label: __("From Date"), fieldtype: "Date" },
+		{ fieldname: "from_date", label: __("From Date"), fieldtype: "Date", placeholder: __("Start Date") },
 		{ fieldtype: "Column Break" },
-		{ fieldname: "to_date", label: __("To Date"), fieldtype: "Date" },
+		{ fieldname: "to_date", label: __("To Date"), fieldtype: "Date", placeholder: __("End Date") },
 		{ fieldtype: "Column Break" },
-		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer" },
+		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer", placeholder: __("Select Customer") },
 		{ fieldtype: "Column Break" },
-		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person" },
+		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person", placeholder: __("Select Sales Person") },
 		{ fieldtype: "Column Break" },
-		{ fieldname: "dom_exp", label: __("Type"), fieldtype: "Select", options: ["", "Domestic", "Export"] },
+		{ fieldname: "dom_exp", label: __("Type"), fieldtype: "Select", options: ["", "Domestic", "Export"], placeholder: __("Select Type") },
 	];
 
 	page.filter_group = new frappe.ui.FieldGroup({ parent: filter_parent, fields: filter_fields });
@@ -231,13 +232,60 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
         .layout-main-section { background-color: transparent !important; }
         .page-container { background-color: transparent !important; }
         .dashboard-content { padding: 20px; background: transparent !important; min-height: 100vh; font-family: 'Inter', sans-serif; color: #1e293b; width: 100% !important; }
-        .summary-wrapper { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; gap: 16px; margin-bottom: 24px; width: 100% !important; }
-        .summary-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); border-left: 4px solid #cbd5e1; }
+        .summary-wrapper { 
+            display: grid !important; 
+            grid-template-columns: repeat(3, 1fr) !important; 
+            gap: 16px; 
+            margin-bottom: 24px; 
+            width: 100% !important; 
+        }
+        .summary-card { 
+            background: #ffffff; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 12px; 
+            padding: 16px; 
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); 
+            border-left: 5px solid #cbd5e1; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+        .summary-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
+        }
+        
+        /* Consistent Border Colors */
         .summary-card.blue { border-left-color: #3b82f6; }
         .summary-card.green { border-left-color: #10b981; }
         .summary-card.orange { border-left-color: #f59e0b; }
-        .summary-card .label { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
-        .summary-card .value { font-size: 20px; font-weight: 800; color: #0f172a; }
+        .summary-card.cyan { border-left-color: #06b6d4; }
+        .summary-card.purple { border-left-color: #8b5cf6; }
+        .summary-card.red { border-left-color: #ef4444; }
+
+        .summary-card .label { 
+            font-size: 11px; 
+            color: #64748b; 
+            font-weight: 700; 
+            text-transform: uppercase; 
+            letter-spacing: 0.05em; 
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .summary-card .value { 
+            font-size: 20px; 
+            font-weight: 800; 
+            color: #0f172a; 
+        }
+        .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+        
+        .bg-blue { background-color: #3b82f6; }
+        .bg-green { background-color: #10b981; }
+        .bg-orange { background-color: #f59e0b; }
+        .bg-cyan { background-color: #06b6d4; }
+        .bg-purple { background-color: #8b5cf6; }
+        .bg-red { background-color: #ef4444; }
         .charts-row { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; width: 100%; }
         .chart-card { background: #fff; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; }
         .chart-card .title { font-size: 13px; font-weight: 700; color: #1e293b; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -252,6 +300,18 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
         .analytics-table th { background: #f8fafc; padding: 10px 15px; text-align: left; font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; border-bottom: 1px solid #f1f5f9; }
         .analytics-table td { padding: 10px 15px; border-bottom: 1px solid #f1f5f9; font-size: 12px; color: #1e293b; }
         .analytics-table tr:last-child td { border-bottom: none; }
+        
+        /* Sticky Total Footer */
+        tr.sticky-total td { 
+            position: sticky; 
+            bottom: 0; 
+            z-index: 30; 
+            background: #f8fafc !important; 
+            font-weight: 700; 
+            border-top: 2px solid #e2e8f0 !important;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
+
         .table-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; overflow: hidden; border: 1px solid #e2e8f0; width: 100%; }
         .table-card .header { padding: 15px 24px; background: #fff; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #0f172a; display: flex; justify-content: space-between; align-items: center; }
         .table-container { overflow: auto; width: 100%; max-height: 600px; }
@@ -290,9 +350,10 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 		data.summary.forEach((metric) => {
+                    let indicator = (metric.indicator || "blue").toLowerCase();
 			$(`
-                <div class="summary-card ${metric.indicator.toLowerCase()}">
-                    <div class="label">${metric.label}</div>
+                <div class="summary-card ${indicator}">
+                    <div class="label"><span class="indicator bg-${indicator}"></span>${metric.label}</div>
                     <div class="value">${format_currency_short(metric.value)}</div>
                 </div>
             `).appendTo(summary_row);
@@ -389,8 +450,10 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
         `).appendTo(page.container);
 
 		let tbody = table_card.find("#collection_table_body");
+		let total_amt = 0;
 		data.results.forEach((row) => {
 			let type_label = row.is_export ? "Export" : "Domestic";
+			total_amt += flt(row.base_grand_total);
 			$(`
                 <tr>
                     <td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
@@ -402,6 +465,18 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                 </tr>
             `).appendTo(tbody);
 		});
+
+		// Add Total Row
+		$(`
+			<tfoot>
+				<tr class="sticky-total">
+					<td colspan="4" style="text-align: right; font-weight: 700; color: #64748b; padding-right: 20px;">GRAND TOTAL</td>
+					<td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_currency_short(total_amt)}</td>
+					<td></td>
+				</tr>
+			</tfoot>
+		`).appendTo(table_card.find(".dashboard-table"));
+
 		table_card.find("#export_excel_btn").click(() => export_to_excel());
 	}
 	page.refresh();

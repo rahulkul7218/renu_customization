@@ -158,7 +158,7 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
         /* KPI Cards Styling */
         .summary-wrapper { 
             display: grid !important; 
-            grid-template-columns: repeat(4, 1fr) !important; 
+            grid-template-columns: repeat(5, 1fr) !important; 
             gap: 16px; 
             margin-bottom: 24px; 
             width: 100% !important;
@@ -169,10 +169,23 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
             border-radius: 12px; 
             padding: 16px; 
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            border-left: 4px solid #cbd5e1;
-            transition: all 0.2s ease;
+            border-left: 5px solid #cbd5e1;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
         }
-        .summary-card:hover { transform: translateY(-2px); box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .summary-card:hover { 
+            transform: translateY(-4px); 
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
+        }
+        
+        /* Consistent Border Colors */
+        .summary-card.blue { border-left-color: #3b82f6; }
+        .summary-card.green { border-left-color: #10b981; }
+        .summary-card.orange { border-left-color: #f59e0b; }
+        .summary-card.cyan { border-left-color: #06b6d4; }
+        .summary-card.purple { border-left-color: #8b5cf6; }
+        .summary-card.red { border-left-color: #ef4444; }
+
         .summary-card .label { 
             font-size: 11px; 
             color: #64748b; 
@@ -316,9 +329,10 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		if (data.summary) {
 			let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 			data.summary.forEach((metric) => {
+				let indicator = (metric.indicator || "blue").toLowerCase();
 				$(`
-                    <div class="summary-card">
-                        <div class="label"><span class="indicator bg-${metric.indicator}"></span>${metric.label}</div>
+                    <div class="summary-card ${indicator}">
+                        <div class="label"><span class="indicator bg-${indicator}"></span>${metric.label}</div>
                         <div class="value">${format_currency_short(metric.value)}</div>
                     </div>
                 `).appendTo(summary_row);
@@ -687,11 +701,12 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                         body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 10px; color: #1e293b; line-height: 1.2; zoom: 0.9; }
                         .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
                         
-                        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: fixed; page-break-inside: auto; }
-                        tr { page-break-inside: avoid; page-break-after: auto; }
+                        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
+                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
-						th, td { border: 1px solid #e2e8f0; padding: 6px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
+						th, td { border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
 						th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
                         td { background: #fff; }
                         

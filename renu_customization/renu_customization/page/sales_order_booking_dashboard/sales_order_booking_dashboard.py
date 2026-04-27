@@ -441,15 +441,24 @@ def export_to_excel(filters=None):
             c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
             col_idx += 1
         c_n = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
-        c_n.number_format, c_n.font, c_n.border = '"₹ "#,##0.00" M"', Font(bold=True), table_border
+        c_n.number_format = '"₹ "#,##0.00" M"'
+        c_n.font = Font(bold=True)
+        c_n.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
+        c_n.border = table_border
         col_idx += 1
         c_g = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total_gross"])/1000000)
-        c_g.number_format, c_g.font, c_g.border, c_g.fill = '"₹ "#,##0.00" M"', Font(bold=True), table_border, PatternFill(start_color="f5f7ff", fill_type="solid")
+        c_g.number_format = '"₹ "#,##0.00" M"'
+        c_g.font = Font(bold=True)
+        c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid")
+        c_g.border = table_border
         row_idx += 1
 
     # Add Footer Rows in Excel
-    ws_months.cell(row=row_idx, column=1, value="Grand Total (Net)").font = footer_font
+    ws_months.cell(row=row_idx, column=1, value="Grand Total (Net)").font = header_font
     ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+    for c in range(1, 5):
+        ws_months.cell(row=row_idx, column=c).fill = header_fill
+        ws_months.cell(row=row_idx, column=c).border = table_border
     m_totals_net, m_totals_gross, g_total_net, g_total_gross = {}, {}, sum(r["total"] for r in merged_data.values()), sum(r["total_gross"] for r in merged_data.values())
     
     # Monthly totals calculation
@@ -464,25 +473,46 @@ def export_to_excel(filters=None):
     col_idx = 5
     for m_key in sorted_months:
         c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
-        c.number_format, c.font, c.border = '"₹ "#,##0.00" M"', footer_font, table_border
+        c.number_format = '"₹ "#,##0.00" M"'
+        c.font = header_font
+        c.fill = header_fill
+        c.border = table_border
         col_idx += 1
     c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-    c_gn.number_format, c_gn.font, c_gn.border = '"₹ "#,##0.00" M"', footer_font, table_border
+    c_gn.number_format = '"₹ "#,##0.00" M"'
+    c_gn.font = header_font
+    c_gn.fill = header_fill
+    c_gn.border = table_border
     col_idx += 1
-    ws_months.cell(row=row_idx, column=col_idx, value="-").border = table_border
+    c_sep = ws_months.cell(row=row_idx, column=col_idx, value="-")
+    c_sep.font = header_font
+    c_sep.fill = header_fill
+    c_sep.border = table_border
     row_idx += 1
     
-    ws_months.cell(row=row_idx, column=1, value="Grand Total (Gross)").font = footer_font
+    ws_months.cell(row=row_idx, column=1, value="Grand Total (Gross)").font = header_font
     ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+    for c in range(1, 5):
+        ws_months.cell(row=row_idx, column=c).fill = header_fill
+        ws_months.cell(row=row_idx, column=c).border = table_border
     col_idx = 5
     for m_key in sorted_months:
         c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_gross.get(m_key, 0))/1000000)
-        c.number_format, c.font, c.border, c.fill = '"₹ "#,##0.00" M"', footer_font, table_border, PatternFill(start_color="eef2ff", fill_type="solid")
+        c.number_format = '"₹ "#,##0.00" M"'
+        c.font = header_font
+        c.fill = header_fill
+        c.border = table_border
         col_idx += 1
-    ws_months.cell(row=row_idx, column=col_idx, value="-").border = table_border
+    c_sep2 = ws_months.cell(row=row_idx, column=col_idx, value="-")
+    c_sep2.font = header_font
+    c_sep2.fill = header_fill
+    c_sep2.border = table_border
     col_idx += 1
     c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
-    c_gg.number_format, c_gg.font, c_gg.border, c_gg.fill = '"₹ "#,##0.00" M"', footer_font, table_border, PatternFill(start_color="eef2ff", fill_type="solid")
+    c_gg.number_format = '"₹ "#,##0.00" M"'
+    c_gg.font = header_font
+    c_gg.fill = header_fill
+    c_gg.border = table_border
     
     # 3. Sales Orders List Sheet
     row_idx = 1
@@ -524,11 +554,17 @@ def export_to_excel(filters=None):
                 cell.value, cell.alignment = str(val) if val else "", Alignment(horizontal="left")
         row_idx += 1
     
-    ws_list.cell(row=row_idx, column=1, value="Grand Total").font = footer_font
+    ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
     ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=8)
-    for c in range(1, 9): ws_list.cell(row=row_idx, column=c).border = table_border
+    for c in range(1, 9): 
+        ws_list.cell(row=row_idx, column=c).fill = header_fill
+        ws_list.cell(row=row_idx, column=c).border = table_border
     c_tot = ws_list.cell(row=row_idx, column=9, value=total_list_amt / 1000000)
-    c_tot.font, c_tot.number_format, c_tot.alignment, c_tot.border = footer_font, '"₹ "#,##0.00" M"', Alignment(horizontal="right"), table_border
+    c_tot.font = header_font
+    c_tot.fill = header_fill
+    c_tot.number_format = '"₹ "#,##0.00" M"'
+    c_tot.alignment = Alignment(horizontal="right")
+    c_tot.border = table_border
 
     ws_list.column_dimensions["A"].width = 8
     ws_list.column_dimensions["B"].width = 20

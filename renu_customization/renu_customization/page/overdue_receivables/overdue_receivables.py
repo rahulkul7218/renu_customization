@@ -207,20 +207,23 @@ def export_to_excel(filters=None):
         row_idx += 1
 
     # Add Total Row
-    ws_list.cell(row=row_idx, column=1, value="Total").font = Font(bold=True)
+    ws_list.cell(row=row_idx, column=1, value="Total").font = header_font
     ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
     for c in range(1, 7):
-        cell = ws_list.cell(row=row_idx, column=c)
-        cell.border = table_border
+        ws_list.cell(row=row_idx, column=c).fill = header_fill
+        ws_list.cell(row=row_idx, column=c).border = table_border
         if c == 1:
-            cell.alignment = Alignment(horizontal="right")
+            ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
             
     total_amt = sum(flt(r['outstanding_amount']) for r in data) / 1000000
     total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
-    total_cell.font = Font(bold=True)
+    total_cell.font = header_font
+    total_cell.fill = header_fill
     total_cell.number_format, total_cell.border = '"₹ "#,##0.00" M"', table_border
     
+    ws_list.cell(row=row_idx, column=8, value="").fill = header_fill
     ws_list.cell(row=row_idx, column=8, value="").border = table_border
+    ws_list.cell(row=row_idx, column=9, value="").fill = header_fill
     ws_list.cell(row=row_idx, column=9, value="").border = table_border
     row_idx += 1
 
