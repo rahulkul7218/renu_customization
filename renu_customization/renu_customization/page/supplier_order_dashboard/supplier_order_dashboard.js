@@ -498,6 +498,9 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             <div class="table-card" style="margin-top: 24px; overflow: visible;">
                 <div class="header" style="overflow: visible;">
                     <span style="font-size: 15px;">${__("Month-Wise Order Breakdown")}</span>
+                    <div class="table-actions">
+                        <span class="export-btn" id="export_month_table"><i class="fa fa-file-excel-o"></i> Export</span>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table class="dashboard-table month-table">
@@ -518,8 +521,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                 <div class="header">
                     <span style="font-size: 15px;">${__("Supplier Orders")}</span>
                     <div class="table-actions">
-                        <span class="export-btn" id="export_excel_btn"><i class="fa fa-file-excel-o"></i> Export</span>
-                        <span class="export-btn" id="export_pdf_btn"><i class="fa fa-file-pdf-o"></i> PDF</span>
+                        <span class="export-btn" id="export_list_table"><i class="fa fa-file-excel-o"></i> Export</span>
                     </div>
                 </div>
                 <div class="table-container">
@@ -634,11 +636,11 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             </tr>
         `);
 
-        const export_to_excel = () => {
+        const export_to_excel = (export_type = "all") => {
             let filters = page.filter_group.get_values();
             frappe.call({
                 method: "renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.export_to_excel",
-                args: { filters: filters },
+                args: { filters: filters, export_type: export_type },
                 callback: function (r) {
                     if (r.message) {
                         const { filename, filecontent } = r.message;
@@ -829,11 +831,11 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             $form.remove();
         };
 
-        tables_html.find("#export_excel_btn").on("click", export_to_excel);
-        tables_html.find("#export_pdf_btn").on("click", export_to_pdf);
+        tables_html.find("#export_month_table").on("click", () => export_to_excel("summary"));
+        tables_html.find("#export_list_table").on("click", () => export_to_excel("detail"));
 
         page.add_menu_item(__("Export to PDF"), export_to_pdf);
-        page.add_menu_item(__("Export to Excel"), export_to_excel);
+        page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 	}
 
 	page.refresh();

@@ -8,13 +8,13 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
 	// Export Functions
-	const export_to_excel = () => {
+	const export_to_excel = (export_type = "all") => {
 		const filters = page.filter_group.get_values();
         frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.overdue_receivables.overdue_receivables.export_to_excel",
-			args: { filters: filters },
+			args: { filters: filters, export_type: export_type },
 			callback: function (r) {
 				if (r.message) {
 					const { filename, filecontent } = r.message;
@@ -190,7 +190,7 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 	};
 
     page.add_menu_item(__("Export to PDF"), () => export_pdf());
-    page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+    page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 
 	let filter_area = $('<div class="dashboard-filter-area border-bottom"></div>').prependTo(page.main);
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
@@ -247,6 +247,31 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 			field.$input.on("change input blur", () => { setTimeout(() => page.refresh(), 50); });
 		}
 	});
+
+	$("<style>")
+		.text(`
+            .sticky-total td { 
+                position: sticky; 
+                bottom: 0; 
+                z-index: 10; 
+                background: #f8fafc !important; 
+                font-weight: 700; 
+                border-top: 2px solid #e2e8f0; 
+                box-shadow: 0 -2px 4px rgba(0,0,0,0.02);
+            }
+            .table-container { 
+                max-height: 600px; 
+                overflow-y: auto; 
+                position: relative;
+            }
+            thead th { 
+                position: sticky; 
+                top: 0; 
+                z-index: 20; 
+                background: #f8fafc; 
+            }
+		`)
+		.appendTo("head");
 
 	page.refresh = function() {
 		let filters = page.filter_group.get_values();
@@ -555,14 +580,14 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
 
         let tfoot = table_card.find('tfoot');
         $(`
-            <tr>
-                <td colspan="5" class="text-right" style="padding: 12px 16px; font-size: 13px; color: #0f172a; font-weight: 700;">${__("Total")}</td>
-                <td class="text-right" style="padding: 12px 16px; font-size: 14px; color: #0f172a; font-weight: 800;">${format_currency(total_outstanding)}</td>
+            <tr class="sticky-total">
+                <td colspan="6" class="text-right" style="padding-right: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
+                <td class="text-right" style="color: #0f172a; font-weight: 800;">${format_currency(total_outstanding)}</td>
                 <td colspan="2"></td>
             </tr>
         `).appendTo(tfoot);
 
-        table_card.find("#export_excel_table").click(() => export_to_excel());
+        table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
 	}
 
 	function format_currency(v) {

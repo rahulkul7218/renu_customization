@@ -892,30 +892,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             $form.remove();
 		};
 
-		// Capture local variables in helpers before they are lost
-		tables_container.find("#export_month_table").on("click", () => {
-			let html = `<html><head><meta charset="utf-8"></head><body><h3>Month-Wise Order Value</h3><table border="1">`;
-			html += tables_container.find("#so_month_body").closest("table").html();
-			html += `</table></body></html>`;
-			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-			const url = window.URL.createObjectURL(blob);
-			const btn = document.createElement("a");
-			btn.href = url;
-			btn.download = `Month_Wise_Orders_${frappe.datetime.now_date()}.xls`;
-			btn.click();
-		});
 
-		tables_container.find("#export_list_table").on("click", () => {
-			let html = `<html><head><meta charset="utf-8"></head><body><h3>Sales Orders List</h3><table border="1">`;
-			html += tables_container.find("#so_list_body").closest("table").html();
-			html += `</table></body></html>`;
-			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-			const url = window.URL.createObjectURL(blob);
-			const btn = document.createElement("a");
-			btn.href = url;
-			btn.download = `Sales_Orders_List_${frappe.datetime.now_date()}.xls`;
-			btn.click();
-		});
 
 		// Hybrid Filter Logic
 		const apply_local_filters = () => {

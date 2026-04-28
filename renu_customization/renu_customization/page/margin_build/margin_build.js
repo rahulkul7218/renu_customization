@@ -8,13 +8,13 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
 	// Export Functions
-	const export_to_excel = () => {
+	const export_to_excel = (export_type = "all") => {
 		const filters = page.filter_group.get_values();
         frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.margin_build.margin_build.export_to_excel",
-			args: { filters: filters },
+			args: { filters: filters, export_type: export_type },
 			callback: function (r) {
 				if (r.message) {
 					const { filename, filecontent } = r.message;
@@ -180,7 +180,7 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 	};
 
     page.add_menu_item(__("Export to PDF"), () => export_pdf());
-    page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+    page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 
 	let filter_area = $('<div class="dashboard-filter-area border-bottom"></div>').prependTo(page.main);
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
@@ -238,6 +238,31 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 			field.$input.on("change input blur", () => { setTimeout(() => page.refresh(), 50); });
 		}
 	});
+
+	$("<style>")
+		.text(`
+            .sticky-total td { 
+                position: sticky; 
+                bottom: 0; 
+                z-index: 10; 
+                background: #f8fafc !important; 
+                font-weight: 700; 
+                border-top: 2px solid #e2e8f0; 
+                box-shadow: 0 -2px 4px rgba(0,0,0,0.02);
+            }
+            .table-container { 
+                max-height: 600px; 
+                overflow-y: auto; 
+                position: relative;
+            }
+            thead th { 
+                position: sticky; 
+                top: 0; 
+                z-index: 20; 
+                background: #f8fafc; 
+            }
+		`)
+		.appendTo("head");
 
 	page.refresh = function() {
 		let filters = page.filter_group.get_values();
@@ -528,7 +553,13 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
         `).appendTo(page.container);
 
 		let tbody = table_card.find('tbody');
+        let total_rev = 0, total_cogs = 0, total_margin = 0;
+
 		data.results.forEach(row => {
+            total_rev += flt(row.revenue);
+            total_cogs += flt(row.cogs);
+            total_margin += flt(row.margin);
+
 			$(`
 				<tr>
 					<td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
@@ -544,7 +575,18 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 			`).appendTo(tbody);
 		});
 
-        table_card.find("#export_excel_table").click(() => export_to_excel());
+        $(`
+            <tfoot>
+                <tr class="sticky-total">
+                    <td colspan="4" class="text-right" style="padding-right: 20px; color: #64748b; font-size: 11px; font-weight: 600;">GRAND TOTAL</td>
+                    <td class="text-right" style="color: #1e293b;">${format_currency(total_rev)}</td>
+                    <td class="text-right" style="color: #1e293b;">${format_currency(total_cogs)}</td>
+                    <td class="text-right" style="color: ${total_margin < 0 ? '#ef4444' : '#4338ca'}; font-weight: 800;">${format_currency(total_margin)}</td>
+                </tr>
+            </tfoot>
+        `).insertAfter(tbody);
+
+        table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
 	}
 
 	function format_currency(v) {

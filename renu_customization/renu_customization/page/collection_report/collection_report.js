@@ -8,13 +8,13 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 	});
 
 	// Define Export Functions
-	const export_to_excel = () => {
+	const export_to_excel = (export_type = "all") => {
 		const filters = page.filter_group.get_values();
         frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.collection_report.collection_report.export_to_excel",
-			args: { filters: filters },
+			args: { filters: filters, export_type: export_type },
 			callback: function (r) {
 				if (r.message) {
 					const { filename, filecontent } = r.message;
@@ -206,7 +206,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 
 	page.set_primary_action(__("Refresh"), () => page.refresh());
     page.add_menu_item(__("Export to PDF"), () => export_pdf());
-    page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+    page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 
 	let filter_parent = $('<div class="dashboard-filter-area border-bottom" style="background: transparent; padding: 0;"></div>').prependTo(page.main);
 	const filter_fields = [
@@ -496,7 +496,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 			</tfoot>
 		`).appendTo(table_card.find(".dashboard-table"));
 
-		table_card.find("#export_excel_btn").click(() => export_to_excel());
+		table_card.find("#export_excel_btn").click(() => export_to_excel("detail"));
 	}
 	page.refresh();
 };

@@ -275,50 +275,50 @@ def export_to_excel(filters=None, export_type="all"):
                 bottom=Side(style='medium', color=bg_color)
             )
 
-    # Adjust r_idx for next section (Status Breakdown)
-    r_idx += 7
-    
-    summary_ws.column_dimensions["C"].width = 30
-    summary_ws.column_dimensions["D"].width = 20
-    summary_ws.cell(row=r_idx, column=1, value="Order Status Breakdown").font = Font(bold=True)
-    r_idx += 1
-    summary_ws.cell(row=r_idx, column=1, value="Status").font = header_font; summary_ws.cell(row=r_idx, column=1).fill = header_fill; summary_ws.cell(row=r_idx, column=1).border = table_border
-    summary_ws.cell(row=r_idx, column=2, value="Count").font = header_font; summary_ws.cell(row=r_idx, column=2).fill = header_fill; summary_ws.cell(row=r_idx, column=2).border = table_border
-    summary_ws.cell(row=r_idx, column=3, value="Share %").font = header_font; summary_ws.cell(row=r_idx, column=3).fill = header_fill; summary_ws.cell(row=r_idx, column=3).border = table_border
-    r_idx += 1
-    
-    charts = dashboard_data.get("charts", {})
-    if "order_status" in charts:
-        labels = charts["order_status"]["data"]["labels"]
-        vals = charts["order_status"]["data"]["datasets"][0]["values"]
-        total_val = sum(vals) or 1
-        for l, v in zip(labels, vals):
-            summary_ws.cell(row=r_idx, column=1, value=l).border = table_border
-            summary_ws.cell(row=r_idx, column=2, value=v).border = table_border
-            share_c = summary_ws.cell(row=r_idx, column=3, value=(v / total_val))
-            share_c.border = table_border; share_c.number_format = '0.0%'
-            r_idx += 1
+        # Adjust r_idx for next section (Status Breakdown)
+        r_idx += 7
+        
+        summary_ws.column_dimensions["C"].width = 30
+        summary_ws.column_dimensions["D"].width = 20
+        summary_ws.cell(row=r_idx, column=1, value="Order Status Breakdown").font = Font(bold=True)
+        r_idx += 1
+        summary_ws.cell(row=r_idx, column=1, value="Status").font = header_font; summary_ws.cell(row=r_idx, column=1).fill = header_fill; summary_ws.cell(row=r_idx, column=1).border = table_border
+        summary_ws.cell(row=r_idx, column=2, value="Count").font = header_font; summary_ws.cell(row=r_idx, column=2).fill = header_fill; summary_ws.cell(row=r_idx, column=2).border = table_border
+        summary_ws.cell(row=r_idx, column=3, value="Share %").font = header_font; summary_ws.cell(row=r_idx, column=3).fill = header_fill; summary_ws.cell(row=r_idx, column=3).border = table_border
+        r_idx += 1
+        
+        charts = dashboard_data.get("charts", {})
+        if "order_status" in charts:
+            labels = charts["order_status"]["data"]["labels"]
+            vals = charts["order_status"]["data"]["datasets"][0]["values"]
+            total_val = sum(vals) or 1
+            for l, v in zip(labels, vals):
+                summary_ws.cell(row=r_idx, column=1, value=l).border = table_border
+                summary_ws.cell(row=r_idx, column=2, value=v).border = table_border
+                share_c = summary_ws.cell(row=r_idx, column=3, value=(v / total_val))
+                share_c.border = table_border; share_c.number_format = '0.0%'
+                r_idx += 1
 
-    r_idx += 2
-    summary_ws.cell(row=r_idx, column=1, value="Top 10 Suppliers by Value").font = Font(bold=True)
-    r_idx += 1
-    summary_ws.cell(row=r_idx, column=1, value="Supplier").font = header_font; summary_ws.cell(row=r_idx, column=1).fill = header_fill; summary_ws.cell(row=r_idx, column=1).border = table_border
-    summary_ws.cell(row=r_idx, column=2, value="Amount (M)").font = header_font; summary_ws.cell(row=r_idx, column=2).fill = header_fill; summary_ws.cell(row=r_idx, column=2).border = table_border
-    summary_ws.cell(row=r_idx, column=3, value="Share %").font = header_font; summary_ws.cell(row=r_idx, column=3).fill = header_fill; summary_ws.cell(row=r_idx, column=3).border = table_border
-    r_idx += 1
-    
-    if "top_10_suppliers" in charts:
-        labels = charts["top_10_suppliers"]["data"]["labels"]
-        vals = charts["top_10_suppliers"]["data"]["datasets"][0]["values"]
-        total_val = sum(vals) or 1
-        for l, v in zip(labels, vals):
-            summary_ws.cell(row=r_idx, column=1, value=l).border = table_border
-            val_c = summary_ws.cell(row=r_idx, column=2, value=v / 1000000)
-            val_c.border = table_border
-            val_c.number_format = '[$₹-en-IN] #,##0.00 "M"'
-            share_c = summary_ws.cell(row=r_idx, column=3, value=(v / total_val))
-            share_c.border = table_border; share_c.number_format = '0.0%'
-            r_idx += 1
+        r_idx += 2
+        summary_ws.cell(row=r_idx, column=1, value="Top 10 Suppliers by Value").font = Font(bold=True)
+        r_idx += 1
+        summary_ws.cell(row=r_idx, column=1, value="Supplier").font = header_font; summary_ws.cell(row=r_idx, column=1).fill = header_fill; summary_ws.cell(row=r_idx, column=1).border = table_border
+        summary_ws.cell(row=r_idx, column=2, value="Amount (M)").font = header_font; summary_ws.cell(row=r_idx, column=2).fill = header_fill; summary_ws.cell(row=r_idx, column=2).border = table_border
+        summary_ws.cell(row=r_idx, column=3, value="Share %").font = header_font; summary_ws.cell(row=r_idx, column=3).fill = header_fill; summary_ws.cell(row=r_idx, column=3).border = table_border
+        r_idx += 1
+        
+        if "top_10_suppliers" in charts:
+            labels = charts["top_10_suppliers"]["data"]["labels"]
+            vals = charts["top_10_suppliers"]["data"]["datasets"][0]["values"]
+            total_val = sum(vals) or 1
+            for l, v in zip(labels, vals):
+                summary_ws.cell(row=r_idx, column=1, value=l).border = table_border
+                val_c = summary_ws.cell(row=r_idx, column=2, value=v / 1000000)
+                val_c.border = table_border
+                val_c.number_format = '[$₹-en-IN] #,##0.00 "M"'
+                share_c = summary_ws.cell(row=r_idx, column=3, value=(v / total_val))
+                share_c.border = table_border; share_c.number_format = '0.0%'
+                r_idx += 1
 
     if export_type in ["all", "summary"]:
         ws_months = wb.get_sheet_by_name("Month-Wise Booking") if "Month-Wise Booking" in wb.sheetnames else wb.create_sheet("Month-Wise Booking")

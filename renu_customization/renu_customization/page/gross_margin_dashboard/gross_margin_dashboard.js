@@ -457,10 +457,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         `).appendTo(page.container);
 
         // Export handlers
-        const export_to_excel = () => {
+        const export_to_excel = (export_type = "all") => {
             frappe.call({
                 method: "renu_customization.renu_customization.page.gross_margin_dashboard.gross_margin_dashboard.export_to_excel",
-                args: { filters: page.filter_group.get_values() },
+                args: { 
+                    filters: page.filter_group.get_values(),
+                    export_type: export_type
+                },
                 callback: (r) => {
                     if (r.message) {
                         const blob = b64toBlob(r.message.filecontent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -663,10 +666,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
         // Local Table Handlers
         card.find("#export_month_btn, #pdf_month_table").on("click", (e) => {
-            if (e.currentTarget.id === "export_month_btn") export_to_excel();
+            if (e.currentTarget.id === "export_month_btn") export_to_excel("summary");
             else export_pdf();
         });
-        detail_card.find("#export_detail_btn").on("click", () => export_to_excel());
+        detail_card.find("#export_detail_btn").on("click", () => export_to_excel("detail"));
 
         page.container.on("click", ".reset-btn", (e) => {
             const field = $(e.currentTarget).data("field");
@@ -675,7 +678,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         });
 
         page.add_menu_item(__("Export to PDF"), () => export_pdf());
-        page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+        page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 	}
 
 	function b64toBlob(b64Data, contentType = "", sliceSize = 512) {
