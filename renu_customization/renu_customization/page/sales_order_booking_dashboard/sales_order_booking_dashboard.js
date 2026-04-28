@@ -514,10 +514,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         </div>
                         <div class="d-flex" style="gap: 8px; margin-left: 10px;">
                             <span class="export-btn" id="export_month_table">
-                                <i class="fa fa-file-excel-o"></i> Export
-                            </span>
-                            <span class="export-btn pdf-btn" id="pdf_month_table">
-                                <i class="fa fa-file-pdf-o"></i> PDF
+                                <i class="fa fa-file-excel-o"></i> Excel
                             </span>
                         </div>
                     </div>
@@ -546,7 +543,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     <div class="table-actions">
                         <span id="so_count" style="font-size: 12px; color: #64748b; font-weight: 500; margin-right: 12px;"></span>
                         <div class="export-btn" id="export_list_table">
-                            <i class="fa fa-file-excel-o"></i> Export
+                            <i class="fa fa-file-excel-o"></i> Excel
                         </div>
                     </div>
                 </div>
@@ -1017,9 +1014,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		};
 
 		// Table Action Handlers
-		tables_container.on("click", "#export_month_table", () => export_to_excel());
+		tables_container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		tables_container.on("click", "#pdf_month_table", () => export_pdf());
-		tables_container.on("click", "#export_list_table", () => export_to_excel());
+		tables_container.on("click", "#export_list_table", () => export_to_excel("detail"));
 
 		// Initial table render
 		render_filtered_view(data.results);
@@ -1031,10 +1028,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 
 
-	const export_to_excel = () => {
+	const export_to_excel = (export_type = "all") => {
 		frappe.call({
 			method: "renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.export_to_excel",
-			args: { filters: page.filter_group.get_values() },
+			args: { 
+                filters: page.filter_group.get_values(),
+                export_type: export_type
+            },
 			callback: (r) => {
 				if (r.message) {
 					const b64 = r.message.filecontent;

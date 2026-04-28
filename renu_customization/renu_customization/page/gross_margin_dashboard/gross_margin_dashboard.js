@@ -341,8 +341,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                     <div class="table-actions">
                         <div id="filter_customer_link" style="width: 200px;"></div>
                         <div id="filter_sp_link" style="width: 200px;"></div>
-                        <span class="export-btn" id="export_month_btn"><i class="fa fa-file-excel-o"></i> Export</span>
-                        <span class="export-btn" id="pdf_month_table"><i class="fa fa-file-pdf-o"></i> PDF</span>
+                        <span class="export-btn" id="export_month_btn"><i class="fa fa-file-excel-o"></i> Excel</span>
                     </div>
                 </div>
                 <div class="table-container">
@@ -407,7 +406,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                 <div class="header">
                     <span>${__("Detailed Gross Margin List")}</span>
                     <div class="table-actions">
-                        <span class="export-btn" id="export_detail_btn"><i class="fa fa-file-excel-o"></i> Export</span>
+                        <span class="export-btn" id="export_detail_btn"><i class="fa fa-file-excel-o"></i> Excel</span>
                     </div>
                 </div>
                 <div class="table-container">

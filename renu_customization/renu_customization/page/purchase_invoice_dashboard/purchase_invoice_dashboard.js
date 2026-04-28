@@ -442,11 +442,8 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                     <span style="font-size: 15px;">Month-Wise Consolidated Purchase</span>
                     <div class="table-actions" style="overflow: visible;">
                         <div class="d-flex" style="gap: 8px;">
-                            <span class="export-btn" id="export_month_table">
-                                <i class="fa fa-file-excel-o"></i> Export
-                            </span>
-                            <span class="export-btn pdf-btn" id="pdf_month_table">
-                                <i class="fa fa-file-pdf-o"></i> PDF
+                            <span class="export-btn" id="export_month_table" data-export-type="summary">
+                                <i class="fa fa-file-excel-o"></i> Excel
                             </span>
                         </div>
                     </div>
@@ -508,11 +505,8 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                     <div class="table-actions" style="overflow: visible;">
                         <span id="invoice_count_label" style="font-size: 12px; color: #64748b; font-weight: 500; margin-right: 12px;"></span>
                         <div class="d-flex" style="gap: 8px;">
-                            <span class="export-btn" id="main_excel_export">
-                                <i class="fa fa-file-excel-o"></i> Export
-                            </span>
-                            <span class="export-btn pdf-btn" id="pdf_invoice_table">
-                                <i class="fa fa-file-pdf-o"></i> PDF
+                            <span class="export-btn" id="main_excel_export" data-export-type="detail">
+                                <i class="fa fa-file-excel-o"></i> Excel
                             </span>
                         </div>
                     </div>
@@ -573,10 +567,13 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
             </tr>
         `);
 
-		const export_to_excel = () => {
+		const export_to_excel = (export_type = "all") => {
 			frappe.call({
 				method: "renu_customization.renu_customization.page.purchase_invoice_dashboard.purchase_invoice_dashboard.export_to_excel",
-				args: { filters: page.filter_group.get_values() },
+				args: { 
+                    filters: page.filter_group.get_values(),
+                    export_type: export_type
+                },
 				callback: function (r) {
 					if (r.message) {
 						const { filename, filecontent } = r.message;
@@ -778,7 +775,10 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
             $form.remove();
 		};
 
-		$("#main_excel_export, #export_month_table").on("click", () => export_to_excel());
+		$("#main_excel_export, #export_month_table").on("click", function() {
+            const type = $(this).attr("data-export-type") || "all";
+            export_to_excel(type);
+        });
 		$("#pdf_month_table, #pdf_invoice_table").on("click", () => export_pdf());
 
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());

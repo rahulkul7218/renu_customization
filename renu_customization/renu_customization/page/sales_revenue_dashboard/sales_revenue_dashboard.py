@@ -322,7 +322,7 @@ def get_dashboard_data(filters=None):
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 
 @frappe.whitelist()
-def export_to_excel(filters=None):
+def export_to_excel(filters=None, export_type="all"):
     filters = prepare_filters(filters)
     
     # Use the dashboard's data fetching logic to ensure filters are applied
@@ -336,15 +336,23 @@ def export_to_excel(filters=None):
 
     wb = openpyxl.Workbook()
     
-    # Sheet 1: Dashboard Overview
-    ws_overview = wb.active
-    ws_overview.title = "Dashboard Overview"
-    
-    # Sheet 2: Month-Wise Revenue
-    ws_months = wb.create_sheet("Month-Wise Revenue")
-    
-    # Sheet 3: Sales Invoices List
-    ws_list = wb.create_sheet("Sales Invoices List")
+    # Conditionally create sheets based on export_type
+    if export_type == "all":
+        ws_overview = wb.active
+        ws_overview.title = "Dashboard Overview"
+        ws_months = wb.create_sheet("Month-Wise Revenue")
+        ws_list = wb.create_sheet("Sales Invoices List")
+    elif export_type == "summary":
+        ws_months = wb.active
+        ws_months.title = "Month-Wise Revenue"
+        # We might need dummy sheets for the logic below if we don't wrap it carefully
+        ws_overview = wb.create_sheet("Dummy1")
+        ws_list = wb.create_sheet("Dummy2")
+    elif export_type == "detail":
+        ws_list = wb.active
+        ws_list.title = "Sales Invoices List"
+        ws_overview = wb.create_sheet("Dummy1")
+        ws_months = wb.create_sheet("Dummy2")
     
     # Styling Helpers
     header_font = Font(bold=True, color="FFFFFF")
@@ -361,378 +369,399 @@ def export_to_excel(filters=None):
     # -------------------------------------------------------------------------
     # Sheet 1: Dashboard Overview (KPIs & Top 10 Tables)
     # -------------------------------------------------------------------------
-    ws_overview.cell(row=row_idx, column=1, value="Sales Revenue Dashboard Overview").font = title_font
-    ws_overview.cell(row=row_idx, column=5, value="Generated On: " + frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S"))
-    row_idx += 2
- 
-    # 1. Summary Section (KPI Grid)
-    ws_overview.cell(row=row_idx, column=1, value="1. Revenue Summary (Million INR)").font = section_font
-    row_idx += 1
-    
-    summary_start_row = row_idx
-    colors = {
-        "blue": "3498db", "green": "2ecc71", "orange": "e67e22", "purple": "9b59b6", "red": "e74c3c"
-    }
- 
-    for i, s in enumerate(summary):
-        r = summary_start_row + (i // 4) * 3
-        c = 1 + (i % 4) * 2
-        
-        # Label
-        cell_l = ws_overview.cell(row=r, column=c, value=s.get('label'))
-        cell_l.font = Font(bold=True, color="FFFFFF")
-        indicator = s.get('indicator', 'blue').lower()
-        bg_color = colors.get(indicator, "3498db")
-        cell_l.fill = PatternFill(start_color=bg_color, fill_type="solid")
-        cell_l.alignment = Alignment(horizontal="center")
-        
-        # Value (Converted to Million)
-        val = flt(s.get('value')) / 1000000
-        cell_v = ws_overview.cell(row=r+1, column=c, value=val)
-        cell_v.font = Font(bold=True, size=12)
-        cell_v.number_format = '"₹ "#,##0.00" M"'
-        cell_v.alignment = Alignment(horizontal="center")
-        cell_v.border = Border(left=Side(style='medium', color=bg_color), 
-                               right=Side(style='medium', color=bg_color), 
-                               bottom=Side(style='medium', color=bg_color))
-        
-        ws_overview.merge_cells(start_row=r, start_column=c, end_row=r, end_column=c+1)
-        ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
- 
-    row_idx = summary_start_row + 6
-    row_idx += 1
- 
-    def write_chart_section(title, chart_data):
-        nonlocal row_idx
-        ws_overview.cell(row=row_idx, column=1, value=title).font = section_font
-        row_idx += 1
-        
-        headers = ["Category", "Amount (M)", "Share %"]
-        for idx, h in enumerate(headers, start=1):
-            cell = ws_overview.cell(row=row_idx, column=idx, value=h)
-            cell.font = header_font
-            cell.fill = PatternFill(start_color="34495e", fill_type="solid")
-            cell.border = table_border
-            cell.alignment = Alignment(horizontal="center")
-        row_idx += 1
-            
-        labels = chart_data.get("data", {}).get("labels", [])
-        values = chart_data.get("data", {}).get("datasets", [{}])[0].get("values", [])
-        total_val = sum(values) if values else 1
-        
-        for i in range(len(labels)):
-            row_fill = zebra_fill if i % 2 == 0 else None
-            c1 = ws_overview.cell(row=row_idx, column=1, value=labels[i])
-            c1.border = table_border
-            if row_fill: c1.fill = row_fill
-            
-            val_m = flt(values[i]) / 1000000
-            c2 = ws_overview.cell(row=row_idx, column=2, value=val_m)
-            c2.number_format = '"₹ "#,##0.00" M"'
-            c2.border = table_border
-            c2.alignment = Alignment(horizontal="right")
-            if row_fill: c2.fill = row_fill
-            
-            share = (values[i] / total_val) if total_val else 0
-            c3 = ws_overview.cell(row=row_idx, column=3, value=share)
-            c3.number_format = "0.00%"
-            c3.border = table_border
-            c3.alignment = Alignment(horizontal="center")
-            if row_fill: c3.fill = row_fill
-            row_idx += 1
+    if export_type == "all":
+        ws_overview.cell(row=row_idx, column=1, value="Sales Revenue Dashboard Overview").font = title_font
+        ws_overview.cell(row=row_idx, column=5, value="Generated On: " + frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S"))
         row_idx += 2
+     
+        # 1. Summary Section (KPI Grid)
+        ws_overview.cell(row=row_idx, column=1, value="1. Revenue Summary (Million INR)").font = section_font
+        row_idx += 1
         
-    if charts.get("top_10_salesperson", {}).get("data", {}).get("labels"):
-        write_chart_section("2. Top 10 Salesperson", charts["top_10_salesperson"])
-    if charts.get("top_10_customers", {}).get("data", {}).get("labels"):
-        write_chart_section("3. Top 10 Customers", charts["top_10_customers"])
-    if charts.get("top_10_products", {}).get("data", {}).get("labels"):
-        write_chart_section("4. Top 10 Products", charts["top_10_products"])
-
-    # -------------------------------------------------------------------------
-    # Sheet 2: Month-Wise Revenue
-    # -------------------------------------------------------------------------
-    row_idx = 1
-    ws_months.cell(row=row_idx, column=1, value="Month-Wise Consolidated Revenue (Million INR)").font = section_font
-    row_idx += 1
-    
-    merged_data = {}
-    months_set = set()
-    for row in data:
-        sp = row.get("sales_person") or "-"
-        cust = row.get("customer_name") or row.get("customer") or "-"
-        prod = row.get("item_name") or row.get("item_code") or "-"
-        alloc_p = flt(row.get("allocated_percentage") or 100)
-        base_amt = flt(row.get("base_amount") or 0)
-        if flt(row.get("is_return") or 0):
-            base_amt = -abs(base_amt)
-        amt = base_amt * (alloc_p / 100)
-        
-        si_net = flt(row.get("si_net_total") or 0)
-        si_grand = flt(row.get("si_grand_total") or 0)
-        gross_amt = amt * (si_grand / si_net) if si_net else amt
-
-        date_str = str(row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date") or "")
-        try:
-            d = frappe.utils.getdate(date_str)
-            m_key = d.strftime("%b %Y")
-            m_sort = d.strftime("%Y%m")
-        except:
-            m_key = "Unknown"
-            m_sort = "000000"
+        summary_start_row = row_idx
+        colors = {
+            "blue": "3498db", "green": "2ecc71", "orange": "e67e22", "purple": "9b59b6", "red": "e74c3c"
+        }
+     
+        for i, s in enumerate(summary):
+            r = summary_start_row + (i // 4) * 3
+            c = 1 + (i % 4) * 2
             
-        months_set.add((m_sort, m_key))
-        key = f"{cust}|{sp}|{prod}"
-        if key not in merged_data:
-            merged_data[key] = {"cust": cust, "sp": sp, "prod": prod, "months": {}, "total": 0, "total_gross": 0}
-        merged_data[key]["months"][m_key] = merged_data[key]["months"].get(m_key, 0) + amt
-        merged_data[key]["total"] += amt
-        merged_data[key]["total_gross"] += gross_amt
-        
-    sorted_months = [x[1] for x in sorted(list(months_set), key=lambda x: x[0])]
-    headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total (Net)", "Grand Total (Gross)"]
-    
-    for idx, h in enumerate(headers, start=1):
-        cell = ws_months.cell(row=row_idx, column=idx, value=h)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
-        cell.border = table_border
-    row_idx += 1
-        
-    for r_idx, row in enumerate(sorted(merged_data.values(), key=lambda x: x["total"], reverse=True)):
-        row_fill = zebra_fill if r_idx % 2 != 0 else None
-        
-        c_no = ws_months.cell(row=row_idx, column=1, value=r_idx + 1)
-        c1 = ws_months.cell(row=row_idx, column=2, value=row["cust"])
-        c2 = ws_months.cell(row=row_idx, column=3, value=row["sp"])
-        c3 = ws_months.cell(row=row_idx, column=4, value=row["prod"])
-        for c in [c_no, c1, c2, c3]:
-            c.border = table_border
-            if row_fill: c.fill = row_fill
+            # Label
+            cell_l = ws_overview.cell(row=r, column=c, value=s.get('label'))
+            cell_l.font = Font(bold=True, color="FFFFFF")
+            indicator = s.get('indicator', 'blue').lower()
+            bg_color = colors.get(indicator, "3498db")
+            cell_l.fill = PatternFill(start_color=bg_color, fill_type="solid")
+            cell_l.alignment = Alignment(horizontal="center")
             
-        col_idx = 5
-        for m_key in sorted_months:
-            v_m = flt(row["months"].get(m_key, 0)) / 1000000
-            c = ws_months.cell(row=row_idx, column=col_idx, value=v_m)
-            c.number_format = '"₹ "#,##0.00" M"'
-            c.border = table_border
-            c.alignment = Alignment(horizontal="right")
-            if row_fill: c.fill = row_fill
+            # Value (Converted to Million)
+            val = flt(s.get('value')) / 1000000
+            cell_v = ws_overview.cell(row=r+1, column=c, value=val)
+            cell_v.font = Font(bold=True, size=12)
+            cell_v.number_format = '"₹ "#,##0.00" M"'
+            cell_v.alignment = Alignment(horizontal="center")
+            cell_v.border = Border(left=Side(style='medium', color=bg_color), 
+                                   right=Side(style='medium', color=bg_color), 
+                                   bottom=Side(style='medium', color=bg_color))
+            
+            ws_overview.merge_cells(start_row=r, start_column=c, end_row=r, end_column=c+1)
+            ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
+     
+        row_idx = summary_start_row + 6
+        row_idx += 1
+     
+        def write_chart_section(title, chart_data):
+            nonlocal row_idx
+            ws_overview.cell(row=row_idx, column=1, value=title).font = section_font
+            row_idx += 1
+            
+            headers = ["Category", "Amount (M)", "Share %"]
+            for idx, h in enumerate(headers, start=1):
+                cell = ws_overview.cell(row=row_idx, column=idx, value=h)
+                cell.font = header_font
+                cell.fill = PatternFill(start_color="34495e", fill_type="solid")
+                cell.border = table_border
+                cell.alignment = Alignment(horizontal="center")
+            row_idx += 1
+                
+            labels = chart_data.get("data", {}).get("labels", [])
+            values = chart_data.get("data", {}).get("datasets", [{}])[0].get("values", [])
+            total_val = sum(values) if values else 1
+            
+            for i in range(len(labels)):
+                row_fill = zebra_fill if i % 2 == 0 else None
+                c1 = ws_overview.cell(row=row_idx, column=1, value=labels[i])
+                c1.border = table_border
+                if row_fill: c1.fill = row_fill
+                
+                val_m = flt(values[i]) / 1000000
+                c2 = ws_overview.cell(row=row_idx, column=2, value=val_m)
+                c2.number_format = '"₹ "#,##0.00" M"'
+                c2.border = table_border
+                c2.alignment = Alignment(horizontal="right")
+                if row_fill: c2.fill = row_fill
+                
+                share = (values[i] / total_val) if total_val else 0
+                c3 = ws_overview.cell(row=row_idx, column=3, value=share)
+                c3.number_format = "0.00%"
+                c3.border = table_border
+                c3.alignment = Alignment(horizontal="center")
+                if row_fill: c3.fill = row_fill
+                row_idx += 1
+            row_idx += 2
+            
+        if charts.get("top_10_salesperson", {}).get("data", {}).get("labels"):
+            write_chart_section("2. Top 10 Salesperson", charts["top_10_salesperson"])
+        if charts.get("top_10_customers", {}).get("data", {}).get("labels"):
+            write_chart_section("3. Top 10 Customers", charts["top_10_customers"])
+        if charts.get("top_10_products", {}).get("data", {}).get("labels"):
+            write_chart_section("4. Top 10 Products", charts["top_10_products"])
+
+    if export_type in ["all", "summary"]:
+        # -------------------------------------------------------------------------
+        # Sheet 2: Month-Wise Revenue
+        # -------------------------------------------------------------------------
+        row_idx = 1
+        ws_months.cell(row=row_idx, column=1, value="Month-Wise Consolidated Revenue (Million INR)").font = section_font
+        row_idx += 1
+        
+        merged_data = {}
+        months_set = set()
+        for row in data:
+            sp = row.get("sales_person") or "-"
+            cust = row.get("customer_name") or row.get("customer") or "-"
+            prod = row.get("item_name") or row.get("item_code") or "-"
+            alloc_p = flt(row.get("allocated_percentage") or 100)
+            base_amt = flt(row.get("base_amount") or 0)
+            if flt(row.get("is_return") or 0):
+                base_amt = -abs(base_amt)
+            amt = base_amt * (alloc_p / 100)
+            
+            si_net = flt(row.get("si_net_total") or 0)
+            si_grand = flt(row.get("si_grand_total") or 0)
+            gross_amt = amt * (si_grand / si_net) if si_net else amt
+    
+            date_str = str(row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date") or "")
+            try:
+                d = frappe.utils.getdate(date_str)
+                m_key = d.strftime("%b %Y")
+                m_sort = d.strftime("%Y%m")
+            except:
+                m_key = "Unknown"
+                m_sort = "000000"
+                
+            months_set.add((m_sort, m_key))
+            key = f"{cust}|{sp}|{prod}"
+            if key not in merged_data:
+                merged_data[key] = {"cust": cust, "sp": sp, "prod": prod, "months": {}, "total": 0, "total_gross": 0}
+            merged_data[key]["months"][m_key] = merged_data[key]["months"].get(m_key, 0) + amt
+            merged_data[key]["total"] += amt
+            merged_data[key]["total_gross"] += gross_amt
+            
+        sorted_months = [x[1] for x in sorted(list(months_set), key=lambda x: x[0])]
+        headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total (Net)", "Grand Total (Gross)"]
+        
+        for idx, h in enumerate(headers, start=1):
+            cell = ws_months.cell(row=row_idx, column=idx, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center")
+            cell.border = table_border
+        row_idx += 1
+            
+        for r_idx, row in enumerate(sorted(merged_data.values(), key=lambda x: x["total"], reverse=True)):
+            row_fill = zebra_fill if r_idx % 2 != 0 else None
+            
+            c_no = ws_months.cell(row=row_idx, column=1, value=r_idx + 1)
+            c1 = ws_months.cell(row=row_idx, column=2, value=row["cust"])
+            c2 = ws_months.cell(row=row_idx, column=3, value=row["sp"])
+            c3 = ws_months.cell(row=row_idx, column=4, value=row["prod"])
+            for c in [c_no, c1, c2, c3]:
+                c.border = table_border
+                if row_fill: c.fill = row_fill
+                
+            col_idx = 5
+            for m_key in sorted_months:
+                v_m = flt(row["months"].get(m_key, 0)) / 1000000
+                c = ws_months.cell(row=row_idx, column=col_idx, value=v_m)
+                c.number_format = '"₹ "#,##0.00" M"'
+                c.border = table_border
+                c.alignment = Alignment(horizontal="right")
+                if row_fill: c.fill = row_fill
+                col_idx += 1
+                
+            tot_m = flt(row["total"]) / 1000000
+            c_tot = ws_months.cell(row=row_idx, column=col_idx, value=tot_m)
+            c_tot.number_format = '"₹ "#,##0.00" M"'
+            c_tot.font = Font(bold=True)
+            c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
+            c_tot.border = table_border
+            c_tot.alignment = Alignment(horizontal="right")
             col_idx += 1
             
-        tot_m = flt(row["total"]) / 1000000
-        c_tot = ws_months.cell(row=row_idx, column=col_idx, value=tot_m)
-        c_tot.number_format = '"₹ "#,##0.00" M"'
-        c_tot.font = Font(bold=True)
-        c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
-        c_tot.border = table_border
-        c_tot.alignment = Alignment(horizontal="right")
+            tot_g = flt(row["total_gross"]) / 1000000
+            c_g = ws_months.cell(row=row_idx, column=col_idx, value=tot_g)
+            c_g.number_format = '"₹ "#,##0.00" M"'
+            c_g.font = Font(bold=True)
+            c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid") # Slightly different for gross
+            c_g.border = table_border
+            c_g.alignment = Alignment(horizontal="right")
+            
+            row_idx += 1
+    
+        # Add Footer Rows in Excel
+        ws_months.cell(row=row_idx, column=1, value="Grand Total (Net)").font = header_font
+        ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+        for c in range(1, 5):
+            ws_months.cell(row=row_idx, column=c).fill = header_fill
+            ws_months.cell(row=row_idx, column=c).border = table_border
+        
+        col_idx = 5
+        m_totals_net = {}
+        m_totals_gross = {}
+        g_total_net = 0
+        g_total_gross = 0
+        
+        # Pre-calculate totals for footer
+        for r in merged_data.values():
+            g_total_net += r["total"]
+            g_total_gross += r["total_gross"]
+            for mk, mv in r["months"].items():
+                m_totals_net[mk] = m_totals_net.get(mk, 0) + mv
+                
+        # We need to calculate monthly gross totals properly too
+        for row in data:
+            date_str = str(row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date") or "")
+            try:
+                d = frappe.utils.getdate(date_str)
+                m_key = d.strftime("%b %Y")
+            except: m_key = "Unknown"
+            
+            amt = flt(row.get("base_amount") or 0) * (flt(row.get("allocated_percentage") or 100) / 100)
+            if flt(row.get("is_return") or 0): amt = -abs(amt)
+            
+            si_net = flt(row.get("si_net_total") or 0)
+            si_grand = flt(row.get("si_grand_total") or 0)
+            gross_amt = amt * (si_grand / si_net) if si_net else amt
+            m_totals_gross[m_key] = m_totals_gross.get(m_key, 0) + gross_amt
+    
+        for m_key in sorted_months:
+            v_net = flt(m_totals_net.get(m_key, 0)) / 1000000
+            c = ws_months.cell(row=row_idx, column=col_idx, value=v_net)
+            c.number_format = '"₹ "#,##0.00" M"'
+            c.font = header_font
+            c.fill = header_fill
+            c.border = table_border
+            c.alignment = Alignment(horizontal="right")
+            col_idx += 1
+            
+        c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
+        c_gn.number_format = '"₹ "#,##0.00" M"'
+        c_gn.font = header_font
+        c_gn.fill = header_fill
+        c_gn.border = table_border
+        c_gn.alignment = Alignment(horizontal="right")
         col_idx += 1
         
-        tot_g = flt(row["total_gross"]) / 1000000
-        c_g = ws_months.cell(row=row_idx, column=col_idx, value=tot_g)
-        c_g.number_format = '"₹ "#,##0.00" M"'
-        c_g.font = Font(bold=True)
-        c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid") # Slightly different for gross
-        c_g.border = table_border
-        c_g.alignment = Alignment(horizontal="right")
+        c_sep = ws_months.cell(row=row_idx, column=col_idx, value="-")
+        c_sep.font = header_font
+        c_sep.fill = header_fill
+        c_sep.border = table_border
+        c_sep.alignment = Alignment(horizontal="center")
         
         row_idx += 1
-
-    # Add Footer Rows in Excel
-    ws_months.cell(row=row_idx, column=1, value="Grand Total (Net)").font = header_font
-    ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
-    for c in range(1, 5):
-        ws_months.cell(row=row_idx, column=c).fill = header_fill
-        ws_months.cell(row=row_idx, column=c).border = table_border
-    
-    col_idx = 5
-    m_totals_net = {}
-    m_totals_gross = {}
-    g_total_net = 0
-    g_total_gross = 0
-    
-    # Pre-calculate totals for footer
-    for r in merged_data.values():
-        g_total_net += r["total"]
-        g_total_gross += r["total_gross"]
-        for mk, mv in r["months"].items():
-            m_totals_net[mk] = m_totals_net.get(mk, 0) + mv
-            
-    # We need to calculate monthly gross totals properly too
-    for row in data:
-        date_str = str(row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date") or "")
-        try:
-            d = frappe.utils.getdate(date_str)
-            m_key = d.strftime("%b %Y")
-        except: m_key = "Unknown"
         
-        amt = flt(row.get("base_amount") or 0) * (flt(row.get("allocated_percentage") or 100) / 100)
-        if flt(row.get("is_return") or 0): amt = -abs(amt)
+        # Second footer row for Gross
+        ws_months.cell(row=row_idx, column=1, value="Grand Total (Gross)").font = header_font
+        ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+        for c in range(1, 5):
+            ws_months.cell(row=row_idx, column=c).fill = header_fill
+            ws_months.cell(row=row_idx, column=c).border = table_border
         
-        si_net = flt(row.get("si_net_total") or 0)
-        si_grand = flt(row.get("si_grand_total") or 0)
-        gross_amt = amt * (si_grand / si_net) if si_net else amt
-        m_totals_gross[m_key] = m_totals_gross.get(m_key, 0) + gross_amt
-
-    for m_key in sorted_months:
-        v_net = flt(m_totals_net.get(m_key, 0)) / 1000000
-        c = ws_months.cell(row=row_idx, column=col_idx, value=v_net)
-        c.number_format = '"₹ "#,##0.00" M"'
-        c.font = header_font
-        c.fill = header_fill
-        c.border = table_border
-        c.alignment = Alignment(horizontal="right")
+        col_idx = 5
+        for m_key in sorted_months:
+            v_gross = flt(m_totals_gross.get(m_key, 0)) / 1000000
+            c = ws_months.cell(row=row_idx, column=col_idx, value=v_gross)
+            c.number_format = '"₹ "#,##0.00" M"'
+            c.font = header_font
+            c.fill = header_fill
+            c.border = table_border
+            c.alignment = Alignment(horizontal="right")
+            col_idx += 1
+    
+        c_sep2 = ws_months.cell(row=row_idx, column=col_idx, value="-")
+        c_sep2.font = header_font
+        c_sep2.fill = header_fill
+        c_sep2.border = table_border
+        c_sep2.alignment = Alignment(horizontal="center")
         col_idx += 1
         
-    c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-    c_gn.number_format = '"₹ "#,##0.00" M"'
-    c_gn.font = header_font
-    c_gn.fill = header_fill
-    c_gn.border = table_border
-    c_gn.alignment = Alignment(horizontal="right")
-    col_idx += 1
-    
-    c_sep = ws_months.cell(row=row_idx, column=col_idx, value="-")
-    c_sep.font = header_font
-    c_sep.fill = header_fill
-    c_sep.border = table_border
-    c_sep.alignment = Alignment(horizontal="center")
-    
-    row_idx += 1
-    
-    # Second footer row for Gross
-    ws_months.cell(row=row_idx, column=1, value="Grand Total (Gross)").font = header_font
-    ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
-    for c in range(1, 5):
-        ws_months.cell(row=row_idx, column=c).fill = header_fill
-        ws_months.cell(row=row_idx, column=c).border = table_border
-    
-    col_idx = 5
-    for m_key in sorted_months:
-        v_gross = flt(m_totals_gross.get(m_key, 0)) / 1000000
-        c = ws_months.cell(row=row_idx, column=col_idx, value=v_gross)
-        c.number_format = '"₹ "#,##0.00" M"'
-        c.font = header_font
-        c.fill = header_fill
-        c.border = table_border
-        c.alignment = Alignment(horizontal="right")
-        col_idx += 1
+        c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
+        c_gg.number_format = '"₹ "#,##0.00" M"'
+        c_gg.font = header_font
+        c_gg.fill = header_fill
+        c_gg.border = table_border
+        c_gg.alignment = Alignment(horizontal="right")
+        
+        row_idx += 2
 
-    c_sep2 = ws_months.cell(row=row_idx, column=col_idx, value="-")
-    c_sep2.font = header_font
-    c_sep2.fill = header_fill
-    c_sep2.border = table_border
-    c_sep2.alignment = Alignment(horizontal="center")
-    col_idx += 1
-    
-    c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
-    c_gg.number_format = '"₹ "#,##0.00" M"'
-    c_gg.font = header_font
-    c_gg.fill = header_fill
-    c_gg.border = table_border
-    c_gg.alignment = Alignment(horizontal="right")
-    
-    row_idx += 2
-    row_idx = 1
-    ws_list.cell(row=row_idx, column=1, value="Detailed Sales Invoices List (Million INR)").font = section_font
-    row_idx += 1
-    
-    ui_columns = [
-        {"label": "S.No.", "fieldname": "sr_no_idx", "width": 8},
-        {"label": "Invoice ID", "fieldname": "invoice_id", "width": 18},
-        {"label": "Date", "fieldname": "invoice_date", "width": 14},
-        {"label": "Type", "fieldname": "dom_exp", "width": 14},
-        {"label": "Invoice Type", "fieldname": "invoice_type", "width": 20},
-        {"label": "Status", "fieldname": "status", "width": 14},
-        {"label": "Customer", "fieldname": "customer_name", "width": 25},
-        {"label": "Item", "fieldname": "item_code", "width": 20},
-        {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
-        {"label": "Qty", "fieldname": "qty", "width": 10},
-        {"label": "Amount (M)", "fieldname": "base_amount", "width": 18},
-    ]
-    
-    for idx, col in enumerate(ui_columns, start=1):
-        cell = ws_list.cell(row=row_idx, column=idx, value=col["label"])
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
-        cell.border = table_border
-        ws_list.column_dimensions[get_column_letter(idx)].width = col["width"]
-    row_idx += 1
-    
-    for r_idx, row in enumerate(data):
-        row_fill = zebra_fill if r_idx % 2 != 0 else None
+    if export_type in ["all", "detail"]:
+        # -------------------------------------------------------------------------
+        # Sheet 3: Sales Invoices List
+        # -------------------------------------------------------------------------
+        row_idx = 1
+        ws_list.cell(row=row_idx, column=1, value="Detailed Sales Invoices List (Million INR)").font = section_font
+        row_idx += 1
+        
+        ui_columns = [
+            {"label": "S.No.", "fieldname": "sr_no_idx", "width": 8},
+            {"label": "Invoice ID", "fieldname": "invoice_id", "width": 18},
+            {"label": "Date", "fieldname": "invoice_date", "width": 14},
+            {"label": "Type", "fieldname": "dom_exp", "width": 14},
+            {"label": "Invoice Type", "fieldname": "invoice_type", "width": 20},
+            {"label": "Status", "fieldname": "status", "width": 14},
+            {"label": "Customer", "fieldname": "customer_name", "width": 25},
+            {"label": "Item", "fieldname": "item_code", "width": 20},
+            {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
+            {"label": "Qty", "fieldname": "qty", "width": 10},
+            {"label": "Amount (M)", "fieldname": "base_amount", "width": 18},
+        ]
+        
         for idx, col in enumerate(ui_columns, start=1):
-            fname = col["fieldname"]
-            val = row.get(fname)
-            
-            if fname == "sr_no_idx":
-                val = r_idx + 1
-            elif fname == "invoice_date":
-                val = row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date")
-            
-            cell = ws_list.cell(row=row_idx, column=idx)
+            cell = ws_list.cell(row=row_idx, column=idx, value=col["label"])
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center")
             cell.border = table_border
-            if row_fill: cell.fill = row_fill
-            
-            if fname in ["qty", "base_amount"]:
-                num_val = flt(val or 0)
-                if fname == "base_amount":
-                    # Correctly apply allocation and returns for consistency
-                    alloc_p = flt(row.get("allocated_percentage") or 100)
-                    is_return = flt(row.get("is_return") or 0)
-                    if is_return:
-                        num_val = -abs(num_val)
-                    num_val = (num_val * (alloc_p / 100)) / 1000000
-                    cell.number_format = '"₹ "#,##0.00" M"'
-                else:
-                    cell.number_format = "#,##0.00"
-                cell.value = num_val
-                cell.alignment = Alignment(horizontal="right")
-            else:
-                cell.value = str(val) if val is not None else ""
-                cell.alignment = Alignment(horizontal="left")
+            ws_list.column_dimensions[get_column_letter(idx)].width = col["width"]
         row_idx += 1
+        
+        for r_idx, row in enumerate(data):
+            row_fill = zebra_fill if r_idx % 2 != 0 else None
+            for idx, col in enumerate(ui_columns, start=1):
+                fname = col["fieldname"]
+                val = row.get(fname)
+                
+                if fname == "sr_no_idx":
+                    val = r_idx + 1
+                elif fname == "invoice_date":
+                    val = row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date")
+                
+                cell = ws_list.cell(row=row_idx, column=idx)
+                cell.border = table_border
+                if row_fill: cell.fill = row_fill
+                
+                if fname in ["qty", "base_amount"]:
+                    num_val = flt(val or 0)
+                    if fname == "base_amount":
+                        # Correctly apply allocation and returns for consistency
+                        alloc_p = flt(row.get("allocated_percentage") or 100)
+                        is_return = flt(row.get("is_return") or 0)
+                        if is_return:
+                            num_val = -abs(num_val)
+                        num_val = (num_val * (alloc_p / 100)) / 1000000
+                        cell.number_format = '"₹ "#,##0.00" M"'
+                    else:
+                        cell.number_format = "#,##0.00"
+                    cell.value = num_val
+                    cell.alignment = Alignment(horizontal="right")
+                else:
+                    cell.value = str(val) if val is not None else ""
+                    cell.alignment = Alignment(horizontal="left")
+            row_idx += 1
+        
+        # -------------------------------------------------------------------------
+        # Add Total Row for Detailed Invoice List
+        # -------------------------------------------------------------------------
+        ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=10)
+        for c in range(1, 11):
+            ws_list.cell(row=row_idx, column=c).fill = header_fill
+            ws_list.cell(row=row_idx, column=c).border = table_border
     
-    # -------------------------------------------------------------------------
-    # Add Total Row for Detailed Invoice List
-    # -------------------------------------------------------------------------
-    ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-    ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=10)
-    for c in range(1, 11):
-        ws_list.cell(row=row_idx, column=c).fill = header_fill
-        ws_list.cell(row=row_idx, column=c).border = table_border
+        # Calculate Total Amount for the list
+        total_list_amt = 0
+        for row in data:
+            alloc_p = flt(row.get("allocated_percentage") or 100)
+            is_return = flt(row.get("is_return") or 0)
+            num_val = flt(row.get("base_amount") or 0)
+            if is_return: num_val = -abs(num_val)
+            total_list_amt += (num_val * (alloc_p / 100))
+    
+        cell_total = ws_list.cell(row=row_idx, column=11, value=total_list_amt / 1000000)
+        cell_total.font = header_font
+        cell_total.fill = header_fill
+        cell_total.number_format = '"₹ "#,##0.00" M"'
+        cell_total.alignment = Alignment(horizontal="right")
+        cell_total.border = table_border
 
-    # Calculate Total Amount for the list
-    total_list_amt = 0
-    for row in data:
-        alloc_p = flt(row.get("allocated_percentage") or 100)
-        is_return = flt(row.get("is_return") or 0)
-        num_val = flt(row.get("base_amount") or 0)
-        if is_return: num_val = -abs(num_val)
-        total_list_amt += (num_val * (alloc_p / 100))
-
-    cell_total = ws_list.cell(row=row_idx, column=11, value=total_list_amt / 1000000)
-    cell_total.font = header_font
-    cell_total.fill = header_fill
-    cell_total.number_format = '"₹ "#,##0.00" M"'
-    cell_total.alignment = Alignment(horizontal="right")
-    cell_total.border = table_border
+    # Remove dummy sheets if created
+    for dummy_name in ["Dummy1", "Dummy2"]:
+        if dummy_name in wb.sheetnames:
+            wb.remove(wb[dummy_name])
 
     # Final Column Widths Adjustments
-    for i in range(1, 10):
-        ws_overview.column_dimensions[get_column_letter(i)].width = 20
-        ws_months.column_dimensions[get_column_letter(i)].width = 20
+    if "Dashboard Overview" in wb.sheetnames:
+        for i in range(1, 10):
+            wb["Dashboard Overview"].column_dimensions[get_column_letter(i)].width = 20
+    if "Month-Wise Revenue" in wb.sheetnames:
+        for i in range(1, 10):
+            wb["Month-Wise Revenue"].column_dimensions[get_column_letter(i)].width = 20
 
     # Save
     output = BytesIO()
     wb.save(output)
     output.seek(0)
     
+    filename = f"Sales_Revenue_Dashboard_{frappe.utils.nowdate()}.xlsx"
+    if export_type == "summary":
+        filename = f"Month_Wise_Consolidated_Revenue_{frappe.utils.nowdate()}.xlsx"
+    elif export_type == "detail":
+        filename = f"Sales_Invoices_List_{frappe.utils.nowdate()}.xlsx"
+
     return {
-        "filename": f"Sales_Revenue_Dashboard_{frappe.utils.nowdate()}.xlsx",
+        "filename": filename,
         "filecontent": base64.b64encode(output.read()).decode()
     }
 

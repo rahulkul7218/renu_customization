@@ -747,10 +747,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <div id="filter_product_link" style="width: 200px;"></div>
                         <div class="d-flex" style="gap: 8px; align-self: center; margin-left: 10px;">
                             <span class="export-btn" id="export_month_table" title="Export this table to Excel">
-                                <i class="fa fa-file-excel-o"></i> Export
-                            </span>
-                            <span class="export-btn pdf-btn" id="pdf_month_table" title="Print/Save as PDF">
-                                <i class="fa fa-file-pdf-o"></i> PDF
+                                <i class="fa fa-file-excel-o"></i> Excel
                             </span>
                         </div>
                     </div>
@@ -1127,14 +1124,17 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		apply_local_filters();
 
 		// 5. Global Export Logic
-		const export_to_excel = () => {
+		const export_to_excel = (export_type = "all") => {
 			let filters = page.filter_group.get_values();
 			
 			frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 			frappe.call({
 				method: "renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.export_to_excel",
-				args: { filters: filters },
+				args: { 
+                    filters: filters,
+                    export_type: export_type
+                },
 				callback: function (r) {
 					if (r.message) {
 						const { filename, filecontent } = r.message;
@@ -1404,9 +1404,9 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 
 		// Attach handlers to the localized buttons in table headers
-		page.container.on("click", "#export_month_table", () => export_to_excel());
+		page.container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		page.container.on("click", "#pdf_month_table", () => export_pdf());
-		page.container.on("click", "#export_invoice_table", () => export_to_excel());
+		page.container.on("click", "#export_invoice_table", () => export_to_excel("detail"));
 
 
 		// 3. Force-remove default duplicates (be specific to avoid hiding our own menu)
