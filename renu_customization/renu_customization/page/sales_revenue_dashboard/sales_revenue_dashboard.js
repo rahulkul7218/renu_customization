@@ -461,7 +461,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             top: 0; 
             z-index: 5; 
             border-bottom: 1px solid #dee2e6; 
-            white-space: nowrap; 
             font-weight: 600;
         }
         .dashboard-table td { 
@@ -470,8 +469,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             font-size: 13px; 
             background: #fff;
             color: #333;
+            line-height: 1.4;
+            vertical-align: top;
         }
-        .month-col { text-align: right !important; min-width: 110px; }
+        .month-col { text-align: right !important; min-width: 110px; width: 110px; white-space: nowrap !important; }
         .total-col { 
             text-align: right !important; 
             font-weight: 700; 
@@ -554,6 +555,18 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { min-width: 280px !important; } /* Customer */
         .dashboard-table th:nth-child(3), .dashboard-table td:nth-child(3) { min-width: 200px !important; } /* Sales Person */
         .dashboard-table th:nth-child(4), .dashboard-table td:nth-child(4) { min-width: 320px !important; } /* Product */
+
+        /* Hide Internal Chart Legend */
+        .frappe-chart .chart-legend, 
+        .frappe-chart .legend, 
+        .frappe-chart .frappe-chart-legend,
+        .frappe-chart .legend-dataset-text { 
+            display: none !important; 
+            visibility: hidden !important; 
+            opacity: 0 !important; 
+            height: 0 !important; 
+            overflow: hidden !important; 
+        }
     </style>`).appendTo(page.main);
 
 	function render_dashboard(data) {
@@ -734,10 +747,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <div id="filter_product_link" style="width: 200px;"></div>
                         <div class="d-flex" style="gap: 8px; align-self: center; margin-left: 10px;">
                             <span class="export-btn" id="export_month_table" title="Export this table to Excel">
-                                <i class="fa fa-file-excel-o"></i> Export
-                            </span>
-                            <span class="export-btn pdf-btn" id="pdf_month_table" title="Print/Save as PDF">
-                                <i class="fa fa-file-pdf-o"></i> PDF
+                                <i class="fa fa-file-excel-o"></i> Excel
                             </span>
                         </div>
                     </div>
@@ -892,7 +902,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			if (summary_list.length === 0) {
 				tbody_summary.append(
-					`<tr><td colspan="${5 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="${6 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				summary_list.slice(0, 100).forEach((row, idx) => {
@@ -906,10 +916,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					tbody_summary.append(`
                         <tr>
                             <td style="text-align: center;">${idx + 1}</td>
-                            <td><div class="text-truncate" style="max-width: 280px;" title="${row.cust}">${row.cust}</div></td>
-                            <td><div class="text-truncate" style="max-width: 200px;" title="${row.sp}">${row.sp}</div></td>
+                            <td><div title="${row.cust}">${row.cust}</div></td>
+                            <td><div title="${row.sp}">${row.sp}</div></td>
                             <td>
-                                <div class="text-truncate" style="max-width: 320px;" title="${row.prod}: ${row.prod_name}">
+                                <div title="${row.prod}: ${row.prod_name}">
                                     <span class="text-muted" style="font-size: 10px;">${row.prod}</span><br>${row.prod_name}
                                 </div>
                             </td>
@@ -957,7 +967,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			if (results.length === 0) {
 				tbody_detail.append(
-					`<tr><td colspan="10" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="11" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				results.forEach((row, idx) => {
@@ -1114,14 +1124,17 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		apply_local_filters();
 
 		// 5. Global Export Logic
-		const export_to_excel = () => {
+		const export_to_excel = (export_type = "all") => {
 			let filters = page.filter_group.get_values();
 			
 			frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 			frappe.call({
 				method: "renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.export_to_excel",
-				args: { filters: filters },
+				args: { 
+                    filters: filters,
+                    export_type: export_type
+                },
 				callback: function (r) {
 					if (r.message) {
 						const { filename, filecontent } = r.message;
@@ -1275,42 +1288,41 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				<html>
 				<head>
 					<style>
-						body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 20px; color: #1e293b; line-height: 1.4; }
-						.report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
-                        .indicator-pill.red { background: #fee2e2; color: #991b1b; }
+                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
+                        @page { size: landscape; margin: 10mm; }
+                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
                         
                         .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
-                        .kpi-card { display: table-cell; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
+                        .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
                         .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-                        .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; white-space: nowrap; }
-                        .kpi-value { font-size: 15px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+                        .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
                         
-                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 30px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
+                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
-                        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
+                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
                         td, th { page-break-inside: avoid !important; }
+                        th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
-						th, td { border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
-						th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
-                        td { background: #fff; }
+                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
                         
-                        .col-sno { width: 25px; text-align: center; }
-                        .col-customer { width: 110px; font-weight: 600; }
-                        .col-sp { width: 80px; }
-                        .col-prod { width: 90px; }
-                        .col-amt { width: 55px; text-align: right; white-space: nowrap; }
-                        .total-net-col, .grand-total-col { width: 65px; text-align: right; font-weight: 700; white-space: nowrap; }
-                        
-						.text-right { text-align: right; }
+                        .text-right { text-align: right; }
                         .text-center { text-align: center; }
                         .font-weight-bold { font-weight: 700; }
-						.page-break { page-break-after: always; }
+                        .page-break { page-break-after: always; }
 
-                        /* Legend Styles for PDF */
+                        /* Column Widths */
+                        .col-sno { width: 40px; text-align: center; }
+                        .col-customer, .col-supplier { width: 180px; }
+                        .col-sp { width: 120px; }
+                        .col-prod { width: 150px; }
+                        .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
+                        .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
+
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-                        .pdf-legend-item { display: inline-block; width: 30%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
+                        .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
                         .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
                         .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
                         .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1392,9 +1404,9 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 
 		// Attach handlers to the localized buttons in table headers
-		page.container.on("click", "#export_month_table", () => export_to_excel());
+		page.container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		page.container.on("click", "#pdf_month_table", () => export_pdf());
-		page.container.on("click", "#export_invoice_table", () => export_to_excel());
+		page.container.on("click", "#export_invoice_table", () => export_to_excel("detail"));
 
 
 		// 3. Force-remove default duplicates (be specific to avoid hiding our own menu)

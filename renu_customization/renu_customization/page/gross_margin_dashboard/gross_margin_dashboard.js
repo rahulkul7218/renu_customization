@@ -180,7 +180,16 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .legend-item .label { font-size: 12px; font-weight: 600; color: #475569; text-decoration: none !important; }
         .legend-item .val { font-size: 11px; color: #94a3b8; }
 
-        .frappe-chart .chart-legend, .frappe-chart .legend { display: none !important; visibility: hidden !important; }
+        .frappe-chart .chart-legend, 
+        .frappe-chart .legend, 
+        .frappe-chart .frappe-chart-legend,
+        .frappe-chart .legend-dataset-text { 
+            display: none !important; 
+            visibility: hidden !important; 
+            opacity: 0 !important; 
+            height: 0 !important; 
+            overflow: hidden !important; 
+        }
         .frappe-chart text { font-size: 11px !important; }
         .chart-actions, .table-actions { display: flex; gap: 12px; align-items: center; }
         .export-btn { font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; padding: 6px 14px; border-radius: 6px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e8f0; white-space: nowrap; }
@@ -190,16 +199,19 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .table-card .header { padding: 15px 24px; border-bottom: 1px solid #f1f5f9; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .table-container { overflow: auto; width: 100%; max-height: 500px; position: relative; }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .dashboard-table th { background: #f8f9fa; padding: 12px 14px; text-align: left; font-size: 11px; color: #555; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
-        .dashboard-table td { padding: 12px 14px; border-top: 1px solid #eee; font-size: 13px; color: #333; background: #fff; white-space: nowrap; }
+        .dashboard-table th { background: #f8f9fa; padding: 12px 14px; text-align: left; font-size: 11px; color: #555; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #dee2e6; }
+        .dashboard-table td { padding: 12px 14px; border-top: 1px solid #eee; font-size: 13px; color: #333; background: #fff; line-height: 1.4; vertical-align: top; }
         .text-right { text-align: right !important; }
         .font-weight-bold { font-weight: 700 !important; }
         .indicator-pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
         .indicator-pill.green { background: #dcfce7; color: #166534; }
         .indicator-pill.red { background: #fee2e2; color: #991b1b; }
         
-        .sticky-right-1 { position: sticky; right: 0; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; }
-        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; }
+        .sticky-right-1 { position: sticky; right: 0; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 100px; min-width: 100px; }
+        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 120px; min-width: 120px; }
+        .month-col { min-width: 110px; width: 110px; white-space: nowrap !important; text-align: right !important; }
+        .data-col { min-width: 120px; white-space: nowrap !important; text-align: right !important; }
+        .dashboard-table th.month-col, .dashboard-table th.data-col { background: #f8f9fa !important; }
         tr.sticky-total td { position: sticky; bottom: 0; z-index: 9; background: #f1f3f5 !important; font-weight: 700; border-top: 2px solid #ddd; }
 
         @media print {
@@ -270,6 +282,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 					type: chart_obj.type || "donut",
 					height: 350,
 					colors: chart_obj.colors,
+                    legend: 0,
 					tooltipOptions: { formatTooltipY: (d) => "₹ " + flt(d).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M" },
 					onClick: (event) => {
 						if (config && config.field && event.label) {
@@ -328,8 +341,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                     <div class="table-actions">
                         <div id="filter_customer_link" style="width: 200px;"></div>
                         <div id="filter_sp_link" style="width: 200px;"></div>
-                        <span class="export-btn" id="export_month_btn"><i class="fa fa-file-excel-o"></i> Export</span>
-                        <span class="export-btn" id="pdf_month_table"><i class="fa fa-file-pdf-o"></i> PDF</span>
+                        <span class="export-btn" id="export_month_btn"><i class="fa fa-file-excel-o"></i> Excel</span>
                     </div>
                 </div>
                 <div class="table-container">
@@ -337,10 +349,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 200px;">Customer</th>
-                                <th style="min-width: 150px;">Sales Person</th>
-                                <th style="min-width: 200px;">Product</th>
-                                ${months.map(m => `<th class="text-right">${m.key}</th>`).join("")}
+                                <th style="min-width: 280px;">Customer</th>
+                                <th style="min-width: 180px;">Sales Person</th>
+                                <th style="min-width: 220px;">Product</th>
+                                ${months.map(m => `<th class="month-col">${m.key}</th>`).join("")}
                                 <th class="text-right sticky-right-2">Total Margin (M)</th>
                                 <th class="text-right sticky-right-1">Margin %</th>
                             </tr>
@@ -365,7 +377,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			});
 
 			Object.values(merged).sort((a,b) => b.total - a.total).slice(0, 100).forEach((r, i) => {
-				let cells = months.map(m => `<td class="text-right">${format_currency_short(r.months[m.key] || 0)}</td>`).join("");
+				let cells = months.map(m => `<td class="month-col">${format_currency_short(r.months[m.key] || 0)}</td>`).join("");
 				let pct = (r.total / r.total_rev) * 100 || 0;
 				tbody.append(`
                     <tr>
@@ -379,7 +391,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
             let grand_total_row = `<tr class="sticky-total">
                 <td colspan="4" class="text-right">GRAND TOTAL</td>
-                ${months.map(m => `<td class="text-right">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
+                ${months.map(m => `<td class="month-col">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
                 <td class="text-right sticky-right-2">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + r.total, 0))}</td>
                 <td class="text-right sticky-right-1"></td>
             </tr>`;
@@ -394,7 +406,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                 <div class="header">
                     <span>${__("Detailed Gross Margin List")}</span>
                     <div class="table-actions">
-                        <span class="export-btn" id="export_detail_btn"><i class="fa fa-file-excel-o"></i> Export</span>
+                        <span class="export-btn" id="export_detail_btn"><i class="fa fa-file-excel-o"></i> Excel</span>
                     </div>
                 </div>
                 <div class="table-container">
@@ -402,15 +414,15 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th>Invoice ID</th>
-                                <th>Date</th>
-                                <th>Customer</th>
-                                <th>Product</th>
-                                <th class="text-right">Qty</th>
-                                <th class="text-right">Revenue (M)</th>
-                                <th class="text-right">COGS (M)</th>
-                                <th class="text-right">Margin (M)</th>
-                                <th class="text-right">Margin %</th>
+                                <th style="min-width: 140px;">Invoice ID</th>
+                                <th style="min-width: 120px;">Date</th>
+                                <th style="min-width: 250px;">Customer</th>
+                                <th style="min-width: 200px;">Product</th>
+                                <th class="text-right" style="min-width: 80px;">Qty</th>
+                                <th class="data-col">Revenue (M)</th>
+                                <th class="data-col">COGS (M)</th>
+                                <th class="data-col">Margin (M)</th>
+                                <th class="data-col" style="min-width: 100px;">Margin %</th>
                             </tr>
                         </thead>
                         <tbody id="detail_table_body">
@@ -422,10 +434,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                     <td>${r.customer_name}</td>
                                     <td>${r.item_code}</td>
                                     <td class="text-right">${flt(r.qty).toFixed(2)}</td>
-                                    <td class="text-right">${format_currency_short(r.base_amount)}</td>
-                                    <td class="text-right">${format_currency_short(r.cogs)}</td>
-                                    <td class="text-right font-weight-bold">${format_currency_short(r.margin)}</td>
-                                    <td class="text-right">${flt(r.margin_pct).toFixed(2)}%</td>
+                                    <td class="data-col">${format_currency_short(r.base_amount)}</td>
+                                    <td class="data-col">${format_currency_short(r.cogs)}</td>
+                                    <td class="data-col font-weight-bold">${format_currency_short(r.margin)}</td>
+                                    <td class="data-col">${flt(r.margin_pct).toFixed(2)}%</td>
                                 </tr>
                             `).join("")}
                         </tbody>
@@ -433,10 +445,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                             <tr class="sticky-total">
                                 <td colspan="5" class="text-right">GRAND TOTAL</td>
                                 <td class="text-right">${data.results.reduce((sum, r) => sum + flt(r.qty), 0).toFixed(2)}</td>
-                                <td class="text-right">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
-                                <td class="text-right">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>
-                                <td class="text-right font-weight-bold">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.margin), 0))}</td>
-                                <td class="text-right">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) * 100) : 0).toFixed(2)}%</td>
+                                <td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
+                                <td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>
+                                <td class="data-col font-weight-bold">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.margin), 0))}</td>
+                                <td class="data-col">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) * 100) : 0).toFixed(2)}%</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -445,10 +457,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         `).appendTo(page.container);
 
         // Export handlers
-        const export_to_excel = () => {
+        const export_to_excel = (export_type = "all") => {
             frappe.call({
                 method: "renu_customization.renu_customization.page.gross_margin_dashboard.gross_margin_dashboard.export_to_excel",
-                args: { filters: page.filter_group.get_values() },
+                args: { 
+                    filters: page.filter_group.get_values(),
+                    export_type: export_type
+                },
                 callback: (r) => {
                     if (r.message) {
                         const blob = b64toBlob(r.message.filecontent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
@@ -550,52 +565,46 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 				<html>
 				<head>
 					<style>
-						body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 20px; color: #1e293b; line-height: 1.4; }
-						.report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
-                        .indicator-pill.red { background: #fee2e2; color: #991b1b; }
-
-                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
-                        .kpi-card { display: table-cell; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
-                        .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-                        .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; white-space: nowrap; }
-                        .kpi-value { font-size: 15px; font-weight: 800; color: #0f172a; white-space: nowrap; }
-                        
-                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 30px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
-                        
+                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
                         @page { size: landscape; margin: 10mm; }
-                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 10px; color: #1e293b; line-height: 1.2; zoom: 0.9; }
-                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
+                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
                         
-                        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
+                        .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
+                        .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+                        .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
+                        
+                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
+                        
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
+                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
                         td, th { page-break-inside: avoid !important; }
+                        th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
-						th, td { border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
-						th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
-                        td { background: #fff; }
+                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
                         
-                        .col-sno { width: 25px; text-align: center; }
-                        .col-customer { width: 110px; font-weight: 600; }
-                        .col-sp { width: 80px; }
-                        .col-prod { width: 90px; }
-                        .col-amt { width: 55px; text-align: right; white-space: nowrap; }
-                        .total-net-col, .grand-total-col { width: 65px; text-align: right; font-weight: 700; white-space: nowrap; }
-                        
-						.text-right { text-align: right; }
+                        .text-right { text-align: right; }
                         .text-center { text-align: center; }
                         .font-weight-bold { font-weight: 700; }
-						.page-break { page-break-after: always; }
+                        .page-break { page-break-after: always; }
 
-                        /* Legend Styles for PDF */
+                        /* Column Widths */
+                        .col-sno { width: 40px; text-align: center; }
+                        .col-customer, .col-supplier { width: 180px; }
+                        .col-sp { width: 120px; }
+                        .col-prod { width: 150px; }
+                        .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
+                        .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
+
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-                        .pdf-legend-item { display: inline-block; width: 30%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
+                        .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
                         .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
                         .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
                         .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                         .pdf-legend-val { font-size: 9px; color: #64748b; }
-					</style>
-					</style>
+                    </style>
 				</head>
 				<body>
 					<div class="report-header">
@@ -657,10 +666,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
         // Local Table Handlers
         card.find("#export_month_btn, #pdf_month_table").on("click", (e) => {
-            if (e.currentTarget.id === "export_month_btn") export_to_excel();
+            if (e.currentTarget.id === "export_month_btn") export_to_excel("summary");
             else export_pdf();
         });
-        detail_card.find("#export_detail_btn").on("click", () => export_to_excel());
+        detail_card.find("#export_detail_btn").on("click", () => export_to_excel("detail"));
 
         page.container.on("click", ".reset-btn", (e) => {
             const field = $(e.currentTarget).data("field");
@@ -669,7 +678,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         });
 
         page.add_menu_item(__("Export to PDF"), () => export_pdf());
-        page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+        page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 	}
 
 	function b64toBlob(b64Data, contentType = "", sliceSize = 512) {

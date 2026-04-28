@@ -448,8 +448,8 @@ def get_data(filters):
         LEFT JOIN `tabSales Invoice` si ON si.name = sii.parent
        
         WHERE 1 = 1
-        # AND so.status != 'Cancelled'
-        # AND so.status != 'Draft'
+        AND so.docstatus != 2
+        AND so.docstatus != 0
         # AND i.is_stock_item = 1
         AND NOT (i.is_stock_item = 0 AND i.custom_is_freight_item = 1)
         # AND (so.amended_from IS NULL OR so.name = (

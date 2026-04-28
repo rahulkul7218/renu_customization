@@ -498,6 +498,9 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             <div class="table-card" style="margin-top: 24px; overflow: visible;">
                 <div class="header" style="overflow: visible;">
                     <span style="font-size: 15px;">${__("Month-Wise Order Breakdown")}</span>
+                    <div class="table-actions">
+                        <span class="export-btn" id="export_month_table"><i class="fa fa-file-excel-o"></i> Export</span>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table class="dashboard-table month-table">
@@ -518,8 +521,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                 <div class="header">
                     <span style="font-size: 15px;">${__("Supplier Orders")}</span>
                     <div class="table-actions">
-                        <span class="export-btn" id="export_excel_btn"><i class="fa fa-file-excel-o"></i> Export</span>
-                        <span class="export-btn" id="export_pdf_btn"><i class="fa fa-file-pdf-o"></i> PDF</span>
+                        <span class="export-btn" id="export_list_table"><i class="fa fa-file-excel-o"></i> Export</span>
                     </div>
                 </div>
                 <div class="table-container">
@@ -634,11 +636,11 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             </tr>
         `);
 
-        const export_to_excel = () => {
+        const export_to_excel = (export_type = "all") => {
             let filters = page.filter_group.get_values();
             frappe.call({
                 method: "renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.export_to_excel",
-                args: { filters: filters },
+                args: { filters: filters, export_type: export_type },
                 callback: function (r) {
                     if (r.message) {
                         const { filename, filecontent } = r.message;
@@ -735,32 +737,40 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                 <html>
                 <head>
                     <style>
+                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
                         @page { size: landscape; margin: 10mm; }
-                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 10px; color: #1e293b; line-height: 1.2; zoom: 0.9; }
-                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
+                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
                         
-                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 15px; table-layout: fixed; }
-                        .kpi-card { display: table-cell; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
-                        .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; white-space: nowrap; }
-                        .kpi-value { font-size: 14px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
+                        .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
+                        .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+                        .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
                         
-                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 30px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
+                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
-                        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
                         tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-                        td, th { page-break-inside: avoid !important; }
+                        th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
-                        th, td { border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
-                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
-                        td { background: #fff; }
+                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
                         
+                        .text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .font-weight-bold { font-weight: 700; }
                         .page-break { page-break-after: always; }
-                        .indicator-pill { padding: 4px 8px; border-radius: 9999px; font-size: 9px; font-weight: 600; text-transform: uppercase; display: inline-block; border: 1px solid #e2e8f0; }
 
-                        /* Legend Styles for PDF */
+                        /* Column Widths */
+                        .col-sno { width: 40px; text-align: center; }
+                        .col-customer, .col-supplier { width: 180px; }
+                        .col-sp { width: 120px; }
+                        .col-prod { width: 150px; }
+                        .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
+                        .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
+
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-                        .pdf-legend-item { display: inline-block; width: 30%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
+                        .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
                         .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
                         .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
                         .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -821,11 +831,11 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             $form.remove();
         };
 
-        tables_html.find("#export_excel_btn").on("click", export_to_excel);
-        tables_html.find("#export_pdf_btn").on("click", export_to_pdf);
+        tables_html.find("#export_month_table").on("click", () => export_to_excel("summary"));
+        tables_html.find("#export_list_table").on("click", () => export_to_excel("detail"));
 
         page.add_menu_item(__("Export to PDF"), export_to_pdf);
-        page.add_menu_item(__("Export to Excel"), export_to_excel);
+        page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 	}
 
 	page.refresh();

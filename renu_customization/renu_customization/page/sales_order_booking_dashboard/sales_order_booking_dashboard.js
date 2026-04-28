@@ -336,14 +336,11 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             border-bottom: 1px solid #e2e8f0;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            white-space: nowrap;
         }
         
         .dashboard-table td { 
-            padding: 12px 16px; border-bottom: 1px solid #f1f5f9; 
-            font-size: 13px; color: #334155; 
-            background: #fff;
-            vertical-align: middle;
+            padding: 12px 14px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #334155; 
+            background: #fff; line-height: 1.4; vertical-align: top;
         }
 
         /* Column Widths & Alignment */
@@ -517,10 +514,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         </div>
                         <div class="d-flex" style="gap: 8px; margin-left: 10px;">
                             <span class="export-btn" id="export_month_table">
-                                <i class="fa fa-file-excel-o"></i> Export
-                            </span>
-                            <span class="export-btn pdf-btn" id="pdf_month_table">
-                                <i class="fa fa-file-pdf-o"></i> PDF
+                                <i class="fa fa-file-excel-o"></i> Excel
                             </span>
                         </div>
                     </div>
@@ -549,7 +543,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     <div class="table-actions">
                         <span id="so_count" style="font-size: 12px; color: #64748b; font-weight: 500; margin-right: 12px;"></span>
                         <div class="export-btn" id="export_list_table">
-                            <i class="fa fa-file-excel-o"></i> Export
+                            <i class="fa fa-file-excel-o"></i> Excel
                         </div>
                     </div>
                 </div>
@@ -788,43 +782,41 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				<html>
 				<head>
 					<style>
+                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
                         @page { size: landscape; margin: 10mm; }
-                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 10px; color: #1e293b; line-height: 1.2; zoom: 0.9; }
-                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
-                        .indicator-pill.red { background: #fee2e2; color: #991b1b; }
+                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
                         
-                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 15px; table-layout: fixed; }
-                        .kpi-card { display: table-cell; padding: 12px; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
+                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
+                        .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
                         .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-                        .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; white-space: nowrap; }
-                        .kpi-value { font-size: 14px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+                        .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
                         
-                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 30px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
+                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
-                        table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; font-size: 8px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
+                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
                         td, th { page-break-inside: avoid !important; }
+                        th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
-						th, td { border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; word-wrap: break-word; overflow: hidden; }
-						th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 7px; }
-                        td { background: #fff; }
+                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
                         
-                        .col-sno { width: 25px; text-align: center; }
-                        .col-customer { width: 110px; font-weight: 600; }
-                        .col-sp { width: 80px; }
-                        .col-prod { width: 90px; }
-                        .col-amt { width: 55px; text-align: right; white-space: nowrap; }
-                        .total-net-col, .grand-total-col { width: 65px; text-align: right; font-weight: 700; white-space: nowrap; }
-                        
-						.text-right { text-align: right; }
+                        .text-right { text-align: right; }
                         .text-center { text-align: center; }
                         .font-weight-bold { font-weight: 700; }
-						.page-break { page-break-after: always; }
+                        .page-break { page-break-after: always; }
 
-                        /* Legend Styles for PDF */
+                        /* Column Widths */
+                        .col-sno { width: 40px; text-align: center; }
+                        .col-customer, .col-supplier { width: 180px; }
+                        .col-sp { width: 120px; }
+                        .col-prod { width: 150px; }
+                        .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
+                        .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
+
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-                        .pdf-legend-item { display: inline-block; width: 30%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
+                        .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
                         .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
                         .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
                         .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -900,30 +892,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             $form.remove();
 		};
 
-		// Capture local variables in helpers before they are lost
-		tables_container.find("#export_month_table").on("click", () => {
-			let html = `<html><head><meta charset="utf-8"></head><body><h3>Month-Wise Order Value</h3><table border="1">`;
-			html += tables_container.find("#so_month_body").closest("table").html();
-			html += `</table></body></html>`;
-			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-			const url = window.URL.createObjectURL(blob);
-			const btn = document.createElement("a");
-			btn.href = url;
-			btn.download = `Month_Wise_Orders_${frappe.datetime.now_date()}.xls`;
-			btn.click();
-		});
 
-		tables_container.find("#export_list_table").on("click", () => {
-			let html = `<html><head><meta charset="utf-8"></head><body><h3>Sales Orders List</h3><table border="1">`;
-			html += tables_container.find("#so_list_body").closest("table").html();
-			html += `</table></body></html>`;
-			const blob = new Blob([html], { type: "application/vnd.ms-excel" });
-			const url = window.URL.createObjectURL(blob);
-			const btn = document.createElement("a");
-			btn.href = url;
-			btn.download = `Sales_Orders_List_${frappe.datetime.now_date()}.xls`;
-			btn.click();
-		});
 
 		// Hybrid Filter Logic
 		const apply_local_filters = () => {
@@ -1022,9 +991,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		};
 
 		// Table Action Handlers
-		tables_container.on("click", "#export_month_table", () => export_to_excel());
+		tables_container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		tables_container.on("click", "#pdf_month_table", () => export_pdf());
-		tables_container.on("click", "#export_list_table", () => export_to_excel());
+		tables_container.on("click", "#export_list_table", () => export_to_excel("detail"));
 
 		// Initial table render
 		render_filtered_view(data.results);
@@ -1036,10 +1005,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 
 
-	const export_to_excel = () => {
+	const export_to_excel = (export_type = "all") => {
 		frappe.call({
 			method: "renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.export_to_excel",
-			args: { filters: page.filter_group.get_values() },
+			args: { 
+                filters: page.filter_group.get_values(),
+                export_type: export_type
+            },
 			callback: (r) => {
 				if (r.message) {
 					const b64 = r.message.filecontent;
