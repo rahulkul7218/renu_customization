@@ -87,25 +87,33 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
             <html>
             <head>
                 <style>
-                    body { font-family: 'Helvetica', sans-serif; padding: 20px; color: #1e293b; }
-                    .header { text-align: center; border-bottom: 3px solid #ef4444; padding-bottom: 20px; margin-bottom: 30px; }
-                    .kpi-wrapper { display: flex; justify-content: space-between; margin-bottom: 30px; }
-                    .kpi-card { border: 1px solid #e2e8f0; padding: 15px; border-radius: 10px; flex: 1; margin: 0 10px; text-align: center; background: #f8fafc; }
+                    body { font-family: 'Helvetica', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; }
+                    @page { size: landscape; margin: 10mm; }
+                    .header { text-align: center; border-bottom: 3px solid #ef4444; padding-bottom: 15px; margin-bottom: 25px; }
+                    .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 25px; table-layout: fixed; }
+                    .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; text-align: center; background: #f8fafc; vertical-align: top; }
                     .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-                    .kpi-value { font-size: 18px; font-weight: 800; }
-                    .chart-container { text-align: center; margin-bottom: 40px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; background: #fff; page-break-inside: avoid; }
-                    .chart-img { max-width: 400px; margin-bottom: 20px; }
-                    .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 15px; border-top: 1px solid #f1f5f9; margin-top: 20px; text-align: left; }
+                    .kpi-value { font-size: 16px; font-weight: 800; }
+                    .chart-container { text-align: center; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: #fff; page-break-inside: avoid; }
+                    .chart-img { max-width: 450px; height: auto; margin-bottom: 15px; }
+                    .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 12px; border: 1px solid #f1f5f9; margin-top: 15px; text-align: left; }
                     
-                    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 10px; margin-top: 20px; page-break-inside: auto !important; }
+                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 15px; page-break-inside: auto !important; table-layout: auto; }
                     tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-                    td, th { page-break-inside: avoid !important; }
+                    th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                     thead { display: table-header-group; }
                     tfoot { display: table-row-group; }
-                    th { background: #f1f5f9; padding: 8px; text-align: left; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; }
-                    td { padding: 8px; border-bottom: 1px solid #eee; }
+                    th { background: #f1f5f9; text-align: left; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; font-weight: 700; }
                     .text-right { text-align: right; }
                     .text-center { text-align: center; }
+
+                    /* Column Widths */
+                    .col-sno { width: 40px; text-align: center; }
+                    .col-customer, .col-supplier { width: 180px; }
+                    .col-sp { width: 120px; }
+                    .col-prod { width: 150px; }
+                    .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
+                    .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
                 </style>
             </head>
             <body>
@@ -426,14 +434,21 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                 
                 .overdue-days { color: #ef4444; font-weight: 700; }
 
-                .export-btn { 
-                    font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; 
-                    padding: 6px 14px; border-radius: 6px; transition: all 0.2s;
-                    display: inline-flex; align-items: center; gap: 6px;
-                    background: #fff; border: 1px solid #e2e8f0;
-                    white-space: nowrap;
-                }
                 .export-btn:hover { color: #2563eb; background: #eff6ff; border-color: #bfdbfe; }
+
+                /* Hide Internal Chart Legend */
+                .frappe-chart .chart-legend, 
+                .frappe-chart .legend, 
+                .frappe-chart .frappe-chart-legend,
+                .frappe-chart .legend-dataset-text { 
+                    display: none !important; 
+                    visibility: hidden !important; 
+                    opacity: 0 !important; 
+                    height: 0 !important; 
+                    overflow: hidden !important; 
+                }
+                
+                .frappe-chart text { font-size: 11px !important; }
 			</style>`).appendTo('head');
 		}
 
@@ -463,6 +478,8 @@ frappe.pages["overdue_receivables"].on_page_load = function(wrapper) {
                 height: 350,
                 colors: data.charts.overdue_breakdown.colors,
                 legend: 0,
+                show_legend: 0,
+                legendOptions: { showLegend: false }
             });
 
             // Render Custom Legend

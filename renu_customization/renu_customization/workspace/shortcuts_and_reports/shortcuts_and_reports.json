@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"UaaXwP-m5M\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Shortcuts and Reports</span>\",\"col\":12}},{\"id\":\"YBF8HYWcJQ\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Aging Report\",\"col\":3}},{\"id\":\"ryApkPQTcy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Dashboard\",\"col\":3}},{\"id\":\"ceSDfjurUS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Order Booking Dashboard\",\"col\":3}},{\"id\":\"HuLeENQyue\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gross Margin Dashboard\",\"col\":3}},{\"id\":\"gE849oOb21\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Supplier Order Dashboard\",\"col\":3}},{\"id\":\"2qum1F7dKY\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Purchase Invoice Dashboard\",\"col\":3}},{\"id\":\"3traMjvfM7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Collection Dashboard\",\"col\":3}},{\"id\":\"BSGCJCFgwd\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Overdue Receivables Dashboard\",\"col\":3}}]",
+ "content": "[{\"id\":\"UaaXwP-m5M\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Shortcuts and Reports</span>\",\"col\":12}},{\"id\":\"ryApkPQTcy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Dashboard\",\"col\":3}},{\"id\":\"ceSDfjurUS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Order Booking Dashboard\",\"col\":3}},{\"id\":\"HuLeENQyue\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gross Margin Dashboard\",\"col\":3}},{\"id\":\"gE849oOb21\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Supplier Order Dashboard\",\"col\":3}},{\"id\":\"3traMjvfM7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Collection Dashboard\",\"col\":3}},{\"id\":\"BSGCJCFgwd\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Overdue Receivables Dashboard\",\"col\":3}}]",
  "creation": "2026-04-15 17:31:35.106441",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Shortcuts and Reports",
  "links": [],
- "modified": "2026-04-24 18:23:56.889512",
+ "modified": "2026-04-28 10:55:43.130741",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "Shortcuts and Reports",
@@ -31,14 +31,6 @@
    "label": "Overdue Receivables Dashboard",
    "link_to": "overdue_receivables",
    "type": "Page"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Sales Revenue Aging Report",
-   "link_to": "Sales Revenue Aging Report",
-   "report_ref_doctype": "Sales Invoice",
-   "type": "Report"
   },
   {
    "color": "Grey",
@@ -73,13 +65,6 @@
    "doc_view": "List",
    "label": "Supplier Order Dashboard",
    "link_to": "supplier_order_dashboard",
-   "type": "Page"
-  },
-  {
-   "color": "Grey",
-   "doc_view": "List",
-   "label": "Purchase Invoice Dashboard",
-   "link_to": "purchase_invoice_dashboard",
    "type": "Page"
   }
  ],
