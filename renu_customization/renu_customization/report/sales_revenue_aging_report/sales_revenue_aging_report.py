@@ -54,7 +54,7 @@ def get_columns(filters):
 
     # Add Total column
     columns.append({
-        "label": _("Total"),
+        "label": _("Gross Total"),
         "fieldname": "total_revenue",
         "fieldtype": "Currency",
         "options": "Company:currency",
@@ -67,6 +67,21 @@ def get_periods(from_date, to_date, period_type):
     periods = []
     
     current_date = from_date
+    if period_type == "Monthly":
+        current_date = current_date.replace(day=1)
+    elif period_type == "Quarterly":
+        month = current_date.month
+        if month in [1, 2, 3]: q_start = 1
+        elif month in [4, 5, 6]: q_start = 4
+        elif month in [7, 8, 9]: q_start = 7
+        else: q_start = 10
+        current_date = current_date.replace(month=q_start, day=1)
+    elif period_type == "Yearly":
+        current_date = current_date.replace(month=1, day=1)
+    elif period_type == "Fiscal Year":
+        fy_year = current_date.year if current_date.month >= 4 else current_date.year - 1
+        current_date = current_date.replace(year=fy_year, month=4, day=1)
+
     while current_date <= to_date:
         period_start = current_date
         period_end = None
@@ -75,56 +90,40 @@ def get_periods(from_date, to_date, period_type):
 
         if period_type == "Monthly":
             period_end = add_days(add_months(period_start, 1), -1)
-            if period_end > to_date:
-                period_end = to_date
-            
-            # Show month with year (e.g. SEP 2024)
             label = period_start.strftime("%b %Y").upper()
-                
             fieldname = period_start.strftime("%b_%Y").lower()
             current_date = add_months(period_start, 1)
 
-
         elif period_type == "Quarterly":
-            month = period_start.month
-            if month in [1, 2, 3]: q_start_month, q_num = 1, 1
-            elif month in [4, 5, 6]: q_start_month, q_num = 4, 2
-            elif month in [7, 8, 9]: q_start_month, q_num = 7, 3
-            else: q_start_month, q_num = 10, 4
-            
-            period_start = period_start.replace(month=q_start_month, day=1)
             period_end = add_days(add_months(period_start, 3), -1)
-            
-            # Show as Month-Month (e.g. APR-JUN 2024)
+            q_num = (period_start.month - 1) // 3 + 1
             label = f"{period_start.strftime('%b')}-{period_end.strftime('%b')} {period_start.year}".upper()
             fieldname = f"q{q_num}_{period_start.year}".lower()
             current_date = add_months(period_start, 3)
 
         elif period_type == "Yearly":
-            period_start = period_start.replace(month=1, day=1)
             period_end = period_start.replace(month=12, day=31)
-            # Only show year
             label = f"{period_start.year}"
             fieldname = f"year_{period_start.year}"
             current_date = add_months(period_start, 12)
 
         elif period_type == "Fiscal Year":
-            if period_start.month >= 4:
-                fy_start_year = period_start.year
-            else:
-                fy_start_year = period_start.year - 1
-            
-            period_start = period_start.replace(year=fy_start_year, month=4, day=1)
-            period_end = period_start.replace(year=fy_start_year + 1, month=3, day=31)
-            
-            label = f"{fy_start_year}-{fy_start_year + 1}"
-            fieldname = f"fy_{fy_start_year}_{fy_start_year + 1}"
+            period_end = period_start.replace(year=period_start.year + 1, month=3, day=31)
+            label = f"{period_start.year}-{period_start.year + 1}"
+            fieldname = f"fy_{period_start.year}_{period_start.year + 1}"
             current_date = add_months(period_start, 12)
 
+        elif period_type == "Aging":
+            return [
+                {"label": "0-30 Days", "fieldname": "aging_0_30", "min_days": 0, "max_days": 30},
+                {"label": "31-60 Days", "fieldname": "aging_31_60", "min_days": 31, "max_days": 60},
+                {"label": "61-90 Days", "fieldname": "aging_61_90", "min_days": 61, "max_days": 90},
+                {"label": "91-120 Days", "fieldname": "aging_91_120", "min_days": 91, "max_days": 120},
+                {"label": "Above 120 Days", "fieldname": "aging_121_plus", "min_days": 121, "max_days": 99999}
+            ]
 
-        if period_end > to_date:
-            period_end = to_date
-            
+        # Final period might exceed to_date, but we keep the full month/period labels
+        # The data bucketing will handle the date range filtering
         periods.append({
             "from_date": period_start,
             "to_date": period_end,
@@ -132,14 +131,7 @@ def get_periods(from_date, to_date, period_type):
             "fieldname": fieldname
         })
 
-    seen = set()
-    unique_periods = []
-    for p in periods:
-        if p['fieldname'] not in seen:
-            unique_periods.append(p)
-            seen.add(p['fieldname'])
-            
-    return unique_periods
+    return periods
 
 def get_data(filters, columns):
     period_type = filters.get("period_type")
@@ -155,20 +147,26 @@ def get_data(filters, columns):
         SELECT 
             si.customer,
             st.sales_person,
+            st.allocated_percentage,
             sii.item_code,
             si.posting_date,
-            SUM(sii.base_amount) as amount
+            dn.posting_date AS delivery_date,
+            sii.base_amount,
+            si.base_net_total,
+            si.base_grand_total
         FROM `tabSales Invoice` si
         JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
         LEFT JOIN `tabSales Team` st ON st.parent = si.name
         LEFT JOIN `tabCustomer` cust ON cust.name = si.customer
         LEFT JOIN `tabItem` it ON it.name = sii.item_code
+        LEFT JOIN `tabDelivery Note Item` dni ON sii.dn_detail = dni.name
+        LEFT JOIN `tabDelivery Note` dn ON dn.name = dni.parent
         WHERE si.docstatus = 1 
         AND si.status != 'Cancelled'
         AND si.posting_date >= %(from_date)s 
         AND si.posting_date <= %(to_date)s
         {conditions}
-        GROUP BY si.customer, st.sales_person, sii.item_code, si.posting_date
+        ORDER BY si.posting_date DESC
     """
     
     invoices = frappe.db.sql(query, filters, as_dict=True)
@@ -193,13 +191,35 @@ def get_data(filters, columns):
             for p in periods:
                 data_map[row_key][p['fieldname']] = 0.0
         
+        # Calculate distributed Gross Total (including taxes proportionally)
+        net_total = flt(inv.base_net_total)
+        grand_total = flt(inv.base_grand_total)
+        item_base = flt(inv.base_amount)
+        
+        # Factor to scale net line amount to grand total share
+        factor = grand_total / net_total if net_total else 1
+        
+        # Multiply by allocated percentage if available (for multiple sales persons)
+        alloc_p = flt(inv.get("allocated_percentage") or 100)
+        distributed_amount = (item_base * factor) * (alloc_p / 100)
+        
         # Determine which period this invoice falls into
-        inv_date = getdate(inv.posting_date)
-        for p in periods:
-            if p['from_date'] <= inv_date <= p['to_date']:
-                data_map[row_key][p['fieldname']] += flt(inv.amount)
-                data_map[row_key]["total_revenue"] += flt(inv.amount)
-                break
+        inv_date = getdate(inv.get("delivery_date") or inv.get("posting_date"))
+        today = getdate()
+        
+        if period_type == "Aging":
+            days_diff = (today - inv_date).days
+            for p in periods:
+                if p['min_days'] <= days_diff <= p['max_days']:
+                    data_map[row_key][p['fieldname']] += distributed_amount
+                    data_map[row_key]["total_revenue"] += distributed_amount
+                    break
+        else:
+            for p in periods:
+                if p['from_date'] <= inv_date <= p['to_date']:
+                    data_map[row_key][p['fieldname']] += distributed_amount
+                    data_map[row_key]["total_revenue"] += distributed_amount
+                    break
                 
     # Convert map to list
     data = list(data_map.values())

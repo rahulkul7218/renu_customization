@@ -15,7 +15,7 @@ def debug_report():
         first_row = raw_data[0]
         print("First row keys:", first_row.keys())
         # Check standard names
-        possible_keys = ["invoice_id", "name", "parent", "customer", "customer_name", "item_code", "posting_date", "invoice_date"]
+        possible_keys = ["invoice_id", "name", "parent", "customer", "customer_name", "item_code", "posting_date", "invoice_date", "delivery_date"]
         for k in possible_keys:
             print(f"{k}: {first_row.get(k)}")
     else:
