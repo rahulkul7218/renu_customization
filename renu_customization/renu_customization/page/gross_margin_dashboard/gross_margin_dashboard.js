@@ -381,7 +381,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 				let pct = (r.total / r.total_rev) * 100 || 0;
 				tbody.append(`
                     <tr>
-                        <td class="text-center">${i+1}</td><td>${r.cust}</td><td>${r.sp}</td><td>${r.prod}</td>
+                        <td class="text-center">${i+1}</td><td>${r.cust || "-"}</td><td>${r.sp || "-"}</td><td>${r.prod || "-"}</td>
                         ${cells}
                         <td class="text-right font-weight-bold sticky-right-2">${format_currency_short(r.total)}</td>
                         <td class="text-right sticky-right-1"><span class="indicator-pill ${pct > 20 ? "green" : pct < 5 ? "red" : ""}">${pct.toFixed(2)}%</span></td>
@@ -429,10 +429,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                             ${data.results.map((r, i) => `
                                 <tr>
                                     <td class="text-center">${i+1}</td>
-                                    <td>${r.invoice_id}</td>
-                                    <td>${r.invoice_date}</td>
-                                    <td>${r.customer_name}</td>
-                                    <td>${r.item_code}</td>
+                                    <td>${r.invoice_id || "-"}</td>
+                                    <td>${frappe.datetime.str_to_user(r.invoice_date) || "-"}</td>
+                                    <td>${r.customer_name || "-"}</td>
+                                    <td>${r.item_code || "-"}</td>
                                     <td class="text-right">${flt(r.qty).toFixed(2)}</td>
                                     <td class="data-col">${format_currency_short(r.base_amount)}</td>
                                     <td class="data-col">${format_currency_short(r.cogs)}</td>
@@ -477,11 +477,11 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         };
 
         const export_pdf = async () => {
-			const report_date = frappe.datetime.now_datetime();
+			const report_date = moment().format("DD-MM-YYYY HH:mm");
 			const filters = page.filter_group.get_values();
 			let period = "Custom Period";
 			if (filters.fiscal_year) period = filters.fiscal_year;
-			if (filters.from_date && filters.to_date) period = `${filters.from_date} to ${filters.to_date}`;
+			if (filters.from_date && filters.to_date) period = `${frappe.datetime.str_to_user(filters.from_date)} to ${frappe.datetime.str_to_user(filters.to_date)}`;
 
 			const get_chart_png = (id) => {
 				const svg_el = document.querySelector(`#wrapper_${id} svg`);

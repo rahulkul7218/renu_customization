@@ -548,13 +548,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         /* Fixed Column Widths for Month Table */
         .month-col { min-width: 150px !important; text-align: right !important; white-space: nowrap; }
         .total-col { min-width: 180px !important; text-align: right !important; font-weight: 700; color: var(--primary); white-space: nowrap; }
-        .dashboard-table th, .dashboard-table td { min-width: 140px; }
+        /* Base table cell padding and font adjustments */
+        .dashboard-table th, .dashboard-table td { padding: 12px 14px; }
         .dashboard-table th:first-child, .dashboard-table td:first-child { min-width: 60px !important; width: 60px !important; text-align: center !important; }
         
-        /* Specific widths for primary info columns */
-        .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { min-width: 280px !important; } /* Customer */
-        .dashboard-table th:nth-child(3), .dashboard-table td:nth-child(3) { min-width: 200px !important; } /* Sales Person */
-        .dashboard-table th:nth-child(4), .dashboard-table td:nth-child(4) { min-width: 320px !important; } /* Product */
+        /* Specific widths for primary info columns in Month Table */
+        #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { min-width: 280px !important; } /* Customer */
+        #consolidated_table th:nth-child(3), #consolidated_table td:nth-child(3) { min-width: 200px !important; } /* Sales Person */
+        #consolidated_table th:nth-child(4), #consolidated_table td:nth-child(4) { min-width: 320px !important; } /* Product */
 
         /* Hide Internal Chart Legend */
         .frappe-chart .chart-legend, 

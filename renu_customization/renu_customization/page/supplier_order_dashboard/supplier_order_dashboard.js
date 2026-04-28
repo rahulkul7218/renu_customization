@@ -616,7 +616,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                 <tr>
                     <td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
                     <td class="col-po"><a href="/app/purchase-order/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-                    <td class="col-supplier" style="font-weight: 500;">${row.supplier}</td>
+                    <td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
                     <td class="col-date" style="${row.is_overdue ? 'color: red; font-weight: 600;' : ''}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.supplier_agreed_time) || "-"}</td>
