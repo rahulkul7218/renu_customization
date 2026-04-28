@@ -273,8 +273,8 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
         .indicator-pill.cyan { background: #cffafe; color: #0e7490; }
 
         /* Monthly Table Styles */
-        .month-col { min-width: 140px; text-align: right !important; white-space: nowrap; }
-        .total-col { min-width: 160px; text-align: right !important; font-weight: 700; color: #000; white-space: nowrap; }
+        .month-col { min-width: 140px; width: 140px; white-space: nowrap !important; text-align: right !important; }
+        .total-col { min-width: 160px; text-align: right !important; font-weight: 700; color: #000; }
         .dashboard-table th.sticky-total-header { position: sticky; right: 0; background: #f8f9fa; z-index: 5; border-left: 1px solid #ddd; color: #000 !important; }
         .dashboard-table td.sticky-total-cell { position: sticky; right: 0; background: #fff; z-index: 4; border-left: 1px solid #ddd; font-weight: 700; color: #000; }
         .grand-total-row { position: sticky; bottom: 0; z-index: 10 !important; background-color: #f8f9fa !important; font-weight: 700 !important; border-top: 2px solid #ddd; }
@@ -302,7 +302,7 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
         .table-container { overflow: auto; max-height: 500px; }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
         .dashboard-table th { background: #f1f3f5; padding: 12px 14px; position: sticky; top: 0; z-index: 5; font-size: 11px; font-weight: 600; border-bottom: 1px solid #dee2e6; }
-        .dashboard-table td { padding: 12px 14px; border-top: 1px solid var(--border-color); font-size: 13px; }
+        .dashboard-table td { padding: 12px 14px; border-top: 1px solid var(--border-color); font-size: 13px; line-height: 1.4; vertical-align: top; }
     </style>`).appendTo(page.main);
 
 	function format_currency_short(num) {
@@ -522,8 +522,8 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 150px; white-space: nowrap;">Invoice ID</th>
-                                <th style="min-width: 110px; white-space: nowrap;">Date</th>
+                                <th style="min-width: 150px;">Invoice ID</th>
+                                <th style="min-width: 110px;">Date</th>
                                 <th style="min-width: 110px;">Status</th>
                                 <th style="min-width: 220px;">Supplier</th>
                                 <th style="min-width: 300px;">Item</th>
@@ -698,7 +698,8 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
                         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; }
                         th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }

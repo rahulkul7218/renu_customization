@@ -336,14 +336,11 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             border-bottom: 1px solid #e2e8f0;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-            white-space: nowrap;
         }
         
         .dashboard-table td { 
-            padding: 12px 16px; border-bottom: 1px solid #f1f5f9; 
-            font-size: 13px; color: #334155; 
-            background: #fff;
-            vertical-align: middle;
+            padding: 12px 14px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #334155; 
+            background: #fff; line-height: 1.4; vertical-align: top;
         }
 
         /* Column Widths & Alignment */
@@ -801,7 +798,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
                         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; }
                         th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }

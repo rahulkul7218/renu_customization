@@ -461,7 +461,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             top: 0; 
             z-index: 5; 
             border-bottom: 1px solid #dee2e6; 
-            white-space: nowrap; 
             font-weight: 600;
         }
         .dashboard-table td { 
@@ -470,8 +469,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             font-size: 13px; 
             background: #fff;
             color: #333;
+            line-height: 1.4;
+            vertical-align: top;
         }
-        .month-col { text-align: right !important; min-width: 110px; }
+        .month-col { text-align: right !important; min-width: 110px; width: 110px; white-space: nowrap !important; }
         .total-col { 
             text-align: right !important; 
             font-weight: 700; 
@@ -904,7 +905,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			if (summary_list.length === 0) {
 				tbody_summary.append(
-					`<tr><td colspan="${5 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="${6 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				summary_list.slice(0, 100).forEach((row, idx) => {
@@ -918,10 +919,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					tbody_summary.append(`
                         <tr>
                             <td style="text-align: center;">${idx + 1}</td>
-                            <td><div class="text-truncate" style="max-width: 280px;" title="${row.cust}">${row.cust}</div></td>
-                            <td><div class="text-truncate" style="max-width: 200px;" title="${row.sp}">${row.sp}</div></td>
+                            <td><div title="${row.cust}">${row.cust}</div></td>
+                            <td><div title="${row.sp}">${row.sp}</div></td>
                             <td>
-                                <div class="text-truncate" style="max-width: 320px;" title="${row.prod}: ${row.prod_name}">
+                                <div title="${row.prod}: ${row.prod_name}">
                                     <span class="text-muted" style="font-size: 10px;">${row.prod}</span><br>${row.prod_name}
                                 </div>
                             </td>
@@ -969,7 +970,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			if (results.length === 0) {
 				tbody_detail.append(
-					`<tr><td colspan="10" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="11" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				results.forEach((row, idx) => {
@@ -1300,7 +1301,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
                         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; }
                         th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }

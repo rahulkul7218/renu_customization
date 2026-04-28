@@ -199,16 +199,19 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .table-card .header { padding: 15px 24px; border-bottom: 1px solid #f1f5f9; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .table-container { overflow: auto; width: 100%; max-height: 500px; position: relative; }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .dashboard-table th { background: #f8f9fa; padding: 12px 14px; text-align: left; font-size: 11px; color: #555; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #dee2e6; white-space: nowrap; }
-        .dashboard-table td { padding: 12px 14px; border-top: 1px solid #eee; font-size: 13px; color: #333; background: #fff; white-space: nowrap; }
+        .dashboard-table th { background: #f8f9fa; padding: 12px 14px; text-align: left; font-size: 11px; color: #555; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #dee2e6; }
+        .dashboard-table td { padding: 12px 14px; border-top: 1px solid #eee; font-size: 13px; color: #333; background: #fff; line-height: 1.4; vertical-align: top; }
         .text-right { text-align: right !important; }
         .font-weight-bold { font-weight: 700 !important; }
         .indicator-pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
         .indicator-pill.green { background: #dcfce7; color: #166534; }
         .indicator-pill.red { background: #fee2e2; color: #991b1b; }
         
-        .sticky-right-1 { position: sticky; right: 0; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; }
-        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; }
+        .sticky-right-1 { position: sticky; right: 0; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 100px; min-width: 100px; }
+        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 120px; min-width: 120px; }
+        .month-col { min-width: 110px; width: 110px; white-space: nowrap !important; text-align: right !important; }
+        .data-col { min-width: 120px; white-space: nowrap !important; text-align: right !important; }
+        .dashboard-table th.month-col, .dashboard-table th.data-col { background: #f8f9fa !important; }
         tr.sticky-total td { position: sticky; bottom: 0; z-index: 9; background: #f1f3f5 !important; font-weight: 700; border-top: 2px solid #ddd; }
 
         @media print {
@@ -347,10 +350,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 200px;">Customer</th>
-                                <th style="min-width: 150px;">Sales Person</th>
-                                <th style="min-width: 200px;">Product</th>
-                                ${months.map(m => `<th class="text-right">${m.key}</th>`).join("")}
+                                <th style="min-width: 280px;">Customer</th>
+                                <th style="min-width: 180px;">Sales Person</th>
+                                <th style="min-width: 220px;">Product</th>
+                                ${months.map(m => `<th class="month-col">${m.key}</th>`).join("")}
                                 <th class="text-right sticky-right-2">Total Margin (M)</th>
                                 <th class="text-right sticky-right-1">Margin %</th>
                             </tr>
@@ -375,7 +378,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			});
 
 			Object.values(merged).sort((a,b) => b.total - a.total).slice(0, 100).forEach((r, i) => {
-				let cells = months.map(m => `<td class="text-right">${format_currency_short(r.months[m.key] || 0)}</td>`).join("");
+				let cells = months.map(m => `<td class="month-col">${format_currency_short(r.months[m.key] || 0)}</td>`).join("");
 				let pct = (r.total / r.total_rev) * 100 || 0;
 				tbody.append(`
                     <tr>
@@ -389,7 +392,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
             let grand_total_row = `<tr class="sticky-total">
                 <td colspan="4" class="text-right">GRAND TOTAL</td>
-                ${months.map(m => `<td class="text-right">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
+                ${months.map(m => `<td class="month-col">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
                 <td class="text-right sticky-right-2">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + r.total, 0))}</td>
                 <td class="text-right sticky-right-1"></td>
             </tr>`;
@@ -412,15 +415,15 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th>Invoice ID</th>
-                                <th>Date</th>
-                                <th>Customer</th>
-                                <th>Product</th>
-                                <th class="text-right">Qty</th>
-                                <th class="text-right">Revenue (M)</th>
-                                <th class="text-right">COGS (M)</th>
-                                <th class="text-right">Margin (M)</th>
-                                <th class="text-right">Margin %</th>
+                                <th style="min-width: 140px;">Invoice ID</th>
+                                <th style="min-width: 120px;">Date</th>
+                                <th style="min-width: 250px;">Customer</th>
+                                <th style="min-width: 200px;">Product</th>
+                                <th class="text-right" style="min-width: 80px;">Qty</th>
+                                <th class="data-col">Revenue (M)</th>
+                                <th class="data-col">COGS (M)</th>
+                                <th class="data-col">Margin (M)</th>
+                                <th class="data-col" style="min-width: 100px;">Margin %</th>
                             </tr>
                         </thead>
                         <tbody id="detail_table_body">
@@ -432,10 +435,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                     <td>${r.customer_name}</td>
                                     <td>${r.item_code}</td>
                                     <td class="text-right">${flt(r.qty).toFixed(2)}</td>
-                                    <td class="text-right">${format_currency_short(r.base_amount)}</td>
-                                    <td class="text-right">${format_currency_short(r.cogs)}</td>
-                                    <td class="text-right font-weight-bold">${format_currency_short(r.margin)}</td>
-                                    <td class="text-right">${flt(r.margin_pct).toFixed(2)}%</td>
+                                    <td class="data-col">${format_currency_short(r.base_amount)}</td>
+                                    <td class="data-col">${format_currency_short(r.cogs)}</td>
+                                    <td class="data-col font-weight-bold">${format_currency_short(r.margin)}</td>
+                                    <td class="data-col">${flt(r.margin_pct).toFixed(2)}%</td>
                                 </tr>
                             `).join("")}
                         </tbody>
@@ -443,10 +446,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                             <tr class="sticky-total">
                                 <td colspan="5" class="text-right">GRAND TOTAL</td>
                                 <td class="text-right">${data.results.reduce((sum, r) => sum + flt(r.qty), 0).toFixed(2)}</td>
-                                <td class="text-right">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
-                                <td class="text-right">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>
-                                <td class="text-right font-weight-bold">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.margin), 0))}</td>
-                                <td class="text-right">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) * 100) : 0).toFixed(2)}%</td>
+                                <td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
+                                <td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>
+                                <td class="data-col font-weight-bold">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.margin), 0))}</td>
+                                <td class="data-col">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) * 100) : 0).toFixed(2)}%</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -573,7 +576,8 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
                         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; }
                         th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
