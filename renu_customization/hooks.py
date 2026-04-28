@@ -326,6 +326,7 @@ after_migrate = [
     "renu_customization.patches.v_0.consider_draft_so_and_po_field_on_stock_setting.execute",
     "renu_customization.patches.v_0.add_lut_start_date_on_sales_invoice.execute",
     "renu_customization.patches.v_0.add_revised_from_field_on_item.execute",
+    "renu_customization.patches.v_0.add_invoice_no_on_packing_slip.execute",
     # "renu_customization.patches.v_0.add_auto_email_send_checkbox_on_supplier.execute",
     # "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
     # "renu_customization.patches.v_0.send_email_mrp.execute",
@@ -435,7 +436,11 @@ doc_events = {
     },
     "Sales Invoice": {
         "before_insert": "renu_customization.api.fetched_serial_no_from_delivery_note.fetch_serial_no_on_invoice",
-        "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si"
+        "before_submit": "renu_customization.api.set_serial_no_warranty_info_from_si.set_serial_no_warranty_info_from_si",
+        "on_submit": "renu_customization.api.packing_slip_handler.update_packing_slip_invoice_no"
+    },
+    "Packing Slip": {
+        "before_save": "renu_customization.api.packing_slip_handler.fetch_invoice_no"
     }
     # "Sales Order": {
     #     "validate": "renu_customization.api.sales_order_validation.validate_short_close_qty",

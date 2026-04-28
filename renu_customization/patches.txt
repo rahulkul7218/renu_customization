@@ -110,4 +110,5 @@ renu_customization.patches.v_0.add_lut_start_date_on_sales_invoice
 renu_customization.patches.v_0.add_revised_from_field_on_item
 renu_customization.patches.v_0.add_is_domestic_and_is_export_on_sales_order
 renu_customization.patches.v_0.add_is_domestic_and_is_export_on_invoice
+renu_customization.patches.v_0.add_invoice_no_on_packing_slip
 
