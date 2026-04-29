@@ -38,6 +38,25 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	const filter_fields = [
 		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.get_today(),
+		},
+		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_user_default("Company"),
+		},
+		{
 			fieldname: "fiscal_year",
 			label: __("Fiscal Year"),
 			fieldtype: "Link",
@@ -141,7 +160,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		}
 		.dashboard-filter-area .frappe-control {
 			margin-bottom: 10px !important;
-			width: calc(20% - 12px) !important;
+			width: calc(25% - 12px) !important;
 		}
 		.dashboard-filter-area .frappe-control .form-group {
 			margin-bottom: 0 !important;
@@ -183,7 +202,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		"margin-bottom": "0",
 	});
 
-    page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
+	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
 	$(`<style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -323,7 +342,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
         
         .table-container { 
-            overflow: auto; width: 100%; max-height: 750px; 
+            overflow: auto; width: 100%; max-height: 800px; 
             position: relative;
             border-top: 1px solid #e2e8f0;
         }
@@ -344,15 +363,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
 
         /* Column Widths & Alignment */
-        .col-sno { width: 60px !important; text-align: center !important; }
-        .col-customer { width: 280px !important; min-width: 280px !important; }
-        .col-sp { width: 180px !important; min-width: 180px !important; }
-        .col-prod { width: 220px !important; min-width: 220px !important; }
-        .col-amt { width: 150px !important; min-width: 150px !important; text-align: right !important; }
-        .col-qty { width: 90px !important; min-width: 90px !important; text-align: right !important; }
-        .col-date { width: 120px !important; min-width: 120px !important; }
-        .col-id { width: 160px !important; min-width: 160px !important; }
-        .col-status { width: 140px !important; min-width: 140px !important; }
+        .col-sno { width: 40px !important; min-width: 40px !important; text-align: center !important; }
+        .col-customer { width: 180px !important; min-width: 180px !important; }
+        .col-sp { width: 130px !important; min-width: 130px !important; }
+        .col-prod { width: 200px !important; min-width: 200px !important; }
+        .col-amt { width: 120px !important; min-width: 120px !important; text-align: right !important; }
+        .col-qty { width: 80px !important; min-width: 80px !important; text-align: right !important; }
+        .col-date { width: 100px !important; min-width: 100px !important; }
+        .col-id { width: 140px !important; min-width: 140px !important; }
+        .col-status { width: 120px !important; min-width: 120px !important; }
 
         /* Total Columns (Right Sticky) */
         .total-net-col { 
@@ -369,14 +388,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             width: 180px !important; min-width: 180px !important;
         }
         
-        .dashboard-table th.total-net-col, .dashboard-table th.grand-total-col { z-index: 60 !important; }
+        .dashboard-table th.total-net-col, .dashboard-table th.grand-total-col { z-index: 60 !important; background: #f1f3f5 !important; }
 
         /* Sticky Footer */
         .dashboard-table tr.sticky-total td { 
             position: sticky; bottom: 0; background: #f8fafc !important; 
             border-top: 2px solid #cbd5e1; z-index: 70; font-weight: 700; color: #0f172a;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
         }
-        .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 80 !important; }
+        .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 80 !important; background: #f1f3f5 !important; }
 
         .indicator-pill { 
             padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 600;
@@ -408,7 +428,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	function render_dashboard(data) {
 		page.container.empty();
-        page.clear_menu();
+		page.clear_menu();
 		if (!data.results || data.results.length === 0) {
 			$(
 				`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found for the selected filters")}</div></div>`,
@@ -419,7 +439,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		// 1. KPI Cards
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 		data.summary.forEach((metric) => {
-            let indicator = (metric.indicator || "blue").toLowerCase();
+			let indicator = (metric.indicator || "blue").toLowerCase();
 			$(`
                 <div class="summary-card ${indicator}">
                     <div class="label"><span class="indicator bg-${indicator}"></span>${metric.label}</div>
@@ -449,30 +469,30 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					height: 350,
 					colors: chart_obj.colors,
 					valuesOverPoints: 1,
-                    isNavigable: 1,
-                    legend: 0,
-                    show_legend: 0, 
-                    legendOptions: { showLegend: false },
+					isNavigable: 1,
+					legend: 0,
+					show_legend: 0,
+					legendOptions: { showLegend: false },
 					tooltipOptions: { formatTooltipY: (d) => format_currency_short(d) },
 				});
 
-                // Render Custom Legend
-                let legend_container = page.container.find(`#legend_${chart_id}`);
-                let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
-                
-                chart_obj.data.labels.forEach((label, idx) => {
-                    let val = chart_obj.data.datasets[0].values[idx];
-                    let color = chart_obj.colors[idx % chart_obj.colors.length];
-                    let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
-                    
-                    // Clean double names (e.g. "John Doe - John Doe")
-                    let display_label = label;
-                    if (label && label.includes(' - ')) {
-                        let parts = label.split(' - ');
-                        if (parts[0] === parts[1]) display_label = parts[0];
-                    }
+				// Render Custom Legend
+				let legend_container = page.container.find(`#legend_${chart_id}`);
+				let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
 
-                    legend_container.append(`
+				chart_obj.data.labels.forEach((label, idx) => {
+					let val = chart_obj.data.datasets[0].values[idx];
+					let color = chart_obj.colors[idx % chart_obj.colors.length];
+					let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
+
+					// Clean double names (e.g. "John Doe - John Doe")
+					let display_label = label;
+					if (label && label.includes(" - ")) {
+						let parts = label.split(" - ");
+						if (parts[0] === parts[1]) display_label = parts[0];
+					}
+
+					legend_container.append(`
                         <div class="legend-item">
                             <span class="dot" style="background: ${color}"></span>
                             <div class="info">
@@ -481,7 +501,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             </div>
                         </div>
                     `);
-                });
+				});
 			}, 100);
 		});
 
@@ -514,7 +534,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         </div>
                         <div class="d-flex" style="gap: 8px; margin-left: 10px;">
                             <span class="export-btn" id="export_month_table">
-                                <i class="fa fa-file-excel-o"></i> Excel
+                                <i class="fa fa-file-excel-o"></i>Export to Excel
                             </span>
                         </div>
                     </div>
@@ -543,7 +563,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     <div class="table-actions">
                         <span id="so_count" style="font-size: 12px; color: #64748b; font-weight: 500; margin-right: 12px;"></span>
                         <div class="export-btn" id="export_list_table">
-                            <i class="fa fa-file-excel-o"></i> Excel
+                            <i class="fa fa-file-excel-o"></i>Export to Excel
                         </div>
                     </div>
                 </div>
@@ -581,13 +601,14 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let cust = row.customer_name || "-";
 				let prod = row.item_name || row.item_code || "-";
 				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
-                let g_amt = flt(row.gross_total || amt);
+				let g_amt = flt(row.gross_total || amt);
 				let m_key = moment(row.so_date).format("MMM YYYY");
 				let key = sp + "|" + cust + "|" + prod;
-				if (!merged_data[key]) merged_data[key] = { sp, cust, prod, months: {}, total: 0, total_gross: 0 };
+				if (!merged_data[key])
+					merged_data[key] = { sp, cust, prod, months: {}, total: 0, total_gross: 0 };
 				merged_data[key].months[m_key] = (merged_data[key].months[m_key] || 0) + amt;
 				merged_data[key].total += amt;
-                merged_data[key].total_gross += g_amt;
+				merged_data[key].total_gross += g_amt;
 			});
 
 			let summary_list = Object.values(merged_data).sort((a, b) => b.total - a.total);
@@ -597,16 +618,20 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			let g_total_gross = 0;
 
 			if (summary_list.length === 0) {
-				tbody_month.append(`<tr><td colspan="${6 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`);
+				tbody_month.append(
+					`<tr><td colspan="${6 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
+				);
 			} else {
 				summary_list.forEach((row, idx) => {
 					g_total_net += row.total;
 					g_total_gross += row.total_gross;
-					let cells = months.map((m) => {
-                        let val = row.months[m.key] || 0;
-                        total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
-                        return `<td class="col-amt">${format_currency_short(val)}</td>`;
-                    }).join("");
+					let cells = months
+						.map((m) => {
+							let val = row.months[m.key] || 0;
+							total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
+							return `<td class="col-amt">${format_currency_short(val)}</td>`;
+						})
+						.join("");
 
 					tbody_month.append(`
                         <tr>
@@ -621,11 +646,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     `);
 				});
 
-                // Month-wise Gross totals for footer
-                filtered_data.forEach(r => {
-                    let m_key = moment(r.so_date).format("MMM YYYY");
-                    total_month_gross_amts[m_key] = (total_month_gross_amts[m_key] || 0) + flt(r.gross_total || r.total_net_amount_inr);
-                });
+				// Month-wise Gross totals for footer
+				filtered_data.forEach((r) => {
+					let m_key = moment(r.so_date).format("MMM YYYY");
+					total_month_gross_amts[m_key] =
+						(total_month_gross_amts[m_key] || 0) +
+						flt(r.gross_total || r.total_net_amount_inr);
+				});
 
 				// Footer Rows
 				tbody_month.append(`
@@ -634,7 +661,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-customer" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL (NET)</td>
                         <td class="col-sp">-</td>
                         <td class="col-prod">-</td>
-                        ${months.map(m => `<td class="col-amt">${format_currency_short(total_month_amts[m.key] || 0)}</td>`).join("")}
+                        ${months.map((m) => `<td class="col-amt">${format_currency_short(total_month_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col">${format_currency_short(g_total_net)}</td>
                         <td class="grand-total-col">-</td>
                     </tr>
@@ -643,7 +670,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-customer" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL (GROSS)</td>
                         <td class="col-sp">-</td>
                         <td class="col-prod">-</td>
-                        ${months.map(m => `<td class="col-amt" style="background: #f0f4ff !important; color: #4338ca;">${format_currency_short(total_month_gross_amts[m.key] || 0)}</td>`).join("")}
+                        ${months.map((m) => `<td class="col-amt" style="background: #f0f4ff !important; color: #4338ca;">${format_currency_short(total_month_gross_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col">-</td>
                         <td class="grand-total-col">${format_currency_short(g_total_gross)}</td>
                     </tr>
@@ -652,16 +679,20 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 			// 3.2 Detailed Sales Orders List
 			tables_container.find("#so_count").text(`Showing ${filtered_data.length} orders`);
-			let total_qty = 0, total_amt = 0;
+			let total_qty = 0,
+				total_amt = 0;
 
 			if (filtered_data.length === 0) {
-				tbody_list.append(`<tr><td colspan="9" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`);
+				tbody_list.append(
+					`<tr><td colspan="9" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
+				);
 			} else {
 				filtered_data.forEach((row, idx) => {
 					let status_color = "gray";
 					if (["Completed", "Closed"].includes(row.status)) status_color = "green";
 					if (["Draft"].includes(row.status)) status_color = "blue";
-					if (["To Deliver", "To Bill", "To Deliver and Bill"].includes(row.status)) status_color = "orange";
+					if (["To Deliver", "To Bill", "To Deliver and Bill"].includes(row.status))
+						status_color = "orange";
 					if (["Cancelled"].includes(row.status)) status_color = "red";
 
 					let qty = flt(row.order_quantity || row.po_qty);
@@ -693,20 +724,23 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                 `);
 			}
 		};
-        
+
 		const export_pdf = async () => {
 			const report_date = frappe.datetime.now_datetime();
 			const filters = page.filter_group.get_values();
 			let period = "Custom Period";
 			if (filters.fiscal_year) period = filters.fiscal_year;
-			if (filters.from_date && filters.to_date) period = `${filters.from_date} to ${filters.to_date}`;
+			if (filters.from_date && filters.to_date)
+				period = `${filters.from_date} to ${filters.to_date}`;
 
 			const get_chart_png = (id) => {
 				const svg_el = document.querySelector(`#wrapper_${id} svg`);
 				if (!svg_el) return null;
-                const clone = svg_el.cloneNode(true);
-                const internal_legend = clone.querySelector('.chart-legend, .legend, .frappe-chart-legend');
-                if (internal_legend) internal_legend.style.display = 'none';
+				const clone = svg_el.cloneNode(true);
+				const internal_legend = clone.querySelector(
+					".chart-legend, .legend, .frappe-chart-legend",
+				);
+				if (internal_legend) internal_legend.style.display = "none";
 				const canvas = document.createElement("canvas");
 				const context = canvas.getContext("2d");
 				const svg_data = new XMLSerializer().serializeToString(clone);
@@ -720,7 +754,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						context.drawImage(img, 0, 0, canvas.width, canvas.height);
 						resolve(canvas.toDataURL("image/png"));
 					};
-					img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
+					img.src =
+						"data:image/svg+xml;base64," +
+						btoa(unescape(encodeURIComponent(svg_data)));
 				});
 			};
 
@@ -730,24 +766,27 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				get_chart_png("top_10_products"),
 			]);
 
-			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>` : "";
-			
-            const chart_l = (chart_id) => {
-                const c_obj = data.charts[chart_id];
-                if (!c_obj || !c_obj.data.labels.length) return "";
-                const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-                
-                let legend_html = '<div class="pdf-legend">';
-                c_obj.data.labels.forEach((l, i) => {
-                    const val = c_obj.data.datasets[0].values[i];
-                    const color = c_obj.colors[i % c_obj.colors.length];
-                    const share = ((val / total_val) * 100).toFixed(1);
-                    let display_label = l;
-                    if (l && l.includes(' - ')) {
-                        let parts = l.split(' - ');
-                        if (parts[0] === parts[1]) display_label = parts[0];
-                    }
-                    legend_html += `
+			const chart_h = (src, title) =>
+				src
+					? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>`
+					: "";
+
+			const chart_l = (chart_id) => {
+				const c_obj = data.charts[chart_id];
+				if (!c_obj || !c_obj.data.labels.length) return "";
+				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+
+				let legend_html = '<div class="pdf-legend">';
+				c_obj.data.labels.forEach((l, i) => {
+					const val = c_obj.data.datasets[0].values[i];
+					const color = c_obj.colors[i % c_obj.colors.length];
+					const share = ((val / total_val) * 100).toFixed(1);
+					let display_label = l;
+					if (l && l.includes(" - ")) {
+						let parts = l.split(" - ");
+						if (parts[0] === parts[1]) display_label = parts[0];
+					}
+					legend_html += `
                         <div class="pdf-legend-item">
                             <span class="pdf-dot" style="background: ${color}"></span>
                             <div class="pdf-legend-info">
@@ -756,25 +795,27 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             </div>
                         </div>
                     `;
-                });
-                legend_html += '</div>';
-                return legend_html;
-            };
+				});
+				legend_html += "</div>";
+				return legend_html;
+			};
 
-            const chart_t = (chart_id, title) => {
+			const chart_t = (chart_id, title) => {
 				const c_obj = data.charts[chart_id];
 				if (!c_obj || !c_obj.data.labels.length) return "";
 				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-				let rows = c_obj.data.labels.map((l, i) => {
+				let rows = c_obj.data.labels
+					.map((l, i) => {
 						const val = c_obj.data.datasets[0].values[i];
 						const share = ((val / total_val) * 100).toFixed(1);
-                        let display_label = l;
-                        if (l && l.includes(' - ')) {
-                            let parts = l.split(' - ');
-                            if (parts[0] === parts[1]) display_label = parts[0];
-                        }
+						let display_label = l;
+						if (l && l.includes(" - ")) {
+							let parts = l.split(" - ");
+							if (parts[0] === parts[1]) display_label = parts[0];
+						}
 						return `<tr><td style="text-align:center;">${i + 1}</td><td>${display_label}</td><td style="text-align:right;">${format_currency_short(val)}</td><td style="text-align:right;">${share}%</td></tr>`;
-					}).join("");
+					})
+					.join("");
 				return `<div style="margin-top:10px; page-break-inside: avoid;"><table style="width:80%; margin: 10px auto; border-collapse: collapse; font-size: 10px; border: 1px solid #eee;"><thead><tr style="background: #f8f9fa;"><th style="width: 40px; text-align:center; border-bottom:2px solid #3b82f6;">S.No.</th><th style="text-align:left; border-bottom:2px solid #3b82f6;">${title}</th><th style="width: 120px; text-align:right; border-bottom:2px solid #3b82f6;">Net Booking (M)</th><th style="width: 80px; text-align:right; border-bottom:2px solid #3b82f6;">Share %</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 			};
 
@@ -794,13 +835,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
-                        td, th { page-break-inside: avoid !important; }
-                        th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: fixed; page-break-inside: auto; }
+                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; position: static !important; }
                         thead { display: table-header-group; }
-                        tfoot { display: table-row-group; }
-                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
+                        tfoot { display: table-footer-group; }
+                        thead th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; position: static !important; }
+                        tr.sticky-total td { position: static !important; background: #f8fafc !important; font-weight: 700; }
                         
                         .text-right { text-align: right; }
                         .text-center { text-align: center; }
@@ -810,10 +851,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         /* Column Widths */
                         .col-sno { width: 40px; text-align: center; }
                         .col-customer, .col-supplier { width: 180px; }
-                        .col-sp { width: 120px; }
-                        .col-prod { width: 150px; }
+                        .col-sp { width: 130px; }
+                        .col-prod { width: 200px; }
                         .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
-                        .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
+                        .total-net-col, .grand-total-col { width: 120px; text-align: right; font-weight: 700; }
 
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
                         .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
@@ -830,32 +871,40 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						<p style="font-size: 11px; color: #999; margin: 0;">Generated: ${report_date}</p>
 					</div>
 					<div class="kpi-wrapper">
-						${data.summary.slice(0, 4).map((m) => {
-                            let color = "#3498db";
-                            if (m.indicator === "green") color = "#2ecc71";
-                            if (m.indicator === "orange") color = "#e67e22";
-                            if (m.indicator === "red") color = "#e74c3c";
-                            if (m.indicator === "purple") color = "#9b59b6";
-                            return `
+						${data.summary
+							.slice(0, 4)
+							.map((m) => {
+								let color = "#3498db";
+								if (m.indicator === "green") color = "#2ecc71";
+								if (m.indicator === "orange") color = "#e67e22";
+								if (m.indicator === "red") color = "#e74c3c";
+								if (m.indicator === "purple") color = "#9b59b6";
+								return `
 							<div class="kpi-card">
 								<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
 								<div class="kpi-value">${format_currency_short(m.value)}</div>
 							</div>
-						`}).join("")}
+						`;
+							})
+							.join("")}
 					</div>
 					<div class="kpi-wrapper">
-						${data.summary.slice(4).map((m) => {
-                            let color = "#3498db";
-                            if (m.indicator === "green") color = "#2ecc71";
-                            if (m.indicator === "orange") color = "#e67e22";
-                            if (m.indicator === "red") color = "#e74c3c";
-                            if (m.indicator === "purple") color = "#9b59b6";
-                            return `
+						${data.summary
+							.slice(4)
+							.map((m) => {
+								let color = "#3498db";
+								if (m.indicator === "green") color = "#2ecc71";
+								if (m.indicator === "orange") color = "#e67e22";
+								if (m.indicator === "red") color = "#e74c3c";
+								if (m.indicator === "purple") color = "#9b59b6";
+								return `
 							<div class="kpi-card">
 								<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
 								<div class="kpi-value">${format_currency_short(m.value)}</div>
 							</div>
-						`}).join("")}
+						`;
+							})
+							.join("")}
 					</div>
 					<h3>Visual Analytics</h3>
 					${chart_h(png1, "Top Salesperson by Booking")}
@@ -882,17 +931,17 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				</html>
 			`;
 
-            const method_url = "/api/method/renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.export_to_pdf";
-            const $form = $(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
+			const method_url =
+				"/api/method/renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.export_to_pdf";
+			const $form =
+				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
                 <input type="hidden" name="html" value="">
                 <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
             </form>`).appendTo("body");
-            $form.find('input[name="html"]').val(html);
-            $form.submit();
-            $form.remove();
+			$form.find('input[name="html"]').val(html);
+			$form.submit();
+			$form.remove();
 		};
-
-
 
 		// Hybrid Filter Logic
 		const apply_local_filters = () => {
@@ -1003,20 +1052,20 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 	}
 
-
-
 	const export_to_excel = (export_type = "all") => {
 		frappe.call({
 			method: "renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.export_to_excel",
-			args: { 
-                filters: page.filter_group.get_values(),
-                export_type: export_type
-            },
+			args: {
+				filters: page.filter_group.get_values(),
+				export_type: export_type,
+			},
 			callback: (r) => {
 				if (r.message) {
 					const b64 = r.message.filecontent;
 					const link = document.createElement("a");
-					link.href = "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," + b64;
+					link.href =
+						"data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64," +
+						b64;
 					link.download = r.message.filename;
 					link.click();
 				}
@@ -1028,10 +1077,14 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 };
 
 function format_currency_short(num) {
-    if (!num && num !== 0) return "₹ 0.00 M";
-    let value = flt(num) / 1000000;
-    return "₹ " + value.toLocaleString("en-IN", { 
-        minimumFractionDigits: 2, 
-        maximumFractionDigits: 2 
-    }) + " M";
+	if (!num && num !== 0) return "₹ 0.00 M";
+	let value = flt(num) / 1000000;
+	return (
+		"₹ " +
+		value.toLocaleString("en-IN", {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		}) +
+		" M"
+	);
 }

@@ -1,8 +1,8 @@
-frappe.pages["margin_build"].on_page_load = function(wrapper) {
+frappe.pages["margin_build"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
 		title: __("Margin Build (Million INR)"),
-		single_column: true
+		single_column: true,
 	});
 
 	page.set_primary_action(__("Refresh"), () => page.refresh());
@@ -10,7 +10,7 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 	// Export Functions
 	const export_to_excel = (export_type = "all") => {
 		const filters = page.filter_group.get_values();
-        frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
+		frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.margin_build.margin_build.export_to_excel",
@@ -31,7 +31,10 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 					link.href = window.URL.createObjectURL(blob);
 					link.download = filename;
 					link.click();
-                    frappe.show_alert({ message: __("Excel Report Downloaded"), indicator: "green" });
+					frappe.show_alert({
+						message: __("Excel Report Downloaded"),
+						indicator: "green",
+					});
 				}
 			},
 		});
@@ -42,7 +45,7 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 
 		const report_date = moment().format("YYYY-MM-DD HH:mm");
 		const data = page.dashboard_data;
-		
+
 		const get_chart_png = () => {
 			const svg = document.querySelector(`#margin-chart svg`);
 			if (!svg) return null;
@@ -59,19 +62,25 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 					context.drawImage(img, 0, 0, canvas.width, canvas.height);
 					resolve(canvas.toDataURL("image/png"));
 				};
-				img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
+				img.src =
+					"data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
 			});
 		};
 
 		const chart_png = await get_chart_png();
-        const total_val = data.charts.margin_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+		const total_val =
+			data.charts.margin_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
 
-        // Generate Legend Box HTML for PDF
-        const legend_box_html = data.charts.margin_breakdown.data.labels.map((label, i) => {
-            const val = data.charts.margin_breakdown.data.datasets[0].values[i];
-            const color = data.charts.margin_breakdown.colors[i % data.charts.margin_breakdown.colors.length];
-            const share = ((val / total_val) * 100).toFixed(1) + "%";
-            return `
+		// Generate Legend Box HTML for PDF
+		const legend_box_html = data.charts.margin_breakdown.data.labels
+			.map((label, i) => {
+				const val = data.charts.margin_breakdown.data.datasets[0].values[i];
+				const color =
+					data.charts.margin_breakdown.colors[
+						i % data.charts.margin_breakdown.colors.length
+					];
+				const share = ((val / total_val) * 100).toFixed(1) + "%";
+				return `
                 <div style="display: inline-block; width: 45%; margin: 5px 2%; vertical-align: top; text-align: left;">
                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: ${color}; margin-right: 8px;"></span>
                     <div style="display: inline-block; vertical-align: top;">
@@ -80,7 +89,8 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                     </div>
                 </div>
             `;
-        }).join('');
+			})
+			.join("");
 
 		let html = `
             <html>
@@ -121,12 +131,16 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                     <p style="font-size:10px; color:#999;">Generated: ${report_date}</p>
                 </div>
                 <div class="kpi-wrapper">
-                    ${data.summary.map(m => `
+                    ${data.summary
+						.map(
+							(m) => `
                         <div class="kpi-card">
                             <div class="kpi-label">${m.label}</div>
-                            <div class="kpi-value">${m.fieldtype === 'Currency' ? format_currency(m.value) : m.value}</div>
+                            <div class="kpi-value">${m.fieldtype === "Currency" ? format_currency(m.value) : m.value}</div>
                         </div>
-                    `).join('')}
+                    `,
+						)
+						.join("")}
                 </div>
                 
                 <div class="chart-container">
@@ -151,7 +165,9 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.results.map(row => `
+                        ${data.results
+							.map(
+								(row) => `
                             <tr>
                                 <td>${row.name}</td>
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
@@ -159,17 +175,21 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                                 <td class="text-center">${row.type}</td>
                                 <td class="text-right">${format_currency(row.revenue)}</td>
                                 <td class="text-right">${format_currency(row.cogs)}</td>
-                                <td class="text-right" style="font-weight: bold; color: ${row.margin < 0 ? '#ef4444' : '#10b981'}">${format_currency(row.margin)}</td>
+                                <td class="text-right" style="font-weight: bold; color: ${row.margin < 0 ? "#ef4444" : "#10b981"}">${format_currency(row.margin)}</td>
                             </tr>
-                        `).join('')}
+                        `,
+							)
+							.join("")}
                     </tbody>
                 </table>
             </body>
             </html>
         `;
 
-		const method_url = "/api/method/renu_customization.renu_customization.page.margin_build.margin_build.export_to_pdf";
-		const $form = $(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
+		const method_url =
+			"/api/method/renu_customization.renu_customization.page.margin_build.margin_build.export_to_pdf";
+		const $form =
+			$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
             <input type="hidden" name="html" value="">
             <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
         </form>`).appendTo("body");
@@ -179,10 +199,12 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 		$form.remove();
 	};
 
-    page.add_menu_item(__("Export to PDF"), () => export_pdf());
-    page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
+	page.add_menu_item(__("Export to PDF"), () => export_pdf());
+	page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 
-	let filter_area = $('<div class="dashboard-filter-area border-bottom"></div>').prependTo(page.main);
+	let filter_area = $('<div class="dashboard-filter-area border-bottom"></div>').prependTo(
+		page.main,
+	);
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
 	const filter_fields = [
@@ -191,7 +213,7 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 			label: __("From Date"),
 			fieldtype: "Date",
 			default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
-			placeholder: __("Start Date")
+			placeholder: __("Start Date"),
 		},
 		{ fieldtype: "Column Break" },
 		{
@@ -199,7 +221,7 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 			label: __("To Date"),
 			fieldtype: "Date",
 			default: frappe.datetime.get_today(),
-			placeholder: __("End Date")
+			placeholder: __("End Date"),
 		},
 		{ fieldtype: "Column Break" },
 		{
@@ -207,7 +229,7 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 			label: __("Customer"),
 			fieldtype: "Link",
 			options: "Customer",
-			placeholder: __("Select Customer")
+			placeholder: __("Select Customer"),
 		},
 		{ fieldtype: "Column Break" },
 		{
@@ -215,8 +237,8 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 			label: __("Type"),
 			fieldtype: "Select",
 			options: ["", "Domestic", "Export"],
-			placeholder: __("Select Type")
-		}
+			placeholder: __("Select Type"),
+		},
 	];
 
 	page.filter_group = new frappe.ui.FieldGroup({
@@ -226,21 +248,24 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
 	page.filter_group.make();
 
 	filter_area.css({
-		"padding": "10px 20px",
+		padding: "10px 20px",
 		"background-color": "#fff",
-		"border-bottom": "1px solid #f1f5f9"
+		"border-bottom": "1px solid #f1f5f9",
 	});
 
-	Object.keys(page.filter_group.fields_dict).forEach(key => {
+	Object.keys(page.filter_group.fields_dict).forEach((key) => {
 		let field = page.filter_group.fields_dict[key];
 		field.df.on_change = () => page.refresh();
 		if (field.$input) {
-			field.$input.on("change input blur", () => { setTimeout(() => page.refresh(), 50); });
+			field.$input.on("change input blur", () => {
+				setTimeout(() => page.refresh(), 50);
+			});
 		}
 	});
 
 	$("<style>")
-		.text(`
+		.text(
+			`
             .sticky-total td { 
                 position: sticky; 
                 bottom: 0; 
@@ -261,28 +286,29 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                 z-index: 20; 
                 background: #f8fafc; 
             }
-		`)
+		`,
+		)
 		.appendTo("head");
 
-	page.refresh = function() {
+	page.refresh = function () {
 		let filters = page.filter_group.get_values();
-		
+
 		frappe.call({
 			method: "renu_customization.renu_customization.page.margin_build.margin_build.get_dashboard_data",
 			args: { filters: filters },
-			callback: function(r) {
+			callback: function (r) {
 				if (r.message) {
 					page.dashboard_data = r.message;
 					render_dashboard(r.message);
 				}
-			}
+			},
 		});
 	};
 
 	function render_dashboard(data) {
 		page.container.empty();
 
-		if (!$('#margin-dashboard-style').length) {
+		if (!$("#margin-dashboard-style").length) {
 			$(`<style id="margin-dashboard-style">
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
                 
@@ -470,16 +496,16 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                     white-space: nowrap;
                 }
                 .export-btn:hover { color: #2563eb; background: #eff6ff; border-color: #bfdbfe; }
-			</style>`).appendTo('head');
+			</style>`).appendTo("head");
 		}
 
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
-		data.summary.forEach(s => {
-                    let indicator = (s.indicator || "blue").toLowerCase();
+		data.summary.forEach((s) => {
+			let indicator = (s.indicator || "blue").toLowerCase();
 			$(`
 				<div class="summary-card ${indicator}">
 					<div class="label"><span class="indicator bg-${indicator}"></span>${s.label}</div>
-					<div class="value">${s.fieldtype === 'Currency' ? format_currency(s.value) : s.value}</div>
+					<div class="value">${s.fieldtype === "Currency" ? format_currency(s.value) : s.value}</div>
 				</div>
 			`).appendTo(summary_row);
 		});
@@ -491,28 +517,34 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                 <div id="margin-legend" class="custom-legend"></div>
             </div>
         `).appendTo(page.container);
-        
+
 		setTimeout(() => {
-            let chart = new frappe.Chart("#margin-chart", {
-                data: data.charts.margin_breakdown.data,
-                type: 'donut',
-                height: 350,
-                colors: data.charts.margin_breakdown.colors,
-                legend: 0,
-                show_legend: 0,
-                legendOptions: { showLegend: false }
-            });
+			let chart = new frappe.Chart("#margin-chart", {
+				data: data.charts.margin_breakdown.data,
+				type: "donut",
+				height: 350,
+				colors: data.charts.margin_breakdown.colors,
+				legend: 0,
+				show_legend: 0,
+				legendOptions: { showLegend: false },
+			});
 
-            // Render Custom Legend
-            let legend_container = chart_card.find("#margin-legend");
-            let total_val = data.charts.margin_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
+			// Render Custom Legend
+			let legend_container = chart_card.find("#margin-legend");
+			let total_val = data.charts.margin_breakdown.data.datasets[0].values.reduce(
+				(a, b) => a + b,
+				0,
+			);
 
-            data.charts.margin_breakdown.data.labels.forEach((label, idx) => {
-                let val = data.charts.margin_breakdown.data.datasets[0].values[idx];
-                let color = data.charts.margin_breakdown.colors[idx % data.charts.margin_breakdown.colors.length];
-                let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
-                
-                legend_container.append(`
+			data.charts.margin_breakdown.data.labels.forEach((label, idx) => {
+				let val = data.charts.margin_breakdown.data.datasets[0].values[idx];
+				let color =
+					data.charts.margin_breakdown.colors[
+						idx % data.charts.margin_breakdown.colors.length
+					];
+				let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
+
+				legend_container.append(`
                     <div class="legend-item">
                         <span class="dot" style="background: ${color}"></span>
                         <div class="info">
@@ -522,15 +554,15 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                         </div>
                     </div>
                 `);
-            });
-        }, 100);
+			});
+		}, 100);
 
 		let table_card = $(`
             <div class="table-card">
                 <div class="header">
                     <span>${__("Detailed Margin List")}</span>
                     <div class="export-btn" id="export_excel_table">
-                        <i class="fa fa-file-excel-o"></i> Export
+                        <i class="fa fa-file-excel-o"></i> Export to Excel
                     </div>
                 </div>
                 <div class="table-container">
@@ -552,13 +584,15 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
             </div>
         `).appendTo(page.container);
 
-		let tbody = table_card.find('tbody');
-        let total_rev = 0, total_cogs = 0, total_margin = 0;
+		let tbody = table_card.find("tbody");
+		let total_rev = 0,
+			total_cogs = 0,
+			total_margin = 0;
 
-		data.results.forEach(row => {
-            total_rev += flt(row.revenue);
-            total_cogs += flt(row.cogs);
-            total_margin += flt(row.margin);
+		data.results.forEach((row) => {
+			total_rev += flt(row.revenue);
+			total_cogs += flt(row.cogs);
+			total_margin += flt(row.margin);
 
 			$(`
 				<tr>
@@ -570,36 +604,37 @@ frappe.pages["margin_build"].on_page_load = function(wrapper) {
                     </td>
 					<td class="text-right">${format_currency(row.revenue)}</td>
 					<td class="text-right">${format_currency(row.cogs)}</td>
-					<td class="text-right" style="font-weight: 700; color: ${row.margin < 0 ? '#ef4444' : '#10b981'};">${format_currency(row.margin)}</td>
+					<td class="text-right" style="font-weight: 700; color: ${row.margin < 0 ? "#ef4444" : "#10b981"};">${format_currency(row.margin)}</td>
 				</tr>
 			`).appendTo(tbody);
 		});
 
-        $(`
+		$(`
             <tfoot>
                 <tr class="sticky-total">
                     <td colspan="4" class="text-right" style="padding-right: 20px; color: #64748b; font-size: 11px; font-weight: 600;">GRAND TOTAL</td>
                     <td class="text-right" style="color: #1e293b;">${format_currency(total_rev)}</td>
                     <td class="text-right" style="color: #1e293b;">${format_currency(total_cogs)}</td>
-                    <td class="text-right" style="color: ${total_margin < 0 ? '#ef4444' : '#4338ca'}; font-weight: 800;">${format_currency(total_margin)}</td>
+                    <td class="text-right" style="color: ${total_margin < 0 ? "#ef4444" : "#4338ca"}; font-weight: 800;">${format_currency(total_margin)}</td>
                 </tr>
             </tfoot>
         `).insertAfter(tbody);
 
-        table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
+		table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
 	}
 
 	function format_currency(v) {
 		if (!v && v !== 0) return "₹ 0.00 M";
-		
+
 		let value = flt(v) / 1000000;
-		
+
 		return (
 			"₹ " +
 			value.toLocaleString("en-US", {
 				minimumFractionDigits: 2,
 				maximumFractionDigits: 2,
-			}) + " M"
+			}) +
+			" M"
 		);
 	}
 

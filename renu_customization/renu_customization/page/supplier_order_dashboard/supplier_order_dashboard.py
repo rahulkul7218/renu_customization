@@ -29,17 +29,21 @@ def get_dashboard_data(filters=None):
         "group_by_po": 1
     })
     
+    if filters.get("company"):
+        report_filters["company"] = filters.get("company")
+    
+    if filters.get("from_date"):
+        report_filters["from_date"] = filters.get("from_date")
+    
+    if filters.get("to_date"):
+        report_filters["to_date"] = filters.get("to_date")
+        
     if filters.get("purchase_order"):
         report_filters["name"] = [filters.get("purchase_order")]
         
     if filters.get("status"):
         report_filters["status"] = [filters.get("status")]
         
-    # The standard report might require from_date and to_date
-    # If not provided, it might fetch all or fail. The standard validate_filters
-    # checks: if not from_date and to_date: throw error. But if BOTH are missing, it might pass.
-    # Let's pass a wide date range just in case, or leave it empty if it doesn't complain.
-    
     try:
         columns, report_data, _msg, chart_data = po_analysis_execute(report_filters)
     except Exception as e:
@@ -62,7 +66,7 @@ def get_dashboard_data(filters=None):
             if meta.has_field(f):
                 valid_fields.append(f)
                 
-        po_details = frappe.get_all("Purchase Order", filters={"name": ("in", po_names)}, fields=valid_fields)
+        po_details = frappe.get_all("Purchase Order", filters={"name": ("in", po_names)}, fields=valid_fields, limit_page_length=None)
         for po in po_details:
             po_details_map[po.name] = po
 
@@ -163,7 +167,7 @@ def get_dashboard_data(filters=None):
                 "datasets": [{"name": "Amount", "values": [x[1] for x in top_10_suppliers]}]
             },
             "type": "bar",
-            "colors": ["#3b82f6"],
+            "colors": ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#06b6d4", "#ef4444", "#6366f1", "#ec4899", "#84cc16", "#f97316"],
             "is_currency": True
         },
         "order_status": {

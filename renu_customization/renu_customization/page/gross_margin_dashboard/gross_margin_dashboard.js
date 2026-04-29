@@ -11,7 +11,9 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
 	// Standard Frappe Filters
 	const filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
-	filter_parent.addClass("border-bottom").css({ "background-color": "#fff", "margin-bottom": "0" });
+	filter_parent
+		.addClass("border-bottom")
+		.css({ "background-color": "#fff", "margin-bottom": "0" });
 
 	let refresh_timer = null;
 	page.refresh = function () {
@@ -34,15 +36,70 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 	}
 
 	const filter_fields = [
-		{ fieldname: "fiscal_year", label: __("Fiscal Year"), fieldtype: "Link", options: "Fiscal Year", placeholder: __("Select Fiscal Year") },
-		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer", placeholder: __("Select Customer") },
-		{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group", placeholder: __("Select Customer Group") },
-		{ fieldname: "item_code", label: __("Product (Item)"), fieldtype: "Link", options: "Item", placeholder: __("Select Product") },
-		{ fieldname: "item_group", label: __("Product Group"), fieldtype: "Link", options: "Item Group", placeholder: __("Select Product Group") },
-		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person", placeholder: __("Select Sales Person") },
-		{ fieldname: "territory", label: __("Territory"), fieldtype: "Link", options: "Territory", placeholder: __("Select Territory") },
-		{ fieldname: "dom_exp", label: __("Type"), fieldtype: "Select", options: "\nDomestic\nExport", placeholder: __("Select Type") },
-		{ fieldname: "invoice_type", label: __("Invoice Type"), fieldtype: "Select", options: "\nProduct Domestic\nProduct Export\nEngineering Service Domestic\nEngineering Service Export", placeholder: __("Select Invoice Type") },
+		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Fiscal Year"),
+		},
+		{
+			fieldname: "customer",
+			label: __("Customer"),
+			fieldtype: "Link",
+			options: "Customer",
+			placeholder: __("Select Customer"),
+		},
+		{
+			fieldname: "customer_group",
+			label: __("Customer Group"),
+			fieldtype: "Link",
+			options: "Customer Group",
+			placeholder: __("Select Customer Group"),
+		},
+		{
+			fieldname: "item_code",
+			label: __("Product (Item)"),
+			fieldtype: "Link",
+			options: "Item",
+			placeholder: __("Select Product"),
+		},
+		{
+			fieldname: "item_group",
+			label: __("Product Group"),
+			fieldtype: "Link",
+			options: "Item Group",
+			placeholder: __("Select Product Group"),
+		},
+		{
+			fieldname: "sales_person",
+			label: __("Sales Person"),
+			fieldtype: "Link",
+			options: "Sales Person",
+			placeholder: __("Select Sales Person"),
+		},
+		{
+			fieldname: "territory",
+			label: __("Territory"),
+			fieldtype: "Link",
+			options: "Territory",
+			placeholder: __("Select Territory"),
+		},
+		{
+			fieldname: "dom_exp",
+			label: __("Type"),
+			fieldtype: "Select",
+			options: "\nDomestic\nExport",
+			placeholder: __("Select Type"),
+		},
+		{
+			fieldname: "invoice_type",
+			label: __("Invoice Type"),
+			fieldtype: "Select",
+			options:
+				"\nProduct Domestic\nProduct Export\nEngineering Service Domestic\nEngineering Service Export",
+			placeholder: __("Select Invoice Type"),
+		},
 	];
 
 	page.filter_group = new frappe.ui.FieldGroup({ parent: filter_parent, fields: filter_fields });
@@ -96,7 +153,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			display: block !important;
 			white-space: nowrap !important;
 		}
-	`
+	`,
 		)
 		.appendTo(filter_parent);
 
@@ -104,7 +161,8 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 		let field = page.filter_group.fields_dict[key];
 		if (!["Column Break", "Section Break"].includes(field.df.fieldtype)) {
 			field.on_change = () => page.refresh();
-			if (field.$input) field.$input.on("change input blur", () => setTimeout(() => page.refresh(), 50));
+			if (field.$input)
+				field.$input.on("change input blur", () => setTimeout(() => page.refresh(), 50));
 		}
 	});
 
@@ -197,10 +255,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
         .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 30px; overflow: visible; display: flex; flex-direction: column; }
         .table-card .header { padding: 15px 24px; border-bottom: 1px solid #f1f5f9; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .table-container { overflow: auto; width: 100%; max-height: 500px; position: relative; }
+        .table-container { overflow: auto; width: 100%; max-height: 650px; position: relative; }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .dashboard-table th { background: #f8f9fa; padding: 12px 14px; text-align: left; font-size: 11px; color: #555; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #dee2e6; }
-        .dashboard-table td { padding: 12px 14px; border-top: 1px solid #eee; font-size: 13px; color: #333; background: #fff; line-height: 1.4; vertical-align: top; }
+        .dashboard-table th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-size: 11px; color: #555; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #dee2e6; }
+        .dashboard-table td { padding: 8px 10px; border-top: 1px solid #eee; font-size: 12px; color: #333; background: #fff; line-height: 1.2; vertical-align: middle; }
         .text-right { text-align: right !important; }
         .font-weight-bold { font-weight: 700 !important; }
         .indicator-pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
@@ -208,11 +266,28 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .indicator-pill.red { background: #fee2e2; color: #991b1b; }
         
         .sticky-right-1 { position: sticky; right: 0; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 100px; min-width: 100px; }
-        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 120px; min-width: 120px; }
-        .month-col { min-width: 110px; width: 110px; white-space: nowrap !important; text-align: right !important; }
+        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 130px; min-width: 130px; }
+        .month-col { min-width: 90px; width: 90px; white-space: nowrap !important; text-align: right !important; }
         .data-col { min-width: 120px; white-space: nowrap !important; text-align: right !important; }
         .dashboard-table th.month-col, .dashboard-table th.data-col { background: #f8f9fa !important; }
-        tr.sticky-total td { position: sticky; bottom: 0; z-index: 9; background: #f1f3f5 !important; font-weight: 700; border-top: 2px solid #ddd; }
+        
+        /* Sticky Primary Columns */
+        .dashboard-table th:nth-child(1), .dashboard-table td:nth-child(1) { position: sticky; left: 0; z-index: 3; background: #fff !important; }
+        .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { position: sticky; left: 40px; z-index: 3; background: #fff !important; }
+        
+        .dashboard-table th:nth-child(1), .dashboard-table th:nth-child(2) { z-index: 11; background: #f1f3f5 !important; }
+        .dashboard-table td:nth-child(1), .dashboard-table td:nth-child(2) { border-right: 1px solid #eee; }
+        
+        /* Sticky Total Footer */
+        tr.sticky-total td { 
+            position: sticky; 
+            bottom: 0; 
+            z-index: 9; 
+            background: #f1f3f5 !important; 
+            font-weight: 700; 
+            border-top: 2px solid #ddd; 
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
 
         @media print {
             @page { size: landscape; margin: 5mm; }
@@ -225,14 +300,23 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 	function format_currency_short(num, fieldtype) {
 		if (!num && num !== 0) return fieldtype === "Percent" ? "0.00%" : "₹ 0.00 M";
 		if (fieldtype === "Percent") return flt(num).toFixed(2) + "%";
-		return "₹ " + (flt(num) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M";
+		return (
+			"₹ " +
+			(flt(num) / 1000000).toLocaleString("en-US", {
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
+			}) +
+			" M"
+		);
 	}
 
 	function render_dashboard(data) {
 		page.container.empty();
 		page.clear_menu();
 		if (!data.results || data.results.length === 0) {
-			$(`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found")}</div></div>`).appendTo(page.container);
+			$(
+				`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found")}</div></div>`,
+			).appendTo(page.container);
 			return;
 		}
 
@@ -282,8 +366,16 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 					type: chart_obj.type || "donut",
 					height: 350,
 					colors: chart_obj.colors,
-                    legend: 0,
-					tooltipOptions: { formatTooltipY: (d) => "₹ " + flt(d).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M" },
+					legend: 0,
+					tooltipOptions: {
+						formatTooltipY: (d) =>
+							"₹ " +
+							flt(d).toLocaleString("en-US", {
+								minimumFractionDigits: 2,
+								maximumFractionDigits: 2,
+							}) +
+							" M",
+					},
 					onClick: (event) => {
 						if (config && config.field && event.label) {
 							page.filter_group.set_value(config.field, event.label);
@@ -292,18 +384,19 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 					},
 				});
 
-                if (!is_full) {
-                    let legend_container = wrapper.find(`.custom-legend`);
-                    let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
-                    chart_obj.data.labels.forEach((label, idx) => {
-                        let val = chart_obj.data.datasets[0].values[idx];
-                        let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
-                        let display_label = label;
-                        if (label && label.includes(' - ')) {
-                            let parts = label.split(' - ');
-                            if (parts[0] === parts[1]) display_label = parts[0];
-                        }
-                        let $item = $(`
+				if (!is_full) {
+					let legend_container = wrapper.find(`.custom-legend`);
+					let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
+					chart_obj.data.labels.forEach((label, idx) => {
+						let val = chart_obj.data.datasets[0].values[idx];
+						let share =
+							total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
+						let display_label = label;
+						if (label && label.includes(" - ")) {
+							let parts = label.split(" - ");
+							if (parts[0] === parts[1]) display_label = parts[0];
+						}
+						let $item = $(`
                             <div class="legend-item">
                                 <span class="dot" style="background: ${chart_obj.colors[idx % chart_obj.colors.length]}"></span>
                                 <div class="info">
@@ -312,24 +405,28 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 </div>
                             </div>
                         `).appendTo(legend_container);
-                        $item.on("click", () => {
-                            if (config && config.field) {
-                                page.filter_group.set_value(config.field, label);
-                                page.refresh();
-                            }
-                        });
-                    });
-                }
+						$item.on("click", () => {
+							if (config && config.field) {
+								page.filter_group.set_value(config.field, label);
+								page.refresh();
+							}
+						});
+					});
+				}
 			}, 100);
 		});
 
 		// Table Logic
-		let months_map = {}; let months = [];
+		let months_map = {};
+		let months = [];
 		data.results.forEach((r) => {
 			let date = r.invoice_date || r.posting_date;
 			let m_key = moment(date).format("MMM YYYY");
 			let m_sort = moment(date).format("YYYYMM");
-			if (!months_map[m_key]) { months_map[m_key] = m_sort; months.push({ key: m_key, sort: m_sort }); }
+			if (!months_map[m_key]) {
+				months_map[m_key] = m_sort;
+				months.push({ key: m_key, sort: m_sort });
+			}
 		});
 		months.sort((a, b) => a.sort - b.sort);
 
@@ -341,18 +438,18 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                     <div class="table-actions">
                         <div id="filter_customer_link" style="width: 200px;"></div>
                         <div id="filter_sp_link" style="width: 200px;"></div>
-                        <span class="export-btn" id="export_month_btn"><i class="fa fa-file-excel-o"></i> Excel</span>
+                        <span class="export-btn" id="export_month_btn"><i class="fa fa-file-excel-o"></i> Export to Excel</span>
                     </div>
                 </div>
                 <div class="table-container">
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 280px;">Customer</th>
-                                <th style="min-width: 180px;">Sales Person</th>
-                                <th style="min-width: 220px;">Product</th>
-                                ${months.map(m => `<th class="month-col">${m.key}</th>`).join("")}
+                                <th style="width: 40px; text-align: center;">S.No.</th>
+                                <th style="min-width: 180px;">Customer</th>
+                                <th style="min-width: 130px;">Sales Person</th>
+                                <th style="min-width: 200px;">Product</th>
+                                ${months.map((m) => `<th class="month-col">${m.key}</th>`).join("")}
                                 <th class="text-right sticky-right-2">Total Margin (M)</th>
                                 <th class="text-right sticky-right-1">Margin %</th>
                             </tr>
@@ -367,57 +464,74 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			let tbody = card.find("#consolidated_table_body");
 			tbody.empty();
 			let merged = {};
-			results.forEach(r => {
-				let key = (r.sales_person||"-") + "|" + (r.customer_name||"-") + "|" + r.item_code;
-				if (!merged[key]) merged[key] = { sp: r.sales_person, cust: r.customer_name, prod: r.item_code, months: {}, total: 0, total_rev: 0 };
+			results.forEach((r) => {
+				let key =
+					(r.sales_person || "-") + "|" + (r.customer_name || "-") + "|" + r.item_code;
+				if (!merged[key])
+					merged[key] = {
+						sp: r.sales_person,
+						cust: r.customer_name,
+						prod: r.item_code,
+						months: {},
+						total: 0,
+						total_rev: 0,
+					};
 				let m_key = moment(r.invoice_date).format("MMM YYYY");
 				merged[key].months[m_key] = (merged[key].months[m_key] || 0) + flt(r.margin);
 				merged[key].total += flt(r.margin);
 				merged[key].total_rev += flt(r.base_amount);
 			});
 
-			Object.values(merged).sort((a,b) => b.total - a.total).slice(0, 100).forEach((r, i) => {
-				let cells = months.map(m => `<td class="month-col">${format_currency_short(r.months[m.key] || 0)}</td>`).join("");
-				let pct = (r.total / r.total_rev) * 100 || 0;
-				tbody.append(`
+			Object.values(merged)
+				.sort((a, b) => b.total - a.total)
+				.slice(0, 100)
+				.forEach((r, i) => {
+					let cells = months
+						.map(
+							(m) =>
+								`<td class="month-col">${format_currency_short(r.months[m.key] || 0)}</td>`,
+						)
+						.join("");
+					let pct = (r.total / r.total_rev) * 100 || 0;
+					tbody.append(`
                     <tr>
-                        <td class="text-center">${i+1}</td><td>${r.cust || "-"}</td><td>${r.sp || "-"}</td><td>${r.prod || "-"}</td>
+                        <td class="text-center">${i + 1}</td><td>${r.cust || "-"}</td><td>${r.sp || "-"}</td><td>${r.prod || "-"}</td>
                         ${cells}
                         <td class="text-right font-weight-bold sticky-right-2">${format_currency_short(r.total)}</td>
                         <td class="text-right sticky-right-1"><span class="indicator-pill ${pct > 20 ? "green" : pct < 5 ? "red" : ""}">${pct.toFixed(2)}%</span></td>
                     </tr>
                 `);
-			});
+				});
 
-            let grand_total_row = `<tr class="sticky-total">
+			let grand_total_row = `<tr class="sticky-total">
                 <td colspan="4" class="text-right">GRAND TOTAL</td>
-                ${months.map(m => `<td class="month-col">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
+                ${months.map((m) => `<td class="month-col">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
                 <td class="text-right sticky-right-2">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + r.total, 0))}</td>
                 <td class="text-right sticky-right-1"></td>
             </tr>`;
-            tbody.append(grand_total_row);
+			tbody.append(grand_total_row);
 		};
 
 		render_table(data.results);
-        
-        // Detailed List Table
+
+		// Detailed List Table
 		let detail_card = $(`
             <div class="table-card" style="margin-top: 30px;">
                 <div class="header">
                     <span>${__("Detailed Gross Margin List")}</span>
                     <div class="table-actions">
-                        <span class="export-btn" id="export_detail_btn"><i class="fa fa-file-excel-o"></i> Excel</span>
+                        <span class="export-btn" id="export_detail_btn"><i class="fa fa-file-excel-o"></i>Export to Excel</span>
                     </div>
                 </div>
                 <div class="table-container">
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 140px;">Invoice ID</th>
-                                <th style="min-width: 120px;">Date</th>
-                                <th style="min-width: 250px;">Customer</th>
-                                <th style="min-width: 200px;">Product</th>
+                                <th style="width: 40px; text-align: center;">S.No.</th>
+                                <th style="min-width: 120px;">Invoice ID</th>
+                                <th style="min-width: 110px;">Date</th>
+                                <th style="min-width: 180px;">Customer</th>
+                                <th style="min-width: 150px;">Product</th>
                                 <th class="text-right" style="min-width: 80px;">Qty</th>
                                 <th class="data-col">Revenue (M)</th>
                                 <th class="data-col">COGS (M)</th>
@@ -426,9 +540,11 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                             </tr>
                         </thead>
                         <tbody id="detail_table_body">
-                            ${data.results.map((r, i) => `
+                            ${data.results
+								.map(
+									(r, i) => `
                                 <tr>
-                                    <td class="text-center">${i+1}</td>
+                                    <td class="text-center">${i + 1}</td>
                                     <td>${r.invoice_id || "-"}</td>
                                     <td>${frappe.datetime.str_to_user(r.invoice_date) || "-"}</td>
                                     <td>${r.customer_name || "-"}</td>
@@ -439,7 +555,9 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                     <td class="data-col font-weight-bold">${format_currency_short(r.margin)}</td>
                                     <td class="data-col">${flt(r.margin_pct).toFixed(2)}%</td>
                                 </tr>
-                            `).join("")}
+                            `,
+								)
+								.join("")}
                         </tbody>
                         <tfoot>
                             <tr class="sticky-total">
@@ -448,7 +566,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 <td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
                                 <td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>
                                 <td class="data-col font-weight-bold">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.margin), 0))}</td>
-                                <td class="data-col">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) * 100) : 0).toFixed(2)}%</td>
+                                <td class="data-col">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0)) * 100 : 0).toFixed(2)}%</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -456,39 +574,45 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
             </div>
         `).appendTo(page.container);
 
-        // Export handlers
-        const export_to_excel = (export_type = "all") => {
-            frappe.call({
-                method: "renu_customization.renu_customization.page.gross_margin_dashboard.gross_margin_dashboard.export_to_excel",
-                args: { 
-                    filters: page.filter_group.get_values(),
-                    export_type: export_type
-                },
-                callback: (r) => {
-                    if (r.message) {
-                        const blob = b64toBlob(r.message.filecontent, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-                        const link = document.createElement("a");
-                        link.href = URL.createObjectURL(blob);
-                        link.download = r.message.filename;
-                        link.click();
-                    }
-                }
-            });
-        };
+		// Export handlers
+		const export_to_excel = (export_type = "all") => {
+			frappe.call({
+				method: "renu_customization.renu_customization.page.gross_margin_dashboard.gross_margin_dashboard.export_to_excel",
+				args: {
+					filters: page.filter_group.get_values(),
+					export_type: export_type,
+				},
+				callback: (r) => {
+					if (r.message) {
+						const blob = b64toBlob(
+							r.message.filecontent,
+							"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+						);
+						const link = document.createElement("a");
+						link.href = URL.createObjectURL(blob);
+						link.download = r.message.filename;
+						link.click();
+					}
+				},
+			});
+		};
 
-        const export_pdf = async () => {
+		const export_pdf = async () => {
 			const report_date = moment().format("DD-MM-YYYY HH:mm");
 			const filters = page.filter_group.get_values();
 			let period = "Custom Period";
 			if (filters.fiscal_year) period = filters.fiscal_year;
-			if (filters.from_date && filters.to_date) period = `${frappe.datetime.str_to_user(filters.from_date)} to ${frappe.datetime.str_to_user(filters.to_date)}`;
+			if (filters.from_date && filters.to_date)
+				period = `${frappe.datetime.str_to_user(filters.from_date)} to ${frappe.datetime.str_to_user(filters.to_date)}`;
 
 			const get_chart_png = (id) => {
 				const svg_el = document.querySelector(`#wrapper_${id} svg`);
 				if (!svg_el) return null;
-                const clone = svg_el.cloneNode(true);
-                const internal_legend = clone.querySelector('.chart-legend, .legend, .frappe-chart-legend');
-                if (internal_legend) internal_legend.style.display = 'none';
+				const clone = svg_el.cloneNode(true);
+				const internal_legend = clone.querySelector(
+					".chart-legend, .legend, .frappe-chart-legend",
+				);
+				if (internal_legend) internal_legend.style.display = "none";
 				const canvas = document.createElement("canvas");
 				const context = canvas.getContext("2d");
 				const svg_data = new XMLSerializer().serializeToString(clone);
@@ -502,7 +626,9 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						context.drawImage(img, 0, 0, canvas.width, canvas.height);
 						resolve(canvas.toDataURL("image/png"));
 					};
-					img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
+					img.src =
+						"data:image/svg+xml;base64," +
+						btoa(unescape(encodeURIComponent(svg_data)));
 				});
 			};
 
@@ -513,24 +639,27 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 				get_chart_png("top_10_products"),
 			]);
 
-			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>` : "";
-			
-            const chart_l = (chart_id) => {
-                const c_obj = data.charts[chart_id];
-                if (!c_obj || !c_obj.data.labels.length) return "";
-                const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-                
-                let legend_html = '<div class="pdf-legend">';
-                c_obj.data.labels.forEach((l, i) => {
-                    const val = c_obj.data.datasets[0].values[i];
-                    const color = c_obj.colors[i % c_obj.colors.length];
-                    const share = ((val / total_val) * 100).toFixed(1);
-                    let display_label = l;
-                    if (l && l.includes(' - ')) {
-                        let parts = l.split(' - ');
-                        if (parts[0] === parts[1]) display_label = parts[0];
-                    }
-                    legend_html += `
+			const chart_h = (src, title) =>
+				src
+					? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>`
+					: "";
+
+			const chart_l = (chart_id) => {
+				const c_obj = data.charts[chart_id];
+				if (!c_obj || !c_obj.data.labels.length) return "";
+				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+
+				let legend_html = '<div class="pdf-legend">';
+				c_obj.data.labels.forEach((l, i) => {
+					const val = c_obj.data.datasets[0].values[i];
+					const color = c_obj.colors[i % c_obj.colors.length];
+					const share = ((val / total_val) * 100).toFixed(1);
+					let display_label = l;
+					if (l && l.includes(" - ")) {
+						let parts = l.split(" - ");
+						if (parts[0] === parts[1]) display_label = parts[0];
+					}
+					legend_html += `
                         <div class="pdf-legend-item">
                             <span class="pdf-dot" style="background: ${color}"></span>
                             <div class="pdf-legend-info">
@@ -539,25 +668,27 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                             </div>
                         </div>
                     `;
-                });
-                legend_html += '</div>';
-                return legend_html;
-            };
+				});
+				legend_html += "</div>";
+				return legend_html;
+			};
 
-            const chart_t = (chart_id, title) => {
+			const chart_t = (chart_id, title) => {
 				const c_obj = data.charts[chart_id];
 				if (!c_obj || !c_obj.data.labels.length) return "";
 				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-				let rows = c_obj.data.labels.map((l, i) => {
+				let rows = c_obj.data.labels
+					.map((l, i) => {
 						const val = c_obj.data.datasets[0].values[i];
 						const share = ((val / total_val) * 100).toFixed(1);
-                        let display_label = l;
-                        if (l && l.includes(' - ')) {
-                            let parts = l.split(' - ');
-                            if (parts[0] === parts[1]) display_label = parts[0];
-                        }
+						let display_label = l;
+						if (l && l.includes(" - ")) {
+							let parts = l.split(" - ");
+							if (parts[0] === parts[1]) display_label = parts[0];
+						}
 						return `<tr><td style="text-align:center;">${i + 1}</td><td>${display_label}</td><td style="text-align:right;">${format_currency_short(val * 1000000)}</td><td style="text-align:right;">${share}%</td></tr>`;
-					}).join("");
+					})
+					.join("");
 				return `<div style="margin-top:10px; page-break-inside: avoid;"><table style="width:80%; margin: 10px auto; border-collapse: collapse; font-size: 10px; border: 1px solid #eee;"><thead><tr style="background: #f8f9fa;"><th style="width: 40px; text-align:center; border-bottom:2px solid #3498db;">S.No.</th><th style="text-align:left; border-bottom:2px solid #3498db;">${title}</th><th style="width: 120px; text-align:right; border-bottom:2px solid #3498db;">Margin (M)</th><th style="width: 80px; text-align:right; border-bottom:2px solid #3498db;">Share %</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 			};
 
@@ -613,18 +744,21 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						<p style="font-size: 11px; color: #999; margin: 0;">Generated: ${report_date}</p>
 					</div>
 					<div class="kpi-wrapper">
-						${data.summary.map((m) => {
-                            let color = "#3498db";
-                            if (m.indicator === "green") color = "#2ecc71";
-                            if (m.indicator === "orange") color = "#e67e22";
-                            if (m.indicator === "red") color = "#e74c3c";
-                            if (m.indicator === "purple") color = "#9b59b6";
-                            return `
+						${data.summary
+							.map((m) => {
+								let color = "#3498db";
+								if (m.indicator === "green") color = "#2ecc71";
+								if (m.indicator === "orange") color = "#e67e22";
+								if (m.indicator === "red") color = "#e74c3c";
+								if (m.indicator === "purple") color = "#9b59b6";
+								return `
 							<div class="kpi-card">
 								<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
 								<div class="kpi-value">${format_currency_short(m.value, m.fieldtype)}</div>
 							</div>
-						`}).join("")}
+						`;
+							})
+							.join("")}
 					</div>
 					<h3>Analytics Summary</h3>
 					${chart_h(png_trend, "Monthly Revenue vs Margin")}
@@ -652,33 +786,34 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 				</html>
 			`;
 
-
-            // Standard way to handle PDF binary response in new tab
-            const method_url = "/api/method/renu_customization.renu_customization.page.gross_margin_dashboard.gross_margin_dashboard.export_to_pdf";
-            const $form = $(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
+			// Standard way to handle PDF binary response in new tab
+			const method_url =
+				"/api/method/renu_customization.renu_customization.page.gross_margin_dashboard.gross_margin_dashboard.export_to_pdf";
+			const $form =
+				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
                 <input type="hidden" name="html" value="">
                 <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
             </form>`).appendTo("body");
-            $form.find('input[name="html"]').val(html);
-            $form.submit();
-            $form.remove();
+			$form.find('input[name="html"]').val(html);
+			$form.submit();
+			$form.remove();
 		};
 
-        // Local Table Handlers
-        card.find("#export_month_btn, #pdf_month_table").on("click", (e) => {
-            if (e.currentTarget.id === "export_month_btn") export_to_excel("summary");
-            else export_pdf();
-        });
-        detail_card.find("#export_detail_btn").on("click", () => export_to_excel("detail"));
+		// Local Table Handlers
+		card.find("#export_month_btn, #pdf_month_table").on("click", (e) => {
+			if (e.currentTarget.id === "export_month_btn") export_to_excel("summary");
+			else export_pdf();
+		});
+		detail_card.find("#export_detail_btn").on("click", () => export_to_excel("detail"));
 
-        page.container.on("click", ".reset-btn", (e) => {
-            const field = $(e.currentTarget).data("field");
-            page.filter_group.set_value(field, "");
-            page.refresh();
-        });
+		page.container.on("click", ".reset-btn", (e) => {
+			const field = $(e.currentTarget).data("field");
+			page.filter_group.set_value(field, "");
+			page.refresh();
+		});
 
-        page.add_menu_item(__("Export to PDF"), () => export_pdf());
-        page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
+		page.add_menu_item(__("Export to PDF"), () => export_pdf());
+		page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 	}
 
 	function b64toBlob(b64Data, contentType = "", sliceSize = 512) {
