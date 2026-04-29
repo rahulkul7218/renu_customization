@@ -323,7 +323,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
         
         .table-container { 
-            overflow: auto; width: 100%; max-height: 750px; 
+            overflow: auto; width: 100%; max-height: 800px; 
             position: relative;
             border-top: 1px solid #e2e8f0;
         }
@@ -344,15 +344,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
 
         /* Column Widths & Alignment */
-        .col-sno { width: 60px !important; text-align: center !important; }
-        .col-customer { width: 280px !important; min-width: 280px !important; }
-        .col-sp { width: 180px !important; min-width: 180px !important; }
-        .col-prod { width: 220px !important; min-width: 220px !important; }
-        .col-amt { width: 150px !important; min-width: 150px !important; text-align: right !important; }
-        .col-qty { width: 90px !important; min-width: 90px !important; text-align: right !important; }
-        .col-date { width: 120px !important; min-width: 120px !important; }
-        .col-id { width: 160px !important; min-width: 160px !important; }
-        .col-status { width: 140px !important; min-width: 140px !important; }
+        .col-sno { width: 40px !important; min-width: 40px !important; text-align: center !important; }
+        .col-customer { width: 180px !important; min-width: 180px !important; }
+        .col-sp { width: 130px !important; min-width: 130px !important; }
+        .col-prod { width: 200px !important; min-width: 200px !important; }
+        .col-amt { width: 120px !important; min-width: 120px !important; text-align: right !important; }
+        .col-qty { width: 80px !important; min-width: 80px !important; text-align: right !important; }
+        .col-date { width: 100px !important; min-width: 100px !important; }
+        .col-id { width: 140px !important; min-width: 140px !important; }
+        .col-status { width: 120px !important; min-width: 120px !important; }
 
         /* Total Columns (Right Sticky) */
         .total-net-col { 
@@ -369,14 +369,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             width: 180px !important; min-width: 180px !important;
         }
         
-        .dashboard-table th.total-net-col, .dashboard-table th.grand-total-col { z-index: 60 !important; }
+        .dashboard-table th.total-net-col, .dashboard-table th.grand-total-col { z-index: 60 !important; background: #f1f3f5 !important; }
 
         /* Sticky Footer */
         .dashboard-table tr.sticky-total td { 
             position: sticky; bottom: 0; background: #f8fafc !important; 
             border-top: 2px solid #cbd5e1; z-index: 70; font-weight: 700; color: #0f172a;
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
         }
-        .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 80 !important; }
+        .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 80 !important; background: #f1f3f5 !important; }
 
         .indicator-pill { 
             padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 600;
@@ -794,13 +795,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: auto !important; page-break-after: auto !important; }
-                        td, th { page-break-inside: avoid !important; }
-                        th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: fixed; page-break-inside: auto; }
+                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
+                        td, th { page-break-inside: avoid !important; border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; position: static !important; }
                         thead { display: table-header-group; }
-                        tfoot { display: table-row-group; }
-                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
+                        tfoot { display: table-footer-group; }
+                        thead th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; position: static !important; }
+                        tr.sticky-total td { position: static !important; background: #f8fafc !important; font-weight: 700; }
                         
                         .text-right { text-align: right; }
                         .text-center { text-align: center; }
@@ -810,10 +811,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         /* Column Widths */
                         .col-sno { width: 40px; text-align: center; }
                         .col-customer, .col-supplier { width: 180px; }
-                        .col-sp { width: 120px; }
-                        .col-prod { width: 150px; }
+                        .col-sp { width: 130px; }
+                        .col-prod { width: 200px; }
                         .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
-                        .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
+                        .total-net-col, .grand-total-col { width: 120px; text-align: right; font-weight: 700; }
 
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
                         .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }

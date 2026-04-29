@@ -160,6 +160,13 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                                 </tr>`;
                             }).join('')}
                         </tbody>
+                        <tfoot>
+                            <tr style="background: #f8fafc; font-weight: 800;">
+                                <td colspan="2" style="text-align:right;">TOTAL</td>
+                                <td style="text-align:right;">${format_currency_short(total_val)}</td>
+                                <td style="text-align:right;">100.0%</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
 
@@ -188,6 +195,13 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                             </tr>
                         `).join('')}
                     </tbody>
+                    <tfoot>
+                        <tr style="background: #f8fafc; font-weight: 800;">
+                            <td colspan="4" style="text-align:right;">GRAND TOTAL</td>
+                            <td style="text-align:right;">${format_currency_short(data.results.reduce((sum, row) => sum + flt(row.base_grand_total), 0))}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
                 </table>
             </body>
             </html>
@@ -316,12 +330,13 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
             background: #f8fafc !important; 
             font-weight: 700; 
             border-top: 2px solid #e2e8f0 !important;
+            color: #0f172a;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
         }
 
         .table-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; overflow: hidden; border: 1px solid #e2e8f0; width: 100%; }
         .table-card .header { padding: 15px 24px; background: #fff; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #0f172a; display: flex; justify-content: space-between; align-items: center; }
-        .table-container { overflow: auto; width: 100%; max-height: 600px; }
+        .table-container { overflow: auto; width: 100%; max-height: 800px; }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
         .dashboard-table th { background: #f8fafc; padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #64748b; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; }
         .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; background: #fff; }

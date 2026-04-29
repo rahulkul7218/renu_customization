@@ -197,10 +197,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
         .table-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 30px; overflow: visible; display: flex; flex-direction: column; }
         .table-card .header { padding: 15px 24px; border-bottom: 1px solid #f1f5f9; font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .table-container { overflow: auto; width: 100%; max-height: 500px; position: relative; }
+        .table-container { overflow: auto; width: 100%; max-height: 650px; position: relative; }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .dashboard-table th { background: #f8f9fa; padding: 12px 14px; text-align: left; font-size: 11px; color: #555; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #dee2e6; }
-        .dashboard-table td { padding: 12px 14px; border-top: 1px solid #eee; font-size: 13px; color: #333; background: #fff; line-height: 1.4; vertical-align: top; }
+        .dashboard-table th { background: #f8f9fa; padding: 10px 12px; text-align: left; font-size: 11px; color: #555; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #dee2e6; }
+        .dashboard-table td { padding: 8px 10px; border-top: 1px solid #eee; font-size: 12px; color: #333; background: #fff; line-height: 1.2; vertical-align: middle; }
         .text-right { text-align: right !important; }
         .font-weight-bold { font-weight: 700 !important; }
         .indicator-pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
@@ -208,11 +208,28 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .indicator-pill.red { background: #fee2e2; color: #991b1b; }
         
         .sticky-right-1 { position: sticky; right: 0; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 100px; min-width: 100px; }
-        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 120px; min-width: 120px; }
-        .month-col { min-width: 110px; width: 110px; white-space: nowrap !important; text-align: right !important; }
+        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 130px; min-width: 130px; }
+        .month-col { min-width: 90px; width: 90px; white-space: nowrap !important; text-align: right !important; }
         .data-col { min-width: 120px; white-space: nowrap !important; text-align: right !important; }
         .dashboard-table th.month-col, .dashboard-table th.data-col { background: #f8f9fa !important; }
-        tr.sticky-total td { position: sticky; bottom: 0; z-index: 9; background: #f1f3f5 !important; font-weight: 700; border-top: 2px solid #ddd; }
+        
+        /* Sticky Primary Columns */
+        .dashboard-table th:nth-child(1), .dashboard-table td:nth-child(1) { position: sticky; left: 0; z-index: 3; background: #fff !important; }
+        .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { position: sticky; left: 40px; z-index: 3; background: #fff !important; }
+        
+        .dashboard-table th:nth-child(1), .dashboard-table th:nth-child(2) { z-index: 11; background: #f1f3f5 !important; }
+        .dashboard-table td:nth-child(1), .dashboard-table td:nth-child(2) { border-right: 1px solid #eee; }
+        
+        /* Sticky Total Footer */
+        tr.sticky-total td { 
+            position: sticky; 
+            bottom: 0; 
+            z-index: 9; 
+            background: #f1f3f5 !important; 
+            font-weight: 700; 
+            border-top: 2px solid #ddd; 
+            box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+        }
 
         @media print {
             @page { size: landscape; margin: 5mm; }
@@ -348,10 +365,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 280px;">Customer</th>
-                                <th style="min-width: 180px;">Sales Person</th>
-                                <th style="min-width: 220px;">Product</th>
+                                <th style="width: 40px; text-align: center;">S.No.</th>
+                                <th style="min-width: 180px;">Customer</th>
+                                <th style="min-width: 130px;">Sales Person</th>
+                                <th style="min-width: 200px;">Product</th>
                                 ${months.map(m => `<th class="month-col">${m.key}</th>`).join("")}
                                 <th class="text-right sticky-right-2">Total Margin (M)</th>
                                 <th class="text-right sticky-right-1">Margin %</th>
@@ -413,11 +430,11 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 140px;">Invoice ID</th>
-                                <th style="min-width: 120px;">Date</th>
-                                <th style="min-width: 250px;">Customer</th>
-                                <th style="min-width: 200px;">Product</th>
+                                <th style="width: 40px; text-align: center;">S.No.</th>
+                                <th style="min-width: 120px;">Invoice ID</th>
+                                <th style="min-width: 110px;">Date</th>
+                                <th style="min-width: 180px;">Customer</th>
+                                <th style="min-width: 150px;">Product</th>
                                 <th class="text-right" style="min-width: 80px;">Qty</th>
                                 <th class="data-col">Revenue (M)</th>
                                 <th class="data-col">COGS (M)</th>
