@@ -41,34 +41,34 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Fiscal Year"),
 			options: "Fiscal Year",
 		},
-				{
+		{
 			fieldname: "date_range",
 			label: __("Date Range"),
 			fieldtype: "DateRange",
 			placeholder: [__("Start Date"), __("End Date")],
 		},
-				{
+		{
 			fieldname: "supplier",
 			label: __("Supplier"),
 			fieldtype: "Link",
 			placeholder: __("Select Supplier"),
 			options: "Supplier",
 		},
-				{
+		{
 			fieldname: "item_code",
 			label: __("Product"),
 			fieldtype: "Link",
 			placeholder: __("Select Product"),
 			options: "Item",
 		},
-				{
+		{
 			fieldname: "supplier_group",
 			label: __("Supplier Group"),
 			fieldtype: "Link",
 			placeholder: __("Select Supplier Group"),
 			options: "Supplier Group",
 		},
-									];
+	];
 
 	page.filter_group = new frappe.ui.FieldGroup({
 		parent: filter_parent,
@@ -356,30 +356,30 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 					type: "donut",
 					height: 350,
 					colors: chart_obj.colors,
-                    legend: 0,
-                    show_legend: 0,
-                    legendOptions: { showLegend: false },
-                    valuesOverPoints: 1,
+					legend: 0,
+					show_legend: 0,
+					legendOptions: { showLegend: false },
+					valuesOverPoints: 1,
 					tooltipOptions: { formatTooltipY: (d) => format_currency_short(d) },
 				});
 
-                // Render Custom Legend
-                let legend_container = page.container.find(`#legend_${chart_id}`);
-                let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
-                
-                    chart_obj.data.labels.forEach((label, idx) => {
-                        let val = chart_obj.data.datasets[0].values[idx];
-                        let color = chart_obj.colors[idx % chart_obj.colors.length];
-                        let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
-                        
-                        // Clean double names (e.g. "John Doe - John Doe")
-                        let display_label = label;
-                        if (label && label.includes(' - ')) {
-                            let parts = label.split(' - ');
-                            if (parts[0] === parts[1]) display_label = parts[0];
-                        }
+				// Render Custom Legend
+				let legend_container = page.container.find(`#legend_${chart_id}`);
+				let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
 
-                        legend_container.append(`
+				chart_obj.data.labels.forEach((label, idx) => {
+					let val = chart_obj.data.datasets[0].values[idx];
+					let color = chart_obj.colors[idx % chart_obj.colors.length];
+					let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
+
+					// Clean double names (e.g. "John Doe - John Doe")
+					let display_label = label;
+					if (label && label.includes(" - ")) {
+						let parts = label.split(" - ");
+						if (parts[0] === parts[1]) display_label = parts[0];
+					}
+
+					legend_container.append(`
                             <div class="legend-item">
                                 <span class="dot" style="background: ${color}"></span>
                                 <div class="info">
@@ -388,7 +388,7 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                                 </div>
                             </div>
                         `);
-                    });
+				});
 			}, 100);
 		});
 
@@ -396,10 +396,13 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		let months_map = {};
 		let months = [];
 		data.results.forEach((row) => {
-            let date_obj = new Date(row.invoice_date);
-            let m_label = date_obj.toLocaleString('default', { month: 'short' }) + " " + date_obj.getFullYear();
-            let m_sort = row.invoice_date.split("-")[0] + row.invoice_date.split("-")[1];
-            
+			let date_obj = new Date(row.invoice_date);
+			let m_label =
+				date_obj.toLocaleString("default", { month: "short" }) +
+				" " +
+				date_obj.getFullYear();
+			let m_sort = row.invoice_date.split("-")[0] + row.invoice_date.split("-")[1];
+
 			if (!months_map[m_label]) {
 				months_map[m_label] = m_sort;
 				months.push({ label: m_label, sort: m_sort });
@@ -410,7 +413,10 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		let consolidated_data = {};
 		data.results.forEach((row) => {
 			let date_obj = new Date(row.invoice_date);
-            let m_label = date_obj.toLocaleString('default', { month: 'short' }) + " " + date_obj.getFullYear();
+			let m_label =
+				date_obj.toLocaleString("default", { month: "short" }) +
+				" " +
+				date_obj.getFullYear();
 			let key = `${row.supplier_name}|${row.item_name}`;
 			if (!consolidated_data[key]) {
 				consolidated_data[key] = {
@@ -423,7 +429,8 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 			}
 			let amt = flt(row.base_amount);
 			if (row.is_return) amt = -amt;
-			consolidated_data[key].months[m_label] = (consolidated_data[key].months[m_label] || 0) + amt;
+			consolidated_data[key].months[m_label] =
+				(consolidated_data[key].months[m_label] || 0) + amt;
 			consolidated_data[key].total += amt;
 		});
 
@@ -431,7 +438,8 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		let grand_total_all = 0;
 		Object.values(consolidated_data).forEach((row) => {
 			months.forEach((m) => {
-				grand_total_months[m.label] = (grand_total_months[m.label] || 0) + (row.months[m.label] || 0);
+				grand_total_months[m.label] =
+					(grand_total_months[m.label] || 0) + (row.months[m.label] || 0);
 			});
 			grand_total_all += row.total;
 		});
@@ -443,7 +451,7 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                     <div class="table-actions" style="overflow: visible;">
                         <div class="d-flex" style="gap: 8px;">
                             <span class="export-btn" id="export_month_table" data-export-type="summary">
-                                <i class="fa fa-file-excel-o"></i> Excel
+                                <i class="fa fa-file-excel-o"></i> Export to Excel
                             </span>
                         </div>
                     </div>
@@ -506,7 +514,7 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                         <span id="invoice_count_label" style="font-size: 12px; color: #64748b; font-weight: 500; margin-right: 12px;"></span>
                         <div class="d-flex" style="gap: 8px;">
                             <span class="export-btn" id="main_excel_export" data-export-type="detail">
-                                <i class="fa fa-file-excel-o"></i> Excel
+                                <i class="fa fa-file-excel-o"></i>Export to Excel
                             </span>
                         </div>
                     </div>
@@ -570,10 +578,10 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		const export_to_excel = (export_type = "all") => {
 			frappe.call({
 				method: "renu_customization.renu_customization.page.purchase_invoice_dashboard.purchase_invoice_dashboard.export_to_excel",
-				args: { 
-                    filters: page.filter_group.get_values(),
-                    export_type: export_type
-                },
+				args: {
+					filters: page.filter_group.get_values(),
+					export_type: export_type,
+				},
 				callback: function (r) {
 					if (r.message) {
 						const { filename, filecontent } = r.message;
@@ -600,14 +608,17 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 			const filters = page.filter_group.get_values();
 			let period = "Custom Period";
 			if (filters.fiscal_year) period = filters.fiscal_year;
-			if (filters.from_date && filters.to_date) period = `${filters.from_date} to ${filters.to_date}`;
+			if (filters.from_date && filters.to_date)
+				period = `${filters.from_date} to ${filters.to_date}`;
 
 			const get_chart_png = (id) => {
 				const svg_el = document.querySelector(`#wrapper_${id} svg`);
 				if (!svg_el) return null;
-                const clone = svg_el.cloneNode(true);
-                const internal_legend = clone.querySelector('.chart-legend, .legend, .frappe-chart-legend');
-                if (internal_legend) internal_legend.style.display = 'none';
+				const clone = svg_el.cloneNode(true);
+				const internal_legend = clone.querySelector(
+					".chart-legend, .legend, .frappe-chart-legend",
+				);
+				if (internal_legend) internal_legend.style.display = "none";
 				const canvas = document.createElement("canvas");
 				const context = canvas.getContext("2d");
 				const svg_data = new XMLSerializer().serializeToString(clone);
@@ -621,7 +632,9 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 						context.drawImage(img, 0, 0, canvas.width, canvas.height);
 						resolve(canvas.toDataURL("image/png"));
 					};
-					img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
+					img.src =
+						"data:image/svg+xml;base64," +
+						btoa(unescape(encodeURIComponent(svg_data)));
 				});
 			};
 
@@ -630,24 +643,27 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 				get_chart_png("top_10_products"),
 			]);
 
-			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>` : "";
-			
-            const chart_l = (chart_id) => {
-                const c_obj = data.charts[chart_id];
-                if (!c_obj || !c_obj.data.labels.length) return "";
-                const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-                
-                let legend_html = '<div class="pdf-legend">';
-                c_obj.data.labels.forEach((l, i) => {
-                    const val = c_obj.data.datasets[0].values[i];
-                    const color = c_obj.colors[i % c_obj.colors.length];
-                    const share = ((val / total_val) * 100).toFixed(1);
-                    let display_label = l;
-                    if (l && l.includes(' - ')) {
-                        let parts = l.split(' - ');
-                        if (parts[0] === parts[1]) display_label = parts[0];
-                    }
-                    legend_html += `
+			const chart_h = (src, title) =>
+				src
+					? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>`
+					: "";
+
+			const chart_l = (chart_id) => {
+				const c_obj = data.charts[chart_id];
+				if (!c_obj || !c_obj.data.labels.length) return "";
+				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+
+				let legend_html = '<div class="pdf-legend">';
+				c_obj.data.labels.forEach((l, i) => {
+					const val = c_obj.data.datasets[0].values[i];
+					const color = c_obj.colors[i % c_obj.colors.length];
+					const share = ((val / total_val) * 100).toFixed(1);
+					let display_label = l;
+					if (l && l.includes(" - ")) {
+						let parts = l.split(" - ");
+						if (parts[0] === parts[1]) display_label = parts[0];
+					}
+					legend_html += `
                         <div class="pdf-legend-item">
                             <span class="pdf-dot" style="background: ${color}"></span>
                             <div class="pdf-legend-info">
@@ -656,25 +672,27 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                             </div>
                         </div>
                     `;
-                });
-                legend_html += '</div>';
-                return legend_html;
-            };
+				});
+				legend_html += "</div>";
+				return legend_html;
+			};
 
-            const chart_t = (chart_id, title) => {
+			const chart_t = (chart_id, title) => {
 				const c_obj = data.charts[chart_id];
 				if (!c_obj || !c_obj.data.labels.length) return "";
 				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-				let rows = c_obj.data.labels.map((l, i) => {
+				let rows = c_obj.data.labels
+					.map((l, i) => {
 						const val = c_obj.data.datasets[0].values[i];
 						const share = ((val / total_val) * 100).toFixed(1);
-                        let display_label = l;
-                        if (l && l.includes(' - ')) {
-                            let parts = l.split(' - ');
-                            if (parts[0] === parts[1]) display_label = parts[0];
-                        }
+						let display_label = l;
+						if (l && l.includes(" - ")) {
+							let parts = l.split(" - ");
+							if (parts[0] === parts[1]) display_label = parts[0];
+						}
 						return `<tr><td style="text-align:center;">${i + 1}</td><td>${display_label}</td><td style="text-align:right;">${format_currency_short(val)}</td><td style="text-align:right;">${share}%</td></tr>`;
-					}).join("");
+					})
+					.join("");
 				return `<div style="margin-top:10px; page-break-inside: avoid;"><table style="width:80%; margin: 10px auto; border-collapse: collapse; font-size: 10px; border: 1px solid #eee;"><thead><tr style="background: #f8f9fa;"><th style="width: 40px; text-align:center; border-bottom:2px solid #3b82f6;">S.No.</th><th style="text-align:left; border-bottom:2px solid #3b82f6;">${title}</th><th style="width: 120px; text-align:right; border-bottom:2px solid #3b82f6;">Value (M)</th><th style="width: 80px; text-align:right; border-bottom:2px solid #3b82f6;">Share %</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 			};
 
@@ -730,18 +748,21 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 						<p style="font-size: 11px; color: #999; margin: 0;">Generated: ${report_date}</p>
 					</div>
 					<div class="kpi-wrapper">
-						${data.summary.map((m) => {
-                            let color = "#3498db";
-                            if (m.indicator === "green") color = "#2ecc71";
-                            if (m.indicator === "orange") color = "#e67e22";
-                            if (m.indicator === "red") color = "#e74c3c";
-                            if (m.indicator === "purple") color = "#9b59b6";
-                            return `
+						${data.summary
+							.map((m) => {
+								let color = "#3498db";
+								if (m.indicator === "green") color = "#2ecc71";
+								if (m.indicator === "orange") color = "#e67e22";
+								if (m.indicator === "red") color = "#e74c3c";
+								if (m.indicator === "purple") color = "#9b59b6";
+								return `
 							<div class="kpi-card">
 								<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
 								<div class="kpi-value">${format_currency_short(m.value)}</div>
 							</div>
-						`}).join("")}
+						`;
+							})
+							.join("")}
 					</div>
 					<h3>Visual Analytics</h3>
 					${chart_h(png1, "Top Suppliers by Value")}
@@ -765,20 +786,22 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 				</html>
 			`;
 
-            const method_url = "/api/method/renu_customization.renu_customization.page.purchase_invoice_dashboard.purchase_invoice_dashboard.export_to_pdf";
-            const $form = $(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
+			const method_url =
+				"/api/method/renu_customization.renu_customization.page.purchase_invoice_dashboard.purchase_invoice_dashboard.export_to_pdf";
+			const $form =
+				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
                 <input type="hidden" name="html" value="">
                 <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
             </form>`).appendTo("body");
-            $form.find('input[name="html"]').val(html);
-            $form.submit();
-            $form.remove();
+			$form.find('input[name="html"]').val(html);
+			$form.submit();
+			$form.remove();
 		};
 
-		$("#main_excel_export, #export_month_table").on("click", function() {
-            const type = $(this).attr("data-export-type") || "all";
-            export_to_excel(type);
-        });
+		$("#main_excel_export, #export_month_table").on("click", function () {
+			const type = $(this).attr("data-export-type") || "all";
+			export_to_excel(type);
+		});
 		$("#pdf_month_table, #pdf_invoice_table").on("click", () => export_pdf());
 
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());

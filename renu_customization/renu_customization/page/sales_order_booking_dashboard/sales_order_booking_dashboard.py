@@ -46,7 +46,8 @@ def get_dashboard_data(filters=None):
     # Use the sales_order_report execute function
     base_filters = frappe._dict({
         "from_date": filters.from_date,
-        "to_date": filters.to_date
+        "to_date": filters.to_date,
+        "company": filters.company
     })
     
     report_result = execute(base_filters)
@@ -82,14 +83,15 @@ def get_dashboard_data(filters=None):
         so_fields = ["name", "status", "customer", "per_billed", "base_net_total", "base_grand_total"]
         if frappe.get_meta("Sales Order").has_field("invoice_type"):
             so_fields.append("invoice_type")
-        sos = frappe.get_all("Sales Order", filters={"name": ("in", so_names)}, fields=so_fields)
+        sos = frappe.get_all("Sales Order", filters={"name": ("in", so_names)}, fields=so_fields, limit_page_length=None)
         so_info_map = {s.name: s for s in sos}
 
     so_item_map = {}
     if so_names:
         so_items = frappe.get_all("Sales Order Item", 
             filters={"parent": ("in", so_names)}, 
-            fields=["parent", "item_code", "returned_qty", "base_rate"]
+            fields=["parent", "item_code", "returned_qty", "base_rate"],
+            limit_page_length=None
         )
         for item in so_items:
             key = (item.parent, item.item_code)
@@ -97,13 +99,13 @@ def get_dashboard_data(filters=None):
                 so_item_map[key] = []
             so_item_map[key].append(item)
 
-    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"])
+    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"], limit_page_length=None)
     customer_map = {c.name: c for c in cust_list}
 
     item_codes = list(set([d.get("item_code") for d in processed_raw_data if d.get("item_code")]))
     item_group_map = {}
     if item_codes:
-        items = frappe.get_all("Item", filters={"name": ("in", item_codes)}, fields=["name", "item_group"])
+        items = frappe.get_all("Item", filters={"name": ("in", item_codes)}, fields=["name", "item_group"], limit_page_length=None)
         item_group_map = {i.name: i.item_group for i in items}
 
     for row in processed_raw_data:

@@ -47,21 +47,21 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Fiscal Year"),
 			options: "Fiscal Year",
 		},
-				{
+		{
 			label: __("Customer"),
 			placeholder: __("Select Customer"),
 			fieldname: "customer",
 			fieldtype: "Link",
 			options: "Customer",
 		},
-				{
+		{
 			fieldname: "customer_group",
 			label: __("Customer Group"),
 			placeholder: __("Select Customer Group"),
 			fieldtype: "Link",
 			options: "Customer Group",
 		},
-				{
+		{
 			label: __("Product (Item)"),
 			placeholder: __("Select Product"),
 			fieldname: "item_code",
@@ -69,7 +69,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			options: "Item",
 		},
 
-		
 		{
 			fieldname: "item_group",
 			label: __("Product Group"),
@@ -77,7 +76,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Link",
 			options: "Item Group",
 		},
-		
+
 		{
 			label: __("Sales Person"),
 			placeholder: __("Select Sales Person"),
@@ -85,16 +84,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Link",
 			options: "Sales Person",
 		},
-				{
+		{
 			fieldname: "territory",
 			label: __("Territory"),
 			placeholder: __("Select Territory"),
 			fieldtype: "Link",
 			options: "Territory",
 		},
-		
 
-		
 		{
 			fieldname: "dom_exp",
 			label: __("Type"),
@@ -102,7 +99,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Select",
 			options: ["", "Domestic", "Export"],
 		},
-		
+
 		{
 			fieldname: "invoice_type",
 			label: __("Invoice Type"),
@@ -172,7 +169,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			display: block !important;
 			white-space: nowrap !important;
 		}
-	`
+	`,
 		)
 		.appendTo(filter_parent);
 
@@ -642,13 +639,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			// Convert to Million INR
 			let value = flt(num) / 1000000;
-			
+
 			return (
 				"₹ " +
 				value.toLocaleString("en-US", {
 					minimumFractionDigits: 2,
 					maximumFractionDigits: 2,
-				}) + " M"
+				}) +
+				" M"
 			);
 		}
 
@@ -695,10 +693,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 						height: 350,
 						colors: chart_obj.colors,
 						regionFill: 1,
-                        legend: 0,
-                        show_legend: 0,
-                        legendOptions: { showLegend: false },
-                        valuesOverPoints: 1,
+						legend: 0,
+						show_legend: 0,
+						legendOptions: { showLegend: false },
+						valuesOverPoints: 1,
 						onClick: (event) => {
 							if (event.label) {
 								page.filter_group.set_value(config.field, event.label);
@@ -710,23 +708,24 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 						},
 					});
 
-                    // Render Custom Legend
-                    let legend_container = page.container.find(`#legend_${chart_id}`);
-                    let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
-                    
-                        chart_obj.data.labels.forEach((label, idx) => {
-                            let val = chart_obj.data.datasets[0].values[idx];
-                            let color = chart_obj.colors[idx % chart_obj.colors.length];
-                            let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
-                            
-                            // Clean double names (e.g. "John Doe - John Doe")
-                            let display_label = label;
-                            if (label && label.includes(' - ')) {
-                                let parts = label.split(' - ');
-                                if (parts[0] === parts[1]) display_label = parts[0];
-                            }
+					// Render Custom Legend
+					let legend_container = page.container.find(`#legend_${chart_id}`);
+					let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
 
-                            legend_container.append(`
+					chart_obj.data.labels.forEach((label, idx) => {
+						let val = chart_obj.data.datasets[0].values[idx];
+						let color = chart_obj.colors[idx % chart_obj.colors.length];
+						let share =
+							total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
+
+						// Clean double names (e.g. "John Doe - John Doe")
+						let display_label = label;
+						if (label && label.includes(" - ")) {
+							let parts = label.split(" - ");
+							if (parts[0] === parts[1]) display_label = parts[0];
+						}
+
+						legend_container.append(`
                                 <div class="legend-item" style="cursor: pointer;" onclick="frappe.pages['sales_revenue_dashboard'].on_legend_click('${config.field}', '${label.replace(/'/g, "\\'")}')">
                                     <span class="dot" style="background: ${color}"></span>
                                     <div class="info">
@@ -735,18 +734,18 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                     </div>
                                 </div>
                             `);
-                        });
+					});
 				} catch (e) {
 					console.error("Error rendering chart " + chart_id, e);
 				}
 			}, 100);
 		});
 
-        // Add legend click handler
-        frappe.pages['sales_revenue_dashboard'].on_legend_click = function(field, value) {
-            page.filter_group.set_value(field, value);
-            page.refresh();
-        };
+		// Add legend click handler
+		frappe.pages["sales_revenue_dashboard"].on_legend_click = function (field, value) {
+			page.filter_group.set_value(field, value);
+			page.refresh();
+		};
 
 		// 2.5 Table Section
 		let tables_row = $(
@@ -778,7 +777,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <div id="filter_product_link" style="width: 200px;"></div>
                         <div class="d-flex" style="gap: 8px; align-self: center; margin-left: 10px;">
                             <span class="export-btn" id="export_month_table" title="Export this table to Excel">
-                                <i class="fa fa-file-excel-o"></i> Excel
+                                <i class="fa fa-file-excel-o"></i>Export to Excel
                             </span>
                         </div>
                     </div>
@@ -807,7 +806,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                     <div class="table-actions">
                         <span class="text-muted" id="invoice_count_label" style="font-size: 12px; font-weight: 400; margin-right: 15px;"></span>
                         <span class="export-btn" id="export_invoice_table" title="Export this table to Excel">
-                            <i class="fa fa-file-excel-o"></i> Excel
+                            <i class="fa fa-file-excel-o"></i>Export to Excel
                         </span>
                     </div>
                 </div>
@@ -846,7 +845,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				let b_amt = flt(row.base_amount || 0);
 				if (row.is_return) b_amt = -Math.abs(b_amt);
 				let amt = b_amt * (alloc_p / 100);
-				
+
 				let gross_amt = flt(row.gross_amount || amt);
 
 				t_rev += amt;
@@ -883,13 +882,21 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				}
 				let amt = base_amt * (alloc_p / 100);
 				let gross_amt = flt(row.gross_amount || amt);
-				
+
 				let date = row.delivery_date || row.invoice_date || row.posting_date;
 				let month_key = moment(date).format("MMM YYYY");
 
 				let row_key = sp + "|" + cust + "|" + prod;
 				if (!merged_data[row_key]) {
-					merged_data[row_key] = { sp, cust, prod, prod_name, months: {}, total: 0, total_gross: 0 };
+					merged_data[row_key] = {
+						sp,
+						cust,
+						prod,
+						prod_name,
+						months: {},
+						total: 0,
+						total_gross: 0,
+					};
 				}
 				merged_data[row_key].months[month_key] =
 					(merged_data[row_key].months[month_key] || 0) + amt;
@@ -908,15 +915,16 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				grand_total_net += row.total;
 				grand_total_gross += row.total_gross;
 				months.forEach((m) => {
-					total_month_amts[m.key] = (total_month_amts[m.key] || 0) + (row.months[m.key] || 0);
-					
+					total_month_amts[m.key] =
+						(total_month_amts[m.key] || 0) + (row.months[m.key] || 0);
+
 					// Proportionally estimate gross for the month
 					// Since we don't store month-wise gross in merged_data, we calculate it here
 				});
 			});
-			
+
 			// We need to group gross amounts by month too for the footer
-			results.forEach(row => {
+			results.forEach((row) => {
 				let date = row.delivery_date || row.invoice_date || row.posting_date;
 				let m_key = moment(date).format("MMM YYYY");
 				let alloc_p = flt(row.allocated_percentage || 100);
@@ -924,7 +932,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				if (row.is_return) b_amt = -Math.abs(b_amt);
 				let amt = b_amt * (alloc_p / 100);
 				let gross_amt = flt(row.gross_amount || amt);
-				
+
 				total_month_gross_amts[m_key] = (total_month_gross_amts[m_key] || 0) + gross_amt;
 			});
 
@@ -967,7 +975,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 							`<td class="month-col" style="font-weight: 700;">${format_currency_short(total_month_amts[m.key] || 0)}</td>`,
 					)
 					.join("");
-				
+
 				let footer_cells_gross = months
 					.map(
 						(m) =>
@@ -1043,10 +1051,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             <td style="text-align: right;">${frappe.format(row.qty, { fieldtype: "Float" })}</td>
                             <td style="text-align: right; font-weight: 600;">
                                 ${(() => {
-                                    let b_amt = flt(row.base_amount || 0);
-                                    if (row.is_return) b_amt = -Math.abs(b_amt);
-                                    return format_currency_short(b_amt * (flt(row.allocated_percentage || 100) / 100));
-                                })()}
+									let b_amt = flt(row.base_amount || 0);
+									if (row.is_return) b_amt = -Math.abs(b_amt);
+									return format_currency_short(
+										b_amt * (flt(row.allocated_percentage || 100) / 100),
+									);
+								})()}
                             </td>
                         </tr>
                     `);
@@ -1157,15 +1167,15 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		// 5. Global Export Logic
 		const export_to_excel = (export_type = "all") => {
 			let filters = page.filter_group.get_values();
-			
+
 			frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 			frappe.call({
 				method: "renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.export_to_excel",
-				args: { 
-                    filters: filters,
-                    export_type: export_type
-                },
+				args: {
+					filters: filters,
+					export_type: export_type,
+				},
 				callback: function (r) {
 					if (r.message) {
 						const { filename, filecontent } = r.message;
@@ -1182,12 +1192,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 						link.href = URL.createObjectURL(blob);
 						link.download = filename;
 						link.click();
-						frappe.show_alert({ message: __("Excel Report Generated Successfully"), indicator: "green" });
+						frappe.show_alert({
+							message: __("Excel Report Generated Successfully"),
+							indicator: "green",
+						});
 					}
 				},
 			});
 		};
-
 
 		// 0. Button Management - Clear existing to avoid duplicates
 		page.clear_inner_toolbar();
@@ -1217,8 +1229,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 						const height = bbox.height || 450;
 
 						const clone = svg_el.cloneNode(true);
-						const internal_legend = clone.querySelector('.chart-legend, .legend, .frappe-chart-legend');
-						if (internal_legend) internal_legend.style.display = 'none';
+						const internal_legend = clone.querySelector(
+							".chart-legend, .legend, .frappe-chart-legend",
+						);
+						if (internal_legend) internal_legend.style.display = "none";
 
 						const svg_data = new XMLSerializer().serializeToString(clone);
 						const canvas = document.createElement("canvas");
@@ -1251,24 +1265,27 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				get_chart_png("top_10_products"),
 			]);
 
-			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>` : "";
-			
-            const chart_l = (chart_id) => {
-                const c_obj = data.charts[chart_id];
-                if (!c_obj || !c_obj.data.labels.length) return "";
-                const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-                
-                let legend_html = '<div class="pdf-legend">';
-                c_obj.data.labels.forEach((l, i) => {
-                    const val = c_obj.data.datasets[0].values[i];
-                    const color = c_obj.colors[i % c_obj.colors.length];
-                    const share = ((val / total_val) * 100).toFixed(1);
-                    let display_label = l;
-                    if (l && l.includes(' - ')) {
-                        let parts = l.split(' - ');
-                        if (parts[0] === parts[1]) display_label = parts[0];
-                    }
-                    legend_html += `
+			const chart_h = (src, title) =>
+				src
+					? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>`
+					: "";
+
+			const chart_l = (chart_id) => {
+				const c_obj = data.charts[chart_id];
+				if (!c_obj || !c_obj.data.labels.length) return "";
+				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+
+				let legend_html = '<div class="pdf-legend">';
+				c_obj.data.labels.forEach((l, i) => {
+					const val = c_obj.data.datasets[0].values[i];
+					const color = c_obj.colors[i % c_obj.colors.length];
+					const share = ((val / total_val) * 100).toFixed(1);
+					let display_label = l;
+					if (l && l.includes(" - ")) {
+						let parts = l.split(" - ");
+						if (parts[0] === parts[1]) display_label = parts[0];
+					}
+					legend_html += `
                         <div class="pdf-legend-item">
                             <span class="pdf-dot" style="background: ${color}"></span>
                             <div class="pdf-legend-info">
@@ -1277,12 +1294,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             </div>
                         </div>
                     `;
-                });
-                legend_html += '</div>';
-                return legend_html;
-            };
+				});
+				legend_html += "</div>";
+				return legend_html;
+			};
 
-            const chart_t = (chart_id, title) => {
+			const chart_t = (chart_id, title) => {
 				const c_obj = data.charts[chart_id];
 				if (!c_obj || !c_obj.data.labels.length) return "";
 				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
@@ -1439,10 +1456,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		page.container.on("click", "#pdf_month_table", () => export_pdf());
 		page.container.on("click", "#export_invoice_table", () => export_to_excel("detail"));
 
-
 		// 3. Force-remove default duplicates (be specific to avoid hiding our own menu)
 		$(".page-head .standard-actions .btn-secondary:contains('Refresh')").hide();
-
 
 		// 6. Remove small local buttons (except the ones we just added in headers)
 		$(".chart-card .export-btn, .row-export-btn").remove();
