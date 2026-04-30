@@ -8,8 +8,6 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 	window.cur_page = page;
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
-
-
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
 
 	let refresh_timer = null;
@@ -39,6 +37,25 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.get_today(),
+		},
+		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_user_default("Company"),
+		},
+		{
 			fieldname: "purchase_order",
 			label: __("PO Details"),
 			fieldtype: "Link",
@@ -56,25 +73,25 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 			fieldname: "expected_delivery_date",
 			label: __("Expected Delivery Date"),
 			fieldtype: "Date",
-			placeholder: __("Select Date")
+			placeholder: __("Select Date"),
 		},
 		{
 			fieldname: "actual_delivery_time",
 			label: __("Actual Delivery Time"),
 			fieldtype: "Date",
-			placeholder: __("Select Date")
+			placeholder: __("Select Date"),
 		},
 		{
 			fieldname: "delivery_time_as_per_po",
 			label: __("Delivery Time as per PO"),
 			fieldtype: "Date",
-			placeholder: __("Select Date")
+			placeholder: __("Select Date"),
 		},
 		{
 			fieldname: "supplier_agreed_time",
 			label: __("Supplier Agreed Time"),
 			fieldtype: "Date",
-			placeholder: __("Select Date")
+			placeholder: __("Select Date"),
 		},
 		{
 			fieldname: "open_po_details",
@@ -90,7 +107,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 			fieldname: "due_next_week",
 			label: __("Due in Next Week"),
 			fieldtype: "Check",
-		}
+		},
 	];
 
 	page.filter_group = new frappe.ui.FieldGroup({
@@ -125,7 +142,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		}
 		.dashboard-filter-area .frappe-control {
 			margin-bottom: 10px !important;
-			width: calc(20% - 12px) !important;
+			width: calc(25% - 12px) !important;
 		}
 		.dashboard-filter-area .frappe-control .form-group {
 			margin-bottom: 0 !important;
@@ -195,7 +212,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		"margin-bottom": "0",
 	});
 
-    page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
+	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
 	$(`<style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -361,7 +378,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 
 	function render_dashboard(data) {
 		page.container.empty();
-        page.clear_menu();
+		page.clear_menu();
 		if (!data.results || data.results.length === 0) {
 			$(
 				`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found for the selected filters")}</div></div>`,
@@ -371,10 +388,16 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 		data.summary.forEach((m) => {
-            let indicator = (m.indicator || "blue").toLowerCase();
-            let val = m.fieldtype === 'Currency' 
-                ? "₹ " + (flt(m.value) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M" 
-                : m.value;
+			let indicator = (m.indicator || "blue").toLowerCase();
+			let val =
+				m.fieldtype === "Currency"
+					? "₹ " +
+						(flt(m.value) / 1000000).toLocaleString("en-US", {
+							minimumFractionDigits: 2,
+							maximumFractionDigits: 2,
+						}) +
+						" M"
+					: m.value;
 			$(`
                 <div class="summary-card ${indicator}">
                     <div class="label"><span class="indicator bg-${indicator}"></span>${m.label}</div>
@@ -392,7 +415,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 
 				$(`
 					<div class="chart-card">
-						<div class="title"><span>${chart_obj.title || chart_id.replace(/_/g, ' ').toUpperCase()}</span></div>
+						<div class="title"><span>${chart_obj.title || chart_id.replace(/_/g, " ").toUpperCase()}</span></div>
 						<div id="wrapper_${chart_id}" style="height: 350px;"></div>
 						<div id="legend_${chart_id}" class="custom-legend"></div>
 					</div>
@@ -401,11 +424,11 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 				setTimeout(() => {
 					let is_currency = chart_obj.is_currency || false;
 					let c_data = Object.assign({}, chart_obj.data);
-					
+
 					if (is_currency) {
-						c_data.datasets = c_data.datasets.map(ds => ({
+						c_data.datasets = c_data.datasets.map((ds) => ({
 							name: ds.name,
-							values: ds.values.map(v => parseFloat((v / 1000000).toFixed(2)))
+							values: ds.values.map((v) => parseFloat((v / 1000000).toFixed(2))),
 						}));
 					}
 
@@ -417,23 +440,27 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						valuesOverPoints: 1,
 						isNavigable: 1,
 						legend: 0,
-						show_legend: 0, 
+						show_legend: 0,
 						legendOptions: { showLegend: false },
-						tooltipOptions: { 
-							formatTooltipY: (d) => is_currency ? format_currency(d, "INR") + " M" : d 
+						tooltipOptions: {
+							formatTooltipY: (d) =>
+								is_currency ? format_currency(d, "INR") + " M" : d,
 						},
 					});
 
 					let legend_container = page.container.find(`#legend_${chart_id}`);
-					let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-					
+					let total_val =
+						chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+
 					chart_obj.data.labels.forEach((label, idx) => {
 						let val = chart_obj.data.datasets[0].values[idx];
 						let color = chart_obj.colors[idx % chart_obj.colors.length];
 						let share = ((val / total_val) * 100).toFixed(1) + "%";
-						
-						let val_str = is_currency ? format_currency(val / 1000000, "INR") + " M" : val;
-						
+
+						let val_str = is_currency
+							? format_currency(val / 1000000, "INR") + " M"
+							: val;
+
 						legend_container.append(`
 							<div class="legend-item">
 								<span class="dot" style="background: ${color}"></span>
@@ -448,29 +475,38 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 					// Append 'M' to Y-axis ticks and values-over-points in SVG
 					if (is_currency) {
 						const append_m_to_svg = () => {
-							page.container.find(`#wrapper_${chart_id} text`).each(function() {
+							page.container.find(`#wrapper_${chart_id} text`).each(function () {
 								let t = $(this).text();
 								// Strip commas for isNaN check
-								let clean_t = t.replace(/,/g, '').trim();
-								if (!isNaN(clean_t) && clean_t !== '' && clean_t !== '0' && !t.includes('M')) {
+								let clean_t = t.replace(/,/g, "").trim();
+								if (
+									!isNaN(clean_t) &&
+									clean_t !== "" &&
+									clean_t !== "0" &&
+									!t.includes("M")
+								) {
 									// Exclude x-axis labels to avoid altering supplier names that might be numbers
-									if ($(this).closest('.x-axis').length === 0) {
-										$(this).text(t + ' M');
+									if ($(this).closest(".x-axis").length === 0) {
+										$(this).text(t + " M");
 									}
 								}
 							});
 						};
-						
+
 						// Run initially
 						setTimeout(append_m_to_svg, 100);
-						
+
 						// Observe SVG for animations/re-renders
 						let wrapperNode = document.querySelector(`#wrapper_${chart_id}`);
 						if (wrapperNode) {
 							let observer = new MutationObserver(() => {
 								append_m_to_svg();
 							});
-							observer.observe(wrapperNode, { childList: true, subtree: true, characterData: true });
+							observer.observe(wrapperNode, {
+								childList: true,
+								subtree: true,
+								characterData: true,
+							});
 						}
 					}
 				}, 100);
@@ -499,7 +535,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                 <div class="header" style="overflow: visible;">
                     <span style="font-size: 15px;">${__("Month-Wise Order Breakdown")}</span>
                     <div class="table-actions">
-                        <span class="export-btn" id="export_month_table"><i class="fa fa-file-excel-o"></i> Export</span>
+                        <span class="export-btn" id="export_month_table"><i class="fa fa-file-excel-o"></i> Export to Excel</span>
                     </div>
                 </div>
                 <div class="table-container">
@@ -521,7 +557,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                 <div class="header">
                     <span style="font-size: 15px;">${__("Supplier Orders")}</span>
                     <div class="table-actions">
-                        <span class="export-btn" id="export_list_table"><i class="fa fa-file-excel-o"></i> Export</span>
+                        <span class="export-btn" id="export_list_table"><i class="fa fa-file-excel-o"></i> Export to Excel</span>
                     </div>
                 </div>
                 <div class="table-container">
@@ -553,8 +589,10 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		data.results.forEach((row) => {
 			let supp = row.supplier || "-";
 			let amt = flt(row.net_total);
-			let m_key = row.transaction_date ? moment(row.transaction_date).format("MMM YYYY") : "Unknown";
-			
+			let m_key = row.transaction_date
+				? moment(row.transaction_date).format("MMM YYYY")
+				: "Unknown";
+
 			if (!merged_data[supp]) {
 				merged_data[supp] = { supp: supp, months: {}, total: 0 };
 			}
@@ -567,15 +605,19 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		let g_total_net = 0;
 
 		if (summary_list.length === 0) {
-			tbody_month.append(`<tr><td colspan="${3 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`);
+			tbody_month.append(
+				`<tr><td colspan="${3 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
+			);
 		} else {
 			summary_list.forEach((row, idx) => {
 				g_total_net += row.total;
-				let cells = months.map((m) => {
-					let val = row.months[m.key] || 0;
-					total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
-					return `<td class="col-amt" style="text-align: right;">${format_currency(val / 1000000, "INR")} M</td>`;
-				}).join("");
+				let cells = months
+					.map((m) => {
+						let val = row.months[m.key] || 0;
+						total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
+						return `<td class="col-amt" style="text-align: right;">${format_currency(val / 1000000, "INR")} M</td>`;
+					})
+					.join("");
 
 				tbody_month.append(`
 					<tr>
@@ -591,34 +633,35 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 				<tr class="sticky-total">
 					<td class="col-sno">-</td>
 					<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL</td>
-					${months.map(m => `<td class="col-amt" style="text-align: right;">${format_currency((total_month_amts[m.key] || 0) / 1000000, "INR")} M</td>`).join("")}
+					${months.map((m) => `<td class="col-amt" style="text-align: right;">${format_currency((total_month_amts[m.key] || 0) / 1000000, "INR")} M</td>`).join("")}
 					<td class="col-amt" style="position: sticky; right: 0; background: #f0f4ff !important; z-index: 80; text-align: right; border-left: 1px solid #e2e8f0;">${format_currency(g_total_net / 1000000, "INR")} M</td>
 				</tr>
 			`);
 		}
 
 		let tbody_list = tables_container.find("#po_list_body");
-        tbody_list.empty();
+		tbody_list.empty();
 
-        let total_amt = 0;
+		let total_amt = 0;
 
-        data.results.forEach((row, idx) => {
-            let status_color = "gray";
-            if (["Completed", "Closed"].includes(row.status)) status_color = "green";
-            if (["Draft"].includes(row.status)) status_color = "blue";
-            if (["To Receive", "To Bill", "To Receive and Bill"].includes(row.status)) status_color = "orange";
-            if (["Cancelled"].includes(row.status)) status_color = "red";
+		data.results.forEach((row, idx) => {
+			let status_color = "gray";
+			if (["Completed", "Closed"].includes(row.status)) status_color = "green";
+			if (["Draft"].includes(row.status)) status_color = "blue";
+			if (["To Receive", "To Bill", "To Receive and Bill"].includes(row.status))
+				status_color = "orange";
+			if (["Cancelled"].includes(row.status)) status_color = "red";
 
-            let amt = flt(row.net_total);
-            total_amt += amt;
+			let amt = flt(row.net_total);
+			total_amt += amt;
 
-            tbody_list.append(`
+			tbody_list.append(`
                 <tr>
                     <td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
                     <td class="col-po"><a href="/app/purchase-order/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
                     <td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
-                    <td class="col-date" style="${row.is_overdue ? 'color: red; font-weight: 600;' : ''}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
+                    <td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.supplier_agreed_time) || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.delivery_time_as_per_po) || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
@@ -626,49 +669,55 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                     <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency(amt / 1000000, "INR")} M</td>
                 </tr>
             `);
-        });
+		});
 
-        let tfoot_list = $('<tfoot id="po_list_tfoot"></tfoot>').appendTo(tables_html.find(".dashboard-table"));
-        tfoot_list.append(`
+		let tfoot_list = $('<tfoot id="po_list_tfoot"></tfoot>').appendTo(
+			tables_html.find(".dashboard-table"),
+		);
+		tfoot_list.append(`
             <tr class="sticky-total">
                 <td colspan="9" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
                 <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0;">${format_currency(total_amt / 1000000, "INR")} M</td>
             </tr>
         `);
 
-        const export_to_excel = (export_type = "all") => {
-            let filters = page.filter_group.get_values();
-            frappe.call({
-                method: "renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.export_to_excel",
-                args: { filters: filters, export_type: export_type },
-                callback: function (r) {
-                    if (r.message) {
-                        const { filename, filecontent } = r.message;
-                        const byteCharacters = atob(filecontent);
-                        const byteNumbers = new Array(byteCharacters.length);
-                        for (let i = 0; i < byteCharacters.length; i++) {
-                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                        }
-                        const byteArray = new Uint8Array(byteNumbers);
-                        const blob = new Blob([byteArray], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-                        const link = document.createElement("a");
-                        link.href = URL.createObjectURL(blob);
-                        link.download = filename;
-                        link.click();
-                    }
-                }
-            });
-        };
+		const export_to_excel = (export_type = "all") => {
+			let filters = page.filter_group.get_values();
+			frappe.call({
+				method: "renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.export_to_excel",
+				args: { filters: filters, export_type: export_type },
+				callback: function (r) {
+					if (r.message) {
+						const { filename, filecontent } = r.message;
+						const byteCharacters = atob(filecontent);
+						const byteNumbers = new Array(byteCharacters.length);
+						for (let i = 0; i < byteCharacters.length; i++) {
+							byteNumbers[i] = byteCharacters.charCodeAt(i);
+						}
+						const byteArray = new Uint8Array(byteNumbers);
+						const blob = new Blob([byteArray], {
+							type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+						});
+						const link = document.createElement("a");
+						link.href = URL.createObjectURL(blob);
+						link.download = filename;
+						link.click();
+					}
+				},
+			});
+		};
 
-        const export_to_pdf = async () => {
-            const report_date = frappe.datetime.now_datetime();
-            
-            const get_chart_png = (id) => {
+		const export_to_pdf = async () => {
+			const report_date = frappe.datetime.now_datetime();
+
+			const get_chart_png = (id) => {
 				const svg_el = document.querySelector(`#wrapper_${id} svg`);
 				if (!svg_el) return null;
-                const clone = svg_el.cloneNode(true);
-                const internal_legend = clone.querySelector('.chart-legend, .legend, .frappe-chart-legend');
-                if (internal_legend) internal_legend.style.display = 'none';
+				const clone = svg_el.cloneNode(true);
+				const internal_legend = clone.querySelector(
+					".chart-legend, .legend, .frappe-chart-legend",
+				);
+				if (internal_legend) internal_legend.style.display = "none";
 				const canvas = document.createElement("canvas");
 				const context = canvas.getContext("2d");
 				const svg_data = new XMLSerializer().serializeToString(clone);
@@ -682,30 +731,37 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						context.drawImage(img, 0, 0, canvas.width, canvas.height);
 						resolve(canvas.toDataURL("image/png"));
 					};
-					img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
+					img.src =
+						"data:image/svg+xml;base64," +
+						btoa(unescape(encodeURIComponent(svg_data)));
 				});
 			};
 
 			const [png1, png2] = await Promise.all([
 				get_chart_png("top_10_suppliers"),
-				get_chart_png("order_status")
+				get_chart_png("order_status"),
 			]);
 
-			const chart_h = (src, title) => src ? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>` : "";
-			
-            const chart_l = (chart_id) => {
-                const c_obj = data.charts[chart_id];
-                if (!c_obj || !c_obj.data.labels.length) return "";
-                const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-                let is_currency = c_obj.is_currency || false;
-                
-                let legend_html = '<div class="pdf-legend">';
-                c_obj.data.labels.forEach((l, i) => {
-                    const val = c_obj.data.datasets[0].values[i];
-                    const color = c_obj.colors[i % c_obj.colors.length];
-                    const share = ((val / total_val) * 100).toFixed(1);
-                    const val_str = is_currency ? format_currency(val / 1000000, "INR") + " M" : val;
-                    legend_html += `
+			const chart_h = (src, title) =>
+				src
+					? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>`
+					: "";
+
+			const chart_l = (chart_id) => {
+				const c_obj = data.charts[chart_id];
+				if (!c_obj || !c_obj.data.labels.length) return "";
+				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+				let is_currency = c_obj.is_currency || false;
+
+				let legend_html = '<div class="pdf-legend">';
+				c_obj.data.labels.forEach((l, i) => {
+					const val = c_obj.data.datasets[0].values[i];
+					const color = c_obj.colors[i % c_obj.colors.length];
+					const share = ((val / total_val) * 100).toFixed(1);
+					const val_str = is_currency
+						? format_currency(val / 1000000, "INR") + " M"
+						: val;
+					legend_html += `
                         <div class="pdf-legend-item">
                             <span class="pdf-dot" style="background: ${color}"></span>
                             <div class="pdf-legend-info">
@@ -714,26 +770,30 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                             </div>
                         </div>
                     `;
-                });
-                legend_html += '</div>';
-                return legend_html;
-            };
+				});
+				legend_html += "</div>";
+				return legend_html;
+			};
 
-            const chart_t = (chart_id, title) => {
+			const chart_t = (chart_id, title) => {
 				const c_obj = data.charts[chart_id];
 				if (!c_obj || !c_obj.data.labels.length) return "";
 				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-                let is_currency = c_obj.is_currency || false;
-				let rows = c_obj.data.labels.map((l, i) => {
+				let is_currency = c_obj.is_currency || false;
+				let rows = c_obj.data.labels
+					.map((l, i) => {
 						const val = c_obj.data.datasets[0].values[i];
 						const share = ((val / total_val) * 100).toFixed(1);
-                        const val_str = is_currency ? format_currency(val / 1000000, "INR") + " M" : val;
+						const val_str = is_currency
+							? format_currency(val / 1000000, "INR") + " M"
+							: val;
 						return `<tr><td style="text-align:center;">${i + 1}</td><td>${l}</td><td style="text-align:right;">${val_str}</td><td style="text-align:right;">${share}%</td></tr>`;
-					}).join("");
+					})
+					.join("");
 				return `<div style="margin-top:10px; page-break-inside: avoid;"><table style="width:80%; margin: 10px auto; border-collapse: collapse; font-size: 10px; border: 1px solid #eee;"><thead><tr style="background: #f8f9fa;"><th style="width: 40px; text-align:center; border-bottom:2px solid #3b82f6;">S.No.</th><th style="text-align:left; border-bottom:2px solid #3b82f6;">${title}</th><th style="width: 120px; text-align:right; border-bottom:2px solid #3b82f6;">Value</th><th style="width: 80px; text-align:right; border-bottom:2px solid #3b82f6;">Share %</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 			};
 
-            const html = `
+			const html = `
                 <html>
                 <head>
                     <style>
@@ -784,12 +844,16 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                     </div>
 
                     <div class="kpi-wrapper">
-                        ${data.summary.map(m => `
+                        ${data.summary
+							.map(
+								(m) => `
                             <div class="kpi-card">
                                 <div class="kpi-label">${m.label}</div>
-                                <div class="kpi-value">${m.fieldtype === 'Currency' ? format_currency(m.value / 1000000, "INR") + " M" : m.value}</div>
+                                <div class="kpi-value">${m.fieldtype === "Currency" ? format_currency(m.value / 1000000, "INR") + " M" : m.value}</div>
                             </div>
-                        `).join("")}
+                        `,
+							)
+							.join("")}
                     </div>
 
                     <h3>Visual Analytics</h3>
@@ -820,22 +884,24 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                 </html>
             `;
 
-            const method_url = "/api/method/renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.export_to_pdf";
-            const $form = $(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
+			const method_url =
+				"/api/method/renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.export_to_pdf";
+			const $form =
+				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
                 <input type="hidden" name="html" value="">
                 <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
             </form>`).appendTo("body");
 
-            $form.find('input[name="html"]').val(html);
-            $form.submit();
-            $form.remove();
-        };
+			$form.find('input[name="html"]').val(html);
+			$form.submit();
+			$form.remove();
+		};
 
-        tables_html.find("#export_month_table").on("click", () => export_to_excel("summary"));
-        tables_html.find("#export_list_table").on("click", () => export_to_excel("detail"));
+		tables_html.find("#export_month_table").on("click", () => export_to_excel("summary"));
+		tables_html.find("#export_list_table").on("click", () => export_to_excel("detail"));
 
-        page.add_menu_item(__("Export to PDF"), export_to_pdf);
-        page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
+		page.add_menu_item(__("Export to PDF"), export_to_pdf);
+		page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 	}
 
 	page.refresh();
