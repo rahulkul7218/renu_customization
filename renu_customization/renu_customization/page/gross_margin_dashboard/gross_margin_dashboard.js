@@ -298,13 +298,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
     </style>`).appendTo(page.main);
 
 	function format_currency_short(num, fieldtype) {
-		if (!num && num !== 0) return fieldtype === "Percent" ? "0.00%" : "₹ 0.00 M";
+		if (!num && num !== 0) return fieldtype === "Percent" ? "0.00%" : "₹ 0.0000 M";
 		if (fieldtype === "Percent") return flt(num).toFixed(2) + "%";
 		return (
 			"₹ " +
 			(flt(num) / 1000000).toLocaleString("en-US", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
+				minimumFractionDigits: 4,
+				maximumFractionDigits: 4,
 			}) +
 			" M"
 		);
@@ -371,8 +371,8 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						formatTooltipY: (d) =>
 							"₹ " +
 							flt(d).toLocaleString("en-US", {
-								minimumFractionDigits: 2,
-								maximumFractionDigits: 2,
+								minimumFractionDigits: 4,
+								maximumFractionDigits: 4,
 							}) +
 							" M",
 					},
@@ -401,7 +401,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 <span class="dot" style="background: ${chart_obj.colors[idx % chart_obj.colors.length]}"></span>
                                 <div class="info">
                                     <span class="label">${display_label}</span>
-                                    <span class="val">₹ ${flt(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M (${share})</span>
+                                    <span class="val">₹ ${flt(val).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M (${share})</span>
                                 </div>
                             </div>
                         `).appendTo(legend_container);

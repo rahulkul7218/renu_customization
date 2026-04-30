@@ -176,7 +176,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = s.get('value')
             if s.get('fieldtype') == 'Currency':
                 cell_v = ws_overview.cell(row=r+1, column=c, value=flt(val) / 1000000)
-                cell_v.number_format = '"₹ "#,##0.00" M"'
+                cell_v.number_format = '"₹ "#,##0.0000" M"'
             else:
                 cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
@@ -205,7 +205,7 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=6, value=row['type']).border = table_border
             
             amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['outstanding_amount']) / 1000000)
-            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00" M"', table_border
+            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.0000" M"', table_border
             
             ws_list.cell(row=row_idx, column=8, value=row['due_date']).border = table_border
             ws_list.cell(row=row_idx, column=9, value=row['days_overdue']).border = table_border
@@ -224,7 +224,7 @@ def export_to_excel(filters=None, export_type="all"):
         total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
         total_cell.font = header_font
         total_cell.fill = header_fill
-        total_cell.number_format, total_cell.border = '"₹ "#,##0.00" M"', table_border
+        total_cell.number_format, total_cell.border = '"₹ "#,##0.0000" M"', table_border
         
         ws_list.cell(row=row_idx, column=8, value="").fill = header_fill
         ws_list.cell(row=row_idx, column=8, value="").border = table_border

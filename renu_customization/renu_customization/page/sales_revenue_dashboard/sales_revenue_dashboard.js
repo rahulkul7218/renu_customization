@@ -634,7 +634,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		}
 
 		function format_currency_short(num, fieldtype) {
-			if (!num && num !== 0) return "₹ 0.00 M";
+			if (!num && num !== 0) return "₹ 0.0000 M";
 			if (fieldtype === "Int") return num;
 
 			// Convert to Million INR
@@ -643,8 +643,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			return (
 				"₹ " +
 				value.toLocaleString("en-US", {
-					minimumFractionDigits: 2,
-					maximumFractionDigits: 2,
+					minimumFractionDigits: 4,
+					maximumFractionDigits: 4,
 				}) +
 				" M"
 			);

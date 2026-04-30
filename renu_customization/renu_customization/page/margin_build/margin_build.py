@@ -193,7 +193,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = s.get('value')
             if s.get('fieldtype') == 'Currency':
                 cell_v = ws_overview.cell(row=r+1, column=c, value=flt(val) / 1000000)
-                cell_v.number_format = '"₹ "#,##0.00" M"'
+                cell_v.number_format = '"₹ "#,##0.0000" M"'
             else:
                 cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
@@ -220,13 +220,13 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=5, value=row['type']).border = table_border
             
             rev_cell = ws_list.cell(row=row_idx, column=6, value=flt(row['revenue']) / 1000000)
-            rev_cell.number_format, rev_cell.border = '"₹ "#,##0.00" M"', table_border
+            rev_cell.number_format, rev_cell.border = '"₹ "#,##0.0000" M"', table_border
             
             cogs_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['cogs']) / 1000000)
-            cogs_cell.number_format, cogs_cell.border = '"₹ "#,##0.00" M"', table_border
+            cogs_cell.number_format, cogs_cell.border = '"₹ "#,##0.0000" M"', table_border
             
             margin_cell = ws_list.cell(row=row_idx, column=8, value=flt(row['margin']) / 1000000)
-            margin_cell.number_format, margin_cell.border = '"₹ "#,##0.00" M"', table_border
+            margin_cell.number_format, margin_cell.border = '"₹ "#,##0.0000" M"', table_border
             
             row_idx += 1
     
@@ -239,17 +239,17 @@ def export_to_excel(filters=None, export_type="all"):
             
         total_rev = sum(flt(row['revenue']) for row in data) / 1000000
         c_rev = ws_list.cell(row=row_idx, column=6, value=total_rev)
-        c_rev.number_format, c_rev.font, c_rev.fill, c_rev.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
+        c_rev.number_format, c_rev.font, c_rev.fill, c_rev.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
         c_rev.alignment = Alignment(horizontal="right")
         
         total_cogs = sum(flt(row['cogs']) for row in data) / 1000000
         c_cogs = ws_list.cell(row=row_idx, column=7, value=total_cogs)
-        c_cogs.number_format, c_cogs.font, c_cogs.fill, c_cogs.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
+        c_cogs.number_format, c_cogs.font, c_cogs.fill, c_cogs.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
         c_cogs.alignment = Alignment(horizontal="right")
         
         total_margin = sum(flt(row['margin']) for row in data) / 1000000
         c_margin = ws_list.cell(row=row_idx, column=8, value=total_margin)
-        c_margin.number_format, c_margin.font, c_margin.fill, c_margin.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
+        c_margin.number_format, c_margin.font, c_margin.fill, c_margin.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
         c_margin.alignment = Alignment(horizontal="right")
 
     # Remove dummy if detail only

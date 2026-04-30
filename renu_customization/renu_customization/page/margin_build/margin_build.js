@@ -624,15 +624,15 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 	}
 
 	function format_currency(v) {
-		if (!v && v !== 0) return "₹ 0.00 M";
+		if (!v && v !== 0) return "₹ 0.0000 M";
 
 		let value = flt(v) / 1000000;
 
 		return (
 			"₹ " +
 			value.toLocaleString("en-US", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
+				minimumFractionDigits: 4,
+				maximumFractionDigits: 4,
 			}) +
 			" M"
 		);

@@ -1077,13 +1077,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 };
 
 function format_currency_short(num) {
-	if (!num && num !== 0) return "₹ 0.00 M";
+	if (!num && num !== 0) return "₹ 0.0000 M";
 	let value = flt(num) / 1000000;
 	return (
 		"₹ " +
-		value.toLocaleString("en-IN", {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2,
+		value.toLocaleString("en-US", {
+			minimumFractionDigits: 4,
+			maximumFractionDigits: 4,
 		}) +
 		" M"
 	);

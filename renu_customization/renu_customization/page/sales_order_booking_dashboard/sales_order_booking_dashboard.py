@@ -372,7 +372,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = flt(s.get('value')) / 1000000
             cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
-            cell_v.number_format = '"₹ "#,##0.00" M"'
+            cell_v.number_format = '"₹ "#,##0.0000" M"'
             cell_v.alignment = Alignment(horizontal="center")
             cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
@@ -400,7 +400,7 @@ def export_to_excel(filters=None, export_type="all"):
             for i in range(len(labels)):
                 ws_overview.cell(row=row_idx, column=1, value=labels[i]).border = table_border
                 v_cell = ws_overview.cell(row=row_idx, column=2, value=flt(values[i])/1000000)
-                v_cell.number_format = '"₹ "#,##0.00" M"'
+                v_cell.number_format = '"₹ "#,##0.0000" M"'
                 v_cell.border = table_border
                 s_cell = ws_overview.cell(row=row_idx, column=3, value=values[i]/total_v)
                 s_cell.number_format = "0.0%"
@@ -449,16 +449,16 @@ def export_to_excel(filters=None, export_type="all"):
             col_idx = 5
             for m_key in sorted_months:
                 c = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["months"].get(m_key, 0))/1000000)
-                c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
+                c.number_format, c.border = '"₹ "#,##0.0000" M"', table_border
                 col_idx += 1
             c_n = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
-            c_n.number_format = '"₹ "#,##0.00" M"'
+            c_n.number_format = '"₹ "#,##0.0000" M"'
             c_n.font = Font(bold=True)
             c_n.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_n.border = table_border
             col_idx += 1
             c_g = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total_gross"])/1000000)
-            c_g.number_format = '"₹ "#,##0.00" M"'
+            c_g.number_format = '"₹ "#,##0.0000" M"'
             c_g.font = Font(bold=True)
             c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid")
             c_g.border = table_border
@@ -484,13 +484,13 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx = 5
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
-            c.number_format = '"₹ "#,##0.00" M"'
+            c.number_format = '"₹ "#,##0.0000" M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
             col_idx += 1
         c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-        c_gn.number_format = '"₹ "#,##0.00" M"'
+        c_gn.number_format = '"₹ "#,##0.0000" M"'
         c_gn.font = header_font
         c_gn.fill = header_fill
         c_gn.border = table_border
@@ -509,7 +509,7 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx = 5
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_gross.get(m_key, 0))/1000000)
-            c.number_format = '"₹ "#,##0.00" M"'
+            c.number_format = '"₹ "#,##0.0000" M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
@@ -520,7 +520,7 @@ def export_to_excel(filters=None, export_type="all"):
         c_sep2.border = table_border
         col_idx += 1
         c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
-        c_gg.number_format = '"₹ "#,##0.00" M"'
+        c_gg.number_format = '"₹ "#,##0.0000" M"'
         c_gg.font = header_font
         c_gg.fill = header_fill
         c_gg.border = table_border
@@ -559,7 +559,7 @@ def export_to_excel(filters=None, export_type="all"):
                 if isinstance(val, (int, float)):
                     if fname == "total_net_amount_(inr)":
                         val /= 1000000
-                        cell.number_format = '"₹ "#,##0.00" M"'
+                        cell.number_format = '"₹ "#,##0.0000" M"'
                         total_list_amt += flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
                     cell.value, cell.alignment = val, Alignment(horizontal="right")
                 else:
@@ -574,7 +574,7 @@ def export_to_excel(filters=None, export_type="all"):
         c_tot = ws_list.cell(row=row_idx, column=9, value=total_list_amt / 1000000)
         c_tot.font = header_font
         c_tot.fill = header_fill
-        c_tot.number_format = '"₹ "#,##0.00" M"'
+        c_tot.number_format = '"₹ "#,##0.0000" M"'
         c_tot.alignment = Alignment(horizontal="right")
         c_tot.border = table_border
 

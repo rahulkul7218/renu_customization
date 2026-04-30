@@ -165,7 +165,7 @@ def export_to_excel(filters=None, export_type="all"):
             
             cell_v = ws_overview.cell(row=r+1, column=c, value=flt(s.get('value')) / 1000000)
             cell_v.font = Font(bold=True, size=11)
-            cell_v.number_format = '"₹ "#,##0.00" M"'
+            cell_v.number_format = '"₹ "#,##0.0000" M"'
             cell_v.alignment = Alignment(horizontal="center")
             cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
@@ -190,7 +190,7 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=5, value=row['sales_person']).border = table_border
             
             amt_cell = ws_list.cell(row=row_idx, column=6, value=flt(row['base_grand_total']) / 1000000)
-            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00" M"', table_border
+            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.0000" M"', table_border
             
             ws_list.cell(row=row_idx, column=7, value="Export" if row['is_export'] else "Domestic").border = table_border
             ws_list.cell(row=row_idx, column=8, value=row['status']).border = table_border
@@ -209,7 +209,7 @@ def export_to_excel(filters=None, export_type="all"):
         total_cell = ws_list.cell(row=row_idx, column=6, value=total_amt)
         total_cell.font = header_font
         total_cell.fill = header_fill
-        total_cell.number_format, total_cell.border = '"₹ "#,##0.00" M"', table_border
+        total_cell.number_format, total_cell.border = '"₹ "#,##0.0000" M"', table_border
         
         ws_list.cell(row=row_idx, column=7, value="").fill = header_fill
         ws_list.cell(row=row_idx, column=7, value="").border = table_border

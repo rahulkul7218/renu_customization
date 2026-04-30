@@ -357,7 +357,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = flt(s.get('value'))
             if s.get('fieldtype') == 'Currency':
                 val = val / 1000000
-                fmt = '"₹ "#,##0.00" M"'
+                fmt = '"₹ "#,##0.0000" M"'
             else:
                 fmt = '0.00"%"'
                 
@@ -399,7 +399,7 @@ def export_to_excel(filters=None, export_type="all"):
                 
                 val_m = flt(values[i]) / 1000000
                 c2 = ws_overview.cell(row=row_idx, column=2, value=val_m)
-                c2.number_format = '"₹ "#,##0.00" M"'
+                c2.number_format = '"₹ "#,##0.0000" M"'
                 c2.border = table_border
                 c2.alignment = Alignment(horizontal="right")
                 if row_fill: c2.fill = row_fill
@@ -470,13 +470,13 @@ def export_to_excel(filters=None, export_type="all"):
             for m_key in sorted_months:
                 v_m = flt(row["months"].get(m_key, 0)) / 1000000
                 c = ws2.cell(row=row_idx, column=col_idx, value=v_m)
-                c.number_format = '"₹ "#,##0.00" M"'; c.border = table_border; c.alignment = Alignment(horizontal="right")
+                c.number_format = '"₹ "#,##0.0000" M"'; c.border = table_border; c.alignment = Alignment(horizontal="right")
                 if row_fill: c.fill = row_fill
                 col_idx += 1
                 
             tot_m = flt(row["total"]) / 1000000
             c_tot = ws2.cell(row=row_idx, column=col_idx, value=tot_m)
-            c_tot.number_format = '"₹ "#,##0.00" M"'
+            c_tot.number_format = '"₹ "#,##0.0000" M"'
             c_tot.font = Font(bold=True)
             c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_tot.border = table_border
@@ -498,7 +498,7 @@ def export_to_excel(filters=None, export_type="all"):
         for m_key in sorted_months:
             total_m = sum(flt(row["months"].get(m_key, 0)) for row in merged_data.values()) / 1000000
             c = ws2.cell(row=row_idx, column=col_idx, value=total_m)
-            c.number_format = '"₹ "#,##0.00" M"'
+            c.number_format = '"₹ "#,##0.0000" M"'
             c.font = Font(bold=True)
             c.fill = header_fill
             c.font = header_font
@@ -508,7 +508,7 @@ def export_to_excel(filters=None, export_type="all"):
             
         grand_total = sum(flt(row["total"]) for row in merged_data.values()) / 1000000
         c_tot = ws2.cell(row=row_idx, column=col_idx, value=grand_total)
-        c_tot.number_format = '"₹ "#,##0.00" M"'
+        c_tot.number_format = '"₹ "#,##0.0000" M"'
         c_tot.font = Font(bold=True, color="FFFFFF")
         c_tot.fill = header_fill
         c_tot.border = table_border
@@ -552,7 +552,7 @@ def export_to_excel(filters=None, export_type="all"):
                 
                 if fname in ["base_amount", "cogs", "margin"]:
                     num_val = flt(val or 0) / 1000000
-                    cell.number_format = '"₹ "#,##0.00" M"'
+                    cell.number_format = '"₹ "#,##0.0000" M"'
                     cell.value = num_val; cell.alignment = Alignment(horizontal="right")
                 elif fname == "margin_pct":
                     cell.value = flt(val or 0)
@@ -582,17 +582,17 @@ def export_to_excel(filters=None, export_type="all"):
         total_rev = sum(flt(row.get("base_amount") or 0) for row in data) / 1000000
         c_rev = ws3.cell(row=row_idx, column=7, value=total_rev)
         c_rev.font = header_font; c_rev.fill = header_fill; c_rev.border = table_border; c_rev.alignment = Alignment(horizontal="right")
-        c_rev.number_format = '"₹ "#,##0.00" M"'
+        c_rev.number_format = '"₹ "#,##0.0000" M"'
         
         total_cogs = sum(flt(row.get("cogs") or 0) for row in data) / 1000000
         c_cogs = ws3.cell(row=row_idx, column=8, value=total_cogs)
         c_cogs.font = header_font; c_cogs.fill = header_fill; c_cogs.border = table_border; c_cogs.alignment = Alignment(horizontal="right")
-        c_cogs.number_format = '"₹ "#,##0.00" M"'
+        c_cogs.number_format = '"₹ "#,##0.0000" M"'
     
         total_margin = sum(flt(row.get("margin") or 0) for row in data) / 1000000
         c_margin = ws3.cell(row=row_idx, column=9, value=total_margin)
         c_margin.font = header_font; c_margin.fill = header_fill; c_margin.border = table_border; c_margin.alignment = Alignment(horizontal="right")
-        c_margin.number_format = '"₹ "#,##0.00" M"'
+        c_margin.number_format = '"₹ "#,##0.0000" M"'
     
         avg_margin_pct = (total_margin / total_rev * 100) if total_rev else 0
         c_margin_pct = ws3.cell(row=row_idx, column=10, value=avg_margin_pct)
