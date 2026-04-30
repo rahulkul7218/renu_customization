@@ -367,7 +367,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .col-customer { width: 180px !important; min-width: 180px !important; }
         .col-sp { width: 130px !important; min-width: 130px !important; }
         .col-prod { width: 200px !important; min-width: 200px !important; }
-        .col-amt { width: 120px !important; min-width: 120px !important; text-align: right !important; }
+        .col-amt { width: 110px !important; min-width: 110px !important; text-align: right !important; }
         .col-qty { width: 80px !important; min-width: 80px !important; text-align: right !important; }
         .col-date { width: 100px !important; min-width: 100px !important; }
         .col-id { width: 140px !important; min-width: 140px !important; }
@@ -375,17 +375,17 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
         /* Total Columns (Right Sticky) */
         .total-net-col { 
-            position: sticky !important; right: 180px; z-index: 25; 
+            position: sticky !important; right: 130px; z-index: 25; 
             background: #f8fafc !important; font-weight: 700; 
             text-align: right !important; border-left: 2px solid #cbd5e1;
-            width: 180px !important; min-width: 180px !important;
+            width: 130px !important; min-width: 130px !important;
         }
         .grand-total-col { 
             position: sticky !important; right: 0; z-index: 25; 
             background: #f0f4ff !important; font-weight: 800; 
             text-align: right !important; border-left: 1px solid #e2e8f0;
             color: #4338ca !important;
-            width: 180px !important; min-width: 180px !important;
+            width: 130px !important; min-width: 130px !important;
         }
         
         .dashboard-table th.total-net-col, .dashboard-table th.grand-total-col { z-index: 60 !important; background: #f1f3f5 !important; }

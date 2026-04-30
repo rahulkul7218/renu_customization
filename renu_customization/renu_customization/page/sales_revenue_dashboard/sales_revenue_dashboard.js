@@ -824,7 +824,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 150px;">Item</th>
                                 <th style="min-width: 130px;">Sales Person</th>
                                 <th style="text-align: right; min-width: 80px;">Qty</th>
-                                <th style="text-align: right; min-width: 130px; border-right: none;">Amount (M)</th>
+                                <th style="text-align: right; min-width: 130px; border-right: none;">Amount (Net)</th>
                             </tr>
                         </thead>
                         <tbody id="invoice_table_body"></tbody>
@@ -871,7 +871,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			// 1. Group & Render Summary Table
 			let merged_data = {};
 			results.forEach((row) => {
-				let sp = row.sales_person || "No Sales Person";
+				let sp = row.sales_person || "-";
 				let cust = row.customer_name || row.customer || "-";
 				let prod = row.item_code || "-";
 				let prod_name = row.item_name || "";
