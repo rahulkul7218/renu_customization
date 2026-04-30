@@ -166,7 +166,7 @@ def get_dashboard_data(filters=None):
                 "labels": [x[0] for x in top_10_suppliers],
                 "datasets": [{"name": "Amount", "values": [x[1] for x in top_10_suppliers]}]
             },
-            "type": "bar",
+            "type": "donut",
             "colors": ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#06b6d4", "#ef4444", "#6366f1", "#ec4899", "#84cc16", "#f97316"],
             "is_currency": True
         },
