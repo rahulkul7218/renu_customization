@@ -1,7 +1,7 @@
 frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Sales Order Booking Dashboard (Million INR)"),
+		title: __("Sales Order Booking Dashboard"),
 		single_column: true,
 	});
 
@@ -366,26 +366,32 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .col-sno { width: 40px !important; min-width: 40px !important; text-align: center !important; }
         .col-customer { width: 180px !important; min-width: 180px !important; }
         .col-sp { width: 130px !important; min-width: 130px !important; }
-        .col-prod { width: 200px !important; min-width: 200px !important; }
-        .col-amt { width: 110px !important; min-width: 110px !important; text-align: right !important; }
+        .col-prod { width: 320px !important; min-width: 320px !important; }
+        .col-amt { 
+            width: 130px !important; min-width: 130px !important; 
+            text-align: right !important; 
+            white-space: nowrap !important;
+        }
         .col-qty { width: 80px !important; min-width: 80px !important; text-align: right !important; }
-        .col-date { width: 100px !important; min-width: 100px !important; }
+        .col-date { width: 120px !important; min-width: 120px !important; }
         .col-id { width: 140px !important; min-width: 140px !important; }
         .col-status { width: 120px !important; min-width: 120px !important; }
 
         /* Total Columns (Right Sticky) */
         .total-net-col { 
-            position: sticky !important; right: 130px; z-index: 25; 
+            position: sticky !important; right: 150px; z-index: 25; 
             background: #f8fafc !important; font-weight: 700; 
             text-align: right !important; border-left: 2px solid #cbd5e1;
-            width: 130px !important; min-width: 130px !important;
+            width: 150px !important; min-width: 150px !important;
+            white-space: nowrap !important;
         }
         .grand-total-col { 
             position: sticky !important; right: 0; z-index: 25; 
             background: #f0f4ff !important; font-weight: 800; 
             text-align: right !important; border-left: 1px solid #e2e8f0;
             color: #4338ca !important;
-            width: 130px !important; min-width: 130px !important;
+            width: 150px !important; min-width: 150px !important;
+            white-space: nowrap !important;
         }
         
         .dashboard-table th.total-net-col, .dashboard-table th.grand-total-col { z-index: 60 !important; background: #f1f3f5 !important; }
@@ -599,13 +605,22 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			filtered_data.forEach((row) => {
 				let sp = row.sales_person || "-";
 				let cust = row.customer_name || "-";
-				let prod = row.item_name || row.item_code || "-";
+				let item_code = row.item_code || "-";
+				let item_name = row.item_name || "-";
 				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
 				let g_amt = flt(row.gross_total || amt);
 				let m_key = moment(row.so_date).format("MMM YYYY");
-				let key = sp + "|" + cust + "|" + prod;
+				let key = sp + "|" + cust + "|" + item_code;
 				if (!merged_data[key])
-					merged_data[key] = { sp, cust, prod, months: {}, total: 0, total_gross: 0 };
+					merged_data[key] = {
+						sp,
+						cust,
+						item_code,
+						item_name,
+						months: {},
+						total: 0,
+						total_gross: 0,
+					};
 				merged_data[key].months[m_key] = (merged_data[key].months[m_key] || 0) + amt;
 				merged_data[key].total += amt;
 				merged_data[key].total_gross += g_amt;
@@ -638,7 +653,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
                             <td class="col-customer" style="font-weight: 600; color: #0f172a;">${row.cust}</td>
                             <td class="col-sp">${row.sp}</td>
-                            <td class="col-prod" style="font-size: 12px; color: #64748b;">${row.prod}</td>
+                            <td class="col-prod">
+                                <div style="line-height: 1.4;">
+                                    <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code}</div>
+                                    <div style="font-weight: 600; color: #1e293b;">${row.item_name}</div>
+                                </div>
+                            </td>
                             ${cells}
                             <td class="total-net-col">${format_currency_short(row.total)}</td>
                             <td class="grand-total-col">${format_currency_short(row.total_gross)}</td>
@@ -706,8 +726,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <td class="col-id"><a href="/app/sales-order/${row.so_no}" style="font-weight: 600; color: #4338ca;">${row.so_no}</a></td>
                             <td class="col-date">${frappe.datetime.str_to_user(row.so_date)}</td>
                             <td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
-                            <td class="col-customer" style="font-weight: 500;">${row.customer_name}</td>
-                            <td class="col-prod" style="font-size: 12.5px;">${row.item_code}</td>
+                             <td class="col-customer" style="font-weight: 500;">${row.customer_name}</td>
+                            <td class="col-prod">
+                                <div style="line-height: 1.4;">
+                                    <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code || "-"}</div>
+                                    <div style="font-weight: 600; color: #1e293b;">${row.item_name || "-"}</div>
+                                </div>
+                            </td>
                             <td class="col-sp">${row.sales_person || "-"}</td>
                             <td class="col-qty" style="font-weight: 600;">${frappe.format(qty, { fieldtype: "Float" })}</td>
                             <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(amt)}</td>

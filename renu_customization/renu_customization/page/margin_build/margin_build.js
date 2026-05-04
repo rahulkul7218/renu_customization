@@ -1,7 +1,7 @@
 frappe.pages["margin_build"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Margin Build (Million INR)"),
+		title: __("Margin Build"),
 		single_column: true,
 	});
 
@@ -158,6 +158,7 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
                             <th>Invoice ID</th>
                             <th>Date</th>
                             <th>Customer</th>
+                            <th>Item</th>
                             <th class="text-center">Type</th>
                             <th class="text-right">Revenue (M)</th>
                             <th class="text-right">COGS (M)</th>
@@ -172,6 +173,10 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
                                 <td>${row.name}</td>
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
                                 <td>${row.customer_name || row.customer}</td>
+                                <td>
+                                    <div style="font-size: 8px; color: #64748b;">${row.item_code || "-"}</div>
+                                    <div style="font-weight: 700; color: #1e293b;">${row.item_name || "-"}</div>
+                                </td>
                                 <td class="text-center">${row.type}</td>
                                 <td class="text-right">${format_currency(row.revenue)}</td>
                                 <td class="text-right">${format_currency(row.cogs)}</td>
@@ -286,6 +291,12 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
                 z-index: 20; 
                 background: #f8fafc; 
             }
+            .date-col { min-width: 120px !important; width: 120px !important; white-space: nowrap !important; }
+            .item-col { min-width: 320px !important; width: 320px !important; }
+            .customer-col { min-width: 220px !important; width: 220px !important; }
+            .invoice-col { min-width: 130px !important; width: 130px !important; }
+            .type-col { min-width: 100px !important; width: 100px !important; text-align: center !important; }
+            .currency-col { min-width: 140px !important; width: 140px !important; text-align: right !important; }
 		`,
 		)
 		.appendTo("head");
@@ -569,13 +580,14 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th>${__("Invoice ID")}</th>
-                                <th>${__("Date")}</th>
-                                <th>${__("Customer")}</th>
-                                <th class="text-center">${__("Type")}</th>
-                                <th class="text-right">${__("Revenue (M)")}</th>
-                                <th class="text-right">${__("COGS (M)")}</th>
-                                <th class="text-right">${__("Margin (M)")}</th>
+                                <th class="invoice-col">${__("Invoice ID")}</th>
+                                <th class="date-col">${__("Date")}</th>
+                                <th class="customer-col">${__("Customer")}</th>
+                                <th class="item-col">${__("Item")}</th>
+                                <th class="type-col">${__("Type")}</th>
+                                <th class="text-right currency-col">${__("Revenue (M)")}</th>
+                                <th class="text-right currency-col">${__("COGS (M)")}</th>
+                                <th class="text-right currency-col">${__("Margin (M)")}</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -596,15 +608,21 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 
 			$(`
 				<tr>
-					<td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-					<td style="white-space: nowrap;">${frappe.datetime.str_to_user(row.posting_date)}</td>
-					<td style="font-weight: 500;">${row.customer_name || row.customer}</td>
-                    <td class="text-center">
+					<td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
+					<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
+					<td class="customer-col">${row.customer_name || row.customer}</td>
+					<td class="item-col">
+                        <div style="line-height: 1.4;">
+                            <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code || "-"}</div>
+                            <div style="font-weight: 600; color: #1e293b;">${row.item_name || "-"}</div>
+                        </div>
+                    </td>
+                    <td class="type-col">
                         <span class="indicator-pill ${row.type}">${__(row.type)}</span>
                     </td>
-					<td class="text-right">${format_currency(row.revenue)}</td>
-					<td class="text-right">${format_currency(row.cogs)}</td>
-					<td class="text-right" style="font-weight: 700; color: ${row.margin < 0 ? "#ef4444" : "#10b981"};">${format_currency(row.margin)}</td>
+					<td class="text-right currency-col">${format_currency(row.revenue)}</td>
+					<td class="text-right currency-col">${format_currency(row.cogs)}</td>
+					<td class="text-right currency-col" style="font-weight: 700; color: ${row.margin < 0 ? "#ef4444" : "#10b981"};">${format_currency(row.margin)}</td>
 				</tr>
 			`).appendTo(tbody);
 		});
@@ -612,7 +630,7 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 		$(`
             <tfoot>
                 <tr class="sticky-total">
-                    <td colspan="4" class="text-right" style="padding-right: 20px; color: #64748b; font-size: 11px; font-weight: 600;">GRAND TOTAL</td>
+                    <td colspan="5" class="text-right" style="padding-right: 20px; color: #64748b; font-size: 11px; font-weight: 600;">GRAND TOTAL</td>
                     <td class="text-right" style="color: #1e293b;">${format_currency(total_rev)}</td>
                     <td class="text-right" style="color: #1e293b;">${format_currency(total_cogs)}</td>
                     <td class="text-right" style="color: ${total_margin < 0 ? "#ef4444" : "#4338ca"}; font-weight: 800;">${format_currency(total_margin)}</td>

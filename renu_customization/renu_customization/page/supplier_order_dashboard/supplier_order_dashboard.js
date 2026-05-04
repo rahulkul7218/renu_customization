@@ -1,7 +1,7 @@
 frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Supplier Order Dashboard (Million INR)"),
+		title: __("Supplier Order Dashboard "),
 		single_column: true,
 	});
 
@@ -444,7 +444,14 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						legendOptions: { showLegend: false },
 						tooltipOptions: {
 							formatTooltipY: (d) =>
-								is_currency ? "₹ " + d.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + " M" : d,
+								is_currency
+									? "₹ " +
+										d.toLocaleString("en-US", {
+											minimumFractionDigits: 4,
+											maximumFractionDigits: 4,
+										}) +
+										" M"
+									: d,
 						},
 					});
 
@@ -458,7 +465,12 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						let share = ((val / total_val) * 100).toFixed(1) + "%";
 
 						let val_str = is_currency
-							? "₹ " + (val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + " M"
+							? "₹ " +
+								(val / 1000000).toLocaleString("en-US", {
+									minimumFractionDigits: 4,
+									maximumFractionDigits: 4,
+								}) +
+								" M"
 							: val;
 
 						legend_container.append(`

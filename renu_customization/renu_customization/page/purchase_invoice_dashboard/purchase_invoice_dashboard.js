@@ -1,7 +1,7 @@
 frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Purchase Invoice Dashboard (Million INR)"),
+		title: __("Purchase Invoice Dashboard"),
 		single_column: true,
 	});
 

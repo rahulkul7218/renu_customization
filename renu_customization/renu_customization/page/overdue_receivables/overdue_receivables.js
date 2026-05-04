@@ -1,7 +1,7 @@
 frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Overdue Receivables (Million INR)"),
+		title: __("Overdue Receivables"),
 		single_column: true,
 	});
 
@@ -295,6 +295,13 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                 z-index: 20; 
                 background: #f8fafc; 
             }
+            .invoice-col { min-width: 130px !important; width: 130px !important; }
+            .date-col { min-width: 120px !important; width: 120px !important; white-space: nowrap !important; }
+            .customer-col { min-width: 220px !important; width: 220px !important; }
+            .sp-col { min-width: 150px !important; width: 150px !important; }
+            .type-col { min-width: 100px !important; width: 100px !important; text-align: center !important; }
+            .amount-col { min-width: 140px !important; width: 140px !important; text-align: right !important; }
+            .overdue-col { min-width: 80px !important; width: 80px !important; text-align: right !important; }
 		`,
 		)
 		.appendTo("head");
@@ -404,7 +411,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                 
                 .custom-legend { 
                     display: grid !important; 
-                    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important; 
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; 
                     gap: 12px 24px !important; 
                     margin-top: 20px; 
                     padding: 16px !important; 
@@ -421,7 +428,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                 .legend-item .info { display: flex !important; align-items: center !important; gap: 8px !important; width: 100%; }
                 .legend-item .label { font-size: 11px !important; font-weight: 600 !important; color: #475569 !important; white-space: nowrap; }
                 .legend-item .val-pct { font-size: 10px !important; color: #94a3b8 !important; }
-                .legend-item .val-amount { font-size: 11px !important; font-weight: 700 !important; color: #1e293b !important; margin-left: auto; }
+                .legend-item .val-amount { font-size: 11px !important; font-weight: 700 !important; color: #1e293b !important; margin-left: auto; white-space: nowrap !important; }
 				
 				.table-card { 
                     background: #fff; 
@@ -573,14 +580,14 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th width="12%">${__("Invoice ID")}</th>
-                                <th width="10%">${__("Date")}</th>
-                                <th width="23%">${__("Customer")}</th>
-                                <th width="15%">${__("Sales Person")}</th>
-                                <th width="10%" class="text-center">${__("Type")}</th>
-                                <th width="15%" class="text-right" style="white-space: nowrap;">${__("Outstanding (M)")}</th>
-                                <th width="10%" class="text-right">${__("Due Date")}</th>
-                                <th width="5%" class="text-right">${__("Days")}</th>
+                                <th class="invoice-col">${__("Invoice ID")}</th>
+                                <th class="date-col">${__("Date")}</th>
+                                <th class="customer-col">${__("Customer")}</th>
+                                <th class="sp-col">${__("Sales Person")}</th>
+                                <th class="type-col">${__("Type")}</th>
+                                <th class="amount-col">${__("Outstanding (M)")}</th>
+                                <th class="date-col text-right">${__("Due Date")}</th>
+                                <th class="overdue-col">${__("Days")}</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -596,16 +603,16 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 			total_outstanding += flt(row.outstanding_amount);
 			$(`
 				<tr>
-					<td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-					<td style="white-space: nowrap;">${frappe.datetime.str_to_user(row.posting_date)}</td>
-					<td style="font-weight: 500;">${row.customer_name || row.customer}</td>
-					<td>${row.sales_person || "-"}</td>
-                    <td class="text-center">
+					<td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
+					<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
+					<td class="customer-col" style="font-weight: 500;">${row.customer_name || row.customer}</td>
+					<td class="sp-col">${row.sales_person || "-"}</td>
+                    <td class="type-col">
                         <span class="indicator-pill ${row.type}">${__(row.type)}</span>
                     </td>
-					<td class="text-right" style="font-weight: 700; color: #0f172a;">${format_currency(row.outstanding_amount)}</td>
-					<td class="text-right" style="white-space: nowrap;">${frappe.datetime.str_to_user(row.due_date)}</td>
-					<td class="text-right overdue-days">${row.days_overdue}</td>
+					<td class="amount-col" style="font-weight: 700; color: #0f172a;">${format_currency(row.outstanding_amount)}</td>
+					<td class="date-col text-right">${frappe.datetime.str_to_user(row.due_date)}</td>
+					<td class="overdue-col overdue-days">${row.days_overdue}</td>
 				</tr>
 			`).appendTo(tbody);
 		});
@@ -613,8 +620,8 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let tfoot = table_card.find("tfoot");
 		$(`
             <tr class="sticky-total">
-                <td colspan="6" class="text-right" style="padding-right: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
-                <td class="text-right" style="color: #0f172a; font-weight: 800;">${format_currency(total_outstanding)}</td>
+                <td colspan="5" class="text-right" style="padding-right: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
+                <td class="amount-col" style="color: #0f172a; font-weight: 800;">${format_currency(total_outstanding)}</td>
                 <td colspan="2"></td>
             </tr>
         `).appendTo(tfoot);

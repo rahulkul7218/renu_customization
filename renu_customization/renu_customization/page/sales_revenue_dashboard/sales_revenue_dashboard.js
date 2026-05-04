@@ -1,7 +1,7 @@
 frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Sales Revenue Dashboard (Million INR)"),
+		title: __("Sales Revenue Dashboard"),
 		single_column: true,
 	});
 
@@ -579,10 +579,16 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         #consolidated_table th:nth-child(4), #consolidated_table td:nth-child(4) { min-width: 220px !important; width: 220px !important; } /* Product */
 
         /* Specific widths for Sales Invoice Table */
-        .invoice-list-container th:nth-child(2), .invoice-list-container td:nth-child(2) { min-width: 120px !important; } /* Invoice ID */
-        .invoice-list-container th:nth-child(7), .invoice-list-container td:nth-child(7) { min-width: 180px !important; } /* Customer */
-        .invoice-list-container th:nth-child(8), .invoice-list-container td:nth-child(8) { min-width: 180px !important; } /* Item */
-        .invoice-list-container th:nth-child(9), .invoice-list-container td:nth-child(9) { min-width: 130px !important; } /* Sales Person */
+        .invoice-id-col { min-width: 130px !important; width: 130px !important; }
+        .date-col { min-width: 120px !important; width: 120px !important; white-space: nowrap !important; }
+        .type-col { min-width: 100px !important; width: 100px !important; text-align: center !important; }
+        .invoice-type-col { min-width: 180px !important; width: 180px !important; }
+        .status-col { min-width: 110px !important; width: 110px !important; }
+        .customer-col { min-width: 200px !important; width: 200px !important; }
+        .item-col { min-width: 280px !important; width: 280px !important; }
+        .sp-col { min-width: 150px !important; width: 150px !important; }
+        .qty-col { min-width: 80px !important; width: 80px !important; text-align: right !important; }
+        .amount-col { min-width: 140px !important; width: 140px !important; text-align: right !important; }
 
         /* Hide Internal Chart Legend */
         .frappe-chart .chart-legend, 
@@ -787,9 +793,9 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
-                                <th style="min-width: 180px;">Customer</th>
-                                <th style="min-width: 130px;">Sales Person</th>
-                                <th style="min-width: 220px;">Product</th>
+                                <th class="customer-col">Customer</th>
+                                <th class="sp-col">Sales Person</th>
+                                <th class="item-col">Product</th>
                                 ${months.map((m) => `<th class="month-col">${m.key}</th>`).join("")}
                                 <th class="total-col sticky-total-header net-total-col">Total (Net)</th>
                                 <th class="total-col sticky-total-header gross-total-col gross-col">Grand Total (Gross)</th>
@@ -813,19 +819,21 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                 <div class="table-container invoice-list-container">
                     <table class="dashboard-table">
                         <thead>
+                        <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
-                                <th style="min-width: 120px;">Invoice ID</th>
-                                <th style="min-width: 110px;">Date</th>
-                                <th style="min-width: 100px;">Type</th>
-                                <th style="min-width: 120px;">Invoice Type</th>
-                                <th style="min-width: 110px;">Status</th>
-                                <th style="min-width: 180px;">Customer</th>
-                                <th style="min-width: 150px;">Item</th>
-                                <th style="min-width: 130px;">Sales Person</th>
-                                <th style="text-align: right; min-width: 80px;">Qty</th>
-                                <th style="text-align: right; min-width: 130px; border-right: none;">Amount (Net)</th>
+                                <th class="invoice-id-col">Invoice ID</th>
+                                <th class="date-col">Date</th>
+                                <th class="type-col">Type</th>
+                                <th class="invoice-type-col">Invoice Type</th>
+                                <th class="status-col">Status</th>
+                                <th class="customer-col">Customer</th>
+                                <th class="item-col">Item</th>
+                                <th class="sp-col">Sales Person</th>
+                                <th class="qty-col">Qty</th>
+                                <th class="amount-col">Amount (Net)</th>
                             </tr>
+                        </thead>
                         </thead>
                         <tbody id="invoice_table_body"></tbody>
                     </table>
@@ -943,11 +951,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					tbody_summary.append(`
                         <tr>
                             <td style="text-align: center;">${idx + 1}</td>
-                            <td><div title="${row.cust}">${row.cust}</div></td>
-                            <td><div title="${row.sp}">${row.sp}</div></td>
-                            <td>
-                                <div title="${row.prod}: ${row.prod_name}">
-                                    <span class="text-muted" style="font-size: 10px;">${row.prod}</span><br>${row.prod_name}
+                            <td class="customer-col"><div title="${row.cust}">${row.cust}</div></td>
+                            <td class="sp-col"><div title="${row.sp}">${row.sp}</div></td>
+                            <td class="item-col">
+                                <div style="line-height: 1.4;">
+                                    <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.prod}</div>
+                                    <div style="font-weight: 600; color: #1e293b;">${row.prod_name}</div>
                                 </div>
                             </td>
                             ${month_cells}
@@ -1020,24 +1029,27 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					tbody_detail.append(`
                         <tr>
                             <td style="text-align: center;">${idx + 1}</td>
-                            <td>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <a href="/app/sales-invoice/${row.invoice_id}" style="color: var(--primary); font-weight: 500;">${row.invoice_id}</a>
-                                </div>
+                            <td class="invoice-id-col">
+                                <a href="/app/sales-invoice/${row.invoice_id}" style="color: var(--primary); font-weight: 500;">${row.invoice_id}</a>
                             </td>
-                            <td>${frappe.datetime.str_to_user(row.delivery_date || row.invoice_date)}</td>
-                            <td>
+                            <td class="date-col">${frappe.datetime.str_to_user(row.delivery_date || row.invoice_date)}</td>
+                            <td class="type-col">
                                 <span class="indicator-pill" style="font-size: 10px; padding: 2px 8px; border-radius: 4px; font-weight: 500; ${type_style}">
                                     ${__(row.dom_exp)}
                                 </span>
                             </td>
-                            <td>${row.invoice_type || ""}</td>
-                            <td><span class="indicator-pill ${status_color}">${row.status}</span></td>
-                            <td>${row.customer_name}</td>
-                            <td><span class="text-muted">${row.item_code}</span></td>
-                            <td>${row.sales_person || "-"}</td>
-                            <td style="text-align: right;">${frappe.format(row.qty, { fieldtype: "Float" })}</td>
-                            <td style="text-align: right; font-weight: 600;">
+                            <td class="invoice-type-col">${row.invoice_type || ""}</td>
+                            <td class="status-col"><span class="indicator-pill ${status_color}">${row.status}</span></td>
+                            <td class="customer-col">${row.customer_name}</td>
+                            <td class="item-col">
+                                <div style="line-height: 1.4;">
+                                    <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code}</div>
+                                    <div style="font-weight: 600; color: #1e293b;">${row.item_name || ""}</div>
+                                </div>
+                            </td>
+                            <td class="sp-col">${row.sales_person || "-"}</td>
+                            <td class="qty-col">${frappe.format(row.qty, { fieldtype: "Float" })}</td>
+                            <td class="amount-col" style="font-weight: 600;">
                                 ${format_currency_short(row.amt_allocated || 0)}
                             </td>
                         </tr>
@@ -1047,8 +1059,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				tbody_detail.append(`
                     <tr class="sticky-total">
                         <td colspan="9" style="text-align: right; font-weight: 700;">Total</td>
-                        <td style="text-align: right; font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
-                        <td style="text-align: right; font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
+                        <td class="qty-col" style="font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
+                        <td class="amount-col" style="font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
                     </tr>
                 `);
 			}
@@ -1326,7 +1338,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
                         .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
                         .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
+                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; white-space: nowrap; }
                         
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
@@ -1350,13 +1362,18 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         .col-prod { width: 150px; }
                         .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
                         .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
+                        
+                        .col-id { width: 130px; }
+                        .col-date { width: 120px; white-space: nowrap; }
+                        .col-invoice-type { width: 180px; }
+                        .col-item { width: 280px; }
 
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
                         .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
                         .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
                         .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
                         .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                        .pdf-legend-val { font-size: 9px; color: #64748b; }
+                        .pdf-legend-val { font-size: 9px; color: #64748b; white-space: nowrap; }
 					</style>
 				</head>
 				<body>

@@ -194,6 +194,15 @@ def get_dashboard_data(filters=None):
             row["invoice_type"] = type_map.get(inv_id)
             row["dom_exp"] = dom_exp_map.get(inv_id, "")
             
+            code = row.get('item_code')
+            name = row.get('item_name')
+            if code and name:
+                row["item"] = f"{code} {name}"
+            elif code:
+                row["item"] = code
+            else:
+                row["item"] = name or ""
+            
             data.append(row)
 
     if not data:
@@ -232,7 +241,7 @@ def get_dashboard_data(filters=None):
         cust = row.get("customer_name") or row.get("customer") or "Unknown"
         cust_margin[cust] = cust_margin.get(cust, 0) + margin
         
-        prod_name = row.get("item_name") or row.get("item_code") or "Unknown"
+        prod_name = row.get("item") or row.get("item_name") or row.get("item_code") or "Unknown"
         prod_margin[prod_name] = prod_margin.get(prod_name, 0) + margin
 
         # Monthly Trend Data
@@ -290,7 +299,7 @@ def get_dashboard_data(filters=None):
             },
             "top_10_salesperson": get_chart_def("Top 10 Salesperson by Margin", sp_margin, "sales_person", limit=10),
             "top_10_customers": get_chart_def("Top 10 Customers by Margin", cust_margin, "customer", limit=10),
-            "top_10_products": get_chart_def("Top 10 Products by Margin", prod_margin, "item_code", limit=10)
+            "top_10_products": get_chart_def("Top 10 Products by Margin", prod_margin, "item", limit=10)
         },
         "results": data,
         "columns": columns
@@ -431,7 +440,7 @@ def export_to_excel(filters=None, export_type="all"):
         for row in data:
             sp = row.get("sales_person") or "-"
             cust = row.get("customer_name") or row.get("customer") or "-"
-            prod = row.get("item_name") or row.get("item_code") or "-"
+            prod = row.get("item") or row.get("item_name") or row.get("item_code") or "-"
             margin = flt(row.get("margin") or 0)
             date_str = str(row.get("invoice_date") or row.get("posting_date") or "")
             try:
@@ -526,7 +535,7 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Invoice ID", "fieldname": "invoice_id", "width": 18},
             {"label": "Date", "fieldname": "invoice_date", "width": 14},
             {"label": "Customer", "fieldname": "customer_name", "width": 25},
-            {"label": "Item", "fieldname": "item_code", "width": 20},
+            {"label": "Item", "fieldname": "item", "width": 30},
             {"label": "Qty", "fieldname": "qty", "width": 10},
             {"label": "Revenue (M)", "fieldname": "base_amount", "width": 18},
             {"label": "COGS (M)", "fieldname": "cogs", "width": 18},

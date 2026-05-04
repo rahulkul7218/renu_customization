@@ -79,36 +79,24 @@ def get_dashboard_data(filters=None):
             "posting_date": row.get("invoice_date") or row.get("posting_date"),
             "customer": row.get("customer"),
             "customer_name": row.get("customer_name"),
+            "item_code": row.get("item_code"),
+            "item_name": row.get("item_name"),
+            "item": f"{row.get('item_code')} {row.get('item_name')}" if row.get('item_code') else (row.get('item_name') or ""),
             "type": row_type,
             "margin": margin,
             "revenue": revenue,
             "cogs": cogs
         })
 
-    inv_data_map = {}
-    for d in data:
-        name = d["name"]
-        if name not in inv_data_map:
-            inv_data_map[name] = {
-                "name": name,
-                "posting_date": d["posting_date"],
-                "customer": d["customer"],
-                "customer_name": d["customer_name"],
-                "type": d["type"],
-                "margin": 0,
-                "revenue": 0,
-                "cogs": 0
-            }
-        inv_data_map[name]["margin"] += d["margin"]
-        inv_data_map[name]["revenue"] += d["revenue"]
-        inv_data_map[name]["cogs"] += d["cogs"]
-
-    final_results = list(inv_data_map.values())
+    # No longer aggregating by invoice to show items
+    final_results = data
     final_results.sort(key=lambda x: getdate(x["posting_date"]) if x["posting_date"] else getdate(), reverse=True)
 
     total_margin = 0
     export_margin = 0
     domestic_margin = 0
+    
+    unique_invoices = set()
 
     for d in final_results:
         amt = flt(d["margin"])
@@ -117,12 +105,14 @@ def get_dashboard_data(filters=None):
             export_margin += amt
         elif d["type"] == "Domestic":
             domestic_margin += amt
+        
+        unique_invoices.add(d["name"])
 
     summary = [
         {"label": _("Total Margin"), "value": total_margin, "indicator": "green", "fieldtype": "Currency"},
         {"label": _("Export Margin"), "value": export_margin, "indicator": "orange", "fieldtype": "Currency"},
         {"label": _("Domestic Margin"), "value": domestic_margin, "indicator": "blue", "fieldtype": "Currency"},
-        {"label": _("Total Invoices"), "value": len(final_results), "indicator": "purple", "fieldtype": "Int"}
+        {"label": _("Total Invoices"), "value": len(unique_invoices), "indicator": "purple", "fieldtype": "Int"}
     ]
 
     charts = {
@@ -206,7 +196,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_list.cell(row=row_idx, column=1, value="Detailed Margin List").font = section_font
         row_idx += 2
         
-        headers = ["S.No.", "Invoice ID", "Date", "Customer", "Type", "Revenue (M)", "COGS (M)", "Margin (M)"]
+        headers = ["S.No.", "Invoice ID", "Date", "Customer", "Item", "Type", "Revenue (M)", "COGS (M)", "Margin (M)"]
         for idx, h in enumerate(headers, start=1):
             cell = ws_list.cell(row=row_idx, column=idx, value=h)
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
@@ -217,38 +207,39 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=2, value=row['name']).border = table_border
             ws_list.cell(row=row_idx, column=3, value=row['posting_date']).border = table_border
             ws_list.cell(row=row_idx, column=4, value=row['customer_name'] or row['customer']).border = table_border
-            ws_list.cell(row=row_idx, column=5, value=row['type']).border = table_border
+            ws_list.cell(row=row_idx, column=5, value=row['item']).border = table_border
+            ws_list.cell(row=row_idx, column=6, value=row['type']).border = table_border
             
-            rev_cell = ws_list.cell(row=row_idx, column=6, value=flt(row['revenue']) / 1000000)
+            rev_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['revenue']) / 1000000)
             rev_cell.number_format, rev_cell.border = '"₹ "#,##0.0000" M"', table_border
             
-            cogs_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['cogs']) / 1000000)
+            cogs_cell = ws_list.cell(row=row_idx, column=8, value=flt(row['cogs']) / 1000000)
             cogs_cell.number_format, cogs_cell.border = '"₹ "#,##0.0000" M"', table_border
             
-            margin_cell = ws_list.cell(row=row_idx, column=8, value=flt(row['margin']) / 1000000)
+            margin_cell = ws_list.cell(row=row_idx, column=9, value=flt(row['margin']) / 1000000)
             margin_cell.number_format, margin_cell.border = '"₹ "#,##0.0000" M"', table_border
             
             row_idx += 1
     
         # Add Grand Total Row for Margin List
         ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-        for c in range(1, 6):
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+        for c in range(1, 7):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
             
         total_rev = sum(flt(row['revenue']) for row in data) / 1000000
-        c_rev = ws_list.cell(row=row_idx, column=6, value=total_rev)
+        c_rev = ws_list.cell(row=row_idx, column=7, value=total_rev)
         c_rev.number_format, c_rev.font, c_rev.fill, c_rev.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
         c_rev.alignment = Alignment(horizontal="right")
         
         total_cogs = sum(flt(row['cogs']) for row in data) / 1000000
-        c_cogs = ws_list.cell(row=row_idx, column=7, value=total_cogs)
+        c_cogs = ws_list.cell(row=row_idx, column=8, value=total_cogs)
         c_cogs.number_format, c_cogs.font, c_cogs.fill, c_cogs.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
         c_cogs.alignment = Alignment(horizontal="right")
         
         total_margin = sum(flt(row['margin']) for row in data) / 1000000
-        c_margin = ws_list.cell(row=row_idx, column=8, value=total_margin)
+        c_margin = ws_list.cell(row=row_idx, column=9, value=total_margin)
         c_margin.number_format, c_margin.font, c_margin.fill, c_margin.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
         c_margin.alignment = Alignment(horizontal="right")
 
