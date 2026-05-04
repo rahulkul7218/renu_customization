@@ -637,8 +637,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			if (!num && num !== 0) return "₹ 0.0000 M";
 			if (fieldtype === "Int") return num;
 
-			// Convert to Million INR
-			let value = flt(num) / 1000000;
+			// Value is already in Million INR from backend
+			let value = flt(num);
 
 			return (
 				"₹ " +
@@ -841,11 +841,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				c_rev = 0;
 
 			results.forEach((row) => {
-				let alloc_p = flt(row.allocated_percentage || 100);
-				let b_amt = flt(row.base_amount || 0);
-				if (row.is_return) b_amt = -Math.abs(b_amt);
-				let amt = b_amt * (alloc_p / 100);
-
+				let amt = flt(row.amt_allocated || 0);
 				let gross_amt = flt(row.gross_amount || amt);
 
 				t_rev += amt;
@@ -875,12 +871,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				let cust = row.customer_name || row.customer || "-";
 				let prod = row.item_code || "-";
 				let prod_name = row.item_name || "";
-				let alloc_p = flt(row.allocated_percentage || 100);
-				let base_amt = flt(row.base_amount || 0);
-				if (row.is_return) {
-					base_amt = -Math.abs(base_amt);
-				}
-				let amt = base_amt * (alloc_p / 100);
+				let amt = flt(row.amt_allocated || 0);
 				let gross_amt = flt(row.gross_amount || amt);
 
 				let date = row.delivery_date || row.invoice_date || row.posting_date;
@@ -927,10 +918,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			results.forEach((row) => {
 				let date = row.delivery_date || row.invoice_date || row.posting_date;
 				let m_key = moment(date).format("MMM YYYY");
-				let alloc_p = flt(row.allocated_percentage || 100);
-				let b_amt = flt(row.base_amount || 0);
-				if (row.is_return) b_amt = -Math.abs(b_amt);
-				let amt = b_amt * (alloc_p / 100);
+				let amt = flt(row.amt_allocated || 0);
 				let gross_amt = flt(row.gross_amount || amt);
 
 				total_month_gross_amts[m_key] = (total_month_gross_amts[m_key] || 0) + gross_amt;
@@ -1050,13 +1038,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             <td>${row.sales_person || "-"}</td>
                             <td style="text-align: right;">${frappe.format(row.qty, { fieldtype: "Float" })}</td>
                             <td style="text-align: right; font-weight: 600;">
-                                ${(() => {
-									let b_amt = flt(row.base_amount || 0);
-									if (row.is_return) b_amt = -Math.abs(b_amt);
-									return format_currency_short(
-										b_amt * (flt(row.allocated_percentage || 100) / 100),
-									);
-								})()}
+                                ${format_currency_short(row.amt_allocated || 0)}
                             </td>
                         </tr>
                     `);

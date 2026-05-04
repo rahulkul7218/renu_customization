@@ -125,15 +125,15 @@ def get_dashboard_data(filters=None):
         row["si_net_total"] = si_net
         row["si_grand_total"] = si_grand
 
+        # Status info
+        row["status"] = s_info.get("status")
+
         # Handle Status Filtering
         stat_filter = filters.get("status")
-        if not stat_filter:
-            if row["status"] in ("Cancelled", "Draft"):
-                keep = False
-        else:
+        if keep and stat_filter:
             if isinstance(stat_filter, str):
                 stat_filter = [s.strip() for s in stat_filter.split(",")]
-            if row["status"] not in stat_filter:
+            if row.get("status") not in stat_filter:
                 keep = False
 
         # Calculate Net Line Amount (after returns)
@@ -220,52 +220,141 @@ def get_dashboard_data(filters=None):
     if not data:
         return { "summary": [], "charts": {}, "results": [], "columns": columns }
 
-    # Calculate Summaries
+    # Lifecycle Metrics: Global
+    booked_rev = 0
+    cancelled_rev = 0
+    short_close_rev = 0
+    delivered_rev = 0
+    
+    # Lifecycle Metrics: Domestic
+    dom_booked = 0
+    dom_cancelled = 0
+    dom_short_close = 0
+    dom_delivered = 0
+    
+    # Lifecycle Metrics: Export
+    exp_booked = 0
+    exp_cancelled = 0
+    exp_short_close = 0
+    exp_delivered = 0
+    
+    # Lifecycle Metrics: Channel Partner
+    cp_booked = 0
+    cp_cancelled = 0
+    cp_short_close = 0
+    cp_delivered = 0
+    
+    # Chart-related totals
     total_rev = 0
     total_gross = 0
-    dom_rev = 0
-    exp_rev = 0
-    cp_rev = 0
-    
-    total_pending = 0
-    dom_pending = 0
-    exp_pending = 0
-    cp_pending = 0
+    cp_active_rev = 0
+
+    # We use a set to track unique (SO, Item) for global metrics
+    unique_items = set()
 
     for row in data:
+        inv_id = row.get("so_no")
+        sr_no = row.get("sr_no")
+        item_key = (inv_id, sr_no)
+        
+        status = row.get("status")
         amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
-        g_amt = flt(row.get("gross_total") or amt)
-        per_billed = flt(row.get("per_billed", 0))
-        unbilled_amt = amt * (1.0 - (per_billed / 100.0))
+        # Use delivered_net_total_inr if available from report, otherwise calculate from per_billed
+        deliv_amt = flt(row.get("delivered_net_total_inr") or (amt * (flt(row.get("per_billed", 0)) / 100.0)))
         
-        total_rev += amt
-        total_gross += g_amt
-        total_pending += unbilled_amt
-        
-        if row.get("dom_exp") == "Domestic":
-            dom_rev += amt
-            dom_pending += unbilled_amt
-        elif row.get("dom_exp") == "Export":
-            exp_rev += amt
-            exp_pending += unbilled_amt
-            
+        # Identification
+        d_e = row.get("dom_exp")
+        is_cp = False
         cust_id = row.get("customer")
         cust_info = customer_map.get(cust_id)
         if cust_info and cust_info.customer_group:
-            cg = cust_info.customer_group.lower()
+            cg = (cust_info.customer_group or "").lower()
             if any(x in cg for x in ["system integrator", "distributor", "distributer"]):
-                cp_rev += amt
-                cp_pending += unbilled_amt
+                is_cp = True
+
+        # 1. Global Metrics (Regardless of chart status filter)
+        if item_key not in unique_items:
+            sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
+            
+            if status != "Draft":
+                booked_rev += amt
+                if d_e == "Domestic": dom_booked += amt
+                elif d_e == "Export": exp_booked += amt
+                if is_cp: cp_booked += amt
+                
+            if status == "Cancelled":
+                cancelled_rev += amt
+                if d_e == "Domestic": dom_cancelled += amt
+                elif d_e == "Export": exp_cancelled += amt
+                if is_cp: cp_cancelled += amt
+            
+            # Short Close is tracked regardless of status if the field is populated
+            if sc_amt > 0:
+                short_close_rev += sc_amt
+                if d_e == "Domestic": dom_short_close += sc_amt
+                elif d_e == "Export": exp_short_close += sc_amt
+                if is_cp: cp_short_close += sc_amt
+            
+            if status != "Cancelled":
+                delivered_rev += deliv_amt
+                if d_e == "Domestic": dom_delivered += deliv_amt
+                elif d_e == "Export": exp_delivered += deliv_amt
+                if is_cp: cp_delivered += deliv_amt
+                
+            unique_items.add(item_key)
+
+        # 2. Chart Metrics (Standard Dashboard logic: Excludes Cancelled/Draft)
+        if status not in ("Cancelled", "Draft"):
+            g_amt = flt(row.get("gross_total") or amt)
+            total_rev += amt
+            total_gross += g_amt
+            if is_cp:
+                cp_active_rev += amt
+
+    actual_book = booked_rev - cancelled_rev - short_close_rev
+    final_pending = actual_book - delivered_rev
+    
+    dom_actual = dom_booked - dom_cancelled - dom_short_close
+    dom_pending = dom_actual - dom_delivered
+    
+    exp_actual = exp_booked - exp_cancelled - exp_short_close
+    exp_pending = exp_actual - exp_delivered
+    
+    cp_actual = cp_booked - cp_cancelled - cp_short_close
+    cp_pending = cp_actual - cp_delivered
 
     report_summary = [
-        {"label": _("Total Net Booking"), "value": total_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total Gross Booking"), "value": total_gross, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Domestic Booking"), "value": dom_rev, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Export Booking"), "value": exp_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Channel Partner"), "value": cp_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total Pending"), "value": total_pending, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Domestic Pending"), "value": dom_pending, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Export Pending"), "value": exp_pending, "indicator": "red", "fieldtype": "Currency", "currency": "INR"}
+        # Global
+        {"label": _("Global Booked"), "value": booked_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Cancelled"), "value": cancelled_rev, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Short Close"), "value": short_close_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Actual"), "value": actual_book, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Delivered"), "value": delivered_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Pending"), "value": final_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
+        
+        # Domestic
+        {"label": _("Dom. Booked"), "value": dom_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Cancelled"), "value": dom_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Short Close"), "value": dom_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Actual"), "value": dom_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Delivered"), "value": dom_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Pending"), "value": dom_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
+
+        # Export
+        {"label": _("Exp. Booked"), "value": exp_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Cancelled"), "value": exp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Short Close"), "value": exp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Actual"), "value": exp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Delivered"), "value": exp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Pending"), "value": exp_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
+        
+        # Channel Partner
+        {"label": _("CP Booked"), "value": cp_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Cancelled"), "value": cp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Short Close"), "value": cp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Actual"), "value": cp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Delivered"), "value": cp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Pending"), "value": cp_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
 
     sp_rev_dict = {}
