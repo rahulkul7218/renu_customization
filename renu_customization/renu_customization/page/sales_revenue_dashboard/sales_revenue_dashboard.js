@@ -229,6 +229,67 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		"margin-bottom": "0",
 	});
 
+	// --- FISCAL YEAR & DATE INTERACTION LOGIC ---
+	const fy_field = page.filter_group.fields_dict.fiscal_year;
+	const from_field = page.filter_group.fields_dict.from_date;
+	const to_field = page.filter_group.fields_dict.to_date;
+
+	// Helper to validate date within FY
+	const validate_fy_bounds = (val, field_name) => {
+		const fy = fy_field.get_value();
+		if (!fy || !val || !fy_field._start_date) return true;
+
+		if (val < fy_field._start_date || val > fy_field._end_date) {
+			frappe.show_alert({
+				message: __("Selected date is outside {0} ({1} to {2})", [
+					fy,
+					frappe.datetime.str_to_user(fy_field._start_date),
+					frappe.datetime.str_to_user(fy_field._end_date),
+				]),
+				indicator: "orange",
+			});
+			// Clip to boundary
+			const clipped = val < fy_field._start_date ? fy_field._start_date : fy_field._end_date;
+			page.filter_group.set_value(field_name, clipped);
+			return false;
+		}
+		return true;
+	};
+
+	// Override Fiscal Year Change
+	fy_field.on_change = function () {
+		const fy = this.get_value();
+		if (fy) {
+			frappe.db.get_doc("Fiscal Year", fy).then((doc) => {
+				fy_field._start_date = doc.year_start_date;
+				fy_field._end_date = doc.year_end_date;
+
+				// Auto-populate dates to match FY boundaries
+				page.filter_group.set_value("from_date", doc.year_start_date);
+				page.filter_group.set_value("to_date", doc.year_end_date);
+				page.refresh();
+			});
+		} else {
+			fy_field._start_date = null;
+			fy_field._end_date = null;
+			// Also clear the dates to allow "All Time" viewing easily
+			page.filter_group.set_value("from_date", null);
+			page.filter_group.set_value("to_date", null);
+			page.refresh();
+		}
+	};
+
+	// Override Date Changes with FY Constraint
+	from_field.on_change = function () {
+		validate_fy_bounds(this.get_value(), "from_date");
+		page.refresh();
+	};
+
+	to_field.on_change = function () {
+		validate_fy_bounds(this.get_value(), "to_date");
+		page.refresh();
+	};
+
 	// Explicitly show the filter container
 	filter_parent.show();
 
@@ -643,6 +704,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		let period = "All Time";
 		if (filters.from_date && filters.to_date) {
 			period = `${frappe.datetime.str_to_user(filters.from_date)} to ${frappe.datetime.str_to_user(filters.to_date)}`;
+		} else if (filters.from_date) {
+			period = `From ${frappe.datetime.str_to_user(filters.from_date)}`;
+		} else if (filters.to_date) {
+			period = `Up to ${frappe.datetime.str_to_user(filters.to_date)}`;
 		}
 
 		// Helper to capture chart images
@@ -735,11 +800,19 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				</div>
 
 				<div class="page-break"></div>
+				<h3>Month-Wise Revenue Breakdown (M)</h3>
+				<table class="month-revenue-table">
+					<thead>${page.container.find("#consolidated_table thead").html() || ""}</thead>
+					<tbody>${page.container.find("#consolidated_table_body").html() || ""}</tbody>
+				</table>
+
+				<div class="page-break"></div>
 				<h3>Detailed Sales Invoices List (M)</h3>
 				<table class="invoice-list-table">
-					<thead>${page.container.find("#invoice_table_body").closest("table").find("thead").html() || ""}</thead>
+					<thead>${page.container.find("#invoice_list_table thead").html() || ""}</thead>
 					<tbody>${page.container.find("#invoice_table_body").html() || ""}</tbody>
 				</table>
+
 			</body>
 			</html>
 		`;
@@ -755,7 +828,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		$form.remove();
 	};
 
-	page.add_menu_item(__("Export to PDF"), () => export_pdf());
 
 	function render_dashboard(data) {
 		current_dashboard_data = data;
@@ -930,6 +1002,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <i class="fa fa-file-excel-o"></i>Export to Excel
                             </span>
                         </div>
+
                     </div>
                 </div>
                 <div class="table-container month-revenue-container">
@@ -959,10 +1032,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             <i class="fa fa-file-excel-o"></i>Export to Excel
                         </span>
                     </div>
+
                 </div>
                 <div class="table-container invoice-list-container">
-                    <table class="dashboard-table">
-                        <thead>
+                    <table class="dashboard-table" id="invoice_list_table">
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
@@ -977,7 +1050,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <th class="qty-col">Qty</th>
                                 <th class="amount-col">Amount (Net)</th>
                             </tr>
-                        </thead>
                         </thead>
                         <tbody id="invoice_table_body"></tbody>
                     </table>
@@ -1343,12 +1415,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 		// 1. Primary Action: Refresh
 		page.set_primary_action(__("Refresh"), () => page.refresh());
-
+		
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+		page.add_menu_item(__("Export to PDF"), () => export_pdf());
 
 		// Attach handlers to the localized buttons in table headers
 		page.container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		page.container.on("click", "#export_invoice_table", () => export_to_excel("detail"));
+
 
 		// 3. Force-remove default duplicates (be specific to avoid hiding our own menu)
 		$(".page-head .standard-actions .btn-secondary:contains('Refresh')").hide();
