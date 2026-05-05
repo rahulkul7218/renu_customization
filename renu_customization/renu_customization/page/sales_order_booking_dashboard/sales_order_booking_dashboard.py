@@ -108,36 +108,39 @@ def get_dashboard_data(filters=None):
         items = frappe.get_all("Item", filters={"name": ("in", item_codes)}, fields=["name", "item_group"], limit_page_length=None)
         item_group_map = {i.name: i.item_group for i in items}
 
+    # Group and collapse duplicates from report (e.g. due to Sales Team joins)
+    unique_data_map = {}
     for row in processed_raw_data:
-        keep = True
         so_id = row.get("so_no")
+        # Use a combination of keys to uniquely identify a Sales Order Item line
+        sr_no = row.get("sr_no") or row.get("idx") or ""
+        item_code = row.get("item_code") or ""
+        qty = flt(row.get("order_quantity") or row.get("po_qty"))
+        
+        # Unique key for the item line
+        item_key = (so_id, str(sr_no), item_code, qty)
+        
+        if item_key in unique_data_map:
+            existing = unique_data_map[item_key]
+            # If we see the same item again, it's likely a duplicate row for a different Sales Person
+            new_sp = str(row.get("sales_person") or "").strip()
+            if new_sp and new_sp not in str(existing.get("sales_person") or ""):
+                existing["sales_person"] = (str(existing.get("sales_person") or "") + ", " + new_sp).strip(", ")
+            continue
+
+        # Enrichment logic (only run once per unique item)
         s_info = so_info_map.get(so_id, {})
         row["status"] = s_info.get("status")
         row["customer"] = s_info.get("customer")
         row["per_billed"] = s_info.get("per_billed", 0)
         row["invoice_type"] = row.get("invoice_type") or s_info.get("invoice_type")
         
-        # Capture Net vs Gross ratio from original document
-        # If returns exist, net_amt reflects the actual line revenue
-        # Gross amt reflects the line's share of the original Grand Total
         si_net = flt(s_info.get("base_net_total") or 1)
         si_grand = flt(s_info.get("base_grand_total") or si_net)
         row["si_net_total"] = si_net
         row["si_grand_total"] = si_grand
 
-        # Handle Status Filtering
-        stat_filter = filters.get("status")
-        if not stat_filter:
-            if row["status"] in ("Cancelled", "Draft"):
-                keep = False
-        else:
-            if isinstance(stat_filter, str):
-                stat_filter = [s.strip() for s in stat_filter.split(",")]
-            if row["status"] not in stat_filter:
-                keep = False
-
-        # Calculate Net Line Amount (after returns)
-        item_code = row.get("item_code")
+        # Handle Returns
         base_line_amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
         returned_val = 0
         if so_id and item_code and (so_id, item_code) in so_item_map:
@@ -149,21 +152,28 @@ def get_dashboard_data(filters=None):
         net_amt = max(0, base_line_amt - returned_val)
         row["po_total"] = net_amt
         row["total_net_amount_(inr)"] = net_amt
-        
-        # Calculate Gross equivalent (matching si_grand_total proportions)
-        # Gross = Line Net * (Grand Total / Net Total)
         row["gross_total"] = net_amt * (si_grand / si_net) if si_net else net_amt
-        
         row["dom_exp"] = row.get("domestic/export") or row.get("domestic_export")
 
-        # 1. Sales Person
+        # Filtering logic
+        keep = True
+        
+        # Status Filter
+        stat_filter = filters.get("status")
+        if stat_filter:
+            if isinstance(stat_filter, str):
+                stat_filter = [s.strip() for s in stat_filter.split(",")]
+            if row.get("status") not in stat_filter:
+                keep = False
+
+        # Sales Person Filter
         sp_filter = filters.get("sales_person")
         if keep and sp_filter:
             row_sp = str(row.get("sales_person") or "").strip().lower()
             if str(sp_filter).strip().lower() not in row_sp:
                 keep = False
             
-        # 2. Customer
+        # Customer Filter
         cust_filter = filters.get("customer") or filters.get("customer_name")
         if keep and cust_filter:
             f_cust = str(cust_filter).strip().lower()
@@ -172,7 +182,7 @@ def get_dashboard_data(filters=None):
             if f_cust != row_cust_id and f_cust != row_cust_name and f_cust not in row_cust_name:
                 keep = False
             
-        # 3. Product
+        # Product Filter
         prod_filter = filters.get("item") or filters.get("item_code") or filters.get("product")
         if keep and prod_filter:
             f_prod = str(prod_filter).strip().lower()
@@ -181,91 +191,173 @@ def get_dashboard_data(filters=None):
             if f_prod != row_prod_code and f_prod != row_prod_name and f_prod not in row_prod_name:
                 keep = False
 
-        # 4. Product Group
+        # Item Group Filter
         ig_filter = filters.get("item_group")
         if keep and ig_filter:
             row_item_group = item_group_map.get(row.get("item_code"))
             if str(row_item_group) != str(ig_filter):
                 keep = False
 
-        # 5. Customer Group
+        # Customer Group Filter
         cg_filter = filters.get("customer_group")
         if keep and cg_filter:
             cust_info = customer_map.get(row.get("customer"))
             if not cust_info or str(cust_info.customer_group) != str(cg_filter):
                 keep = False
 
-        # 6. Territory
+        # Territory Filter
         terr_filter = filters.get("territory")
         if keep and terr_filter:
             cust_info = customer_map.get(row.get("customer"))
             if not cust_info or str(cust_info.territory) != str(terr_filter):
                 keep = False
 
-        # Type (Domestic/Export)
+        # Type Filter
         dom_exp_f = filters.get("dom_exp")
         if keep and dom_exp_f:
             if str(dom_exp_f) != str(row.get("dom_exp")):
                 keep = False
                 
-        # Invoice Type
+        # Invoice Type Filter
         inv_type_f = filters.get("invoice_type")
         if keep and inv_type_f:
             if str(inv_type_f) != str(row.get("invoice_type")):
                 keep = False
 
         if keep:
-            data.append(row)
+            unique_data_map[item_key] = row
+
+    data = list(unique_data_map.values())
+
 
     if not data:
         return { "summary": [], "charts": {}, "results": [], "columns": columns }
 
-    # Calculate Summaries
+    # Lifecycle Metrics: Global
+    booked_rev = 0
+    cancelled_rev = 0
+    short_close_rev = 0
+    delivered_rev = 0
+    
+    # Lifecycle Metrics: Domestic
+    dom_booked = 0
+    dom_cancelled = 0
+    dom_short_close = 0
+    dom_delivered = 0
+    
+    # Lifecycle Metrics: Export
+    exp_booked = 0
+    exp_cancelled = 0
+    exp_short_close = 0
+    exp_delivered = 0
+    
+    # Lifecycle Metrics: Channel Partner
+    cp_booked = 0
+    cp_cancelled = 0
+    cp_short_close = 0
+    cp_delivered = 0
+    
+    # Chart-related totals
     total_rev = 0
     total_gross = 0
-    dom_rev = 0
-    exp_rev = 0
-    cp_rev = 0
+    cp_active_rev = 0
     
-    total_pending = 0
-    dom_pending = 0
-    exp_pending = 0
-    cp_pending = 0
-
     for row in data:
+
+        status = row.get("status")
         amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
-        g_amt = flt(row.get("gross_total") or amt)
-        per_billed = flt(row.get("per_billed", 0))
-        unbilled_amt = amt * (1.0 - (per_billed / 100.0))
+        deliv_amt = flt(row.get("delivered_net_total_inr") or (amt * (flt(row.get("per_billed", 0)) / 100.0)))
         
-        total_rev += amt
-        total_gross += g_amt
-        total_pending += unbilled_amt
-        
-        if row.get("dom_exp") == "Domestic":
-            dom_rev += amt
-            dom_pending += unbilled_amt
-        elif row.get("dom_exp") == "Export":
-            exp_rev += amt
-            exp_pending += unbilled_amt
-            
+        # Identification
+        d_e = row.get("dom_exp")
+        is_cp = False
         cust_id = row.get("customer")
         cust_info = customer_map.get(cust_id)
         if cust_info and cust_info.customer_group:
-            cg = cust_info.customer_group.lower()
+            cg = (cust_info.customer_group or "").lower()
             if any(x in cg for x in ["system integrator", "distributor", "distributer"]):
-                cp_rev += amt
-                cp_pending += unbilled_amt
+                is_cp = True
+
+        # Global Metrics
+        sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
+        
+        if status != "Draft":
+            booked_rev += amt
+            if d_e == "Domestic": dom_booked += amt
+            elif d_e == "Export": exp_booked += amt
+            if is_cp: cp_booked += amt
+            
+        if status == "Cancelled":
+            cancelled_rev += amt
+            if d_e == "Domestic": dom_cancelled += amt
+            elif d_e == "Export": exp_cancelled += amt
+            if is_cp: cp_cancelled += amt
+        
+        if sc_amt > 0:
+            short_close_rev += sc_amt
+            if d_e == "Domestic": dom_short_close += sc_amt
+            elif d_e == "Export": exp_short_close += sc_amt
+            if is_cp: cp_short_close += sc_amt
+        
+        if status != "Cancelled":
+            delivered_rev += deliv_amt
+            if d_e == "Domestic": dom_delivered += deliv_amt
+            elif d_e == "Export": exp_delivered += deliv_amt
+            if is_cp: cp_delivered += deliv_amt
+
+        # Chart Totals (Excludes Cancelled/Draft)
+        if status not in ("Cancelled", "Draft"):
+            g_amt = flt(row.get("gross_total") or amt)
+            total_rev += amt
+            total_gross += g_amt
+            if is_cp:
+                cp_active_rev += amt
+
+
+    actual_book = booked_rev - cancelled_rev - short_close_rev
+    final_pending = actual_book - delivered_rev
+    
+    dom_actual = dom_booked - dom_cancelled - dom_short_close
+    dom_pending = dom_actual - dom_delivered
+    
+    exp_actual = exp_booked - exp_cancelled - exp_short_close
+    exp_pending = exp_actual - exp_delivered
+    
+    cp_actual = cp_booked - cp_cancelled - cp_short_close
+    cp_pending = cp_actual - cp_delivered
 
     report_summary = [
-        {"label": _("Total Net Booking"), "value": total_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total Gross Booking"), "value": total_gross, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Domestic Booking"), "value": dom_rev, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Export Booking"), "value": exp_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Channel Partner"), "value": cp_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total Pending"), "value": total_pending, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Domestic Pending"), "value": dom_pending, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Export Pending"), "value": exp_pending, "indicator": "red", "fieldtype": "Currency", "currency": "INR"}
+        # Global
+        {"label": _("Global Booked"), "value": booked_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Cancelled"), "value": cancelled_rev, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Short Close"), "value": short_close_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Actual"), "value": actual_book, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Delivered"), "value": delivered_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Pending"), "value": final_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
+        
+        # Domestic
+        {"label": _("Dom. Booked"), "value": dom_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Cancelled"), "value": dom_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Short Close"), "value": dom_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Actual"), "value": dom_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Delivered"), "value": dom_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Pending"), "value": dom_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
+
+        # Export
+        {"label": _("Exp. Booked"), "value": exp_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Cancelled"), "value": exp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Short Close"), "value": exp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Actual"), "value": exp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Delivered"), "value": exp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Pending"), "value": exp_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
+        
+        # Channel Partner
+        {"label": _("CP Booked"), "value": cp_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Cancelled"), "value": cp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Short Close"), "value": cp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Actual"), "value": cp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Delivered"), "value": cp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Pending"), "value": cp_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
 
     sp_rev_dict = {}
@@ -273,15 +365,25 @@ def get_dashboard_data(filters=None):
     prod_rev_dict = {}
     
     for row in data:
+        # For Chart aggregation, if multiple sales persons exist, we split the credit proportionally
+        # to ensure the chart total matches the global booked total.
         amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
-        sp = row.get("sales_person") or "Unassigned"
-        sp_rev_dict[sp] = sp_rev_dict.get(sp, 0) + amt
         
-        cust = row.get("customer_name") or ""
+        # Sales Person split
+        sp_raw = str(row.get("sales_person") or "Unassigned")
+        sp_list = [s.strip() for s in sp_raw.split(",") if s.strip()]
+        if not sp_list: sp_list = ["Unassigned"]
+        split_amt = amt / len(sp_list)
+        
+        for sp in sp_list:
+            sp_rev_dict[sp] = sp_rev_dict.get(sp, 0) + split_amt
+        
+        cust = row.get("customer_name") or "Unknown"
         cust_rev_dict[cust] = cust_rev_dict.get(cust, 0) + amt
         
-        prod = row.get("item_name") or row.get("item_code") or ""
+        prod = row.get("item_name") or row.get("item_code") or "Unknown"
         prod_rev_dict[prod] = prod_rev_dict.get(prod, 0) + amt
+
 
     def get_chart_def(title, data_dict, limit=10):
         sorted_items = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
@@ -290,8 +392,9 @@ def get_dashboard_data(filters=None):
             "title": title,
             "data": {
                 "labels": [x[0] for x in top_items],
-                "datasets": [{"name": title, "values": [flt(x[1], 2) for x in top_items]}]
+                "datasets": [{"name": title, "values": [flt(x[1], 4) for x in top_items]}]
             },
+
             "type": "donut",
             "height": 300,
             "colors": ['#4338ca', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#3b82f6', '#06b6d4', '#d946ef', '#f97316', '#64748b']
@@ -372,13 +475,14 @@ def export_to_excel(filters=None, export_type="all"):
             val = flt(s.get('value')) / 1000000
             cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
-            cell_v.number_format = '"₹ "#,##0.00" M"'
+            cell_v.number_format = '"₹ "#,##0.0000" M"'
             cell_v.alignment = Alignment(horizontal="center")
             cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
     
         # Chart Tables on Overview
-        row_idx = 14
+        # Calculate row_idx dynamically based on summary cards (4 per row, each taking 3 rows)
+        row_idx = 5 + ((len(summary) - 1) // 4 + 1) * 3 + 2
         for chart_id in ["top_10_salesperson", "top_10_customers", "top_10_products"]:
             c_data = charts.get(chart_id, {})
             if not c_data.get("data", {}).get("labels"): continue
@@ -400,7 +504,7 @@ def export_to_excel(filters=None, export_type="all"):
             for i in range(len(labels)):
                 ws_overview.cell(row=row_idx, column=1, value=labels[i]).border = table_border
                 v_cell = ws_overview.cell(row=row_idx, column=2, value=flt(values[i])/1000000)
-                v_cell.number_format = '"₹ "#,##0.00" M"'
+                v_cell.number_format = '"₹ "#,##0.0000" M"'
                 v_cell.border = table_border
                 s_cell = ws_overview.cell(row=row_idx, column=3, value=values[i]/total_v)
                 s_cell.number_format = "0.0%"
@@ -449,16 +553,16 @@ def export_to_excel(filters=None, export_type="all"):
             col_idx = 5
             for m_key in sorted_months:
                 c = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["months"].get(m_key, 0))/1000000)
-                c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
+                c.number_format, c.border = '"₹ "#,##0.0000" M"', table_border
                 col_idx += 1
             c_n = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
-            c_n.number_format = '"₹ "#,##0.00" M"'
+            c_n.number_format = '"₹ "#,##0.0000" M"'
             c_n.font = Font(bold=True)
             c_n.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_n.border = table_border
             col_idx += 1
             c_g = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total_gross"])/1000000)
-            c_g.number_format = '"₹ "#,##0.00" M"'
+            c_g.number_format = '"₹ "#,##0.0000" M"'
             c_g.font = Font(bold=True)
             c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid")
             c_g.border = table_border
@@ -484,13 +588,13 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx = 5
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
-            c.number_format = '"₹ "#,##0.00" M"'
+            c.number_format = '"₹ "#,##0.0000" M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
             col_idx += 1
         c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-        c_gn.number_format = '"₹ "#,##0.00" M"'
+        c_gn.number_format = '"₹ "#,##0.0000" M"'
         c_gn.font = header_font
         c_gn.fill = header_fill
         c_gn.border = table_border
@@ -509,7 +613,7 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx = 5
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_gross.get(m_key, 0))/1000000)
-            c.number_format = '"₹ "#,##0.00" M"'
+            c.number_format = '"₹ "#,##0.0000" M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
@@ -520,7 +624,7 @@ def export_to_excel(filters=None, export_type="all"):
         c_sep2.border = table_border
         col_idx += 1
         c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
-        c_gg.number_format = '"₹ "#,##0.00" M"'
+        c_gg.number_format = '"₹ "#,##0.0000" M"'
         c_gg.font = header_font
         c_gg.fill = header_fill
         c_gg.border = table_border
@@ -559,7 +663,7 @@ def export_to_excel(filters=None, export_type="all"):
                 if isinstance(val, (int, float)):
                     if fname == "total_net_amount_(inr)":
                         val /= 1000000
-                        cell.number_format = '"₹ "#,##0.00" M"'
+                        cell.number_format = '"₹ "#,##0.0000" M"'
                         total_list_amt += flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
                     cell.value, cell.alignment = val, Alignment(horizontal="right")
                 else:
@@ -574,7 +678,7 @@ def export_to_excel(filters=None, export_type="all"):
         c_tot = ws_list.cell(row=row_idx, column=9, value=total_list_amt / 1000000)
         c_tot.font = header_font
         c_tot.fill = header_fill
-        c_tot.number_format = '"₹ "#,##0.00" M"'
+        c_tot.number_format = '"₹ "#,##0.0000" M"'
         c_tot.alignment = Alignment(horizontal="right")
         c_tot.border = table_border
 

@@ -30,10 +30,29 @@ def get_dashboard_data(filters=None):
         "due_date": ["<", nowdate()]
     }
 
+    # Handle Fiscal Year
+    if filters.get("fiscal_year"):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = fy.year_start_date
+            filters["to_date"] = fy.year_end_date
+
     # Apply Filters from JS
+    if filters.get("company"):
+        query_filters["company"] = filters.get("company")
+
     if filters.get("customer"):
         query_filters["customer"] = filters.get("customer")
+        
+    if filters.get("from_date"):
+        query_filters["posting_date"] = [">=", filters.get("from_date")]
     
+    if filters.get("to_date"):
+        if "posting_date" in query_filters:
+            query_filters["posting_date"] = ["between", [filters.get("from_date"), filters.get("to_date")]]
+        else:
+            query_filters["posting_date"] = ["<=", filters.get("to_date")]
+
     invoices = frappe.get_all("Sales Invoice", 
         filters=query_filters, 
         fields=["name", "customer", "customer_name", "posting_date", "due_date", 
@@ -176,7 +195,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = s.get('value')
             if s.get('fieldtype') == 'Currency':
                 cell_v = ws_overview.cell(row=r+1, column=c, value=flt(val) / 1000000)
-                cell_v.number_format = '"₹ "#,##0.00" M"'
+                cell_v.number_format = '"₹ "#,##0.0000" M"'
             else:
                 cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
@@ -205,7 +224,7 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=6, value=row['type']).border = table_border
             
             amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['outstanding_amount']) / 1000000)
-            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00" M"', table_border
+            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.0000" M"', table_border
             
             ws_list.cell(row=row_idx, column=8, value=row['due_date']).border = table_border
             ws_list.cell(row=row_idx, column=9, value=row['days_overdue']).border = table_border
@@ -224,7 +243,7 @@ def export_to_excel(filters=None, export_type="all"):
         total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
         total_cell.font = header_font
         total_cell.fill = header_fill
-        total_cell.number_format, total_cell.border = '"₹ "#,##0.00" M"', table_border
+        total_cell.number_format, total_cell.border = '"₹ "#,##0.0000" M"', table_border
         
         ws_list.cell(row=row_idx, column=8, value="").fill = header_fill
         ws_list.cell(row=row_idx, column=8, value="").border = table_border

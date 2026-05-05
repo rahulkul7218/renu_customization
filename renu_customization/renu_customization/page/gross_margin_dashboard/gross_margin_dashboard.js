@@ -41,7 +41,17 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			label: __("Fiscal Year"),
 			fieldtype: "Link",
 			options: "Fiscal Year",
-			placeholder: __("Select Fiscal Year"),
+			placeholder: __("Select Year"),
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
 		},
 		{
 			fieldname: "customer",
@@ -269,6 +279,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 130px; min-width: 130px; }
         .month-col { min-width: 90px; width: 90px; white-space: nowrap !important; text-align: right !important; }
         .data-col { min-width: 120px; white-space: nowrap !important; text-align: right !important; }
+        .date-col { min-width: 120px !important; width: 120px !important; white-space: nowrap !important; }
         .dashboard-table th.month-col, .dashboard-table th.data-col { background: #f8f9fa !important; }
         
         /* Sticky Primary Columns */
@@ -298,13 +309,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
     </style>`).appendTo(page.main);
 
 	function format_currency_short(num, fieldtype) {
-		if (!num && num !== 0) return fieldtype === "Percent" ? "0.00%" : "₹ 0.00 M";
+		if (!num && num !== 0) return fieldtype === "Percent" ? "0.00%" : "₹ 0.0000 M";
 		if (fieldtype === "Percent") return flt(num).toFixed(2) + "%";
 		return (
 			"₹ " +
 			(flt(num) / 1000000).toLocaleString("en-US", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
+				minimumFractionDigits: 4,
+				maximumFractionDigits: 4,
 			}) +
 			" M"
 		);
@@ -371,8 +382,8 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						formatTooltipY: (d) =>
 							"₹ " +
 							flt(d).toLocaleString("en-US", {
-								minimumFractionDigits: 2,
-								maximumFractionDigits: 2,
+								minimumFractionDigits: 4,
+								maximumFractionDigits: 4,
 							}) +
 							" M",
 					},
@@ -401,7 +412,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 <span class="dot" style="background: ${chart_obj.colors[idx % chart_obj.colors.length]}"></span>
                                 <div class="info">
                                     <span class="label">${display_label}</span>
-                                    <span class="val">₹ ${flt(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M (${share})</span>
+                                    <span class="val">₹ ${flt(val).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M (${share})</span>
                                 </div>
                             </div>
                         `).appendTo(legend_container);
@@ -465,13 +476,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			tbody.empty();
 			let merged = {};
 			results.forEach((r) => {
-				let key =
-					(r.sales_person || "-") + "|" + (r.customer_name || "-") + "|" + r.item_code;
+				let key = (r.sales_person || "-") + "|" + (r.customer_name || "-") + "|" + r.item_code;
 				if (!merged[key])
 					merged[key] = {
 						sp: r.sales_person,
 						cust: r.customer_name,
-						prod: r.item_code,
+						prod_code: r.item_code,
+						prod_name: r.item_name,
 						months: {},
 						total: 0,
 						total_rev: 0,
@@ -495,7 +506,12 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 					let pct = (r.total / r.total_rev) * 100 || 0;
 					tbody.append(`
                     <tr>
-                        <td class="text-center">${i + 1}</td><td>${r.cust || "-"}</td><td>${r.sp || "-"}</td><td>${r.prod || "-"}</td>
+                        <td class="text-center">${i + 1}</td><td class="customer-col">${r.cust || "-"}</td><td>${r.sp || "-"}</td><td class="item-col">
+                            <div style="line-height: 1.4;">
+                                <div style="font-size: 11px; color: #64748b; font-weight: 500;">${r.prod_code || "-"}</div>
+                                <div style="font-weight: 600; color: #1e293b;">${r.prod_name || "-"}</div>
+                            </div>
+                        </td>
                         ${cells}
                         <td class="text-right font-weight-bold sticky-right-2">${format_currency_short(r.total)}</td>
                         <td class="text-right sticky-right-1"><span class="indicator-pill ${pct > 20 ? "green" : pct < 5 ? "red" : ""}">${pct.toFixed(2)}%</span></td>
@@ -545,10 +561,15 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 									(r, i) => `
                                 <tr>
                                     <td class="text-center">${i + 1}</td>
-                                    <td>${r.invoice_id || "-"}</td>
-                                    <td>${frappe.datetime.str_to_user(r.invoice_date) || "-"}</td>
-                                    <td>${r.customer_name || "-"}</td>
-                                    <td>${r.item_code || "-"}</td>
+                                    <td class="invoice-col">${r.invoice_id || "-"}</td>
+                                    <td class="date-col">${frappe.datetime.str_to_user(r.invoice_date) || "-"}</td>
+                                    <td class="customer-col">${r.customer_name || "-"}</td>
+                                    <td class="item-col">
+                                        <div style="line-height: 1.4;">
+                                            <div style="font-size: 11px; color: #64748b; font-weight: 500;">${r.item_code || "-"}</div>
+                                            <div style="font-weight: 600; color: #1e293b;">${r.item_name || "-"}</div>
+                                        </div>
+                                    </td>
                                     <td class="text-right">${flt(r.qty).toFixed(2)}</td>
                                     <td class="data-col">${format_currency_short(r.base_amount)}</td>
                                     <td class="data-col">${format_currency_short(r.cogs)}</td>
@@ -682,7 +703,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						const val = c_obj.data.datasets[0].values[i];
 						const share = ((val / total_val) * 100).toFixed(1);
 						let display_label = l;
-						if (l && l.includes(" - ")) {
+						
+						if (chart_id === "top_10_products" && l && l.includes(" ")) {
+							let parts = l.split(" ");
+							let code = parts[0];
+							let name = parts.slice(1).join(" ");
+							display_label = `<div style="font-size: 8px; color: #64748b;">${code}</div><div style="font-weight: 700; color: #1e293b;">${name}</div>`;
+						} else if (l && l.includes(" - ")) {
 							let parts = l.split(" - ");
 							if (parts[0] === parts[1]) display_label = parts[0];
 						}
