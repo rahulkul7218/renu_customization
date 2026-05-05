@@ -29,22 +29,19 @@ def prepare_filters(filters):
         filters["company"] = frappe.defaults.get_user_default("company") or \
                            frappe.db.get_single_value('Global Defaults', 'default_company')
 
-    # Handle Fiscal Year
-    if filters.get("fiscal_year"):
+    # PRIORITY LOGIC:
+    # 1. If specific dates are provided (from_date or to_date), they take absolute priority.
+    # 2. If NO dates are provided, but a Fiscal Year is selected, use the Fiscal Year's range.
+    # 3. If neither are provided, the system fetches "All Time" data.
+    
+    has_manual_dates = filters.get("from_date") or filters.get("to_date")
+
+    if filters.get("fiscal_year") and not has_manual_dates:
         fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
         if fy:
             filters["from_date"] = fy.year_start_date
             filters["to_date"] = fy.year_end_date
     
-    # Handle DateRange from JS
-    if filters.get("date_range"):
-        date_range = filters.get("date_range")
-        if isinstance(date_range, list) and len(date_range) == 2:
-            filters["from_date"] = date_range[0]
-            filters["to_date"] = date_range[1]
-    
-    # REMOVED MANDATORY DATE DEFAULTS to support "All Time" as default
-    # If no dates are provided, we don't set them, allowing queries to fetch all data.
     return filters
 
 @frappe.whitelist()
@@ -55,8 +52,9 @@ def get_dashboard_data(filters=None):
     base_filters = frappe._dict({
         "company": filters.company
     })
-    if filters.get("from_date") and filters.get("to_date"):
+    if filters.get("from_date"):
         base_filters["from_date"] = filters.from_date
+    if filters.get("to_date"):
         base_filters["to_date"] = filters.to_date
     
     report_result = execute(base_filters)
@@ -128,9 +126,12 @@ def get_dashboard_data(filters=None):
         """
         query_params = {"company": company}
         
-        if filters.get("from_date") and filters.get("to_date"):
-            gl_query += " AND gl.posting_date >= %(from_date)s AND gl.posting_date <= %(to_date)s "
-            query_params.update({"from_date": filters.from_date, "to_date": filters.to_date})
+        if filters.get("from_date"):
+            gl_query += " AND gl.posting_date >= %(from_date)s "
+            query_params["from_date"] = filters.from_date
+        if filters.get("to_date"):
+            gl_query += " AND gl.posting_date <= %(to_date)s "
+            query_params["to_date"] = filters.to_date
             
         gl_data = frappe.db.sql(gl_query, query_params, as_dict=1)
         master_gl_income = flt(gl_data[0].total_income) if gl_data else 0
@@ -163,13 +164,17 @@ def get_dashboard_data(filters=None):
                 item_charge_share = 0
                 item_discount_share = 0
                 
-            rev_item = base_amt_raw + item_charge_share - item_discount_share
+            # For "Sales Invoice Data" revenue, we only use base amount and item-level discounts
+            # This ensures we match the sum of base_net_total exactly (Target: 162,061,181.73)
+            rev_item = base_amt_raw - item_discount_share
             global_total_invoice_rev += rev_item
             unique_items_global.add(item_key)
 
+    # ALIGNMENT FACTOR: Disabled to match "Sales Invoice Data" exactly as requested.
+    # The previous GL alignment included non-invoice income accounts (Duty Drawback etc.)
     alignment_factor = 1.0
-    if global_total_invoice_rev > 0 and master_gl_income > 0:
-        alignment_factor = master_gl_income / global_total_invoice_rev
+    # if global_total_invoice_rev > 0 and master_gl_income > 0:
+    #    alignment_factor = master_gl_income / global_total_invoice_rev
 
     if inv_names:
         # Build domestic/export classification map
@@ -309,7 +314,8 @@ def get_dashboard_data(filters=None):
             item_charge_share = 0
             item_discount_share = 0
             
-        rev_with_adjustments = (base_amt_raw + item_charge_share - item_discount_share) * alignment_factor
+        # Match the "Sales Invoice Data" calculation (Base - Discount)
+        rev_with_adjustments = (base_amt_raw - item_discount_share) * alignment_factor
         
         # Attribution for Charts (Handles multiple sales persons per row)
         alloc_p = flt(row.get("allocated_percentage") or 100)

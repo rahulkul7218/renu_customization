@@ -647,8 +647,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th class="col-sp">Sales Person</th>
                                 <th class="col-prod">Product</th>
                                 ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
-                                <th class="total-net-col">Total (Net)</th>
-                                <th class="grand-total-col">Grand Total (Gross)</th>
+                                <th class="total-net-col">Total (Net) (M)</th>
+                                <th class="total-net-col">Cancelled (M)</th>
+                                <th class="grand-total-col">Grand Total (Gross) (M)</th>
                             </tr>
                         </thead>
                         <tbody id="booking_month_body"></tbody>
@@ -666,7 +667,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <tr>
                                 <th class="col-category">Category</th>
                                 ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
-                                <th class="lifecycle-total-col">Total</th>
+                                <th class="lifecycle-total-col">Total (M)</th>
                             </tr>
                         </thead>
                         <tbody id="lifecycle_summary_body"></tbody>
@@ -698,6 +699,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th style="width: 110px; white-space: nowrap;">Deliv. Date</th>
                                 <th class="col-sp">Sales Person</th>
                                 <th class="col-amt">Order (M)</th>
+                                <th class="col-amt">Cancelled (M)</th>
+                                <th class="col-amt">Picked (M)</th>
                                 <th class="col-amt">Delivery (M)</th>
                                 <th class="col-amt">Short Close (M)</th>
                                 <th class="col-amt">Open (M)</th>
@@ -724,6 +727,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				Cancelled: { color: "#ef4444", data: {} },
 				"Short Close": { color: "#f59e0b", data: {} },
 				Actual: { color: "#10b981", data: {} },
+				Picked: { color: "#facc15", data: {} },
 				Delivered: { color: "#06b6d4", data: {} },
 				Overdue: { color: "#8b5cf6", data: {} },
 			};
@@ -748,6 +752,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				if (sc_amt > 0) {
 					lifecycle_buckets["Short Close"].data[m_key] =
 						(lifecycle_buckets["Short Close"].data[m_key] || 0) + sc_amt;
+				}
+
+				let picked_amt = flt(row.picked_net_total_inr || 0);
+				if (status !== "Cancelled") {
+					lifecycle_buckets["Picked"].data[m_key] =
+						(lifecycle_buckets["Picked"].data[m_key] || 0) + picked_amt;
 				}
 
 				let deliv_amt = flt(
@@ -816,10 +826,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						item_name,
 						months: {},
 						total: 0,
+						total_cancelled: 0,
 						total_gross: 0,
 					};
 				merged_data[key].months[m_key] = (merged_data[key].months[m_key] || 0) + amt;
 				merged_data[key].total += amt;
+				merged_data[key].total_cancelled += flt(row.cancelled_val || 0);
 				merged_data[key].total_gross += g_amt;
 			});
 
@@ -827,6 +839,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			let total_month_amts = {};
 			let total_month_gross_amts = {};
 			let g_total_net = 0;
+			let g_total_cancelled = 0;
 			let g_total_gross = 0;
 
 			if (summary_list.length === 0) {
@@ -836,6 +849,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			} else {
 				summary_list.forEach((row, idx) => {
 					g_total_net += row.total;
+					g_total_cancelled += row.total_cancelled;
 					g_total_gross += row.total_gross;
 					let cells = months
 						.map((m) => {
@@ -858,6 +872,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             </td>
                             ${cells}
                             <td class="total-net-col">${format_currency_short(row.total)}</td>
+                            <td class="total-net-col">${format_currency_short(row.total_cancelled)}</td>
                             <td class="grand-total-col">${format_currency_short(row.total_gross)}</td>
                         </tr>
                     `);
@@ -880,6 +895,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-prod">-</td>
                         ${months.map((m) => `<td class="col-amt">${format_currency_short(total_month_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col">${format_currency_short(g_total_net)}</td>
+                        <td class="total-net-col">${format_currency_short(g_total_cancelled)}</td>
                         <td class="grand-total-col">-</td>
                     </tr>
                     <tr class="sticky-total">
@@ -889,6 +905,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-prod">-</td>
                         ${months.map((m) => `<td class="col-amt" style="background: #f0f4ff !important; color: #4338ca;">${format_currency_short(total_month_gross_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col">-</td>
+                        <td class="total-net-col">-</td>
                         <td class="grand-total-col">${format_currency_short(g_total_gross)}</td>
                     </tr>
                 `);
@@ -897,29 +914,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			// 3.2 Detailed Sales Orders List
 			tables_container.find("#so_count").text(`Showing ${filtered_data.length} orders`);
 			let total_amt = 0,
+				total_cancelled = 0,
+				total_picked = 0,
 				total_deliv = 0,
 				total_sc = 0,
 				total_balance = 0;
 
-			// Grand Totals (Entire Dataset)
-			let g_amt = 0,
-				g_deliv = 0,
-				g_sc = 0,
-				g_balance = 0;
-
-			data.results.forEach((r) => {
-				let a = flt(r.total_net_amount_inr || r["total_net_amount_(inr)"] || r.po_total);
-				let d = flt(r.delivered_net_total_inr || 0);
-				let sc = flt(r.sc_value || 0);
-				g_amt += a;
-				g_deliv += d;
-				g_sc += sc;
-				g_balance += flt(r.balance_net_total_inr || a - d);
-			});
-
 			if (filtered_data.length === 0) {
 				tbody_list.append(
-					`<tr><td colspan="13" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="15" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				filtered_data.forEach((row, idx) => {
@@ -931,9 +934,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					if (["Cancelled"].includes(row.status)) status_color = "red";
 
 					let amt = flt(row.total_net_amount_inr || row["total_net_amount_(inr)"] || row.po_total);
+					let cancelled_val = row.status === "Cancelled" ? amt : 0;
 					let deliv_total = flt(row.delivered_net_total_inr || 0);
 					let sc_value = flt(row.sc_value || 0);
-					let balance_total = flt(row.balance_net_total_inr || amt - deliv_total);
+					let balance_total = flt(row.balance_net_total_inr || amt - deliv_total - cancelled_val);
 
 					let cust_po = row.po_no || "-";
 					let deliv_date_str = row.delivery_date
@@ -941,6 +945,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						: "-";
 
 					total_amt += amt;
+					total_cancelled += cancelled_val;
+					total_picked += flt(row.picked_net_total_inr || 0);
 					total_deliv += deliv_total;
 					total_sc += sc_value;
 					total_balance += balance_total;
@@ -962,6 +968,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <td class="col-deliv-date" style="color: #475569; font-size: 11px; white-space: nowrap;">${deliv_date_str}</td>
                             <td class="col-sp">${row.sales_person || "-"}</td>
                             <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(amt)}</td>
+                            <td class="col-amt" style="color: #0f172a;">${format_currency_short(cancelled_val)}</td>
+                            <td class="col-amt" style="color: #0f172a;">${format_currency_short(row.picked_net_total_inr || 0)}</td>
                             <td class="col-amt" style="color: #0f172a;">${format_currency_short(deliv_total)}</td>
                             <td class="col-amt" style="color: #0f172a; font-weight: 600;">${format_currency_short(sc_value)}</td>
                             <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(balance_total)}</td>
@@ -981,6 +989,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-deliv-date" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-sp" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_amt)}</td>
+                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_cancelled)}</td>
+                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_picked)}</td>
                         <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_deliv)}</td>
                         <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_sc)}</td>
                         <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_balance)}</td>

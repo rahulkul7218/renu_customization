@@ -99,6 +99,18 @@ def get_dashboard_data(filters=None):
                 so_item_map[key] = []
             so_item_map[key].append(item)
 
+    # Fetch Pick List Item info for "Picked" metric
+    pick_item_map = {}
+    if so_names:
+        pick_items = frappe.db.sql("""
+            SELECT sales_order_item, SUM(picked_qty) as picked_qty
+            FROM `tabPick List Item`
+            WHERE sales_order IN %(so_names)s
+            AND docstatus = 1
+            GROUP BY sales_order_item
+        """, {"so_names": so_names}, as_dict=1)
+        pick_item_map = {d.sales_order_item: flt(d.picked_qty) for d in pick_items}
+
     cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"], limit_page_length=None)
     customer_map = {c.name: c for c in cust_list}
 
@@ -148,12 +160,21 @@ def get_dashboard_data(filters=None):
             if matched_items:
                 mi = matched_items.pop(0)
                 returned_val = flt(mi.get("returned_qty", 0)) * flt(mi.get("base_rate", 0))
-        
-        net_amt = max(0, base_line_amt - returned_val)
+
+        # Booked amount should be the full order value to match target 375,461,138.54
+        net_amt = base_line_amt
         row["po_total"] = net_amt
         row["total_net_amount_(inr)"] = net_amt
         row["gross_total"] = net_amt * (si_grand / si_net) if si_net else net_amt
         row["dom_exp"] = row.get("domestic/export") or row.get("domestic_export")
+        
+        # Picked and Delivered Metrics
+        soi_name = row.get("name") # This assumes the report returns the soi name
+        row["picked_qty_val"] = pick_item_map.get(soi_name, 0)
+        row["picked_net_total_inr"] = flt(row["picked_qty_val"]) * flt(row.get("base_rate", 0))
+        # Note: returned_val is still tracked but not subtracted from the "Booked" KPI
+        row["returned_val"] = returned_val
+        row["cancelled_val"] = net_amt if row.get("status") == "Cancelled" else 0
 
         # Filtering logic
         keep = True
@@ -261,6 +282,10 @@ def get_dashboard_data(filters=None):
     total_rev = 0
     total_gross = 0
     cp_active_rev = 0
+    picked_rev = 0
+    dom_picked = 0
+    exp_picked = 0
+    cp_picked = 0
     
     for row in data:
 
@@ -304,6 +329,12 @@ def get_dashboard_data(filters=None):
             if d_e == "Domestic": dom_delivered += deliv_amt
             elif d_e == "Export": exp_delivered += deliv_amt
             if is_cp: cp_delivered += deliv_amt
+            
+            p_amt = flt(row.get("picked_net_total_inr", 0))
+            picked_rev += p_amt
+            if d_e == "Domestic": dom_picked += p_amt
+            elif d_e == "Export": exp_picked += p_amt
+            if is_cp: cp_picked += p_amt
 
         # Chart Totals (Excludes Cancelled/Draft)
         if status not in ("Cancelled", "Draft"):
@@ -337,6 +368,7 @@ def get_dashboard_data(filters=None):
         {"label": _("Global Cancelled"), "value": cancelled_rev, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Short Close"), "value": short_close_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Actual"), "value": actual_book, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Picked"), "value": picked_rev, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Delivered"), "value": delivered_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Pending"), "value": final_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
         
@@ -345,6 +377,7 @@ def get_dashboard_data(filters=None):
         {"label": _("Dom. Cancelled"), "value": dom_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Short Close"), "value": dom_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Actual"), "value": dom_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Picked"), "value": dom_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Delivered"), "value": dom_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Pending"), "value": dom_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
 
@@ -353,17 +386,25 @@ def get_dashboard_data(filters=None):
         {"label": _("Exp. Cancelled"), "value": exp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Short Close"), "value": exp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Actual"), "value": exp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Picked"), "value": exp_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Delivered"), "value": exp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Pending"), "value": exp_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
+
         
         # Channel Partner
         {"label": _("CP Booked"), "value": cp_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Cancelled"), "value": cp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Short Close"), "value": cp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Actual"), "value": cp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Picked"), "value": cp_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Delivered"), "value": cp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Pending"), "value": cp_pending, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
+    
+    # Add Picked to Global, Dom, Exp
+    report_summary.insert(4, {"label": _("Global Picked (M)"), "value": picked_rev, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"})
+    report_summary.insert(11, {"label": _("Dom. Picked (M)"), "value": dom_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"})
+    report_summary.insert(18, {"label": _("Exp. Picked (M)"), "value": exp_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"})
 
     sp_rev_dict = {}
     cust_rev_dict = {}
@@ -537,13 +578,14 @@ def export_to_excel(filters=None, export_type="all"):
             except: m_key, m_sort = "Unknown", "000000"
             months_set.add((m_sort, m_key))
             key = f"{sp}|{cust}|{prod}"
-            if key not in merged_data: merged_data[key] = {"sp": sp, "cust": cust, "prod": prod, "months": {}, "total": 0, "total_gross": 0}
+            if key not in merged_data: merged_data[key] = {"sp": sp, "cust": cust, "prod": prod, "months": {}, "total": 0, "total_cancelled": 0, "total_gross": 0}
             merged_data[key]["months"][m_key] = merged_data[key]["months"].get(m_key, 0) + amt
             merged_data[key]["total"] += amt
+            merged_data[key]["total_cancelled"] += flt(row.get("cancelled_val") or 0)
             merged_data[key]["total_gross"] += g_amt
             
         sorted_months = [x[1] for x in sorted(list(months_set), key=lambda x: x[0])]
-        headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total (Net)", "Grand Total (Gross)"]
+        headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total (Net)", "Cancelled (M)", "Grand Total (Gross)"]
         for idx, h in enumerate(headers, start=1):
             cell = ws_months.cell(row=row_idx, column=idx, value=h)
             cell.font = header_font
@@ -569,6 +611,10 @@ def export_to_excel(filters=None, export_type="all"):
             c_n.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_n.border = table_border
             col_idx += 1
+            c_c = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total_cancelled"])/1000000)
+            c_c.number_format = '"₹ "#,##0.0000" M"'
+            c_c.border = table_border
+            col_idx += 1
             c_g = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total_gross"])/1000000)
             c_g.number_format = '"₹ "#,##0.0000" M"'
             c_g.font = Font(bold=True)
@@ -582,7 +628,7 @@ def export_to_excel(filters=None, export_type="all"):
         for c in range(1, 5):
             ws_months.cell(row=row_idx, column=c).fill = header_fill
             ws_months.cell(row=row_idx, column=c).border = table_border
-        m_totals_net, m_totals_gross, g_total_net, g_total_gross = {}, {}, sum(r["total"] for r in merged_data.values()), sum(r["total_gross"] for r in merged_data.values())
+        m_totals_net, m_totals_gross, g_total_net, g_total_cancelled, g_total_gross = {}, {}, sum(r["total"] for r in merged_data.values()), sum(r["total_cancelled"] for r in merged_data.values()), sum(r["total_gross"] for r in merged_data.values())
         
         # Monthly totals calculation
         for r in merged_data.values():
@@ -606,6 +652,12 @@ def export_to_excel(filters=None, export_type="all"):
         c_gn.font = header_font
         c_gn.fill = header_fill
         c_gn.border = table_border
+        col_idx += 1
+        c_gc = ws_months.cell(row=row_idx, column=col_idx, value=g_total_cancelled / 1000000)
+        c_gc.number_format = '"₹ "#,##0.0000" M"'
+        c_gc.font = header_font
+        c_gc.fill = header_fill
+        c_gc.border = table_border
         col_idx += 1
         c_sep = ws_months.cell(row=row_idx, column=col_idx, value="-")
         c_sep.font = header_font
@@ -748,6 +800,8 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Deliv. Date", "fieldname": "delivery_date", "width": 14},
             {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
             {"label": "Order (M)", "fieldname": "total_net_amount_(inr)", "width": 16},
+            {"label": "Cancelled (M)", "fieldname": "cancelled_val", "width": 16},
+            {"label": "Picked (M)", "fieldname": "picked_net_total_inr", "width": 16},
             {"label": "Delivery (M)", "fieldname": "delivered_net_total_inr", "width": 16},
             {"label": "Short Close (M)", "fieldname": "sc_value", "width": 16},
             {"label": "Open (M)", "fieldname": "balance_net_total_inr", "width": 16}
@@ -768,7 +822,7 @@ def export_to_excel(filters=None, export_type="all"):
                 cell = ws_list.cell(row=row_idx, column=idx)
                 cell.border = table_border
                 if isinstance(val, (int, float)):
-                    if fname in ["total_net_amount_(inr)", "delivered_net_total_inr", "sc_value", "balance_net_total_inr"]:
+                    if fname in ["total_net_amount_(inr)", "cancelled_val", "picked_net_total_inr", "delivered_net_total_inr", "sc_value", "balance_net_total_inr"]:
                         val /= 1000000
                         cell.number_format = '"₹ "#,##0.0000" M"'
                         if fname == "total_net_amount_(inr)":
