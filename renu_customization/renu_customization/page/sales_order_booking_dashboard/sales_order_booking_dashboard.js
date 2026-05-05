@@ -739,8 +739,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
 				let status = row.status;
 
-				lifecycle_buckets["Booked"].data[m_key] =
-					(lifecycle_buckets["Booked"].data[m_key] || 0) + amt;
+				if (status !== "Cancelled") {
+					lifecycle_buckets["Booked"].data[m_key] =
+						(lifecycle_buckets["Booked"].data[m_key] || 0) + amt;
+				}
 
 				if (status === "Cancelled") {
 					lifecycle_buckets["Cancelled"].data[m_key] =
@@ -782,7 +784,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let booked = lifecycle_buckets["Booked"].data[m.key] || 0;
 				let cancelled = lifecycle_buckets["Cancelled"].data[m.key] || 0;
 				let sc = lifecycle_buckets["Short Close"].data[m.key] || 0;
-				lifecycle_buckets["Actual"].data[m.key] = booked - cancelled - sc;
+				lifecycle_buckets["Actual"].data[m.key] = booked - sc;
 			});
 
 			Object.keys(lifecycle_buckets).forEach((cat) => {
@@ -829,10 +831,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						total_cancelled: 0,
 						total_gross: 0,
 					};
-				merged_data[key].months[m_key] = (merged_data[key].months[m_key] || 0) + amt;
-				merged_data[key].total += amt;
+				if (row.status !== "Cancelled") {
+					merged_data[key].months[m_key] = (merged_data[key].months[m_key] || 0) + amt;
+					merged_data[key].total += amt;
+					merged_data[key].total_gross += g_amt;
+				}
 				merged_data[key].total_cancelled += flt(row.cancelled_val || 0);
-				merged_data[key].total_gross += g_amt;
 			});
 
 			let summary_list = Object.values(merged_data).sort((a, b) => b.total - a.total);
@@ -878,12 +882,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     `);
 				});
 
-				// Month-wise Gross totals for footer
 				filtered_data.forEach((r) => {
-					let m_key = moment(r.so_date).format("MMM YYYY");
-					total_month_gross_amts[m_key] =
-						(total_month_gross_amts[m_key] || 0) +
-						flt(r.gross_total || r.total_net_amount_inr);
+					if (r.status !== "Cancelled") {
+						let m_key = moment(r.so_date).format("MMM YYYY");
+						total_month_gross_amts[m_key] =
+							(total_month_gross_amts[m_key] || 0) +
+							flt(r.gross_total || r.total_net_amount_inr);
+					}
 				});
 
 				// Footer Rows
@@ -944,7 +949,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						? frappe.datetime.str_to_user(row.delivery_date)
 						: "-";
 
-					total_amt += amt;
+					if (row.status !== "Cancelled") total_amt += amt;
 					total_cancelled += cancelled_val;
 					total_picked += flt(row.picked_net_total_inr || 0);
 					total_deliv += deliv_total;
