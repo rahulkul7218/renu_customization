@@ -30,10 +30,29 @@ def get_dashboard_data(filters=None):
         "due_date": ["<", nowdate()]
     }
 
+    # Handle Fiscal Year
+    if filters.get("fiscal_year"):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = fy.year_start_date
+            filters["to_date"] = fy.year_end_date
+
     # Apply Filters from JS
+    if filters.get("company"):
+        query_filters["company"] = filters.get("company")
+
     if filters.get("customer"):
         query_filters["customer"] = filters.get("customer")
+        
+    if filters.get("from_date"):
+        query_filters["posting_date"] = [">=", filters.get("from_date")]
     
+    if filters.get("to_date"):
+        if "posting_date" in query_filters:
+            query_filters["posting_date"] = ["between", [filters.get("from_date"), filters.get("to_date")]]
+        else:
+            query_filters["posting_date"] = ["<=", filters.get("to_date")]
+
     invoices = frappe.get_all("Sales Invoice", 
         filters=query_filters, 
         fields=["name", "customer", "customer_name", "posting_date", "due_date", 

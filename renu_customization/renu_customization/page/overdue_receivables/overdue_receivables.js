@@ -219,13 +219,36 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_user_default("Company"),
+		},
+		{
 			fieldname: "customer",
 			label: __("Customer"),
 			fieldtype: "Link",
 			options: "Customer",
 			placeholder: __("Select Customer"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "sales_person",
 			label: __("Sales Person"),
@@ -233,14 +256,12 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 			options: "Sales Person",
 			placeholder: __("Select Sales Person"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "min_days",
 			label: __("Min Days Overdue"),
 			fieldtype: "Int",
 			placeholder: __("Enter Days"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "type",
 			label: __("Type"),
@@ -264,7 +285,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 
 	Object.keys(page.filter_group.fields_dict).forEach((key) => {
 		let field = page.filter_group.fields_dict[key];
-		field.df.on_change = () => page.refresh();
+		field.on_change = () => page.refresh();
 		if (field.$input) {
 			field.$input.on("change input blur", () => {
 				setTimeout(() => page.refresh(), 50);
@@ -275,6 +296,51 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 	$("<style>")
 		.text(
 			`
+		.dashboard-filter-area {
+			padding: 15px 20px 5px 20px !important;
+			background-color: #fff !important;
+			border-bottom: 1px solid #e2e8f0 !important;
+		}
+		.dashboard-filter-area .form-section .section-body,
+		.dashboard-filter-area .section-body,
+		.dashboard-filter-area .form-column {
+			display: block !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .form-column form {
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 15px !important;
+			align-items: flex-end !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
+		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
+			display: none !important;
+		}
+		.dashboard-filter-area .frappe-control {
+			margin-bottom: 10px !important;
+			width: calc(25% - 12px) !important;
+		}
+		.dashboard-filter-area .frappe-control .form-group {
+			margin-bottom: 0 !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .control-input,
+		.dashboard-filter-area .awesomplete,
+		.dashboard-filter-area input:not([type="checkbox"]),
+		.dashboard-filter-area select {
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		.dashboard-filter-area label,
+		.dashboard-filter-area .control-label {
+			font-size: 12px !important;
+			font-weight: 600 !important;
+			color: #475569 !important;
+			margin-bottom: 6px !important;
+			display: block !important;
+			white-space: nowrap !important;
+		}
             .sticky-total td { 
                 position: sticky; 
                 bottom: 0; 
@@ -304,7 +370,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
             .overdue-col { min-width: 80px !important; width: 80px !important; text-align: right !important; }
 		`,
 		)
-		.appendTo("head");
+		.appendTo(filter_area);
 
 	page.refresh = function () {
 		let filters = page.filter_group.get_values();

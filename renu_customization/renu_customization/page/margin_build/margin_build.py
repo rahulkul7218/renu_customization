@@ -23,6 +23,13 @@ def get_dashboard_data(filters=None):
     if not filters:
         filters = {}
 
+    # Handle Fiscal Year
+    if filters.get("fiscal_year"):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = fy.year_start_date
+            filters["to_date"] = fy.year_end_date
+
     base_filters = frappe._dict({})
     if filters.get("from_date"):
         base_filters.from_date = filters.get("from_date")

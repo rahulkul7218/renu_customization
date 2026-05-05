@@ -37,16 +37,21 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
 		},
 		{
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.get_today(),
 		},
 		{
 			fieldname: "company",

@@ -41,7 +41,17 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			label: __("Fiscal Year"),
 			fieldtype: "Link",
 			options: "Fiscal Year",
-			placeholder: __("Select Fiscal Year"),
+			placeholder: __("Select Year"),
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
 		},
 		{
 			fieldname: "customer",

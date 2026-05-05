@@ -22,6 +22,20 @@ def prepare_filters(filters):
     elif isinstance(filters, str):
         filters = frappe.parse_json(filters)
     
+    filters = frappe._dict(filters)
+
+    # Handle Company Default
+    if not filters.get("company"):
+        filters["company"] = frappe.defaults.get_user_default("company") or \
+                           frappe.db.get_single_value('Global Defaults', 'default_company')
+
+    # Handle Fiscal Year
+    if filters.get("fiscal_year"):
+        fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
+        if fy:
+            filters["from_date"] = fy.year_start_date
+            filters["to_date"] = fy.year_end_date
+    
     # Handle DateRange from JS
     if filters.get("date_range"):
         date_range = filters.get("date_range")
@@ -29,25 +43,21 @@ def prepare_filters(filters):
             filters["from_date"] = date_range[0]
             filters["to_date"] = date_range[1]
     
-    return frappe._dict(filters)
+    # REMOVED MANDATORY DATE DEFAULTS to support "All Time" as default
+    # If no dates are provided, we don't set them, allowing queries to fetch all data.
+    return filters
 
 @frappe.whitelist()
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
     
-    # Handle Fiscal Year
-    if filters.get("fiscal_year"):
-        fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
-        if fy:
-            filters["from_date"] = fy.year_start_date
-            filters["to_date"] = fy.year_end_date
-
-    # Pass only date filters to report execution to get the full dataset for the period.
-    # We apply all other filters manually below to avoid inconsistencies in the report script.
+    # Pass filters to report execution. Only include dates if they are explicitly set.
     base_filters = frappe._dict({
-        "from_date": filters.from_date,
-        "to_date": filters.to_date
+        "company": filters.company
     })
+    if filters.get("from_date") and filters.get("to_date"):
+        base_filters["from_date"] = filters.from_date
+        base_filters["to_date"] = filters.to_date
     
     report_result = execute(base_filters)
     columns = report_result[0]
@@ -88,7 +98,7 @@ def get_dashboard_data(filters=None):
         # 4. Fetch Invoice level info for classification and discounts
         invoices = frappe.get_all("Sales Invoice", filters={"name": ("in", inv_names)}, 
                                   fields=["name", "customer", "status", "invoice_type", "is_domestic", "is_export", 
-                                          "base_discount_amount", "base_total", "base_net_total"],
+                                          "base_discount_amount", "base_total", "base_net_total", "base_grand_total"],
                                   limit_page_length=None)
         
         invoice_map = {i.name: i.customer for i in invoices}
@@ -96,9 +106,9 @@ def get_dashboard_data(filters=None):
         type_map = {i.name: i.invoice_type for i in invoices}
         invoice_discount_map = {i.name: flt(i.base_discount_amount) for i in invoices}
         invoice_total_map = {i.name: flt(i.base_total) for i in invoices}
+        invoice_grand_total_map = {i.name: flt(i.base_grand_total) for i in invoices}
+        invoice_net_total_map = {i.name: i.base_net_total for i in invoices}
         
-    # 5. FETCH MASTER REVENUE FROM GL ENTRIES (Exactly as P&L does)
-    # This ensures 100% match with Profit & Loss "Total Income"
     # 5. FETCH MASTER REVENUE FROM GL ENTRIES (Exactly as P&L does)
     # This ensures 100% match with Profit & Loss "Total Income"
     from_date = filters.get("from_date")
@@ -109,18 +119,24 @@ def get_dashboard_data(filters=None):
     if from_date and to_date and company:
         # Find all accounts where root_type is Income for this company
         # We'll sum them directly to avoid any hierarchy-related omissions
-        gl_data = frappe.db.sql(f"""
+        gl_query = """
             SELECT SUM(gl.credit - gl.debit) as total_income
             FROM `tabGL Entry` gl
             JOIN `tabAccount` acc ON gl.account = acc.name
             WHERE gl.company = %(company)s 
-            AND gl.posting_date >= %(from_date)s 
-            AND gl.posting_date <= %(to_date)s 
             AND gl.is_cancelled = 0
             AND acc.root_type = 'Income'
-        """, {"company": company, "from_date": from_date, "to_date": to_date}, as_dict=1)
+        """
+        query_params = {"company": company}
+        
+        if filters.get("from_date") and filters.get("to_date"):
+            gl_query += " AND gl.posting_date >= %(from_date)s AND gl.posting_date <= %(to_date)s "
+            query_params.update({"from_date": filters.from_date, "to_date": filters.to_date})
+            
+        gl_data = frappe.db.sql(gl_query, query_params, as_dict=1)
         
         master_gl_income = flt(gl_data[0].total_income) if gl_data else 0
+    
 
     if inv_names:
         # Build domestic/export classification map
@@ -319,10 +335,10 @@ def get_dashboard_data(filters=None):
             if invoice_cp_map.get(inv_id): cp_rev += rev_item
             
             # Grand Total baseline
-            si_net = flt(row.get("si_net_total") or 0)
-            si_grand = flt(row.get("si_grand_total") or 0)
+            si_net = flt(invoice_net_total_map.get(inv_id, 0))
+            si_grand = flt(invoice_grand_total_map.get(inv_id, 0))
             g_factor = (si_grand / si_net) if si_net else 1.0
-            total_grand_rev += (base_amt_raw * g_factor)
+            total_grand_rev += (rev_item * g_factor) # Apply gross factor to adjusted net item revenue
             
             unique_items_totals.add(item_key)
 
@@ -357,8 +373,8 @@ def get_dashboard_data(filters=None):
         alloc_p = flt(row.get("allocated_percentage") or 100)
         amt_allocated = rev_with_adjustments * (alloc_p / 100)
         
-        si_net = flt(row.get("si_net_total") or 0)
-        si_grand = flt(row.get("si_grand_total") or 0)
+        si_net = flt(invoice_net_total_map.get(inv_id, 0))
+        si_grand = flt(invoice_grand_total_map.get(inv_id, 0))
         gross_factor = (si_grand / si_net) if si_net else 1.0
         gross_amt_allocated = amt_allocated * gross_factor
         
@@ -377,8 +393,8 @@ def get_dashboard_data(filters=None):
     total_grand_rev *= alignment_factor
     
     report_summary = [
-        {"label": _("Total Net Revenue"), "value": final_total_rev / 1000000, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total Grand Total"), "value": total_grand_rev / 1000000, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Revenue (Net)"), "value": final_total_rev / 1000000, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Revenue (Gross)"), "value": total_grand_rev / 1000000, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Domestic Revenue"), "value": dom_rev / 1000000, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Export Revenue"), "value": exp_rev / 1000000, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Channel Partner"), "value": cp_rev / 1000000, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}

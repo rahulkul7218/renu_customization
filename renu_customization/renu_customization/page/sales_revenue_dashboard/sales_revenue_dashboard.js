@@ -41,11 +41,30 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_default("company"),
+			placeholder: __("Select Company"),
+			reqd: 1,
+		},
+		{
 			fieldname: "fiscal_year",
 			label: __("Fiscal Year"),
 			fieldtype: "Link",
 			placeholder: __("Select Fiscal Year"),
 			options: "Fiscal Year",
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
 		},
 		{
 			label: __("Customer"),
@@ -147,7 +166,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		}
 		.dashboard-filter-area .frappe-control {
 			margin-bottom: 10px !important;
-			width: calc(20% - 12px) !important;
+			width: calc(25% - 12px) !important;
 		}
 		.dashboard-filter-area .frappe-control .form-group {
 			margin-bottom: 0 !important;
@@ -221,7 +240,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         /* KPI Cards Styling */
         .summary-wrapper { 
             display: grid !important; 
-            grid-template-columns: repeat(5, 1fr) !important; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; 
             gap: 16px; 
             margin-bottom: 24px; 
             width: 100% !important;
@@ -230,11 +249,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px; 
-            padding: 16px; 
+            padding: 16px 12px; 
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             border-left: 5px solid #cbd5e1;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            min-width: 190px;
         }
         .summary-card:hover { 
             transform: translateY(-4px); 
@@ -261,9 +281,11 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             gap: 8px;
         }
         .summary-card .value { 
-            font-size: 20px; 
+            font-size: 18px; 
             font-weight: 800; 
             color: #0f172a; 
+            white-space: nowrap;
+            display: block;
         }
         .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
         
@@ -617,20 +639,9 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		// 1. Report Summary Metrics
 		if (data.summary && data.summary.length > 0) {
 			let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
-			const render_summary_card = (title, chart_id) => {
-				let card_html = `
-                    <div class="chart-card">
-                        <div class="header">
-                            <span>${title}</span>
-                        </div>
-                        <div class="chart-container" id="${chart_id}"></div>
-                    </div>
-                `;
-				return card_html;
-			};
 			data.summary.forEach((metric, idx) => {
 				let indicator = (metric.indicator || "blue").toLowerCase();
-				let card = $(`
+				$(`
                     <div class="summary-card ${indicator}" id="summary_card_${idx}">
                         <div class="label"><span class="indicator bg-${indicator}"></span>${metric.label}</div>
                         <div class="value">${format_currency_short(metric.value, metric.fieldtype)}</div>

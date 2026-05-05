@@ -38,16 +38,21 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	const filter_fields = [
 		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
 		},
 		{
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.get_today(),
 		},
 		{
 			fieldname: "company",
@@ -55,13 +60,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			fieldtype: "Link",
 			options: "Company",
 			default: frappe.defaults.get_user_default("Company"),
-		},
-		{
-			fieldname: "fiscal_year",
-			label: __("Fiscal Year"),
-			fieldtype: "Link",
-			options: "Fiscal Year",
-			placeholder: __("Select Year"),
 		},
 		{
 			label: __("Customer"),
@@ -218,9 +216,26 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
 
         /* KPI Cards Styling */
+        .section-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 32px 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .section-title::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
         .summary-wrapper { 
             display: grid !important; 
-            grid-template-columns: repeat(5, 1fr) !important; 
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; 
             gap: 16px; 
             margin-bottom: 24px; 
             width: 100% !important;
@@ -229,11 +244,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px; 
-            padding: 16px; 
+            padding: 16px 12px; 
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             border-left: 5px solid #cbd5e1;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            min-width: 170px;
         }
         .summary-card:hover { 
             transform: translateY(-4px); 
@@ -260,9 +276,11 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             gap: 8px;
         }
         .summary-card .value { 
-            font-size: 20px; 
+            font-size: 18px; 
             font-weight: 800; 
             color: #0f172a; 
+            white-space: nowrap;
+            display: block;
         }
         .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
         
@@ -442,16 +460,33 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			return;
 		}
 
-		// 1. KPI Cards
-		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
-		data.summary.forEach((metric) => {
-			let indicator = (metric.indicator || "blue").toLowerCase();
-			$(`
-                <div class="summary-card ${indicator}">
-                    <div class="label"><span class="indicator bg-${indicator}"></span>${metric.label}</div>
-                    <div class="value">${format_currency_short(metric.value)}</div>
-                </div>
-            `).appendTo(summary_row);
+		// 1. KPI Cards Grouped by Section
+		const sections = [
+			{ title: "Global Overview", prefix: "Global" },
+			{ title: "Domestic Performance", prefix: "Dom." },
+			{ title: "Export Performance", prefix: "Exp." },
+			{ title: "Channel Partner (CP) Performance", prefix: "CP" },
+		];
+
+		sections.forEach((sec) => {
+			let section_metrics = data.summary.filter((m) => m.label.startsWith(sec.prefix));
+			if (section_metrics.length > 0) {
+				$(`<div class="section-title">${__(sec.title)}</div>`).appendTo(page.container);
+				let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
+
+				section_metrics.forEach((metric) => {
+					let indicator = (metric.indicator || "blue").toLowerCase();
+					// Clean label: remove prefix
+					let clean_label = metric.label.replace(sec.prefix, "").replace(/^\.|\s+/, "").trim();
+
+					$(`
+                        <div class="summary-card ${indicator}">
+                            <div class="label"><span class="indicator bg-${indicator}"></span>${clean_label}</div>
+                            <div class="value">${format_currency_short(metric.value)}</div>
+                        </div>
+                    `).appendTo(summary_row);
+				});
+			}
 		});
 
 		// 2. Charts Row

@@ -214,10 +214,17 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{ fieldtype: "Column Break" },
+		{
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_months(frappe.datetime.get_today(), -1),
 			placeholder: __("Start Date"),
 		},
 		{ fieldtype: "Column Break" },
@@ -225,7 +232,6 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.get_today(),
 			placeholder: __("End Date"),
 		},
 		{ fieldtype: "Column Break" },

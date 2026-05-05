@@ -467,7 +467,8 @@ def export_to_excel(filters=None, export_type="all"):
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
     
         # Chart Tables on Overview
-        row_idx = 14
+        # Calculate row_idx dynamically based on summary cards (4 per row, each taking 3 rows)
+        row_idx = 5 + ((len(summary) - 1) // 4 + 1) * 3 + 2
         for chart_id in ["top_10_salesperson", "top_10_customers", "top_10_products"]:
             c_data = charts.get(chart_id, {})
             if not c_data.get("data", {}).get("labels"): continue

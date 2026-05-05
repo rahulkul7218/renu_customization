@@ -23,6 +23,13 @@ def get_dashboard_data(filters=None):
 
     conditions = ["si.docstatus < 2", "si.status NOT IN ('Cancelled', 'Draft', 'Return')", "si.is_return = 0"]
     
+    # Handle Fiscal Year
+    if filters.get("fiscal_year"):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = fy.year_start_date
+            filters["to_date"] = fy.year_end_date
+    
     if filters.get("customer"):
         conditions.append(f"si.customer = {frappe.db.escape(filters.get('customer'))}")
     

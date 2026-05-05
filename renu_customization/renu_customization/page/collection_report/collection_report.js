@@ -254,6 +254,14 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 	).prependTo(page.main);
 	const filter_fields = [
 		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{ fieldtype: "Column Break" },
+		{
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",

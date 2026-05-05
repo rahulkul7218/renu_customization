@@ -42,10 +42,14 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 			options: "Fiscal Year",
 		},
 		{
-			fieldname: "date_range",
-			label: __("Date Range"),
-			fieldtype: "DateRange",
-			placeholder: [__("Start Date"), __("End Date")],
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
 		},
 		{
 			fieldname: "supplier",
@@ -131,7 +135,7 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		}
 		.dashboard-filter-area .frappe-control {
 			margin-bottom: 10px !important;
-			width: calc(20% - 12px) !important;
+			width: calc(25% - 12px) !important;
 		}
 		.dashboard-filter-area .frappe-control .form-group {
 			margin-bottom: 0 !important;
