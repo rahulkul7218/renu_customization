@@ -735,11 +735,19 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				</div>
 
 				<div class="page-break"></div>
+				<h3>Month-Wise Revenue Breakdown (M)</h3>
+				<table class="month-revenue-table">
+					<thead>${page.container.find("#consolidated_table thead").html() || ""}</thead>
+					<tbody>${page.container.find("#consolidated_table_body").html() || ""}</tbody>
+				</table>
+
+				<div class="page-break"></div>
 				<h3>Detailed Sales Invoices List (M)</h3>
 				<table class="invoice-list-table">
-					<thead>${page.container.find("#invoice_table_body").closest("table").find("thead").html() || ""}</thead>
+					<thead>${page.container.find("#invoice_list_table thead").html() || ""}</thead>
 					<tbody>${page.container.find("#invoice_table_body").html() || ""}</tbody>
 				</table>
+
 			</body>
 			</html>
 		`;
@@ -755,7 +763,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		$form.remove();
 	};
 
-	page.add_menu_item(__("Export to PDF"), () => export_pdf());
 
 	function render_dashboard(data) {
 		current_dashboard_data = data;
@@ -930,6 +937,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <i class="fa fa-file-excel-o"></i>Export to Excel
                             </span>
                         </div>
+
                     </div>
                 </div>
                 <div class="table-container month-revenue-container">
@@ -959,10 +967,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             <i class="fa fa-file-excel-o"></i>Export to Excel
                         </span>
                     </div>
+
                 </div>
                 <div class="table-container invoice-list-container">
-                    <table class="dashboard-table">
-                        <thead>
+                    <table class="dashboard-table" id="invoice_list_table">
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
@@ -977,7 +985,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <th class="qty-col">Qty</th>
                                 <th class="amount-col">Amount (Net)</th>
                             </tr>
-                        </thead>
                         </thead>
                         <tbody id="invoice_table_body"></tbody>
                     </table>
@@ -1343,12 +1350,14 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 		// 1. Primary Action: Refresh
 		page.set_primary_action(__("Refresh"), () => page.refresh());
-
+		
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+		page.add_menu_item(__("Export to PDF"), () => export_pdf());
 
 		// Attach handlers to the localized buttons in table headers
 		page.container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		page.container.on("click", "#export_invoice_table", () => export_to_excel("detail"));
+
 
 		// 3. Force-remove default duplicates (be specific to avoid hiding our own menu)
 		$(".page-head .standard-actions .btn-secondary:contains('Refresh')").hide();

@@ -313,6 +313,11 @@ def get_dashboard_data(filters=None):
             if is_cp:
                 cp_active_rev += amt
 
+        # Store calculated metrics for detailed list and exports
+        row["sc_value"] = sc_amt
+        row["delivered_net_total_inr"] = deliv_amt
+        row["balance_net_total_inr"] = flt(row.get("balance_net_total_inr") or (amt - deliv_amt))
+
 
     actual_book = booked_rev - cancelled_rev - short_close_rev
     final_pending = actual_book - delivered_rev
@@ -429,10 +434,12 @@ def export_to_excel(filters=None, export_type="all"):
         ws_overview = wb.active
         ws_overview.title = "Dashboard Overview"
         ws_months = wb.create_sheet("Month-Wise Booking")
+        ws_lifecycle = wb.create_sheet("Monthly Lifecycle Summary")
         ws_list = wb.create_sheet("Sales Orders List")
     elif export_type == "summary":
         ws_months = wb.active
         ws_months.title = "Month-Wise Booking"
+        ws_lifecycle = wb.create_sheet("Monthly Lifecycle Summary")
         ws_overview = wb.create_sheet("Dummy1")
         ws_list = wb.create_sheet("Dummy2")
     elif export_type == "detail":
@@ -440,6 +447,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_list.title = "Sales Orders List"
         ws_overview = wb.create_sheet("Dummy1")
         ws_months = wb.create_sheet("Dummy2")
+        ws_lifecycle = wb.create_sheet("Dummy3")
     
     # Premium Styling
     header_fill = PatternFill(start_color="2c3e50", fill_type="solid")
@@ -628,6 +636,101 @@ def export_to_excel(filters=None, export_type="all"):
         c_gg.font = header_font
         c_gg.fill = header_fill
         c_gg.border = table_border
+        row_idx += 3
+
+    if export_type in ["all", "summary"]:
+        # 2.1 Monthly Lifecycle Summary (Excel - Separate Sheet)
+        row_idx_l = 1
+        ws_lifecycle.cell(
+            row=row_idx_l, column=1, value="Monthly Lifecycle Summary (Million INR)"
+        ).font = section_font
+        row_idx_l += 2
+
+        lifecycle_summary_data = {
+            "Booked": {m: 0 for m in sorted_months},
+            "Cancelled": {m: 0 for m in sorted_months},
+            "Short Close": {m: 0 for m in sorted_months},
+            "Actual": {m: 0 for m in sorted_months},
+            "Delivered": {m: 0 for m in sorted_months},
+            "Overdue": {m: 0 for m in sorted_months},
+        }
+
+        today = frappe.utils.getdate()
+        for row in data:
+            try:
+                m_key = frappe.utils.getdate(row.get("so_date")).strftime("%b %Y")
+            except:
+                continue
+            if m_key not in sorted_months:
+                continue
+
+            amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
+            status = row.get("status")
+
+            lifecycle_summary_data["Booked"][m_key] += amt
+            if status == "Cancelled":
+                lifecycle_summary_data["Cancelled"][m_key] += amt
+
+            sc_amt = flt(row.get("short_close_qty", 0)) * flt(
+                row.get("base_rate") or row.get("item_rate", 0)
+            )
+            if sc_amt > 0:
+                lifecycle_summary_data["Short Close"][m_key] += sc_amt
+
+            deliv_amt = flt(row.get("delivered_net_total_inr") or 0)
+            if not deliv_amt:
+                deliv_amt = amt * (flt(row.get("per_billed", 0)) / 100.0)
+
+            if status != "Cancelled":
+                lifecycle_summary_data["Delivered"][m_key] += deliv_amt
+
+            if status not in ("Cancelled", "Closed", "Completed"):
+                delivery_date = row.get("delivery_date")
+                if delivery_date:
+                    delivery_date = frappe.utils.getdate(delivery_date)
+                    if delivery_date < today:
+                        balance = flt(row.get("balance_net_total_inr") or 0)
+                        if not balance:
+                            balance = amt - deliv_amt
+                        lifecycle_summary_data["Overdue"][m_key] += balance
+
+        for m_key in sorted_months:
+            lifecycle_summary_data["Actual"][m_key] = (
+                lifecycle_summary_data["Booked"][m_key]
+                - lifecycle_summary_data["Cancelled"][m_key]
+                - lifecycle_summary_data["Short Close"][m_key]
+            )
+
+        headers_l = ["Category"] + sorted_months + ["Total"]
+        for idx, h in enumerate(headers_l, start=1):
+            cell = ws_lifecycle.cell(row=row_idx_l, column=idx, value=h)
+            cell.font, cell.fill, cell.alignment, cell.border = (
+                header_font,
+                header_fill,
+                Alignment(horizontal="center"),
+                table_border,
+            )
+            ws_lifecycle.column_dimensions[get_column_letter(idx)].width = 20
+        row_idx_l += 1
+
+        categories = ["Booked", "Cancelled", "Short Close", "Actual", "Delivered", "Overdue"]
+        for cat in categories:
+            ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).border = table_border
+            ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).font = Font(bold=True)
+            col_idx = 2
+            total_cat = 0
+            for m_key in sorted_months:
+                val = lifecycle_summary_data[cat][m_key]
+                total_cat += val
+                c = ws_lifecycle.cell(
+                    row=row_idx_l, column=col_idx, value=flt(val) / 1000000
+                )
+                c.number_format, c.border = '"₹ "#,##0.0000" M"', table_border
+                col_idx += 1
+            c_tot = ws_lifecycle.cell(row=row_idx_l, column=col_idx, value=flt(total_cat) / 1000000)
+            c_tot.number_format, c_tot.border = '"₹ "#,##0.0000" M"', table_border
+            c_tot.font = Font(bold=True)
+            row_idx_l += 1
     
     if export_type in ["all", "detail"]:
         # 3. Sales Orders List Sheet
@@ -640,10 +743,14 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Date", "fieldname": "so_date", "width": 14},
             {"label": "Status", "fieldname": "status", "width": 14},
             {"label": "Customer", "fieldname": "customer_name", "width": 25},
+            {"label": "Cust. PO No.", "fieldname": "po_no", "width": 18},
             {"label": "Item", "fieldname": "item_code", "width": 20},
+            {"label": "Deliv. Date", "fieldname": "delivery_date", "width": 14},
             {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
-            {"label": "Qty", "fieldname": "order_quantity", "width": 10},
-            {"label": "Amount (M)", "fieldname": "total_net_amount_(inr)", "width": 18}
+            {"label": "Order (M)", "fieldname": "total_net_amount_(inr)", "width": 16},
+            {"label": "Delivery (M)", "fieldname": "delivered_net_total_inr", "width": 16},
+            {"label": "Short Close (M)", "fieldname": "sc_value", "width": 16},
+            {"label": "Open (M)", "fieldname": "balance_net_total_inr", "width": 16}
         ]
         for idx, col in enumerate(ui_columns, start=1):
             cell = ws_list.cell(row=row_idx, column=idx, value=col["label"])
@@ -661,21 +768,22 @@ def export_to_excel(filters=None, export_type="all"):
                 cell = ws_list.cell(row=row_idx, column=idx)
                 cell.border = table_border
                 if isinstance(val, (int, float)):
-                    if fname == "total_net_amount_(inr)":
+                    if fname in ["total_net_amount_(inr)", "delivered_net_total_inr", "sc_value", "balance_net_total_inr"]:
                         val /= 1000000
                         cell.number_format = '"₹ "#,##0.0000" M"'
-                        total_list_amt += flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
+                        if fname == "total_net_amount_(inr)":
+                            total_list_amt += flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
                     cell.value, cell.alignment = val, Alignment(horizontal="right")
                 else:
                     cell.value, cell.alignment = str(val) if val else "", Alignment(horizontal="left")
             row_idx += 1
         
         ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=8)
-        for c in range(1, 9): 
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=9)
+        for c in range(1, 10): 
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
-        c_tot = ws_list.cell(row=row_idx, column=9, value=total_list_amt / 1000000)
+        c_tot = ws_list.cell(row=row_idx, column=10, value=total_list_amt / 1000000)
         c_tot.font = header_font
         c_tot.fill = header_fill
         c_tot.number_format = '"₹ "#,##0.0000" M"'
@@ -683,7 +791,7 @@ def export_to_excel(filters=None, export_type="all"):
         c_tot.border = table_border
 
     # Remove dummy sheets if created
-    for dummy_name in ["Dummy1", "Dummy2"]:
+    for dummy_name in ["Dummy1", "Dummy2", "Dummy3"]:
         if dummy_name in wb.sheetnames:
             wb.remove(wb[dummy_name])
 
