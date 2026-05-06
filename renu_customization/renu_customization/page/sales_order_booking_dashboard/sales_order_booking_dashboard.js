@@ -739,7 +739,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
 				let status = row.status;
 
-				if (status !== "Cancelled") {
+				if (status !== "Cancelled" && status !== "Draft") {
 					lifecycle_buckets["Booked"].data[m_key] =
 						(lifecycle_buckets["Booked"].data[m_key] || 0) + amt;
 				}
@@ -751,13 +751,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 				let sc_qty = flt(row.short_close_qty || 0);
 				let sc_amt = sc_qty * flt(row.base_rate || row.item_rate || 0);
-				if (sc_amt > 0) {
+				if (sc_amt > 0 && status !== "Cancelled" && status !== "Draft") {
 					lifecycle_buckets["Short Close"].data[m_key] =
 						(lifecycle_buckets["Short Close"].data[m_key] || 0) + sc_amt;
 				}
 
 				let picked_amt = flt(row.picked_net_total_inr || 0);
-				if (status !== "Cancelled") {
+				if (status !== "Cancelled" && status !== "Draft") {
 					lifecycle_buckets["Picked"].data[m_key] =
 						(lifecycle_buckets["Picked"].data[m_key] || 0) + picked_amt;
 				}
@@ -765,12 +765,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let deliv_amt = flt(
 					row.delivered_net_total_inr || amt * (flt(row.per_billed || 0) / 100),
 				);
-				if (status !== "Cancelled") {
+				if (status !== "Cancelled" && status !== "Draft") {
 					lifecycle_buckets["Delivered"].data[m_key] =
 						(lifecycle_buckets["Delivered"].data[m_key] || 0) + deliv_amt;
 				}
 
-				if (status !== "Cancelled" && status !== "Closed" && status !== "Completed") {
+				if (status !== "Cancelled" && status !== "Closed" && status !== "Completed" && status !== "Draft") {
 					if (row.delivery_date && moment(row.delivery_date).isBefore(today_moment)) {
 						let balance = flt(row.balance_net_total_inr || amt - deliv_amt);
 						lifecycle_buckets["Overdue"].data[m_key] =
@@ -831,7 +831,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						total_cancelled: 0,
 						total_gross: 0,
 					};
-				if (row.status !== "Cancelled") {
+				if (row.status !== "Cancelled" && row.status !== "Draft") {
 					merged_data[key].months[m_key] = (merged_data[key].months[m_key] || 0) + amt;
 					merged_data[key].total += amt;
 					merged_data[key].total_gross += g_amt;
@@ -883,7 +883,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				});
 
 				filtered_data.forEach((r) => {
-					if (r.status !== "Cancelled") {
+					if (r.status !== "Cancelled" && r.status !== "Draft") {
 						let m_key = moment(r.so_date).format("MMM YYYY");
 						total_month_gross_amts[m_key] =
 							(total_month_gross_amts[m_key] || 0) +

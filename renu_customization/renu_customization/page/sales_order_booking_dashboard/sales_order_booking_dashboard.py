@@ -324,13 +324,13 @@ def get_dashboard_data(filters=None):
             elif d_e == "Export": exp_cancelled += amt
             if is_cp: cp_cancelled += amt
         
-        if sc_amt > 0:
+        if sc_amt > 0 and status not in ("Cancelled", "Draft"):
             short_close_rev += sc_amt
             if d_e == "Domestic": dom_short_close += sc_amt
             elif d_e == "Export": exp_short_close += sc_amt
             if is_cp: cp_short_close += sc_amt
         
-        if status != "Cancelled":
+        if status not in ("Cancelled", "Draft"):
             delivered_rev += deliv_amt
             if d_e == "Domestic": dom_delivered += deliv_amt
             elif d_e == "Export": exp_delivered += deliv_amt
@@ -351,7 +351,7 @@ def get_dashboard_data(filters=None):
                 cp_active_rev += amt
 
         # Overdue Calculation
-        if status not in ("Cancelled", "Closed", "Completed"):
+        if status not in ("Cancelled", "Closed", "Completed", "Draft"):
             d_date = row.get("delivery_date")
             if d_date:
                 if frappe.utils.getdate(d_date) < today:
