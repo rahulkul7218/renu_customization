@@ -666,7 +666,9 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let tbody = table_card.find("tbody");
 		let total_outstanding = 0;
 		data.results.forEach((row) => {
-			total_outstanding += flt(row.outstanding_amount);
+			// Round to 4 decimal places in M (same as display) before summing
+			let display_val = Math.round(flt(row.outstanding_amount) / 1000000 * 10000) / 10000;
+			total_outstanding += display_val;
 			$(`
 				<tr>
 					<td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
@@ -683,11 +685,14 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 			`).appendTo(tbody);
 		});
 
+		// Total is already in M and rounded, format directly
+		let total_display = "₹ " + total_outstanding.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + " M";
+
 		let tfoot = table_card.find("tfoot");
 		$(`
             <tr class="sticky-total">
                 <td colspan="5" class="text-right" style="padding-right: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
-                <td class="amount-col" style="color: #0f172a; font-weight: 800;">${format_currency(total_outstanding)}</td>
+                <td class="amount-col" style="color: #0f172a; font-weight: 800;">${total_display}</td>
                 <td colspan="2"></td>
             </tr>
         `).appendTo(tfoot);
