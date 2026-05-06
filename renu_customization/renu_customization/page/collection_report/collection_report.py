@@ -128,10 +128,11 @@ def get_dashboard_data(filters=None):
                 "is_domestic": d.is_domestic
             }
  
-    # Calculate KPIs from unique invoices
-    total_collection = sum(v["amount"] for v in unique_invoices.values())
-    export_collection = sum(v["amount"] for v in unique_invoices.values() if v["is_export"])
-    domestic_collection = sum(v["amount"] for v in unique_invoices.values() if v["is_domestic"])
+    # Calculate KPIs from unique invoices - round each value to 4 decimal places in M
+    # before summing so card totals match the sum of displayed row values
+    total_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values()) * 1000000
+    export_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values() if v["is_export"]) * 1000000
+    domestic_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values() if not v["is_export"]) * 1000000
     
     summary = [
         {"label": _("TOTAL Collection"), "value": total_collection, "indicator": "Blue"},

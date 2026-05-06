@@ -96,13 +96,11 @@ def get_dashboard_data(filters=None):
         # Calculate Days Overdue
         inv["days_overdue"] = date_diff(today, inv.due_date)
         
-        # Determine classification
-        if inv.is_domestic:
-            inv["type"] = "Domestic"
-        elif inv.is_export:
+        # Determine classification - match table display logic
+        if inv.is_export:
             inv["type"] = "Export"
         else:
-            inv["type"] = "Other"
+            inv["type"] = "Domestic"
 
         # Apply Sales Person Filter
         if filters.get("sales_person") and filters.get("sales_person") not in inv_sales_persons:
@@ -118,18 +116,11 @@ def get_dashboard_data(filters=None):
 
         data.append(inv)
 
-    # Calculate KPIs
-    total_overdue = 0
-    export_overdue = 0
-    domestic_overdue = 0
-
-    for d in data:
-        amt = flt(d.outstanding_amount)
-        total_overdue += amt
-        if d.type == "Export":
-            export_overdue += amt
-        elif d.type == "Domestic":
-            domestic_overdue += amt
+    # Calculate KPIs - round each value to 4 decimal places in M before summing
+    # so card totals match the sum of displayed row values
+    total_overdue = sum(round(flt(d.outstanding_amount) / 1000000, 4) for d in data) * 1000000
+    export_overdue = sum(round(flt(d.outstanding_amount) / 1000000, 4) for d in data if d.type == "Export") * 1000000
+    domestic_overdue = sum(round(flt(d.outstanding_amount) / 1000000, 4) for d in data if d.type == "Domestic") * 1000000
 
     summary = [
         {"label": _("Total Overdue"), "value": total_overdue, "indicator": "red", "fieldtype": "Currency"},
