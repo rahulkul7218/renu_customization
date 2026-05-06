@@ -72,16 +72,29 @@ def get_dashboard_data(filters=None):
     po_names = [d.get("purchase_order") for d in report_data if d.get("purchase_order")]
     
     po_details_map = {}
+    pr_delivery_map = {}
     if po_names:
-        fields = ["name", "supplier_agreed_time", "delivery_time_as_per_po", "actual_delivery_time"]
-        # Only fetch fields that exist to avoid errors
-        meta = frappe.get_meta("Purchase Order")
-        valid_fields = ["name"]
-        for f in fields[1:]:
-            if meta.has_field(f):
-                valid_fields.append(f)
-                
-        po_details = frappe.get_all("Purchase Order", filters={"name": ("in", po_names)}, fields=valid_fields, limit_page_length=None)
+        # Fetch Actual Delivery Date from Purchase Receipt (GRN)
+        pr_details = frappe.db.sql("""
+            SELECT 
+                pri.purchase_order, 
+                MAX(pr.posting_date) as actual_delivery_date
+            FROM 
+                `tabPurchase Receipt` pr
+            JOIN 
+                `tabPurchase Receipt Item` pri ON pri.parent = pr.name
+            WHERE 
+                pri.purchase_order IN %s
+                AND pr.docstatus = 1
+            GROUP BY 
+                pri.purchase_order
+        """, (tuple(po_names),), as_dict=True)
+        
+        for pr in pr_details:
+            pr_delivery_map[pr.purchase_order] = pr.actual_delivery_date
+
+        fields = ["name"]
+        po_details = frappe.get_all("Purchase Order", filters={"name": ("in", po_names)}, fields=fields, limit_page_length=None)
         for po in po_details:
             po_details_map[po.name] = po
 
@@ -104,9 +117,7 @@ def get_dashboard_data(filters=None):
         row["schedule_date"] = row.get("required_date")
         row["net_total"] = row.get("amount") # Base amount
         
-        row["supplier_agreed_time"] = po_detail.get("supplier_agreed_time")
-        row["delivery_time_as_per_po"] = po_detail.get("delivery_time_as_per_po")
-        row["actual_delivery_time"] = po_detail.get("actual_delivery_time")
+        row["actual_delivery_time"] = pr_delivery_map.get(po_name)
         
         # Post-query filters
         if filters.get("supplier") and row.get("supplier") != filters.get("supplier"):
@@ -116,12 +127,6 @@ def get_dashboard_data(filters=None):
             continue
             
         if filters.get("actual_delivery_time") and str(row.get("actual_delivery_time")) != str(filters.get("actual_delivery_time")):
-            continue
-            
-        if filters.get("delivery_time_as_per_po") and str(row.get("delivery_time_as_per_po")) != str(filters.get("delivery_time_as_per_po")):
-            continue
-            
-        if filters.get("supplier_agreed_time") and str(row.get("supplier_agreed_time")) != str(filters.get("supplier_agreed_time")):
             continue
             
         if filters.get("open_po_details") and row.get("status") not in ["Draft", "To Receive and Bill", "To Receive", "To Bill"]:
@@ -437,8 +442,6 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Supplier", "fieldname": "supplier", "width": 35},
             {"label": "PO Date", "fieldname": "transaction_date", "width": 14},
             {"label": "Expected Del.", "fieldname": "schedule_date", "width": 14},
-            {"label": "Agreed Time", "fieldname": "supplier_agreed_time", "width": 14},
-            {"label": "Delivery as per PO", "fieldname": "delivery_time_as_per_po", "width": 14},
             {"label": "Actual Delivery", "fieldname": "actual_delivery_time", "width": 14},
             {"label": "Status", "fieldname": "status", "width": 18},
             {"label": "Net Total (M)", "fieldname": "net_total", "width": 18},
@@ -476,15 +479,15 @@ def export_to_excel(filters=None, export_type="all"):
         # Add Total Row
         c_tot_label = ws.cell(row=row_idx, column=1, value="GRAND TOTAL")
         c_tot_label.font = Font(bold=True)
-        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=9)
-        for c in range(1, 10):
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
+        for c in range(1, 8):
             ws.cell(row=row_idx, column=c).fill = header_fill
             ws.cell(row=row_idx, column=c).font = header_font
             ws.cell(row=row_idx, column=c).border = table_border
             if c == 1:
                 ws.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right", vertical="center")
     
-        c_tot_amt = ws.cell(row=row_idx, column=10, value=total_amt / 1000000)
+        c_tot_amt = ws.cell(row=row_idx, column=8, value=total_amt / 1000000)
         c_tot_amt.font = header_font; c_tot_amt.fill = header_fill; c_tot_amt.border = table_border; c_tot_amt.alignment = Alignment(horizontal="right")
         c_tot_amt.number_format = '[$₹-en-IN] #,##0.0000 "M"'
 
