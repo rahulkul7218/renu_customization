@@ -19,6 +19,21 @@ def prepare_filters(filters):
         filters = {}
     elif isinstance(filters, str):
         filters = frappe.parse_json(filters)
+    
+    # Handle DateRange from JS
+    if filters.get("date_range"):
+        dr = filters.get("date_range")
+        if isinstance(dr, list) and len(dr) == 2:
+            filters["from_date"] = dr[0]
+            filters["to_date"] = dr[1]
+
+    # Handle Fiscal Year
+    if filters.get("fiscal_year") and (not filters.get("from_date") or not filters.get("to_date")):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = filters.get("from_date") or fy.year_start_date
+            filters["to_date"] = filters.get("to_date") or fy.year_end_date
+
     return frappe._dict(filters)
 
 @frappe.whitelist()
@@ -57,16 +72,29 @@ def get_dashboard_data(filters=None):
     po_names = [d.get("purchase_order") for d in report_data if d.get("purchase_order")]
     
     po_details_map = {}
+    pr_delivery_map = {}
     if po_names:
-        fields = ["name", "supplier_agreed_time", "delivery_time_as_per_po", "actual_delivery_time"]
-        # Only fetch fields that exist to avoid errors
-        meta = frappe.get_meta("Purchase Order")
-        valid_fields = ["name"]
-        for f in fields[1:]:
-            if meta.has_field(f):
-                valid_fields.append(f)
-                
-        po_details = frappe.get_all("Purchase Order", filters={"name": ("in", po_names)}, fields=valid_fields, limit_page_length=None)
+        # Fetch Actual Delivery Date from Purchase Receipt (GRN)
+        pr_details = frappe.db.sql("""
+            SELECT 
+                pri.purchase_order, 
+                MAX(pr.posting_date) as actual_delivery_date
+            FROM 
+                `tabPurchase Receipt` pr
+            JOIN 
+                `tabPurchase Receipt Item` pri ON pri.parent = pr.name
+            WHERE 
+                pri.purchase_order IN %s
+                AND pr.docstatus = 1
+            GROUP BY 
+                pri.purchase_order
+        """, (tuple(po_names),), as_dict=True)
+        
+        for pr in pr_details:
+            pr_delivery_map[pr.purchase_order] = pr.actual_delivery_date
+
+        fields = ["name"]
+        po_details = frappe.get_all("Purchase Order", filters={"name": ("in", po_names)}, fields=fields, limit_page_length=None)
         for po in po_details:
             po_details_map[po.name] = po
 
@@ -89,9 +117,7 @@ def get_dashboard_data(filters=None):
         row["schedule_date"] = row.get("required_date")
         row["net_total"] = row.get("amount") # Base amount
         
-        row["supplier_agreed_time"] = po_detail.get("supplier_agreed_time")
-        row["delivery_time_as_per_po"] = po_detail.get("delivery_time_as_per_po")
-        row["actual_delivery_time"] = po_detail.get("actual_delivery_time")
+        row["actual_delivery_time"] = pr_delivery_map.get(po_name)
         
         # Post-query filters
         if filters.get("supplier") and row.get("supplier") != filters.get("supplier"):
@@ -101,12 +127,6 @@ def get_dashboard_data(filters=None):
             continue
             
         if filters.get("actual_delivery_time") and str(row.get("actual_delivery_time")) != str(filters.get("actual_delivery_time")):
-            continue
-            
-        if filters.get("delivery_time_as_per_po") and str(row.get("delivery_time_as_per_po")) != str(filters.get("delivery_time_as_per_po")):
-            continue
-            
-        if filters.get("supplier_agreed_time") and str(row.get("supplier_agreed_time")) != str(filters.get("supplier_agreed_time")):
             continue
             
         if filters.get("open_po_details") and row.get("status") not in ["Draft", "To Receive and Bill", "To Receive", "To Bill"]:
@@ -133,9 +153,9 @@ def get_dashboard_data(filters=None):
         total_pos += 1
         total_amount += flt(row.get("net_total"))
         if is_overdue:
-            total_overdue += 1
+            total_overdue += flt(row.get("net_total"))
         if due_next_week_flag:
-            total_due_next_week += 1
+            total_due_next_week += flt(row.get("net_total"))
             
         results.append(row)
 
@@ -144,8 +164,8 @@ def get_dashboard_data(filters=None):
     summary = [
         {"label": _("Total Orders"), "value": total_pos, "indicator": "blue", "fieldtype": "Int"},
         {"label": _("Total Net Amount"), "value": total_amount, "indicator": "green", "fieldtype": "Currency"},
-        {"label": _("Overdue Orders"), "value": total_overdue, "indicator": "red", "fieldtype": "Int"},
-        {"label": _("Due in Next Week"), "value": total_due_next_week, "indicator": "orange", "fieldtype": "Int"}
+        {"label": _("Overdue Amount"), "value": total_overdue, "indicator": "red", "fieldtype": "Currency"},
+        {"label": _("Due Next Week"), "value": total_due_next_week, "indicator": "orange", "fieldtype": "Currency"}
     ]
 
     supplier_totals = {}
@@ -156,7 +176,7 @@ def get_dashboard_data(filters=None):
         stat = row.get("status") or "Unknown"
         
         supplier_totals[supp] = supplier_totals.get(supp, 0) + flt(row.get("net_total"))
-        status_counts[stat] = status_counts.get(stat, 0) + 1
+        status_counts[stat] = status_counts.get(stat, 0) + flt(row.get("net_total"))
 
     top_10_suppliers = sorted(supplier_totals.items(), key=lambda x: x[1], reverse=True)[:10]
     
@@ -173,10 +193,11 @@ def get_dashboard_data(filters=None):
         "order_status": {
             "data": {
                 "labels": list(status_counts.keys()),
-                "datasets": [{"name": "Count", "values": list(status_counts.values())}]
+                "datasets": [{"name": "Amount", "values": list(status_counts.values())}]
             },
             "type": "donut",
-            "colors": ["#10b981", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6", "#6366f1", "#ec4899", "#84cc16"]
+            "colors": ["#10b981", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6", "#6366f1", "#ec4899", "#84cc16"],
+            "is_currency": True
         }
     }
 
@@ -421,8 +442,6 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Supplier", "fieldname": "supplier", "width": 35},
             {"label": "PO Date", "fieldname": "transaction_date", "width": 14},
             {"label": "Expected Del.", "fieldname": "schedule_date", "width": 14},
-            {"label": "Agreed Time", "fieldname": "supplier_agreed_time", "width": 14},
-            {"label": "Delivery as per PO", "fieldname": "delivery_time_as_per_po", "width": 14},
             {"label": "Actual Delivery", "fieldname": "actual_delivery_time", "width": 14},
             {"label": "Status", "fieldname": "status", "width": 18},
             {"label": "Net Total (M)", "fieldname": "net_total", "width": 18},
@@ -460,15 +479,15 @@ def export_to_excel(filters=None, export_type="all"):
         # Add Total Row
         c_tot_label = ws.cell(row=row_idx, column=1, value="GRAND TOTAL")
         c_tot_label.font = Font(bold=True)
-        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=9)
-        for c in range(1, 10):
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
+        for c in range(1, 8):
             ws.cell(row=row_idx, column=c).fill = header_fill
             ws.cell(row=row_idx, column=c).font = header_font
             ws.cell(row=row_idx, column=c).border = table_border
             if c == 1:
                 ws.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right", vertical="center")
     
-        c_tot_amt = ws.cell(row=row_idx, column=10, value=total_amt / 1000000)
+        c_tot_amt = ws.cell(row=row_idx, column=8, value=total_amt / 1000000)
         c_tot_amt.font = header_font; c_tot_amt.fill = header_fill; c_tot_amt.border = table_border; c_tot_amt.alignment = Alignment(horizontal="right")
         c_tot_amt.number_format = '[$₹-en-IN] #,##0.0000 "M"'
 

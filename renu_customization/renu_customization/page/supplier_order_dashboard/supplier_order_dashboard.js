@@ -87,18 +87,6 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Date"),
 		},
 		{
-			fieldname: "delivery_time_as_per_po",
-			label: __("Delivery Time as per PO"),
-			fieldtype: "Date",
-			placeholder: __("Select Date"),
-		},
-		{
-			fieldname: "supplier_agreed_time",
-			label: __("Supplier Agreed Time"),
-			fieldtype: "Date",
-			placeholder: __("Select Date"),
-		},
-		{
 			fieldname: "open_po_details",
 			label: __("Open PO Details"),
 			fieldtype: "Check",
@@ -566,6 +554,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                             </tr>
                         </thead>
                         <tbody id="po_month_body"></tbody>
+                        <tfoot id="po_month_tfoot"></tfoot>
                     </table>
                 </div>
             </div>
@@ -586,8 +575,6 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                                 <th class="col-supplier">Supplier</th>
                                 <th class="col-date">PO Date</th>
                                 <th class="col-date">Expected Del.</th>
-                                <th class="col-date">Agreed Time</th>
-                                <th class="col-date">Delivery as per PO</th>
                                 <th class="col-date">Actual Delivery</th>
                                 <th class="col-status">Status</th>
                                 <th class="col-amt">Net Total</th>
@@ -646,12 +633,19 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 				`);
 			});
 
-			tbody_month.append(`
+			let footer_month = tables_container.find("#po_month_tfoot");
+			footer_month.empty();
+			footer_month.append(`
 				<tr class="sticky-total">
-					<td class="col-sno">-</td>
-					<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL</td>
-					${months.map((m) => `<td class="col-amt" style="text-align: right;">₹ ${((total_month_amts[m.key] || 0) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>`).join("")}
-					<td class="col-amt" style="position: sticky; right: 0; background: #f0f4ff !important; z-index: 80; text-align: right; border-left: 1px solid #e2e8f0;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
+					<td class="col-sno" style="background: #f1f3f5 !important; border-top: 2px solid #ddd;">-</td>
+					<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px; background: #f1f3f5 !important; border-top: 2px solid #ddd;">GRAND TOTAL</td>
+					${months
+						.map((m) => {
+							let val = total_month_amts[m.key] || 0;
+							return `<td class="col-amt" style="text-align: right; background: #f1f3f5 !important; border-top: 2px solid #ddd;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>`;
+						})
+						.join("")}
+					<td class="col-amt" style="position: sticky; right: 0; background: #f0f4ff !important; z-index: 80; text-align: right; border-left: 1px solid #e2e8f0; border-top: 2px solid #ddd; font-weight: 800;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
 				</tr>
 			`);
 		}
@@ -679,8 +673,6 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                     <td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
                     <td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
-                    <td class="col-date">${frappe.datetime.str_to_user(row.supplier_agreed_time) || "-"}</td>
-                    <td class="col-date">${frappe.datetime.str_to_user(row.delivery_time_as_per_po) || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
                     <td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
                     <td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
@@ -693,7 +685,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		);
 		tfoot_list.append(`
             <tr class="sticky-total">
-                <td colspan="9" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
+                <td colspan="7" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
                 <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0;">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
             </tr>
         `);
