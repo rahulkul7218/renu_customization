@@ -421,10 +421,7 @@ def get_dashboard_data(filters=None):
         {"label": _("CP Overdue"), "value": cp_overdue, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
     
-    # Add Picked to Global, Dom, Exp
-    report_summary.insert(4, {"label": _("Global Picked (M)"), "value": picked_rev, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"})
-    report_summary.insert(11, {"label": _("Dom. Picked (M)"), "value": dom_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"})
-    report_summary.insert(18, {"label": _("Exp. Picked (M)"), "value": exp_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"})
+
 
     sp_rev_dict = {}
     cust_rev_dict = {}
