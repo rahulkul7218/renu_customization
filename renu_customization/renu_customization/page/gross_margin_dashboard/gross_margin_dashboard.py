@@ -24,10 +24,17 @@ def prepare_filters(filters):
     
     # Handle DateRange from JS
     if filters.get("date_range"):
-        date_range = filters.get("date_range")
-        if isinstance(date_range, list) and len(date_range) == 2:
-            filters["from_date"] = date_range[0]
-            filters["to_date"] = date_range[1]
+        dr = filters.get("date_range")
+        if isinstance(dr, list) and len(dr) == 2:
+            filters["from_date"] = dr[0]
+            filters["to_date"] = dr[1]
+
+    # Handle Fiscal Year
+    if filters.get("fiscal_year") and (not filters.get("from_date") or not filters.get("to_date")):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = filters.get("from_date") or fy.year_start_date
+            filters["to_date"] = filters.get("to_date") or fy.year_end_date
     
     return frappe._dict(filters)
 
@@ -35,12 +42,7 @@ def prepare_filters(filters):
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
     
-    # Handle Fiscal Year
-    if filters.get("fiscal_year"):
-        fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
-        if fy:
-            filters["from_date"] = fy.year_start_date
-            filters["to_date"] = fy.year_end_date
+    # Fiscal year handled in prepare_filters
 
     # Pass only date filters to report execution to get the full dataset for the period.
     base_filters = frappe._dict({

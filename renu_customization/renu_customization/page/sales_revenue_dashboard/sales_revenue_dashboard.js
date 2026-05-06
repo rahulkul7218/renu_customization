@@ -264,17 +264,22 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				fy_field._start_date = doc.year_start_date;
 				fy_field._end_date = doc.year_end_date;
 
-				// Auto-populate dates to match FY boundaries
-				page.filter_group.set_value("from_date", doc.year_start_date);
-				page.filter_group.set_value("to_date", doc.year_end_date);
+				// Constrain current values if they are outside the new FY bounds
+				let fd = from_field.get_value();
+				let td = to_field.get_value();
+
+				if (fd && (fd < doc.year_start_date || fd > doc.year_end_date)) {
+					page.filter_group.set_value("from_date", doc.year_start_date);
+				}
+				if (td && (td < doc.year_start_date || td > doc.year_end_date)) {
+					page.filter_group.set_value("to_date", doc.year_end_date);
+				}
+
 				page.refresh();
 			});
 		} else {
 			fy_field._start_date = null;
 			fy_field._end_date = null;
-			// Also clear the dates to allow "All Time" viewing easily
-			page.filter_group.set_value("from_date", null);
-			page.filter_group.set_value("to_date", null);
 			page.refresh();
 		}
 	};
@@ -596,17 +601,22 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         }
 
         /* Logic for stacking multiple sticky footer rows (e.g. Month-Wise Revenue table) */
-        /* The row above the last one */
+        /* Row 3 from bottom */
+        tr.sticky-total:nth-last-child(3) td { 
+            bottom: 74px; 
+            z-index: 21;
+        }
+        
+        /* Row 2 from bottom */
         tr.sticky-total:nth-last-child(2) td { 
             bottom: 37px; 
-            z-index: 21;
-            border-bottom: 1px solid #e2e8f0;
+            z-index: 22;
         }
         
         /* The very last row */
         tr.sticky-total:last-child td { 
             bottom: 0; 
-            z-index: 22;
+            z-index: 23;
         }
 
         /* Ensure right-sticky total columns maintain their horizontal position while being vertically sticky */
@@ -1122,8 +1132,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			let summary_list = Object.values(merged_data).sort((a, b) => b.total - a.total);
 			let total_month_amts = {};
 			let total_month_gross_amts = {};
+			let total_month_returned_amts = {};
 			let grand_total_net = 0;
 			let grand_total_gross = 0;
+			let grand_total_returned = 0;
 
 			// Calculate totals across ALL rows before slicing for rendering
 			summary_list.forEach((row) => {
@@ -1143,6 +1155,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				let gross_amt = flt(row.gross_amount || amt);
 
 				total_month_gross_amts[m_key] = (total_month_gross_amts[m_key] || 0) + gross_amt;
+				
+				if (row.is_return) {
+					let ret_val = Math.abs(amt);
+					total_month_returned_amts[m_key] = (total_month_returned_amts[m_key] || 0) + ret_val;
+					grand_total_returned += ret_val;
+				}
 			});
 
 			// Update Summary Cards at the top
@@ -1193,6 +1211,13 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					)
 					.join("");
 
+				let footer_cells_returned = months
+					.map(
+						(m) =>
+							`<td class="month-col" style="font-weight: 700;">${format_currency_short(total_month_returned_amts[m.key] || 0)}</td>`,
+					)
+					.join("");
+
 				tbody_summary.append(`
                     <tr class="sticky-total">
                         <td colspan="4" style="text-align: right; font-weight: 700;">Grand Total (Net)</td>
@@ -1201,7 +1226,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <td class="total-col gross-total-col gross-col" style="background: #e9ecef !important; opacity: 0.5;">-</td>
                     </tr>
                     <tr class="sticky-total">
-                        <td colspan="4" style="text-align: right; font-weight: 800; color: #4338ca;">Grand Total (Gross)</td>
+                        <td colspan="4" style="text-align: right; font-weight: 800;">Grand Total (Gross)</td>
                         ${footer_cells_gross}
                         <td class="total-col net-total-col" style="background: #e9ecef !important; opacity: 0.5;">-</td>
                         <td class="total-col gross-total-col gross-col" style="font-weight: 800;">${format_currency_short(grand_total_gross)}</td>

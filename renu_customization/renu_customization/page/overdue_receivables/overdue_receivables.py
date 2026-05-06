@@ -15,12 +15,31 @@ def export_to_pdf(html):
     frappe.response.filecontent = pdf_content
     frappe.response.type = "download"
 
-@frappe.whitelist()
-def get_dashboard_data(filters=None):
-    if isinstance(filters, str):
-        filters = json.loads(filters)
+def prepare_filters(filters):
     if not filters:
         filters = {}
+    elif isinstance(filters, str):
+        filters = frappe.parse_json(filters)
+    
+    # Handle DateRange from JS
+    if filters.get("date_range"):
+        dr = filters.get("date_range")
+        if isinstance(dr, list) and len(dr) == 2:
+            filters["from_date"] = dr[0]
+            filters["to_date"] = dr[1]
+
+    # Handle Fiscal Year
+    if filters.get("fiscal_year") and (not filters.get("from_date") or not filters.get("to_date")):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = filters.get("from_date") or fy.year_start_date
+            filters["to_date"] = filters.get("to_date") or fy.year_end_date
+    
+    return frappe._dict(filters)
+
+@frappe.whitelist()
+def get_dashboard_data(filters=None):
+    filters = prepare_filters(filters)
 
     # Base query for overdue sales invoices
     query_filters = {
@@ -30,12 +49,7 @@ def get_dashboard_data(filters=None):
         "due_date": ["<", nowdate()]
     }
 
-    # Handle Fiscal Year
-    if filters.get("fiscal_year"):
-        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
-        if fy:
-            filters["from_date"] = fy.year_start_date
-            filters["to_date"] = fy.year_end_date
+    # Fiscal year handled in prepare_filters
 
     # Apply Filters from JS
     if filters.get("company"):
