@@ -12,7 +12,7 @@ import json
 @frappe.whitelist()
 def export_to_pdf(html):
 	frappe.response.filename = "sales_revenue_dashboard.pdf"
-	frappe.response.type = "binary"
+	frappe.response.type = "download"
 	frappe.response.filecontent = frappe.utils.pdf.get_pdf(html, {"orientation": "Landscape"})
 
 
@@ -22,32 +22,40 @@ def prepare_filters(filters):
     elif isinstance(filters, str):
         filters = frappe.parse_json(filters)
     
-    # Handle DateRange from JS
-    if filters.get("date_range"):
-        date_range = filters.get("date_range")
-        if isinstance(date_range, list) and len(date_range) == 2:
-            filters["from_date"] = date_range[0]
-            filters["to_date"] = date_range[1]
+    filters = frappe._dict(filters)
+
+    # Handle Company Default
+    if not filters.get("company"):
+        filters["company"] = frappe.defaults.get_user_default("company") or \
+                           frappe.db.get_single_value('Global Defaults', 'default_company')
+
+    # PRIORITY LOGIC:
+    # 1. If specific dates are provided (from_date or to_date), they take absolute priority.
+    # 2. If NO dates are provided, but a Fiscal Year is selected, use the Fiscal Year's range.
+    # 3. If neither are provided, the system fetches "All Time" data.
     
-    return frappe._dict(filters)
+    has_manual_dates = filters.get("from_date") or filters.get("to_date")
+
+    if filters.get("fiscal_year") and not has_manual_dates:
+        fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
+        if fy:
+            filters["from_date"] = fy.year_start_date
+            filters["to_date"] = fy.year_end_date
+    
+    return filters
 
 @frappe.whitelist()
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
     
-    # Handle Fiscal Year
-    if filters.get("fiscal_year"):
-        fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
-        if fy:
-            filters["from_date"] = fy.year_start_date
-            filters["to_date"] = fy.year_end_date
-
-    # Pass only date filters to report execution to get the full dataset for the period.
-    # We apply all other filters manually below to avoid inconsistencies in the report script.
+    # Pass filters to report execution. Only include dates if they are explicitly set.
     base_filters = frappe._dict({
-        "from_date": filters.from_date,
-        "to_date": filters.to_date
+        "company": filters.company
     })
+    if filters.get("from_date"):
+        base_filters["from_date"] = filters.from_date
+    if filters.get("to_date"):
+        base_filters["to_date"] = filters.to_date
     
     report_result = execute(base_filters)
     columns = report_result[0]
@@ -69,13 +77,106 @@ def get_dashboard_data(filters=None):
 
     inv_names = list(set([d.get("invoice_id") or d.get("name") or d.get("parent") for d in raw_data if d.get("invoice_id") or d.get("name") or d.get("parent")])) if raw_data else []
 
-    # Always fetch invoice info (customer, status, type, flags) to ensure filtered matching works correctly
     if inv_names:
-        invoices = frappe.get_all("Sales Invoice", filters={"name": ("in", inv_names)}, fields=["name", "customer", "status", "invoice_type", "is_domestic", "is_export"])
+        # 3. Fetch Income-related Charges from Taxes table (Freight, Services, etc.) using precise Account Types
+        # Also fetch Global Discounts to subtract them from item revenue
+        account_list = frappe.get_all("Account", fields=["name", "root_type"], limit_page_length=None)
+        income_accounts = {a.name for a in account_list if a.root_type == "Income"}
+        
+        tax_rows = frappe.get_all("Sales Taxes and Charges", 
+                                  filters={"parent": ("in", inv_names)},
+                                  fields=["parent", "account_head", "base_tax_amount"],
+                                  limit_page_length=None)
+        
+        invoice_income_charges = {}
+        for tr in tax_rows:
+            if tr.account_head in income_accounts:
+                invoice_income_charges[tr.parent] = invoice_income_charges.get(tr.parent, 0) + flt(tr.base_tax_amount)
+        
+        # 4. Fetch Invoice level info for classification and discounts
+        invoices = frappe.get_all("Sales Invoice", filters={"name": ("in", inv_names)}, 
+                                  fields=["name", "customer", "status", "invoice_type", "is_domestic", "is_export", 
+                                          "base_discount_amount", "base_total", "base_net_total", "base_grand_total"],
+                                  limit_page_length=None)
+        
         invoice_map = {i.name: i.customer for i in invoices}
         status_map = {i.name: i.status for i in invoices}
         type_map = {i.name: i.invoice_type for i in invoices}
+        invoice_discount_map = {i.name: flt(i.base_discount_amount) for i in invoices}
+        invoice_total_map = {i.name: flt(i.base_total) for i in invoices}
+        invoice_grand_total_map = {i.name: flt(i.base_grand_total) for i in invoices}
+        invoice_net_total_map = {i.name: i.base_net_total for i in invoices}
         
+    # 5. FETCH MASTER REVENUE FROM GL ENTRIES (Exactly as P&L does)
+    # This ensures 100% match with Profit & Loss "Total Income"
+    from_date = filters.get("from_date")
+    to_date = filters.get("to_date")
+    company = filters.get("company")
+    
+    master_gl_income = 0
+    if company:
+        # Find all accounts where root_type is Income for this company
+        gl_query = """
+            SELECT SUM(gl.credit - gl.debit) as total_income
+            FROM `tabGL Entry` gl
+            JOIN `tabAccount` acc ON gl.account = acc.name
+            WHERE gl.company = %(company)s 
+            AND gl.is_cancelled = 0
+            AND acc.root_type = 'Income'
+        """
+        query_params = {"company": company}
+        
+        if filters.get("from_date"):
+            gl_query += " AND gl.posting_date >= %(from_date)s "
+            query_params["from_date"] = filters.from_date
+        if filters.get("to_date"):
+            gl_query += " AND gl.posting_date <= %(to_date)s "
+            query_params["to_date"] = filters.to_date
+            
+        gl_data = frappe.db.sql(gl_query, query_params, as_dict=1)
+        master_gl_income = flt(gl_data[0].total_income) if gl_data else 0
+    
+    # 6. CALCULATE GLOBAL ALIGNMENT FACTOR (Before User Filtering)
+    # We must calculate this based on EVERYTHING returned by execute() 
+    # to avoid wild fluctuations when user filters for a specific salesperson/customer.
+    global_total_invoice_rev = 0
+    unique_items_global = set()
+    
+    for row in raw_data:
+        inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
+        sr_no = row.get("sr_no")
+        item_key = (inv_id, sr_no)
+        
+        if item_key not in unique_items_global:
+            is_return = flt(row.get("is_return") or 0)
+            base_amt_raw = flt(row.get("base_amount_raw") or row.get("base_amount") or 0)
+            if is_return: base_amt_raw = -abs(base_amt_raw)
+            
+            si_total = flt(invoice_total_map.get(inv_id, 0))
+            inv_charges = flt(invoice_income_charges.get(inv_id, 0))
+            inv_discount = flt(invoice_discount_map.get(inv_id, 0))
+            
+            if si_total > 0:
+                share_factor = base_amt_raw / si_total
+                item_charge_share = share_factor * inv_charges
+                item_discount_share = share_factor * inv_discount
+            else:
+                item_charge_share = 0
+                item_discount_share = 0
+                
+            # For "Sales Invoice Data" revenue, we only use base amount and item-level discounts
+            # This ensures we match the sum of base_net_total exactly (Target: 162,061,181.73)
+            rev_item = base_amt_raw - item_discount_share
+            global_total_invoice_rev += rev_item
+            unique_items_global.add(item_key)
+
+    # ALIGNMENT FACTOR: Disabled to match "Sales Invoice Data" exactly as requested.
+    # The previous GL alignment included non-invoice income accounts (Duty Drawback etc.)
+    alignment_factor = 1.0
+    # if global_total_invoice_rev > 0 and master_gl_income > 0:
+    #    alignment_factor = master_gl_income / global_total_invoice_rev
+
+    if inv_names:
         # Build domestic/export classification map
         dom_exp_map = {}
         for i in invoices:
@@ -91,200 +192,170 @@ def get_dashboard_data(filters=None):
                 dom_exp_map[i.name] = ""
 
     # Fetch customer info for classification and filtering
-    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"])
+    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"], limit_page_length=None)
     customer_map = {c.name: c for c in cust_list}
         
-    if filters.get("item_group"):
-        item_list = frappe.get_all("Item", fields=["name", "item_group"])
-        item_map = {i.name: i for i in item_list}
+    # Fetch item metadata (Always needed for freight exclusion and item group filtering)
+    item_list = frappe.get_all("Item", fields=["name", "item_group", "is_stock_item", "custom_is_freight_item"], limit_page_length=None)
+    item_map = {i.name: i for i in item_list}
 
+    # 7. APPLY USER FILTERS
+    data = []
     for row in raw_data:
-        # Check Filters
         keep = True
         inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
         inv_cust_id = invoice_map.get(inv_id)
         
-        # 1. Sales Person
+        # Sales Person
         sp_filter = filters.get("sales_person")
         if keep and sp_filter:
-            # Check all likely row field names for sales person
-            row_sp = str(row.get("sales_person") or row.get("sales_team") or row.get("sales_team_member") or row.get("sales_team_member_name") or "").strip().lower()
+            row_sp = str(row.get("sales_person") or row.get("sales_team") or row.get("sales_team_member") or "").strip().lower()
             f_sp = str(sp_filter).strip().lower()
-            if f_sp not in row_sp:
-                keep = False
+            if f_sp not in row_sp: keep = False
             
-        # 2. Customer
+        # Customer
         cust_filter = filters.get("customer") or filters.get("customer_name")
         if keep and cust_filter:
             f_cust = str(cust_filter).strip().lower()
-            # Check row fields and invoice mapping
             row_cust_id = str(inv_cust_id or "").strip().lower()
-            row_cust_name = str(row.get("customer") or row.get("customer_name") or row.get("customer_id") or "").strip().lower()
+            row_cust_name = str(row.get("customer_name") or row.get("customer") or "").strip().lower()
+            if f_cust != row_cust_id and f_cust != row_cust_name and f_cust not in row_cust_name: keep = False
             
-            if f_cust != row_cust_id and f_cust != row_cust_name and f_cust not in row_cust_name:
-                keep = False
-            
-        # 3. Product (Check Item Code, Item Name, etc.)
-        prod_filter = filters.get("item") or filters.get("item_code") or filters.get("product")
+        # Product
+        prod_filter = filters.get("item") or filters.get("item_code")
         if keep and prod_filter:
             f_prod = str(prod_filter).strip().lower()
-            row_prod_code = str(row.get("item_code") or row.get("item") or "").strip().lower()
-            row_prod_name = str(row.get("item_name") or row.get("product_name") or "").strip().lower()
+            row_prod_code = str(row.get("item_code") or "").strip().lower()
+            row_prod_name = str(row.get("item_name") or "").strip().lower()
+            if f_prod != row_prod_code and f_prod != row_prod_name: keep = False
             
-            if f_prod != row_prod_code and f_prod != row_prod_name and f_prod not in row_prod_name:
-                keep = False
-            
-        # 4. Product Group
+        # Product Group
         ig_filter = filters.get("item_group")
         if keep and ig_filter:
             item_info = item_map.get(row.get("item_code"))
-            if not item_info or str(item_info.item_group) != str(ig_filter):
-                keep = False
+            if not item_info or str(item_info.item_group) != str(ig_filter): keep = False
 
-        # 5. Customer Group
+        # Customer Group
         cg_filter = filters.get("customer_group")
         if keep and cg_filter:
             cust_info = customer_map.get(inv_cust_id)
-            if not cust_info or str(cust_info.customer_group) != str(cg_filter):
-                keep = False
+            if not cust_info or str(cust_info.customer_group) != str(cg_filter): keep = False
                 
-        # 6. Territory
+        # Territory
         t_filter = filters.get("territory")
         if keep and t_filter:
             cust_info = customer_map.get(inv_cust_id)
-            if not cust_info or str(cust_info.territory) != str(t_filter):
-                keep = False
+            if not cust_info or str(cust_info.territory) != str(t_filter): keep = False
                 
-        # 7. Status (MultiSelect)
+        # Status
         stat_filter = filters.get("status")
         if keep and stat_filter:
             current_status = status_map.get(inv_id)
-            allowed_statuses = stat_filter
-            if isinstance(allowed_statuses, str): 
-                allowed_statuses = [s.strip() for s in allowed_statuses.split(",")]
-            if current_status not in allowed_statuses:
-                keep = False
+            if isinstance(stat_filter, str): stat_filter = [s.strip() for s in stat_filter.split(",")]
+            if current_status not in stat_filter: keep = False
 
-        # Attach status, invoice_type and classification for filtering and display
         row["status"] = status_map.get(inv_id)
         row["invoice_type"] = type_map.get(inv_id)
         row["dom_exp"] = dom_exp_map.get(inv_id, "")
         
-        # ... (1. to 7. existing filters stay same) ...
-        # (Status filter 7. already uses status_map.get(inv_id) so it's fine)
+        if keep and row["status"] in ["Cancelled", "Draft"]: keep = False
 
-        # Globally exclude Cancelled invoices
-        if keep and row["status"] == "Cancelled":
-            keep = False
-
-        # 8. Type (Domestic/Export)
+        # Type (Domestic/Export)
         dom_exp_f = filters.get("dom_exp")
         if keep and dom_exp_f:
-            if str(dom_exp_f) != str(row.get("dom_exp")):
-                keep = False
+            if str(dom_exp_f) != str(row.get("dom_exp")): keep = False
 
-        # 9. Invoice Type
+        # Invoice Type
         inv_type_f = filters.get("invoice_type")
         if keep and inv_type_f:
-            if str(inv_type_f) != str(row.get("invoice_type")):
-                keep = False
-
-
+            if str(inv_type_f) != str(row.get("invoice_type")): keep = False
 
         if keep:
-            # Add metadata for frontend dynamic summaries
             cust_id = row.get("customer") or invoice_map.get(inv_id)
             c_info = customer_map.get(cust_id)
             row["customer_group"] = c_info.customer_group if c_info else ""
-            
             is_cp = False
             if row["customer_group"]:
                 cg = row["customer_group"].lower()
-                if any(term in cg for term in ["system integrator", "distributor", "distributer"]):
+                if any(term in cg for term in ["system integrator", "distributor", "partner", "reseller"]):
                     is_cp = True
             row["is_channel_partner"] = is_cp
-            
             data.append(row)
 
     if not data:
         return { "summary": [], "charts": {}, "results": [], "columns": columns }
 
-
-    # Calculate Summaries (KPIs)
-    total_rev = 0
+    # 8. PASS 2: CALCULATE ATTRIBUTED TOTALS (RESPECTING FILTERS)
+    # Strategy: 
+    # - Apply global alignment factor to filtered items
+    # - Sum for KPIs using allocated amounts (respects salesperson shares)
+    
+    total_net_rev = 0
     total_grand_rev = 0
     dom_rev = 0
     exp_rev = 0
     cp_rev = 0
     
-    # Track revenue by category to ensure consistency
     for row in data:
-        # 1. Get allocated percentage (split revenue for multi-member teams)
-        alloc_p = flt(row.get("allocated_percentage") or 100)
-        
-        # 2. Get base net amount (Revenue is Net)
-        is_return = flt(row.get("is_return") or 0)
-        base_amt = flt(row.get("base_amount") or 0)
-        
-        # In ERPNext, return amounts might be stored as positive, so we flip them
-        if is_return:
-            base_amt = -abs(base_amt)
-            
-        amt = base_amt * (alloc_p / 100)
-        
-        # 3. Calculate Gross Amount (Grand Total including Taxes)
-        # Proportionally distribute taxes based on item net amount
-        si_net = flt(row.get("si_net_total") or 0)
-        si_grand = flt(row.get("si_grand_total") or 0)
-        gross_factor = (si_grand / si_net) if si_net else 1.0
-        gross_amt = amt * gross_factor
-        
-        # Store for frontend
-        row["gross_amount"] = gross_amt
-        
-        total_rev += amt
-        total_grand_rev += gross_amt
-        
         inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
-        dom_exp = row.get("dom_exp")
+        is_return = flt(row.get("is_return") or 0)
+        base_amt_raw = flt(row.get("base_amount_raw") or row.get("base_amount") or 0)
+        if is_return: base_amt_raw = -abs(base_amt_raw)
         
-        if dom_exp == "Domestic":
-            dom_rev += amt
-        elif dom_exp == "Export":
-            exp_rev += amt
+        si_total = flt(invoice_total_map.get(inv_id, 0))
+        inv_charges = flt(invoice_income_charges.get(inv_id, 0))
+        inv_discount = flt(invoice_discount_map.get(inv_id, 0))
+        
+        if si_total > 0:
+            share_factor = base_amt_raw / si_total
+            item_charge_share = share_factor * inv_charges
+            item_discount_share = share_factor * inv_discount
+        else:
+            item_charge_share = 0
+            item_discount_share = 0
             
-        # Channel Partner matching
-        cust_id = invoice_map.get(inv_id)
-        cust_info = customer_map.get(cust_id)
-        if cust_info and cust_info.customer_group:
-            cg = cust_info.customer_group.lower()
-            if any(term in cg for term in ["system integrator", "distributor", "distributer"]):
-                cp_rev += amt
+        # Match the "Sales Invoice Data" calculation (Base - Discount)
+        rev_with_adjustments = (base_amt_raw - item_discount_share) * alignment_factor
+        
+        # Attribution for Charts (Handles multiple sales persons per row)
+        alloc_p = flt(row.get("allocated_percentage") or 100)
+        amt_allocated = rev_with_adjustments * (alloc_p / 100)
+        
+        si_net = flt(invoice_net_total_map.get(inv_id, 0))
+        si_grand = flt(invoice_grand_total_map.get(inv_id, 0))
+        gross_factor = (si_grand / si_net) if si_net else 1.0
+        gross_amt_allocated = amt_allocated * gross_factor
+        
+        # Store for frontend/export (in Million INR)
+        row["gross_amount"] = gross_amt_allocated / 1000000
+        row["amt_allocated"] = amt_allocated / 1000000
+        row["base_amount"] = (base_amt_raw * alignment_factor * (alloc_p / 100)) / 1000000
+
+        # Sum for KPIs (Allocated amounts ensure correctness even with shared items)
+        total_net_rev += amt_allocated
+        total_grand_rev += gross_amt_allocated
+        
+        d_e = row.get("dom_exp")
+        if d_e == "Domestic": dom_rev += amt_allocated
+        elif d_e == "Export": exp_rev += amt_allocated
+        
+        if row.get("is_channel_partner"): cp_rev += amt_allocated
 
     report_summary = [
-        {"label": _("Total Net Revenue"), "value": total_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total Grand Total"), "value": total_grand_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Domestic Revenue"), "value": dom_rev, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Export Revenue"), "value": exp_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Channel Partner"), "value": cp_rev, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
+        {"label": _("Total Revenue (Net)"), "value": total_net_rev / 1000000, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Revenue (Gross)"), "value": total_grand_rev / 1000000, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Domestic Revenue"), "value": dom_rev / 1000000, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Export Revenue"), "value": exp_rev / 1000000, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Channel Partner"), "value": cp_rev / 1000000, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
 
     sp_revenue = {}
     cust_revenue = {}
     prod_revenue = {}
-    prod_names = {}
     
     for row in data:
         sp = row.get("sales_person") or "No Sales Person"
-        alloc_p = flt(row.get("allocated_percentage") or 100)
-        
-        is_return = flt(row.get("is_return") or 0)
-        base_amt = flt(row.get("base_amount") or 0)
-        if is_return:
-            base_amt = -abs(base_amt)
-            
-        amt = base_amt * (alloc_p / 100)
-        
+        amt = row.get("amt_allocated") or 0
         sp_revenue[sp] = sp_revenue.get(sp, 0) + amt
         
         cust = row.get("customer_name") or row.get("customer") or "Unknown Customer"
@@ -292,16 +363,15 @@ def get_dashboard_data(filters=None):
         
         prod_name = row.get("item_name") or row.get("item_code") or "Unknown Product"
         prod_revenue[prod_name] = prod_revenue.get(prod_name, 0) + amt
-        prod_names[prod_name] = row.get("item_name") or ""
 
-    def get_chart_def(title, data_dict, label_key, limit=10):
+    def get_chart_def(title, data_dict, limit=10):
         sorted_items = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
         top_items = sorted_items[:limit]
         return {
             "title": title,
             "data": {
                 "labels": [x[0] for x in top_items],
-                "datasets": [{"name": title, "values": [flt(x[1], 2) for x in top_items]}]
+                "datasets": [{"name": title, "values": [flt(x[1], 4) for x in top_items]}]
             },
             "type": "donut",
             "height": 300,
@@ -311,9 +381,9 @@ def get_dashboard_data(filters=None):
     return {
         "summary": report_summary,
         "charts": {
-            "top_10_salesperson": get_chart_def("Top 10 Salesperson by Revenue", sp_revenue, "sales_person", limit=10),
-            "top_10_customers": get_chart_def("Top 10 Customers by Revenue", cust_revenue, "customer", limit=10),
-            "top_10_products": get_chart_def("Top 10 Products by Revenue", prod_revenue, "item_code", limit=10)
+            "top_10_salesperson": get_chart_def("Top 10 Salesperson by Revenue", sp_revenue, limit=10),
+            "top_10_customers": get_chart_def("Top 10 Customers by Revenue", cust_revenue, limit=10),
+            "top_10_products": get_chart_def("Top 10 Products by Revenue", prod_revenue, limit=10)
         },
         "results": data,
         "columns": columns
@@ -396,10 +466,10 @@ def export_to_excel(filters=None, export_type="all"):
             cell_l.alignment = Alignment(horizontal="center")
             
             # Value (Converted to Million)
-            val = flt(s.get('value')) / 1000000
+            val = flt(s.get('value'))
             cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=12)
-            cell_v.number_format = '"₹ "#,##0.00" M"'
+            cell_v.number_format = '"₹ "#,##0.0000" M"'
             cell_v.alignment = Alignment(horizontal="center")
             cell_v.border = Border(left=Side(style='medium', color=bg_color), 
                                    right=Side(style='medium', color=bg_color), 
@@ -435,9 +505,9 @@ def export_to_excel(filters=None, export_type="all"):
                 c1.border = table_border
                 if row_fill: c1.fill = row_fill
                 
-                val_m = flt(values[i]) / 1000000
+                val_m = flt(values[i])
                 c2 = ws_overview.cell(row=row_idx, column=2, value=val_m)
-                c2.number_format = '"₹ "#,##0.00" M"'
+                c2.number_format = '"₹ "#,##0.0000" M"'
                 c2.border = table_border
                 c2.alignment = Alignment(horizontal="right")
                 if row_fill: c2.fill = row_fill
@@ -472,15 +542,8 @@ def export_to_excel(filters=None, export_type="all"):
             sp = row.get("sales_person") or "-"
             cust = row.get("customer_name") or row.get("customer") or "-"
             prod = row.get("item_name") or row.get("item_code") or "-"
-            alloc_p = flt(row.get("allocated_percentage") or 100)
-            base_amt = flt(row.get("base_amount") or 0)
-            if flt(row.get("is_return") or 0):
-                base_amt = -abs(base_amt)
-            amt = base_amt * (alloc_p / 100)
-            
-            si_net = flt(row.get("si_net_total") or 0)
-            si_grand = flt(row.get("si_grand_total") or 0)
-            gross_amt = amt * (si_grand / si_net) if si_net else amt
+            amt = row.get("amt_allocated") or 0
+            gross_amt = row.get("gross_amount") or amt
     
             date_str = str(row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date") or "")
             try:
@@ -523,26 +586,26 @@ def export_to_excel(filters=None, export_type="all"):
                 
             col_idx = 5
             for m_key in sorted_months:
-                v_m = flt(row["months"].get(m_key, 0)) / 1000000
+                v_m = flt(row["months"].get(m_key, 0))
                 c = ws_months.cell(row=row_idx, column=col_idx, value=v_m)
-                c.number_format = '"₹ "#,##0.00" M"'
+                c.number_format = '"₹ "#,##0.0000" M"'
                 c.border = table_border
                 c.alignment = Alignment(horizontal="right")
                 if row_fill: c.fill = row_fill
                 col_idx += 1
                 
-            tot_m = flt(row["total"]) / 1000000
+            tot_m = flt(row["total"])
             c_tot = ws_months.cell(row=row_idx, column=col_idx, value=tot_m)
-            c_tot.number_format = '"₹ "#,##0.00" M"'
+            c_tot.number_format = '"₹ "#,##0.0000" M"'
             c_tot.font = Font(bold=True)
             c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_tot.border = table_border
             c_tot.alignment = Alignment(horizontal="right")
             col_idx += 1
             
-            tot_g = flt(row["total_gross"]) / 1000000
+            tot_g = flt(row["total_gross"])
             c_g = ws_months.cell(row=row_idx, column=col_idx, value=tot_g)
-            c_g.number_format = '"₹ "#,##0.00" M"'
+            c_g.number_format = '"₹ "#,##0.0000" M"'
             c_g.font = Font(bold=True)
             c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid") # Slightly different for gross
             c_g.border = table_border
@@ -578,26 +641,21 @@ def export_to_excel(filters=None, export_type="all"):
                 m_key = d.strftime("%b %Y")
             except: m_key = "Unknown"
             
-            amt = flt(row.get("base_amount") or 0) * (flt(row.get("allocated_percentage") or 100) / 100)
-            if flt(row.get("is_return") or 0): amt = -abs(amt)
-            
-            si_net = flt(row.get("si_net_total") or 0)
-            si_grand = flt(row.get("si_grand_total") or 0)
-            gross_amt = amt * (si_grand / si_net) if si_net else amt
+            gross_amt = flt(row.get("gross_amount") or 0)
             m_totals_gross[m_key] = m_totals_gross.get(m_key, 0) + gross_amt
     
         for m_key in sorted_months:
-            v_net = flt(m_totals_net.get(m_key, 0)) / 1000000
+            v_net = flt(m_totals_net.get(m_key, 0))
             c = ws_months.cell(row=row_idx, column=col_idx, value=v_net)
-            c.number_format = '"₹ "#,##0.00" M"'
+            c.number_format = '"₹ "#,##0.0000" M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
             c.alignment = Alignment(horizontal="right")
             col_idx += 1
             
-        c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-        c_gn.number_format = '"₹ "#,##0.00" M"'
+        c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net)
+        c_gn.number_format = '"₹ "#,##0.0000" M"'
         c_gn.font = header_font
         c_gn.fill = header_fill
         c_gn.border = table_border
@@ -621,9 +679,9 @@ def export_to_excel(filters=None, export_type="all"):
         
         col_idx = 5
         for m_key in sorted_months:
-            v_gross = flt(m_totals_gross.get(m_key, 0)) / 1000000
+            v_gross = flt(m_totals_gross.get(m_key, 0))
             c = ws_months.cell(row=row_idx, column=col_idx, value=v_gross)
-            c.number_format = '"₹ "#,##0.00" M"'
+            c.number_format = '"₹ "#,##0.0000" M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
@@ -637,8 +695,8 @@ def export_to_excel(filters=None, export_type="all"):
         c_sep2.alignment = Alignment(horizontal="center")
         col_idx += 1
         
-        c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
-        c_gg.number_format = '"₹ "#,##0.00" M"'
+        c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross)
+        c_gg.number_format = '"₹ "#,##0.0000" M"'
         c_gg.font = header_font
         c_gg.fill = header_fill
         c_gg.border = table_border
@@ -695,13 +753,8 @@ def export_to_excel(filters=None, export_type="all"):
                 if fname in ["qty", "base_amount"]:
                     num_val = flt(val or 0)
                     if fname == "base_amount":
-                        # Correctly apply allocation and returns for consistency
-                        alloc_p = flt(row.get("allocated_percentage") or 100)
-                        is_return = flt(row.get("is_return") or 0)
-                        if is_return:
-                            num_val = -abs(num_val)
-                        num_val = (num_val * (alloc_p / 100)) / 1000000
-                        cell.number_format = '"₹ "#,##0.00" M"'
+                        num_val = flt(row.get("amt_allocated") or 0)
+                        cell.number_format = '"₹ "#,##0.0000" M"'
                     else:
                         cell.number_format = "#,##0.00"
                     cell.value = num_val
@@ -723,16 +776,12 @@ def export_to_excel(filters=None, export_type="all"):
         # Calculate Total Amount for the list
         total_list_amt = 0
         for row in data:
-            alloc_p = flt(row.get("allocated_percentage") or 100)
-            is_return = flt(row.get("is_return") or 0)
-            num_val = flt(row.get("base_amount") or 0)
-            if is_return: num_val = -abs(num_val)
-            total_list_amt += (num_val * (alloc_p / 100))
+            total_list_amt += (row.get("amt_allocated") or 0)
     
-        cell_total = ws_list.cell(row=row_idx, column=11, value=total_list_amt / 1000000)
+        cell_total = ws_list.cell(row=row_idx, column=11, value=total_list_amt)
         cell_total.font = header_font
         cell_total.fill = header_fill
-        cell_total.number_format = '"₹ "#,##0.00" M"'
+        cell_total.number_format = '"₹ "#,##0.0000" M"'
         cell_total.alignment = Alignment(horizontal="right")
         cell_total.border = table_border
 

@@ -263,7 +263,7 @@ def export_to_excel(filters=None, export_type="all"):
             if item.get("fieldtype") == "Currency":
                 val_display = flt(val) / 1000000
                 val_cell = summary_ws.cell(row=grid_row, column=val_col, value=val_display)
-                val_cell.number_format = '[$₹-en-IN] #,##0.00 "M"'
+                val_cell.number_format = '[$₹-en-IN] #,##0.0000 "M"'
             else:
                 val_cell = summary_ws.cell(row=grid_row, column=val_col, value=val)
                 
@@ -319,7 +319,7 @@ def export_to_excel(filters=None, export_type="all"):
                 summary_ws.cell(row=r_idx, column=1, value=l).border = table_border
                 val_c = summary_ws.cell(row=r_idx, column=2, value=v / 1000000)
                 val_c.border = table_border
-                val_c.number_format = '[$₹-en-IN] #,##0.00 "M"'
+                val_c.number_format = '[$₹-en-IN] #,##0.0000 "M"'
                 share_c = summary_ws.cell(row=r_idx, column=3, value=(v / total_val))
                 share_c.border = table_border; share_c.number_format = '0.0%'
                 r_idx += 1
@@ -367,11 +367,11 @@ def export_to_excel(filters=None, export_type="all"):
             col_idx = 3
             for m_key in sorted_months:
                 c = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["months"].get(m_key, 0))/1000000)
-                c.number_format, c.border = '[$₹-en-IN] #,##0.00 "M"', table_border
+                c.number_format, c.border = '[$₹-en-IN] #,##0.0000 "M"', table_border
                 if fill: c.fill = fill
                 col_idx += 1
             c_n = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
-            c_n.number_format = '[$₹-en-IN] #,##0.00 "M"'
+            c_n.number_format = '[$₹-en-IN] #,##0.0000 "M"'
             c_n.font = Font(bold=True)
             c_n.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_n.border = table_border
@@ -393,13 +393,13 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx = 3
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
-            c.number_format = '[$₹-en-IN] #,##0.00 "M"'
+            c.number_format = '[$₹-en-IN] #,##0.0000 "M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
             col_idx += 1
         c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-        c_gn.number_format = '[$₹-en-IN] #,##0.00 "M"'
+        c_gn.number_format = '[$₹-en-IN] #,##0.0000 "M"'
         c_gn.font = header_font
         c_gn.fill = header_fill
         c_gn.border = table_border
@@ -449,7 +449,7 @@ def export_to_excel(filters=None, export_type="all"):
                 if fname == "net_total":
                     num_val = flt(val or 0) / 1000000
                     total_amt += flt(val or 0)
-                    cell.number_format = '[$₹-en-IN] #,##0.00 "M"'
+                    cell.number_format = '[$₹-en-IN] #,##0.0000 "M"'
                     cell.value = num_val; cell.alignment = Alignment(horizontal="right")
                 elif fname in ["transaction_date", "schedule_date", "supplier_agreed_time", "delivery_time_as_per_po", "actual_delivery_time"]:
                     cell.value = str(val) if val else "-"; cell.alignment = Alignment(horizontal="center")
@@ -470,7 +470,7 @@ def export_to_excel(filters=None, export_type="all"):
     
         c_tot_amt = ws.cell(row=row_idx, column=10, value=total_amt / 1000000)
         c_tot_amt.font = header_font; c_tot_amt.fill = header_fill; c_tot_amt.border = table_border; c_tot_amt.alignment = Alignment(horizontal="right")
-        c_tot_amt.number_format = '[$₹-en-IN] #,##0.00 "M"'
+        c_tot_amt.number_format = '[$₹-en-IN] #,##0.0000 "M"'
 
     # Remove dummy sheets if created
     for dummy_name in ["Dummy1", "Dummy2"]:

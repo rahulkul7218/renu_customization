@@ -3,7 +3,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 	console.log("Collection Report Dashboard - Version 3.3 (Full PDF Sync)");
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Collection Report (Million INR)"),
+		title: __("Collection Report"),
 		single_column: true,
 	});
 
@@ -194,6 +194,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                             <th>Invoice ID</th>
                             <th>Date</th>
                             <th>Customer</th>
+                            <th>Item</th>
                             <th>Sales Person</th>
                             <th style="text-align:right;">Amount</th>
                             <th>Type</th>
@@ -207,8 +208,12 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                                 <td>${row.name}</td>
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
                                 <td>${row.customer}</td>
+                                <td>
+                                    <div style="font-size: 8px; color: #64748b;">${row.item_code || "-"}</div>
+                                    <div style="font-weight: 700; color: #1e293b;">${row.item_name || "-"}</div>
+                                </td>
                                 <td>${row.sales_person || "-"}</td>
-                                <td style="text-align:right;">${format_currency_short(row.base_grand_total)}</td>
+                                <td style="text-align:right;">${format_currency_short(row.allocated_amount)}</td>
                                 <td>${row.is_export ? "Export" : "Domestic"}</td>
                             </tr>
                         `,
@@ -217,8 +222,8 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                     </tbody>
                     <tfoot>
                         <tr style="background: #f8fafc; font-weight: 800;">
-                            <td colspan="4" style="text-align:right;">GRAND TOTAL</td>
-                            <td style="text-align:right;">${format_currency_short(data.results.reduce((sum, row) => sum + flt(row.base_grand_total), 0))}</td>
+                            <td colspan="5" style="text-align:right;">GRAND TOTAL</td>
+                            <td style="text-align:right;">${format_currency_short(data.results.reduce((sum, row) => sum + flt(row.allocated_amount), 0))}</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -248,6 +253,14 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 		'<div class="dashboard-filter-area border-bottom" style="background: transparent; padding: 0;"></div>',
 	).prependTo(page.main);
 	const filter_fields = [
+		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{ fieldtype: "Column Break" },
 		{
 			fieldname: "from_date",
 			label: __("From Date"),
@@ -395,6 +408,13 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
         .dashboard-table th { background: #f8fafc; padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #64748b; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; }
         .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; background: #fff; }
         .dashboard-table tr:hover td { background: #f8fafc; }
+        .date-col { min-width: 120px !important; width: 120px !important; white-space: nowrap !important; }
+        .item-col { min-width: 320px !important; width: 320px !important; }
+        .customer-col { min-width: 220px !important; width: 220px !important; }
+        .invoice-col { min-width: 130px !important; width: 130px !important; }
+        .type-col { min-width: 100px !important; width: 100px !important; text-align: center !important; }
+        .currency-col { min-width: 140px !important; width: 140px !important; text-align: right !important; }
+        .sp-col { min-width: 150px !important; width: 150px !important; }
 
         /* Hide Internal Chart Legend */
         .frappe-chart .chart-legend, 
@@ -413,11 +433,11 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
     </style>`).appendTo(page.main);
 
 	function format_currency_short(num) {
-		if (!num && num !== 0) return "₹ 0.00 M";
+		if (!num && num !== 0) return "₹ 0.0000 M";
 		let value = flt(num) / 1000000;
 		return (
 			"₹ " +
-			value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+			value.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) +
 			" M"
 		);
 	}
@@ -532,12 +552,13 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th>${__("Invoice ID")}</th>
-                                <th>${__("Date")}</th>
-                                <th>${__("Customer")}</th>
-                                <th>${__("Sales Person")}</th>
-                                <th style="text-align: right;">${__("Amount")}</th>
-                                <th style="text-align: center;">${__("Type")}</th>
+                                <th class="invoice-col">${__("Invoice ID")}</th>
+                                <th class="date-col">${__("Date")}</th>
+                                <th class="customer-col">${__("Customer")}</th>
+                                <th class="item-col">${__("Item")}</th>
+                                <th class="sp-col">${__("Sales Person")}</th>
+                                <th class="currency-col" style="text-align: right;">${__("Amount")}</th>
+                                <th class="type-col" style="text-align: center;">${__("Type")}</th>
                             </tr>
                         </thead>
                         <tbody id="collection_table_body"></tbody>
@@ -553,12 +574,18 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 			total_amt += flt(row.base_grand_total);
 			$(`
                 <tr>
-                    <td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-                    <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
-                    <td style="font-weight: 500;">${row.customer}</td>
-                    <td>${row.sales_person || "-"}</td>
-                    <td style="text-align: right; font-weight: 700; color: #0f172a;">${format_currency_short(row.base_grand_total)}</td>
-                    <td style="text-align: center;"><span class="indicator-pill ${type_label}">${__(type_label)}</span></td>
+                    <td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
+                    <td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
+                    <td class="customer-col">${row.customer}</td>
+                    <td class="item-col">
+                        <div style="line-height: 1.4;">
+                            <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code || "-"}</div>
+                            <div style="font-weight: 600; color: #1e293b;">${row.item_name || "-"}</div>
+                        </div>
+                    </td>
+                    <td class="sp-col">${row.sales_person || "-"}</td>
+                    <td class="currency-col" style="text-align: right; font-weight: 700; color: #0f172a;">${format_currency_short(row.allocated_amount)}</td>
+                    <td class="type-col" style="text-align: center;"><span class="indicator-pill ${type_label}">${__(type_label)}</span></td>
                 </tr>
             `).appendTo(tbody);
 		});
@@ -567,9 +594,9 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 		$(`
 			<tfoot>
 				<tr class="sticky-total">
-					<td colspan="4" style="text-align: right; font-weight: 700; color: #64748b; padding-right: 20px;">GRAND TOTAL</td>
-					<td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_currency_short(total_amt)}</td>
-					<td></td>
+					<td colspan="5" style="text-align: right; font-weight: 700; color: #64748b; padding-right: 20px;">GRAND TOTAL</td>
+					<td class="currency-col" style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_currency_short(total_amt)}</td>
+					<td class="type-col"></td>
 				</tr>
 			</tfoot>
 		`).appendTo(table_card.find(".dashboard-table"));

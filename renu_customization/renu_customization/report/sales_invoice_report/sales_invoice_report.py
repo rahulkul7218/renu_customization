@@ -1,4 +1,3 @@
-from warnings import filters
 import frappe
  
 def execute(filters=None):
@@ -10,6 +9,9 @@ def execute(filters=None):
     # 🔴 ADDED: Exclude Draft documents (docstatus = 0)
     conditions += " AND si.docstatus != 0 "
     conditions += " AND si.docstatus != 2 "
+    
+    if filters.get("company"):
+        conditions += " AND si.company = %(company)s"
 
 
  
@@ -30,13 +32,13 @@ def execute(filters=None):
     if filters.get("invoice_id"):
         conditions += " AND si.name = %(invoice_id)s"
  
-    # Invoice Date From (Prioritize Delivery Date / Item Posting Date)
+    # Invoice Date From
     if filters.get("from_date"):
-        conditions += " AND IFNULL(dn.posting_date, si.posting_date) >= %(from_date)s"
+        conditions += " AND si.posting_date >= %(from_date)s"
  
     # Invoice Date To
     if filters.get("to_date"):
-        conditions += " AND IFNULL(dn.posting_date, si.posting_date) <= %(to_date)s"
+        conditions += " AND si.posting_date <= %(to_date)s"
  
     # Customer Name
     if filters.get("customer_name"):
@@ -218,7 +220,6 @@ def execute(filters=None):
  
         {conditions}
         # AND it.is_stock_item = 1
-        AND NOT (it.is_stock_item = 0 AND it.custom_is_freight_item = 1)
 
 
         ORDER BY si.posting_date ASC, si.name ASC,sii.idx ASC

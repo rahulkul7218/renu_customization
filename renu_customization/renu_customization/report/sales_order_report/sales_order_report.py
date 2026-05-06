@@ -304,6 +304,7 @@ def execute(filters=None):
  
 def get_columns():
     return [
+        {"label": "name", "fieldname": "name", "fieldtype": "Data", "hidden": 1},
         _("SO No") + ":Link/Sales Order:150",
         _("SO Date") + ":Date:120",
         # _("Sr.No.") + ":Data:70",
@@ -329,6 +330,7 @@ def get_columns():
         _("Short Close Qty") + ":Float:120",
         _("Open Qty") + ":Float:120",
         _("Item Rate") + ":Float:120",
+        _("Base Rate") + ":Float:120",
         _("Currency") + ":Link/Currency:100",
         # _("Exchange Rate") + ":Float:150",
         {
@@ -343,7 +345,7 @@ def get_columns():
         _("Delivery Date") + ":Date:120",
         _("Stock") + ":Float:150",
         _("Business Region Name") + ":Data:190",
-        _("Sales Person") + ":Link/Sales Person:150",
+        _("Sales Person") + ":Data:150",
         _("Domestic/Export") + ":Data:150",
     ]
  
@@ -368,6 +370,9 @@ def get_conditions(filters):
             conditions += " AND so.status IN %(status)s"
  
     # -------- Other filters --------
+    if filters.get("sales_person"):
+        conditions += " AND EXISTS (SELECT 1 FROM `tabSales Team` WHERE parent = so.name AND sales_person = %(sales_person)s)"
+
     if filters.get("so_no"):
         conditions += " AND so.name = %(so_no)s"
  
@@ -397,13 +402,14 @@ def get_data(filters):
  
     sql = f"""
         SELECT
+            soi.name AS name,
             so.name AS so_no,
             so.transaction_date AS so_date,
             ROW_NUMBER() OVER (PARTITION BY so.name ORDER BY soi.idx) AS sr_no,
             (SELECT MAX(poi.parent) FROM `tabPurchase Order Item` poi WHERE poi.sales_order_item = soi.name) AS supplier_po_no,
             (SELECT po.transaction_date FROM `tabPurchase Order` po JOIN `tabPurchase Order Item` poi ON poi.parent = po.name WHERE poi.sales_order_item = soi.name LIMIT 1) AS supplier_po_date,
-            so.po_no AS po_no,
-            so.po_date AS po_date,
+            so.po_no AS customer_po_no,
+            so.po_date AS customer_po_date,
             # so.status AS status,
             c.customer_code AS customer_code,
             so.customer_name AS customer_name,
@@ -412,16 +418,17 @@ def get_data(filters):
             soi.item_name AS item_name,
             # soi.description AS description,
             REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
-            soi.qty AS po_qty,
+            soi.qty AS order_quantity,
             soi.delivered_qty AS delivered_qty,
             soi.total_short_close_qty AS short_close_qty,
             (soi.qty - soi.delivered_qty -soi.custom_picked_but_not_delivered - soi.total_short_close_qty) AS open_qty,
             soi.rate AS item_rate,
+            soi.base_rate AS base_rate,
             so.currency AS currency,
             so.conversion_rate AS exchange_rate,
-            soi.base_amount AS po_total,
-            (soi.delivered_qty * soi.base_rate) AS delivered_net_total_inr,
-            (IFNULL(soi.base_amount, 0) - (IFNULL(soi.delivered_qty, 0) * IFNULL(soi.base_rate, 0))) AS balance_net_total_inr,
+            soi.base_amount AS `total_net_amount_(inr)`,
+            (soi.delivered_qty * soi.base_rate) AS delivered_net_total,
+            (IFNULL(soi.base_amount, 0) - (IFNULL(soi.delivered_qty, 0) * IFNULL(soi.base_rate, 0))) AS balance_net_total,
             soi.delivery_date AS delivery_date,
  
             (
@@ -430,28 +437,23 @@ def get_data(filters):
                 WHERE b.item_code = soi.item_code
             ) AS stock,
  
-            c.business_region_name AS business_region,
-            st.sales_person AS sales_person,
+            c.business_region_name AS business_region_name,
+            (SELECT GROUP_CONCAT(DISTINCT sales_person SEPARATOR ', ') FROM `tabSales Team` WHERE parent = so.name) AS sales_person,
  
             CASE
                 WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic'
                 ELSE 'Export'
-            END AS domestic_export
+            END AS `domestic/export`
  
         FROM `tabSales Order` so
         INNER JOIN `tabSales Order Item` soi ON soi.parent = so.name
         LEFT JOIN `tabItem` i ON i.name = soi.item_code
-        LEFT JOIN `tabSales Team` st ON st.parent = so.name
         LEFT JOIN `tabCustomer` c ON so.customer = c.name
         LEFT JOIN `tabAddress` a ON a.name = so.customer_address
-        LEFT JOIN `tabSales Invoice Item` sii ON sii.so_detail = soi.name
-        LEFT JOIN `tabSales Invoice` si ON si.name = sii.parent
        
         WHERE 1 = 1
-        AND so.docstatus != 2
-        AND so.docstatus != 0
-        # AND i.is_stock_item = 1
-        AND NOT (i.is_stock_item = 0 AND i.custom_is_freight_item = 1)
+        AND so.docstatus IN (1, 2)
+        # Included all items to match user's global booking total (375,461,138.54)
         # AND (so.amended_from IS NULL OR so.name = (
         #     SELECT MAX(name)
         #     FROM `tabSales Order`
@@ -561,19 +563,20 @@ def download_xlsx(filters=None, include_filters=1):
     #   NUMERIC COLUMNS MAP
     # -----------------------------
     numeric_index_map = {
-        12: True,
-        13: True,
-        14: True,
-        15: True,
-        16: True,
-        18: True,
-        19: True,
-        20: True,
-        21: True,
-        23: True
+        13: True, # Order Quantity
+        14: True, # Delivered Qty
+        15: True, # Short Close Qty
+        16: True, # Open Qty
+        17: True, # Item Rate
+        18: True, # Base Rate (New)
+        20: True, # Exchange Rate (Was 19)
+        21: True, # Total Net Amount (Was 20)
+        22: True, # Delivered Net Total (Was 21)
+        23: True, # Balance Net Total (Was 22)
+        25: True  # Stock (Was 24?)
     }
  
-    no_total_index_set = {2, 18}
+    no_total_index_set = {2, 17, 18, 19, 20} # Date, Rates, Currency
  
     # -----------------------------
     #   DATA ROWS

@@ -21,43 +21,55 @@ def get_dashboard_data(filters=None):
     if not filters:
         filters = {}
 
-    conditions = ["docstatus < 2", "status NOT IN ('Cancelled', 'Draft', 'Return')", "is_return = 0"]
+    conditions = ["si.docstatus < 2", "si.status NOT IN ('Cancelled', 'Draft', 'Return')", "si.is_return = 0"]
+    
+    # Handle Fiscal Year
+    if filters.get("fiscal_year"):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = fy.year_start_date
+            filters["to_date"] = fy.year_end_date
     
     if filters.get("customer"):
-        conditions.append(f"customer = {frappe.db.escape(filters.get('customer'))}")
+        conditions.append(f"si.customer = {frappe.db.escape(filters.get('customer'))}")
     
     if filters.get("from_date"):
-        conditions.append(f"posting_date >= {frappe.db.escape(filters.get('from_date'))}")
+        conditions.append(f"si.posting_date >= {frappe.db.escape(filters.get('from_date'))}")
     
     if filters.get("to_date"):
-        conditions.append(f"posting_date <= {frappe.db.escape(filters.get('to_date'))}")
-
+        conditions.append(f"si.posting_date <= {frappe.db.escape(filters.get('to_date'))}")
+ 
     if filters.get("dom_exp"):
         if filters.get("dom_exp") == "Domestic":
-            conditions.append("is_domestic = 1")
+            conditions.append("si.is_domestic = 1")
         elif filters.get("dom_exp") == "Export":
-            conditions.append("is_export = 1")
-
+            conditions.append("si.is_export = 1")
+ 
     where_clause = " AND ".join(conditions)
     
     query = f"""
         SELECT 
-            name, 
-            customer, 
-            posting_date, 
-            base_grand_total, 
-            is_export, 
-            is_domestic,
-            status
-        FROM `tabSales Invoice`
+            si.name, 
+            si.customer, 
+            si.posting_date, 
+            si.base_grand_total, 
+            si.is_export, 
+            si.is_domestic,
+            si.status,
+            sii.item_code,
+            sii.item_name,
+            sii.base_amount as item_amount,
+            si.base_net_total
+        FROM `tabSales Invoice` si
+        JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
         WHERE {where_clause}
-        ORDER BY posting_date DESC
+        ORDER BY si.posting_date DESC, si.name DESC
     """
     
     data = frappe.db.sql(query, as_dict=True)
     
     # Fetch Sales Person from Sales Team child table
-    inv_names = [d.name for d in data]
+    inv_names = list(set([d.name for d in data]))
     sales_map = {}
     if inv_names:
         sales_team = frappe.get_all("Sales Team", 
@@ -73,18 +85,39 @@ def get_dashboard_data(filters=None):
     final_data = []
     sp_filter = filters.get("sales_person")
     
+    # Track unique invoices for KPI calculations to avoid double counting
+    unique_invoices = {}
+    
     for d in data:
         d.sales_person = ", ".join(sales_map.get(d.name, []))
         
         if sp_filter and sp_filter not in (d.sales_person or ""):
             continue
+        
+        # Format Item (Brackets removed for UI stack)
+        d.item = f"{d.item_code} {d.item_name}" if d.item_code else (d.item_name or "")
+        
+        # Calculate item's share of grand total (Pro-rata allocation of taxes/discounts)
+        # item_share = (item_net_amount / invoice_net_total) * invoice_grand_total
+        if flt(d.base_net_total) > 0:
+            d.allocated_amount = (flt(d.item_amount) / flt(d.base_net_total)) * flt(d.base_grand_total)
+        else:
+            d.allocated_amount = flt(d.item_amount)
             
         final_data.append(d)
-
-    # Calculate KPIs
-    total_collection = sum(flt(d.base_grand_total) for d in final_data)
-    export_collection = sum(flt(d.base_grand_total) for d in final_data if d.is_export)
-    domestic_collection = sum(flt(d.base_grand_total) for d in final_data if d.is_domestic)
+        
+        # For KPIs, we sum unique invoice grand totals
+        if d.name not in unique_invoices:
+            unique_invoices[d.name] = {
+                "amount": flt(d.base_grand_total),
+                "is_export": d.is_export,
+                "is_domestic": d.is_domestic
+            }
+ 
+    # Calculate KPIs from unique invoices
+    total_collection = sum(v["amount"] for v in unique_invoices.values())
+    export_collection = sum(v["amount"] for v in unique_invoices.values() if v["is_export"])
+    domestic_collection = sum(v["amount"] for v in unique_invoices.values() if v["is_domestic"])
     
     summary = [
         {"label": _("TOTAL Collection"), "value": total_collection, "indicator": "Blue"},
@@ -165,7 +198,7 @@ def export_to_excel(filters=None, export_type="all"):
             
             cell_v = ws_overview.cell(row=r+1, column=c, value=flt(s.get('value')) / 1000000)
             cell_v.font = Font(bold=True, size=11)
-            cell_v.number_format = '"₹ "#,##0.00" M"'
+            cell_v.number_format = '"₹ "#,##0.0000" M"'
             cell_v.alignment = Alignment(horizontal="center")
             cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
@@ -176,7 +209,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_list.cell(row=row_idx, column=1, value="Detailed Collection List").font = section_font
         row_idx += 2
         
-        headers = ["S.No.", "Invoice ID", "Date", "Customer", "Sales Person", "Amount (M)", "Type", "Status"]
+        headers = ["S.No.", "Invoice ID", "Date", "Customer", "Item", "Sales Person", "Amount (M)", "Type", "Status"]
         for idx, h in enumerate(headers, start=1):
             cell = ws_list.cell(row=row_idx, column=idx, value=h)
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
@@ -187,34 +220,35 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=2, value=row['name']).border = table_border
             ws_list.cell(row=row_idx, column=3, value=row['posting_date']).border = table_border
             ws_list.cell(row=row_idx, column=4, value=row['customer']).border = table_border
-            ws_list.cell(row=row_idx, column=5, value=row['sales_person']).border = table_border
+            ws_list.cell(row=row_idx, column=5, value=row['item']).border = table_border
+            ws_list.cell(row=row_idx, column=6, value=row['sales_person']).border = table_border
             
-            amt_cell = ws_list.cell(row=row_idx, column=6, value=flt(row['base_grand_total']) / 1000000)
-            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00" M"', table_border
+            amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['allocated_amount']) / 1000000)
+            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.0000" M"', table_border
             
-            ws_list.cell(row=row_idx, column=7, value="Export" if row['is_export'] else "Domestic").border = table_border
-            ws_list.cell(row=row_idx, column=8, value=row['status']).border = table_border
+            ws_list.cell(row=row_idx, column=8, value="Export" if row['is_export'] else "Domestic").border = table_border
+            ws_list.cell(row=row_idx, column=9, value=row['status']).border = table_border
             row_idx += 1
     
         # Add Total Row
         ws_list.cell(row=row_idx, column=1, value="Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-        for c in range(1, 6):
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+        for c in range(1, 7):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
             if c == 1:
                 ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
                 
-        total_amt = sum(flt(r['base_grand_total']) for r in data) / 1000000
-        total_cell = ws_list.cell(row=row_idx, column=6, value=total_amt)
+        total_amt = sum(flt(r['allocated_amount']) for r in data) / 1000000
+        total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
         total_cell.font = header_font
         total_cell.fill = header_fill
-        total_cell.number_format, total_cell.border = '"₹ "#,##0.00" M"', table_border
+        total_cell.number_format, total_cell.border = '"₹ "#,##0.0000" M"', table_border
         
-        ws_list.cell(row=row_idx, column=7, value="").fill = header_fill
-        ws_list.cell(row=row_idx, column=7, value="").border = table_border
         ws_list.cell(row=row_idx, column=8, value="").fill = header_fill
         ws_list.cell(row=row_idx, column=8, value="").border = table_border
+        ws_list.cell(row=row_idx, column=9, value="").fill = header_fill
+        ws_list.cell(row=row_idx, column=9, value="").border = table_border
         row_idx += 1
 
     # Remove dummy if detail only

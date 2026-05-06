@@ -1,7 +1,7 @@
 frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Sales Order Booking Dashboard (Million INR)"),
+		title: __("Sales Order Booking Dashboard"),
 		single_column: true,
 	});
 
@@ -38,16 +38,21 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	const filter_fields = [
 		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
 		},
 		{
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.get_today(),
 		},
 		{
 			fieldname: "company",
@@ -55,13 +60,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			fieldtype: "Link",
 			options: "Company",
 			default: frappe.defaults.get_user_default("Company"),
-		},
-		{
-			fieldname: "fiscal_year",
-			label: __("Fiscal Year"),
-			fieldtype: "Link",
-			options: "Fiscal Year",
-			placeholder: __("Select Year"),
 		},
 		{
 			label: __("Customer"),
@@ -218,9 +216,26 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
 
         /* KPI Cards Styling */
+        .section-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 32px 0 16px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .section-title::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: #e2e8f0;
+        }
         .summary-wrapper { 
             display: grid !important; 
-            grid-template-columns: repeat(5, 1fr) !important; 
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; 
             gap: 16px; 
             margin-bottom: 24px; 
             width: 100% !important;
@@ -229,12 +244,33 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px; 
-            padding: 16px; 
+            padding: 10px 16px; 
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             border-left: 5px solid #cbd5e1;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
+            min-width: 170px;
+            height: 72px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            box-sizing: border-box;
         }
+
+        .lifecycle-total-col {
+            position: sticky !important; 
+            right: 0; 
+            z-index: 25; 
+            background: #f8fafc !important; 
+            font-weight: 800; 
+            color: #0f172a !important;
+            text-align: right !important;
+            border-left: 2px solid #cbd5e1;
+            width: 150px !important;
+            min-width: 150px !important;
+            white-space: nowrap !important;
+        }
+        th.lifecycle-total-col { z-index: 60 !important; background: #f1f5f9 !important; }
         .summary-card:hover { 
             transform: translateY(-4px); 
             box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
@@ -254,15 +290,17 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             font-weight: 700; 
             text-transform: uppercase; 
             letter-spacing: 0.05em; 
-            margin-bottom: 8px; 
+            margin-bottom: 4px; 
             display: flex; 
             align-items: center; 
             gap: 8px;
         }
         .summary-card .value { 
-            font-size: 20px; 
+            font-size: 18px; 
             font-weight: 800; 
             color: #0f172a; 
+            white-space: nowrap;
+            display: block;
         }
         .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
         
@@ -366,37 +404,73 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .col-sno { width: 40px !important; min-width: 40px !important; text-align: center !important; }
         .col-customer { width: 180px !important; min-width: 180px !important; }
         .col-sp { width: 130px !important; min-width: 130px !important; }
-        .col-prod { width: 200px !important; min-width: 200px !important; }
-        .col-amt { width: 110px !important; min-width: 110px !important; text-align: right !important; }
+        .col-prod { width: 320px !important; min-width: 320px !important; }
+        .col-amt { 
+            width: 130px !important; min-width: 130px !important; 
+            text-align: right !important; 
+            white-space: nowrap !important;
+        }
         .col-qty { width: 80px !important; min-width: 80px !important; text-align: right !important; }
-        .col-date { width: 100px !important; min-width: 100px !important; }
+        .col-date { width: 120px !important; min-width: 120px !important; }
         .col-id { width: 140px !important; min-width: 140px !important; }
         .col-status { width: 120px !important; min-width: 120px !important; }
+        
+        /* Table Sticky Columns - Table 1 (Booking Breakdown) */
+        .month-table .col-sno { width: 50px !important; text-align: center !important; position: sticky; left: 0; z-index: 20; background: #f8fafc !important; }
+        .month-table .col-customer { position: sticky; left: 50px; z-index: 20; background: #fff !important; border-right: 1px solid #e2e8f0; width: 220px !important; min-width: 220px !important; }
+        
+        /* Sales Person and Product are no longer sticky in Table 1 */
+        .month-table .col-sp { position: relative; width: 150px !important; min-width: 150px !important; }
+        .month-table .col-prod { position: relative; width: 280px !important; min-width: 280px !important; }
+        
+        /* Table Sticky Columns - Table 2 (Detailed List) */
+        .detailed-list-table .col-sno { width: 50px !important; text-align: center !important; position: sticky; left: 0; z-index: 20; background: #f8fafc !important; }
+        .detailed-list-table .col-id { position: sticky; left: 50px; z-index: 20; background: #fff !important; border-right: 1px solid #e2e8f0; width: 140px !important; min-width: 140px !important; }
 
-        /* Total Columns (Right Sticky) */
+        /* Ensure sticky columns stay on top in Header and Footer */
+        .dashboard-table th.col-sno, .dashboard-table th.col-customer, .dashboard-table th.col-id, .dashboard-table th.col-category { z-index: 60 !important; }
+        .dashboard-table tr.sticky-total td.col-sno, .dashboard-table tr.sticky-total td.col-customer, .dashboard-table tr.sticky-total td.col-id, .dashboard-table tr.sticky-total td.col-category { z-index: 90 !important; }
+
+        .col-customer { width: 220px !important; min-width: 220px !important; }
+        .col-sp { width: 150px !important; min-width: 150px !important; }
+        .col-prod { width: 280px !important; min-width: 280px !important; }
+
         .total-net-col { 
-            position: sticky !important; right: 130px; z-index: 25; 
-            background: #f8fafc !important; font-weight: 700; 
-            text-align: right !important; border-left: 2px solid #cbd5e1;
-            width: 130px !important; min-width: 130px !important;
+            position: sticky !important; right: 150px; z-index: 25; 
+            background: #f1f5f9 !important; font-weight: 800; color: #0f172a !important; 
+            text-align: right !important; border-left: 1px solid #cbd5e1;
+            width: 150px !important; min-width: 150px !important;
         }
         .grand-total-col { 
             position: sticky !important; right: 0; z-index: 25; 
-            background: #f0f4ff !important; font-weight: 800; 
-            text-align: right !important; border-left: 1px solid #e2e8f0;
-            color: #4338ca !important;
-            width: 130px !important; min-width: 130px !important;
+            background: #f0f4ff !important; font-weight: 800; color: #4338ca !important; 
+            text-align: right !important; border-left: 2px solid #cbd5e1;
+            width: 150px !important; min-width: 150px !important;
         }
-        
-        .dashboard-table th.total-net-col, .dashboard-table th.grand-total-col { z-index: 60 !important; background: #f1f3f5 !important; }
+        th.total-net-col, th.grand-total-col { z-index: 60 !important; background: #f1f3f5 !important; }
 
         /* Sticky Footer */
         .dashboard-table tr.sticky-total td { 
-            position: sticky; bottom: 0; background: #f8fafc !important; 
+            position: sticky; background: #f8fafc !important; 
             border-top: 2px solid #cbd5e1; z-index: 70; font-weight: 700; color: #0f172a;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
+            height: 40px !important;
+            padding: 8px 14px !important;
+            line-height: 1.2 !important;
         }
-        .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 80 !important; background: #f1f3f5 !important; }
+        
+        /* Stacked Sticky Footers (Table 1 has two) */
+        .dashboard-table tr.sticky-total:nth-last-child(2) td { bottom: 40px !important; }
+        .dashboard-table tr.sticky-total:nth-last-child(1) td { bottom: 0 !important; }
+
+        .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 95 !important; background: #f1f3f5 !important; }
+
+        /* Lifecycle Table Category Sticky */
+        .lifecycle-table .col-category {
+            position: sticky !important; left: 0; z-index: 20;
+            background: #f8fafc !important; border-right: 1px solid #e2e8f0;
+            width: 180px !important; min-width: 180px !important;
+        }
 
         .indicator-pill { 
             padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 600;
@@ -429,6 +503,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 	function render_dashboard(data) {
 		page.container.empty();
 		page.clear_menu();
+		page.add_menu_item(__("Export to PDF"), () => export_pdf());
+		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
+
 		if (!data.results || data.results.length === 0) {
 			$(
 				`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found for the selected filters")}</div></div>`,
@@ -436,16 +513,38 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			return;
 		}
 
-		// 1. KPI Cards
-		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
-		data.summary.forEach((metric) => {
-			let indicator = (metric.indicator || "blue").toLowerCase();
-			$(`
-                <div class="summary-card ${indicator}">
-                    <div class="label"><span class="indicator bg-${indicator}"></span>${metric.label}</div>
-                    <div class="value">${format_currency_short(metric.value)}</div>
-                </div>
-            `).appendTo(summary_row);
+		// 1. KPI Cards Grouped by Section
+		const sections = [
+			{ title: "Global Overview", prefix: "Global" },
+			{ title: "Domestic Performance", prefix: "Dom." },
+			{ title: "Export Performance", prefix: "Exp." },
+			{ title: "Channel Partner (CP) Performance", prefix: "CP" },
+		];
+
+		sections.forEach((sec) => {
+			let section_metrics = data.summary.filter((m) => m.label.startsWith(sec.prefix));
+			if (section_metrics.length > 0) {
+				$(`<div class="section-title">${__(sec.title)}</div>`).appendTo(page.container);
+				let summary_row = $('<div class="summary-wrapper"></div>').appendTo(
+					page.container,
+				);
+
+				section_metrics.forEach((metric) => {
+					let indicator = (metric.indicator || "blue").toLowerCase();
+					// Clean label: remove prefix
+					let clean_label = metric.label
+						.replace(sec.prefix, "")
+						.replace(/^\.|\s+/, "")
+						.trim();
+
+					$(`
+                        <div class="summary-card ${indicator}">
+                            <div class="label"><span class="indicator bg-${indicator}"></span>${clean_label}</div>
+                            <div class="value">${format_currency_short(metric.value)}</div>
+                        </div>
+                    `).appendTo(summary_row);
+				});
+			}
 		});
 
 		// 2. Charts Row
@@ -548,11 +647,30 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th class="col-sp">Sales Person</th>
                                 <th class="col-prod">Product</th>
                                 ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
-                                <th class="total-net-col">Total (Net)</th>
-                                <th class="grand-total-col">Grand Total (Gross)</th>
+                                <th class="total-net-col">Total (Net) (M)</th>
+                                <th class="total-net-col">Cancelled (M)</th>
+                                <th class="grand-total-col">Grand Total (Gross) (M)</th>
                             </tr>
                         </thead>
                         <tbody id="booking_month_body"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-card" style="margin-top: 32px; overflow: visible;">
+                <div class="header" style="overflow: visible;">
+                    <span style="font-size: 15px;">${__("Monthly Lifecycle Summary")}</span>
+                </div>
+                <div class="table-container">
+                    <table class="dashboard-table lifecycle-table">
+                        <thead>
+                            <tr>
+                                <th class="col-category">Category</th>
+                                ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
+                                <th class="lifecycle-total-col">Total (M)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lifecycle_summary_body"></tbody>
                     </table>
                 </div>
             </div>
@@ -568,18 +686,24 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table detailed-list-table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
                                 <th class="col-id">Order ID</th>
-                                <th class="col-date">Date</th>
+                                <th class="col-date" style="white-space: nowrap;">Date</th>
                                 <th class="col-status">Status</th>
                                 <th class="col-customer">Customer</th>
+                                <th style="width: 140px; white-space: nowrap;">Cust. PO No.</th>
                                 <th class="col-prod">Item</th>
+                                <th style="width: 110px; white-space: nowrap;">Deliv. Date</th>
                                 <th class="col-sp">Sales Person</th>
-                                <th class="col-qty">Qty</th>
-                                <th class="col-amt">Amount (Net M)</th>
+                                <th class="col-amt">Order (M)</th>
+                                <th class="col-amt">Cancelled (M)</th>
+                                <th class="col-amt">Picked (M)</th>
+                                <th class="col-amt">Delivery (M)</th>
+                                <th class="col-amt">Short Close (M)</th>
+                                <th class="col-amt">Open (M)</th>
                             </tr>
                         </thead>
                         <tbody id="so_list_body"></tbody>
@@ -590,31 +714,136 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 		const render_filtered_view = (filtered_data) => {
 			let tbody_month = tables_container.find("#booking_month_body");
+			let tbody_lifecycle = tables_container.find("#lifecycle_summary_body");
 			let tbody_list = tables_container.find("#so_list_body");
+
 			tbody_month.empty();
+			tbody_lifecycle.empty();
 			tbody_list.empty();
+
+			// 3.0 Process Monthly Lifecycle Summary
+			let lifecycle_buckets = {
+				Booked: { color: "#3b82f6", data: {} },
+				Cancelled: { color: "#ef4444", data: {} },
+				"Short Close": { color: "#f59e0b", data: {} },
+				Actual: { color: "#10b981", data: {} },
+				Picked: { color: "#facc15", data: {} },
+				Delivered: { color: "#06b6d4", data: {} },
+				Overdue: { color: "#8b5cf6", data: {} },
+			};
+
+			const today_moment = moment().startOf("day");
+
+			filtered_data.forEach((row) => {
+				let m_key = moment(row.so_date).format("MMM YYYY");
+				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
+				let status = row.status;
+
+				if (status !== "Cancelled") {
+					lifecycle_buckets["Booked"].data[m_key] =
+						(lifecycle_buckets["Booked"].data[m_key] || 0) + amt;
+				}
+
+				if (status === "Cancelled") {
+					lifecycle_buckets["Cancelled"].data[m_key] =
+						(lifecycle_buckets["Cancelled"].data[m_key] || 0) + amt;
+				}
+
+				let sc_qty = flt(row.short_close_qty || 0);
+				let sc_amt = sc_qty * flt(row.base_rate || row.item_rate || 0);
+				if (sc_amt > 0) {
+					lifecycle_buckets["Short Close"].data[m_key] =
+						(lifecycle_buckets["Short Close"].data[m_key] || 0) + sc_amt;
+				}
+
+				let picked_amt = flt(row.picked_net_total_inr || 0);
+				if (status !== "Cancelled") {
+					lifecycle_buckets["Picked"].data[m_key] =
+						(lifecycle_buckets["Picked"].data[m_key] || 0) + picked_amt;
+				}
+
+				let deliv_amt = flt(
+					row.delivered_net_total_inr || amt * (flt(row.per_billed || 0) / 100),
+				);
+				if (status !== "Cancelled") {
+					lifecycle_buckets["Delivered"].data[m_key] =
+						(lifecycle_buckets["Delivered"].data[m_key] || 0) + deliv_amt;
+				}
+
+				if (status !== "Cancelled" && status !== "Closed" && status !== "Completed") {
+					if (row.delivery_date && moment(row.delivery_date).isBefore(today_moment)) {
+						let balance = flt(row.balance_net_total_inr || amt - deliv_amt);
+						lifecycle_buckets["Overdue"].data[m_key] =
+							(lifecycle_buckets["Overdue"].data[m_key] || 0) + balance;
+					}
+				}
+			});
+
+			// Calculate Actual
+			months.forEach((m) => {
+				let booked = lifecycle_buckets["Booked"].data[m.key] || 0;
+				let cancelled = lifecycle_buckets["Cancelled"].data[m.key] || 0;
+				let sc = lifecycle_buckets["Short Close"].data[m.key] || 0;
+				lifecycle_buckets["Actual"].data[m.key] = booked - sc;
+			});
+
+			Object.keys(lifecycle_buckets).forEach((cat) => {
+				let row_data = lifecycle_buckets[cat];
+				let cells = months
+					.map(
+						(m) =>
+							`<td class="col-amt">${format_currency_short(row_data.data[m.key] || 0)}</td>`,
+					)
+					.join("");
+				let total = Object.values(row_data.data).reduce((a, b) => a + b, 0);
+
+				tbody_lifecycle.append(`
+					<tr>
+						<td class="col-category" style="font-weight: 700; color: #475569;">
+                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${row_data.color}; margin-right: 8px; vertical-align: middle;"></span>
+                            ${cat}
+                        </td>
+						${cells}
+						<td class="lifecycle-total-col">${format_currency_short(total)}</td>
+					</tr>
+				`);
+			});
 
 			// 3.1 Process Month-Wise Booking Breakdown
 			let merged_data = {};
 			filtered_data.forEach((row) => {
 				let sp = row.sales_person || "-";
 				let cust = row.customer_name || "-";
-				let prod = row.item_name || row.item_code || "-";
+				let item_code = row.item_code || "-";
+				let item_name = row.item_name || "-";
 				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
 				let g_amt = flt(row.gross_total || amt);
 				let m_key = moment(row.so_date).format("MMM YYYY");
-				let key = sp + "|" + cust + "|" + prod;
+				let key = sp + "|" + cust + "|" + item_code;
 				if (!merged_data[key])
-					merged_data[key] = { sp, cust, prod, months: {}, total: 0, total_gross: 0 };
-				merged_data[key].months[m_key] = (merged_data[key].months[m_key] || 0) + amt;
-				merged_data[key].total += amt;
-				merged_data[key].total_gross += g_amt;
+					merged_data[key] = {
+						sp,
+						cust,
+						item_code,
+						item_name,
+						months: {},
+						total: 0,
+						total_cancelled: 0,
+						total_gross: 0,
+					};
+				if (row.status !== "Cancelled") {
+					merged_data[key].months[m_key] = (merged_data[key].months[m_key] || 0) + amt;
+					merged_data[key].total += amt;
+					merged_data[key].total_gross += g_amt;
+				}
+				merged_data[key].total_cancelled += flt(row.cancelled_val || 0);
 			});
 
 			let summary_list = Object.values(merged_data).sort((a, b) => b.total - a.total);
 			let total_month_amts = {};
 			let total_month_gross_amts = {};
 			let g_total_net = 0;
+			let g_total_cancelled = 0;
 			let g_total_gross = 0;
 
 			if (summary_list.length === 0) {
@@ -624,6 +853,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			} else {
 				summary_list.forEach((row, idx) => {
 					g_total_net += row.total;
+					g_total_cancelled += row.total_cancelled;
 					g_total_gross += row.total_gross;
 					let cells = months
 						.map((m) => {
@@ -638,20 +868,27 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
                             <td class="col-customer" style="font-weight: 600; color: #0f172a;">${row.cust}</td>
                             <td class="col-sp">${row.sp}</td>
-                            <td class="col-prod" style="font-size: 12px; color: #64748b;">${row.prod}</td>
+                            <td class="col-prod">
+                                <div style="line-height: 1.4;">
+                                    <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code}</div>
+                                    <div style="font-weight: 600; color: #1e293b;">${row.item_name}</div>
+                                </div>
+                            </td>
                             ${cells}
                             <td class="total-net-col">${format_currency_short(row.total)}</td>
+                            <td class="total-net-col">${format_currency_short(row.total_cancelled)}</td>
                             <td class="grand-total-col">${format_currency_short(row.total_gross)}</td>
                         </tr>
                     `);
 				});
 
-				// Month-wise Gross totals for footer
 				filtered_data.forEach((r) => {
-					let m_key = moment(r.so_date).format("MMM YYYY");
-					total_month_gross_amts[m_key] =
-						(total_month_gross_amts[m_key] || 0) +
-						flt(r.gross_total || r.total_net_amount_inr);
+					if (r.status !== "Cancelled") {
+						let m_key = moment(r.so_date).format("MMM YYYY");
+						total_month_gross_amts[m_key] =
+							(total_month_gross_amts[m_key] || 0) +
+							flt(r.gross_total || r.total_net_amount_inr);
+					}
 				});
 
 				// Footer Rows
@@ -663,14 +900,16 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-prod">-</td>
                         ${months.map((m) => `<td class="col-amt">${format_currency_short(total_month_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col">${format_currency_short(g_total_net)}</td>
+                        <td class="total-net-col">${format_currency_short(g_total_cancelled)}</td>
                         <td class="grand-total-col">-</td>
                     </tr>
-                    <tr class="sticky-total" style="bottom: 0;">
+                    <tr class="sticky-total">
                         <td class="col-sno">-</td>
                         <td class="col-customer" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL (GROSS)</td>
                         <td class="col-sp">-</td>
                         <td class="col-prod">-</td>
                         ${months.map((m) => `<td class="col-amt" style="background: #f0f4ff !important; color: #4338ca;">${format_currency_short(total_month_gross_amts[m.key] || 0)}</td>`).join("")}
+                        <td class="total-net-col">-</td>
                         <td class="total-net-col">-</td>
                         <td class="grand-total-col">${format_currency_short(g_total_gross)}</td>
                     </tr>
@@ -679,12 +918,16 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 			// 3.2 Detailed Sales Orders List
 			tables_container.find("#so_count").text(`Showing ${filtered_data.length} orders`);
-			let total_qty = 0,
-				total_amt = 0;
+			let total_amt = 0,
+				total_cancelled = 0,
+				total_picked = 0,
+				total_deliv = 0,
+				total_sc = 0,
+				total_balance = 0;
 
 			if (filtered_data.length === 0) {
 				tbody_list.append(
-					`<tr><td colspan="9" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="15" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				filtered_data.forEach((row, idx) => {
@@ -695,31 +938,67 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						status_color = "orange";
 					if (["Cancelled"].includes(row.status)) status_color = "red";
 
-					let qty = flt(row.order_quantity || row.po_qty);
-					let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
-					total_qty += qty;
-					total_amt += amt;
+					let amt = flt(row.total_net_amount_inr || row["total_net_amount_(inr)"] || row.po_total);
+					let cancelled_val = row.status === "Cancelled" ? amt : 0;
+					let deliv_total = flt(row.delivered_net_total_inr || 0);
+					let sc_value = flt(row.sc_value || 0);
+					let balance_total = flt(row.balance_net_total_inr || amt - deliv_total - cancelled_val);
+
+					let cust_po = row.po_no || "-";
+					let deliv_date_str = row.delivery_date
+						? frappe.datetime.str_to_user(row.delivery_date)
+						: "-";
+
+					if (row.status !== "Cancelled") total_amt += amt;
+					total_cancelled += cancelled_val;
+					total_picked += flt(row.picked_net_total_inr || 0);
+					total_deliv += deliv_total;
+					total_sc += sc_value;
+					total_balance += balance_total;
 
 					tbody_list.append(`
                         <tr>
                             <td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
                             <td class="col-id"><a href="/app/sales-order/${row.so_no}" style="font-weight: 600; color: #4338ca;">${row.so_no}</a></td>
-                            <td class="col-date">${frappe.datetime.str_to_user(row.so_date)}</td>
+                            <td class="col-date" style="white-space: nowrap;">${frappe.datetime.str_to_user(row.so_date)}</td>
                             <td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
                             <td class="col-customer" style="font-weight: 500;">${row.customer_name}</td>
-                            <td class="col-prod" style="font-size: 12.5px;">${row.item_code}</td>
+                            <td class="col-po" style="color: #475569; font-size: 11px; font-weight: 500; white-space: nowrap;">${cust_po}</td>
+                            <td class="col-prod">
+                                <div style="line-height: 1.4;">
+                                    <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code || "-"}</div>
+                                    <div style="font-weight: 600; color: #1e293b;">${row.item_name || "-"}</div>
+                                </div>
+                            </td>
+                            <td class="col-deliv-date" style="color: #475569; font-size: 11px; white-space: nowrap;">${deliv_date_str}</td>
                             <td class="col-sp">${row.sales_person || "-"}</td>
-                            <td class="col-qty" style="font-weight: 600;">${frappe.format(qty, { fieldtype: "Float" })}</td>
                             <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(amt)}</td>
+                            <td class="col-amt" style="color: #0f172a;">${format_currency_short(cancelled_val)}</td>
+                            <td class="col-amt" style="color: #0f172a;">${format_currency_short(row.picked_net_total_inr || 0)}</td>
+                            <td class="col-amt" style="color: #0f172a;">${format_currency_short(deliv_total)}</td>
+                            <td class="col-amt" style="color: #0f172a; font-weight: 600;">${format_currency_short(sc_value)}</td>
+                            <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(balance_total)}</td>
                         </tr>
                     `);
 				});
 
 				tbody_list.append(`
                     <tr class="sticky-total">
-                        <td colspan="7" style="text-align: right; padding-right: 24px; color: #64748b;">GRAND TOTAL</td>
-                        <td style="text-align: right; font-weight: 700; color: #0f172a;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
-                        <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0;">${format_currency_short(total_amt)}</td>
+                        <td class="col-sno" style="position: sticky; left: 0; z-index: 100; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">-</td>
+                        <td class="col-id" style="position: sticky; left: 50px; z-index: 100; text-align: left; padding-left: 10px; color: #475569; font-size: 10px; font-weight: 800; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">GRAND TOTAL</td>
+                        <td class="col-date" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-status" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-customer" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-po" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-prod" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-deliv-date" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-sp" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_amt)}</td>
+                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_cancelled)}</td>
+                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_picked)}</td>
+                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_deliv)}</td>
+                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_sc)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_balance)}</td>
                     </tr>
                 `);
 			}
@@ -827,11 +1106,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         @page { size: landscape; margin: 10mm; }
                         .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
                         
-                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
-                        .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
-                        .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-                        .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
+                        .kpi-section-title { font-size: 13px; font-weight: 700; color: #3b82f6; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; text-transform: uppercase; }
+                        .kpi-container { width: 100%; clear: both; margin-bottom: 5px; display: block; }
+                        .kpi-card { float: left; width: 23.5%; border: 1px solid #e2e8f0; padding: 6px 4px; margin: 0.5%; border-radius: 6px; background: #f8fafc; text-align: center; height: 45px; box-sizing: border-box; }
+                        .kpi-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+                        .kpi-label { font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                        .kpi-value { font-size: 11px; font-weight: 800; color: #0f172a; line-height: 1.1; }
                         
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
@@ -849,12 +1129,18 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         .page-break { page-break-after: always; }
 
                         /* Column Widths */
-                        .col-sno { width: 40px; text-align: center; }
-                        .col-customer, .col-supplier { width: 180px; }
-                        .col-sp { width: 130px; }
-                        .col-prod { width: 200px; }
-                        .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
-                        .total-net-col, .grand-total-col { width: 120px; text-align: right; font-weight: 700; }
+                        .col-sno { width: 35px; text-align: center; }
+                        .col-id { width: 100px; }
+                        .col-date { width: 80px; }
+                        .col-status { width: 90px; text-align: center; }
+                        .col-customer, .col-supplier { width: 160px; }
+                        .col-sp { width: 110px; }
+                        .col-prod { width: 180px; }
+                        .col-amt { width: 85px; text-align: right; }
+                        .col-po { width: 110px; }
+                        .col-deliv-date { width: 85px; }
+                        .col-category { width: 140px; font-weight: 700; background: #f8fafc !important; }
+                        .total-net-col, .grand-total-col, .lifecycle-total-col { width: 100px; text-align: right; font-weight: 700; }
 
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
                         .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
@@ -870,42 +1156,48 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						<p style="font-size: 14px; color: #555; margin: 8px 0;">${period}</p>
 						<p style="font-size: 11px; color: #999; margin: 0;">Generated: ${report_date}</p>
 					</div>
-					<div class="kpi-wrapper">
-						${data.summary
-							.slice(0, 4)
-							.map((m) => {
-								let color = "#3498db";
-								if (m.indicator === "green") color = "#2ecc71";
-								if (m.indicator === "orange") color = "#e67e22";
-								if (m.indicator === "red") color = "#e74c3c";
-								if (m.indicator === "purple") color = "#9b59b6";
+					${(function () {
+						const sections = [
+							{ title: "Global Overview", prefix: "Global" },
+							{ title: "Domestic Performance", prefix: "Dom." },
+							{ title: "Export Performance", prefix: "Exp." },
+							{ title: "Channel Partner Performance", prefix: "CP" },
+						];
+						return sections
+							.map((sec) => {
+								let metrics = data.summary.filter((m) =>
+									m.label.startsWith(sec.prefix),
+								);
+								if (!metrics.length) return "";
+								let cards = metrics
+									.map((m) => {
+										let color = "#3498db";
+										if (m.indicator === "green") color = "#2ecc71";
+										if (m.indicator === "orange") color = "#e67e22";
+										if (m.indicator === "red") color = "#e74c3c";
+										if (m.indicator === "purple") color = "#9b59b6";
+										let clean_label = m.label
+											.replace(sec.prefix, "")
+											.replace(/^\.|\s+/, "")
+											.trim();
+										return `
+									<div class="kpi-card">
+										<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${clean_label}</div>
+										<div class="kpi-value">${format_currency_short(m.value)}</div>
+									</div>
+								`;
+									})
+									.join("");
 								return `
-							<div class="kpi-card">
-								<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
-								<div class="kpi-value">${format_currency_short(m.value)}</div>
-							</div>
-						`;
+								<div style="page-break-inside: avoid; margin-bottom: 15px;">
+									<div class="kpi-section-title">${sec.title}</div>
+									<div class="kpi-container">${cards}</div>
+									<div style="clear: both;"></div>
+								</div>
+							`;
 							})
-							.join("")}
-					</div>
-					<div class="kpi-wrapper">
-						${data.summary
-							.slice(4)
-							.map((m) => {
-								let color = "#3498db";
-								if (m.indicator === "green") color = "#2ecc71";
-								if (m.indicator === "orange") color = "#e67e22";
-								if (m.indicator === "red") color = "#e74c3c";
-								if (m.indicator === "purple") color = "#9b59b6";
-								return `
-							<div class="kpi-card">
-								<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
-								<div class="kpi-value">${format_currency_short(m.value)}</div>
-							</div>
-						`;
-							})
-							.join("")}
-					</div>
+							.join("");
+					})()}
 					<h3>Visual Analytics</h3>
 					${chart_h(png1, "Top Salesperson by Booking")}
                     ${chart_l("top_10_salesperson")}
@@ -922,7 +1214,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					<table>
 						${tables_container.find(".month-table").html()}
 					</table>
-                    <div class="page-break"></div>
+					<div class="page-break"></div>
+					<h3>Monthly Lifecycle Summary (M)</h3>
+					<table>
+						${tables_container.find(".lifecycle-table").html()}
+					</table>
+					<div class="page-break"></div>
 					<h3>Detailed Sales Orders List (M)</h3>
 					<table>
 						${tables_container.find(".table-card:last table").html()}
@@ -1048,8 +1345,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		render_filtered_view(data.results);
 		init_hybrid_ui();
 
-		page.add_menu_item(__("Export to PDF"), () => export_pdf());
-		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 	}
 
 	const export_to_excel = (export_type = "all") => {
@@ -1077,13 +1372,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 };
 
 function format_currency_short(num) {
-	if (!num && num !== 0) return "₹ 0.00 M";
+	if (!num && num !== 0) return "₹ 0.0000 M";
 	let value = flt(num) / 1000000;
 	return (
 		"₹ " +
-		value.toLocaleString("en-IN", {
-			minimumFractionDigits: 2,
-			maximumFractionDigits: 2,
+		value.toLocaleString("en-US", {
+			minimumFractionDigits: 4,
+			maximumFractionDigits: 4,
 		}) +
 		" M"
 	);

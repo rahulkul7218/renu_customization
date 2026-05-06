@@ -1,7 +1,7 @@
 frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Purchase Invoice Dashboard (Million INR)"),
+		title: __("Purchase Invoice Dashboard"),
 		single_column: true,
 	});
 
@@ -42,10 +42,14 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 			options: "Fiscal Year",
 		},
 		{
-			fieldname: "date_range",
-			label: __("Date Range"),
-			fieldtype: "DateRange",
-			placeholder: [__("Start Date"), __("End Date")],
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
 		},
 		{
 			fieldname: "supplier",
@@ -131,7 +135,7 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		}
 		.dashboard-filter-area .frappe-control {
 			margin-bottom: 10px !important;
-			width: calc(20% - 12px) !important;
+			width: calc(25% - 12px) !important;
 		}
 		.dashboard-filter-area .frappe-control .form-group {
 			margin-bottom: 0 !important;
@@ -306,11 +310,11 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
     </style>`).appendTo(page.main);
 
 	function format_currency_short(num) {
-		if (!num && num !== 0) return "₹ 0.00 M";
+		if (!num && num !== 0) return "₹ 0.0000 M";
 		let value = flt(num) / 1000000;
 		return (
 			"₹ " +
-			value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+			value.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) +
 			" M"
 		);
 	}

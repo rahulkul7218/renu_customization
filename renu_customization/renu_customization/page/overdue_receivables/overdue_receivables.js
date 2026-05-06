@@ -1,7 +1,7 @@
 frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Overdue Receivables (Million INR)"),
+		title: __("Overdue Receivables"),
 		single_column: true,
 	});
 
@@ -219,13 +219,36 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+		},
+		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_user_default("Company"),
+		},
+		{
 			fieldname: "customer",
 			label: __("Customer"),
 			fieldtype: "Link",
 			options: "Customer",
 			placeholder: __("Select Customer"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "sales_person",
 			label: __("Sales Person"),
@@ -233,14 +256,12 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 			options: "Sales Person",
 			placeholder: __("Select Sales Person"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "min_days",
 			label: __("Min Days Overdue"),
 			fieldtype: "Int",
 			placeholder: __("Enter Days"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "type",
 			label: __("Type"),
@@ -264,7 +285,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 
 	Object.keys(page.filter_group.fields_dict).forEach((key) => {
 		let field = page.filter_group.fields_dict[key];
-		field.df.on_change = () => page.refresh();
+		field.on_change = () => page.refresh();
 		if (field.$input) {
 			field.$input.on("change input blur", () => {
 				setTimeout(() => page.refresh(), 50);
@@ -275,6 +296,51 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 	$("<style>")
 		.text(
 			`
+		.dashboard-filter-area {
+			padding: 15px 20px 5px 20px !important;
+			background-color: #fff !important;
+			border-bottom: 1px solid #e2e8f0 !important;
+		}
+		.dashboard-filter-area .form-section .section-body,
+		.dashboard-filter-area .section-body,
+		.dashboard-filter-area .form-column {
+			display: block !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .form-column form {
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 15px !important;
+			align-items: flex-end !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
+		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
+			display: none !important;
+		}
+		.dashboard-filter-area .frappe-control {
+			margin-bottom: 10px !important;
+			width: calc(25% - 12px) !important;
+		}
+		.dashboard-filter-area .frappe-control .form-group {
+			margin-bottom: 0 !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .control-input,
+		.dashboard-filter-area .awesomplete,
+		.dashboard-filter-area input:not([type="checkbox"]),
+		.dashboard-filter-area select {
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		.dashboard-filter-area label,
+		.dashboard-filter-area .control-label {
+			font-size: 12px !important;
+			font-weight: 600 !important;
+			color: #475569 !important;
+			margin-bottom: 6px !important;
+			display: block !important;
+			white-space: nowrap !important;
+		}
             .sticky-total td { 
                 position: sticky; 
                 bottom: 0; 
@@ -295,9 +361,16 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                 z-index: 20; 
                 background: #f8fafc; 
             }
+            .invoice-col { min-width: 130px !important; width: 130px !important; }
+            .date-col { min-width: 120px !important; width: 120px !important; white-space: nowrap !important; }
+            .customer-col { min-width: 220px !important; width: 220px !important; }
+            .sp-col { min-width: 150px !important; width: 150px !important; }
+            .type-col { min-width: 100px !important; width: 100px !important; text-align: center !important; }
+            .amount-col { min-width: 140px !important; width: 140px !important; text-align: right !important; }
+            .overdue-col { min-width: 80px !important; width: 80px !important; text-align: right !important; }
 		`,
 		)
-		.appendTo("head");
+		.appendTo(filter_area);
 
 	page.refresh = function () {
 		let filters = page.filter_group.get_values();
@@ -404,7 +477,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                 
                 .custom-legend { 
                     display: grid !important; 
-                    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important; 
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important; 
                     gap: 12px 24px !important; 
                     margin-top: 20px; 
                     padding: 16px !important; 
@@ -421,7 +494,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                 .legend-item .info { display: flex !important; align-items: center !important; gap: 8px !important; width: 100%; }
                 .legend-item .label { font-size: 11px !important; font-weight: 600 !important; color: #475569 !important; white-space: nowrap; }
                 .legend-item .val-pct { font-size: 10px !important; color: #94a3b8 !important; }
-                .legend-item .val-amount { font-size: 11px !important; font-weight: 700 !important; color: #1e293b !important; margin-left: auto; }
+                .legend-item .val-amount { font-size: 11px !important; font-weight: 700 !important; color: #1e293b !important; margin-left: auto; white-space: nowrap !important; }
 				
 				.table-card { 
                     background: #fff; 
@@ -573,14 +646,14 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th width="12%">${__("Invoice ID")}</th>
-                                <th width="10%">${__("Date")}</th>
-                                <th width="23%">${__("Customer")}</th>
-                                <th width="15%">${__("Sales Person")}</th>
-                                <th width="10%" class="text-center">${__("Type")}</th>
-                                <th width="15%" class="text-right" style="white-space: nowrap;">${__("Outstanding (M)")}</th>
-                                <th width="10%" class="text-right">${__("Due Date")}</th>
-                                <th width="5%" class="text-right">${__("Days")}</th>
+                                <th class="invoice-col">${__("Invoice ID")}</th>
+                                <th class="date-col">${__("Date")}</th>
+                                <th class="customer-col">${__("Customer")}</th>
+                                <th class="sp-col">${__("Sales Person")}</th>
+                                <th class="type-col">${__("Type")}</th>
+                                <th class="amount-col">${__("Outstanding (M)")}</th>
+                                <th class="date-col text-right">${__("Due Date")}</th>
+                                <th class="overdue-col">${__("Days")}</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -596,16 +669,16 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 			total_outstanding += flt(row.outstanding_amount);
 			$(`
 				<tr>
-					<td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-					<td style="white-space: nowrap;">${frappe.datetime.str_to_user(row.posting_date)}</td>
-					<td style="font-weight: 500;">${row.customer_name || row.customer}</td>
-					<td>${row.sales_person || "-"}</td>
-                    <td class="text-center">
+					<td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
+					<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
+					<td class="customer-col" style="font-weight: 500;">${row.customer_name || row.customer}</td>
+					<td class="sp-col">${row.sales_person || "-"}</td>
+                    <td class="type-col">
                         <span class="indicator-pill ${row.type}">${__(row.type)}</span>
                     </td>
-					<td class="text-right" style="font-weight: 700; color: #0f172a;">${format_currency(row.outstanding_amount)}</td>
-					<td class="text-right" style="white-space: nowrap;">${frappe.datetime.str_to_user(row.due_date)}</td>
-					<td class="text-right overdue-days">${row.days_overdue}</td>
+					<td class="amount-col" style="font-weight: 700; color: #0f172a;">${format_currency(row.outstanding_amount)}</td>
+					<td class="date-col text-right">${frappe.datetime.str_to_user(row.due_date)}</td>
+					<td class="overdue-col overdue-days">${row.days_overdue}</td>
 				</tr>
 			`).appendTo(tbody);
 		});
@@ -613,8 +686,8 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let tfoot = table_card.find("tfoot");
 		$(`
             <tr class="sticky-total">
-                <td colspan="6" class="text-right" style="padding-right: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
-                <td class="text-right" style="color: #0f172a; font-weight: 800;">${format_currency(total_outstanding)}</td>
+                <td colspan="5" class="text-right" style="padding-right: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
+                <td class="amount-col" style="color: #0f172a; font-weight: 800;">${format_currency(total_outstanding)}</td>
                 <td colspan="2"></td>
             </tr>
         `).appendTo(tfoot);
@@ -623,7 +696,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 	}
 
 	function format_currency(v) {
-		if (!v && v !== 0) return "₹ 0.00 M";
+		if (!v && v !== 0) return "₹ 0.0000 M";
 
 		// Convert to Million INR
 		let value = flt(v) / 1000000;
@@ -631,8 +704,8 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		return (
 			"₹ " +
 			value.toLocaleString("en-US", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
+				minimumFractionDigits: 4,
+				maximumFractionDigits: 4,
 			}) +
 			" M"
 		);

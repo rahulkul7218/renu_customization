@@ -1,7 +1,7 @@
 frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Supplier Order Dashboard (Million INR)"),
+		title: __("Supplier Order Dashboard "),
 		single_column: true,
 	});
 
@@ -37,16 +37,21 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.add_months(frappe.datetime.get_today(), -12),
 		},
 		{
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
-			default: frappe.datetime.get_today(),
 		},
 		{
 			fieldname: "company",
@@ -393,8 +398,8 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 				m.fieldtype === "Currency"
 					? "₹ " +
 						(flt(m.value) / 1000000).toLocaleString("en-US", {
-							minimumFractionDigits: 2,
-							maximumFractionDigits: 2,
+							minimumFractionDigits: 4,
+							maximumFractionDigits: 4,
 						}) +
 						" M"
 					: m.value;
@@ -428,7 +433,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 					if (is_currency) {
 						c_data.datasets = c_data.datasets.map((ds) => ({
 							name: ds.name,
-							values: ds.values.map((v) => parseFloat((v / 1000000).toFixed(2))),
+							values: ds.values.map((v) => parseFloat((v / 1000000).toFixed(4))),
 						}));
 					}
 
@@ -444,7 +449,14 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						legendOptions: { showLegend: false },
 						tooltipOptions: {
 							formatTooltipY: (d) =>
-								is_currency ? format_currency(d, "INR") + " M" : d,
+								is_currency
+									? "₹ " +
+										d.toLocaleString("en-US", {
+											minimumFractionDigits: 4,
+											maximumFractionDigits: 4,
+										}) +
+										" M"
+									: d,
 						},
 					});
 
@@ -458,7 +470,12 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						let share = ((val / total_val) * 100).toFixed(1) + "%";
 
 						let val_str = is_currency
-							? format_currency(val / 1000000, "INR") + " M"
+							? "₹ " +
+								(val / 1000000).toLocaleString("en-US", {
+									minimumFractionDigits: 4,
+									maximumFractionDigits: 4,
+								}) +
+								" M"
 							: val;
 
 						legend_container.append(`
@@ -615,7 +632,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 					.map((m) => {
 						let val = row.months[m.key] || 0;
 						total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
-						return `<td class="col-amt" style="text-align: right;">${format_currency(val / 1000000, "INR")} M</td>`;
+						return `<td class="col-amt" style="text-align: right;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>`;
 					})
 					.join("");
 
@@ -624,7 +641,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
 						<td class="col-supplier" style="font-weight: 600; color: #0f172a;">${row.supp}</td>
 						${cells}
-						<td class="col-amt" style="position: sticky; right: 0; background: #f8fafc; font-weight: 700; color: #4338ca; text-align: right; border-left: 1px solid #e2e8f0;">${format_currency(row.total / 1000000, "INR")} M</td>
+						<td class="col-amt" style="position: sticky; right: 0; background: #f8fafc; font-weight: 700; color: #4338ca; text-align: right; border-left: 1px solid #e2e8f0;">₹ ${(row.total / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
 					</tr>
 				`);
 			});
@@ -633,8 +650,8 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 				<tr class="sticky-total">
 					<td class="col-sno">-</td>
 					<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL</td>
-					${months.map((m) => `<td class="col-amt" style="text-align: right;">${format_currency((total_month_amts[m.key] || 0) / 1000000, "INR")} M</td>`).join("")}
-					<td class="col-amt" style="position: sticky; right: 0; background: #f0f4ff !important; z-index: 80; text-align: right; border-left: 1px solid #e2e8f0;">${format_currency(g_total_net / 1000000, "INR")} M</td>
+					${months.map((m) => `<td class="col-amt" style="text-align: right;">₹ ${((total_month_amts[m.key] || 0) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>`).join("")}
+					<td class="col-amt" style="position: sticky; right: 0; background: #f0f4ff !important; z-index: 80; text-align: right; border-left: 1px solid #e2e8f0;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
 				</tr>
 			`);
 		}
@@ -666,7 +683,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                     <td class="col-date">${frappe.datetime.str_to_user(row.delivery_time_as_per_po) || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
                     <td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
-                    <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency(amt / 1000000, "INR")} M</td>
+                    <td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
                 </tr>
             `);
 		});
@@ -677,7 +694,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		tfoot_list.append(`
             <tr class="sticky-total">
                 <td colspan="9" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
-                <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0;">${format_currency(total_amt / 1000000, "INR")} M</td>
+                <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0;">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
             </tr>
         `);
 
