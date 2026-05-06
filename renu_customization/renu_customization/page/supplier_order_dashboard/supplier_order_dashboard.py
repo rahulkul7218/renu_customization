@@ -19,6 +19,21 @@ def prepare_filters(filters):
         filters = {}
     elif isinstance(filters, str):
         filters = frappe.parse_json(filters)
+    
+    # Handle DateRange from JS
+    if filters.get("date_range"):
+        dr = filters.get("date_range")
+        if isinstance(dr, list) and len(dr) == 2:
+            filters["from_date"] = dr[0]
+            filters["to_date"] = dr[1]
+
+    # Handle Fiscal Year
+    if filters.get("fiscal_year") and (not filters.get("from_date") or not filters.get("to_date")):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            filters["from_date"] = filters.get("from_date") or fy.year_start_date
+            filters["to_date"] = filters.get("to_date") or fy.year_end_date
+
     return frappe._dict(filters)
 
 @frappe.whitelist()
@@ -133,9 +148,9 @@ def get_dashboard_data(filters=None):
         total_pos += 1
         total_amount += flt(row.get("net_total"))
         if is_overdue:
-            total_overdue += 1
+            total_overdue += flt(row.get("net_total"))
         if due_next_week_flag:
-            total_due_next_week += 1
+            total_due_next_week += flt(row.get("net_total"))
             
         results.append(row)
 
@@ -144,8 +159,8 @@ def get_dashboard_data(filters=None):
     summary = [
         {"label": _("Total Orders"), "value": total_pos, "indicator": "blue", "fieldtype": "Int"},
         {"label": _("Total Net Amount"), "value": total_amount, "indicator": "green", "fieldtype": "Currency"},
-        {"label": _("Overdue Orders"), "value": total_overdue, "indicator": "red", "fieldtype": "Int"},
-        {"label": _("Due in Next Week"), "value": total_due_next_week, "indicator": "orange", "fieldtype": "Int"}
+        {"label": _("Overdue Amount"), "value": total_overdue, "indicator": "red", "fieldtype": "Currency"},
+        {"label": _("Due Next Week"), "value": total_due_next_week, "indicator": "orange", "fieldtype": "Currency"}
     ]
 
     supplier_totals = {}
@@ -156,7 +171,7 @@ def get_dashboard_data(filters=None):
         stat = row.get("status") or "Unknown"
         
         supplier_totals[supp] = supplier_totals.get(supp, 0) + flt(row.get("net_total"))
-        status_counts[stat] = status_counts.get(stat, 0) + 1
+        status_counts[stat] = status_counts.get(stat, 0) + flt(row.get("net_total"))
 
     top_10_suppliers = sorted(supplier_totals.items(), key=lambda x: x[1], reverse=True)[:10]
     
@@ -173,10 +188,11 @@ def get_dashboard_data(filters=None):
         "order_status": {
             "data": {
                 "labels": list(status_counts.keys()),
-                "datasets": [{"name": "Count", "values": list(status_counts.values())}]
+                "datasets": [{"name": "Amount", "values": list(status_counts.values())}]
             },
             "type": "donut",
-            "colors": ["#10b981", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6", "#6366f1", "#ec4899", "#84cc16"]
+            "colors": ["#10b981", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6", "#6366f1", "#ec4899", "#84cc16"],
+            "is_currency": True
         }
     }
 

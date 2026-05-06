@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 from renu_customization.renu_customization.report.sales_order_report.sales_order_report import execute
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
@@ -23,25 +23,40 @@ def prepare_filters(filters):
     elif isinstance(filters, str):
         filters = frappe.parse_json(filters)
     
-    # Handle DateRange from JS
+    filters = frappe._dict(filters)
+
+    # Handle DateRange from JS (Legacy/Compatibility)
     if filters.get("date_range"):
-        date_range = filters.get("date_range")
-        if isinstance(date_range, list) and len(date_range) == 2:
-            filters["from_date"] = date_range[0]
-            filters["to_date"] = date_range[1]
-    
-    return frappe._dict(filters)
+        dr = filters.get("date_range")
+        if isinstance(dr, list) and len(dr) == 2:
+            filters["from_date"] = dr[0]
+            filters["to_date"] = dr[1]
+
+    # Handle Fiscal Year Interaction
+    if filters.get("fiscal_year"):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
+        if fy:
+            # 1. If NO dates provided, use FY defaults
+            if not filters.get("from_date"):
+                filters["from_date"] = fy.year_start_date
+            if not filters.get("to_date"):
+                filters["to_date"] = fy.year_end_date
+            
+            # 2. If dates ARE provided, constrain them to the FY bounds
+            # This ensures "Fiscal Year" acts as a hard filter boundary
+            if filters.get("from_date") and getdate(filters.from_date) < getdate(fy.year_start_date):
+                filters["from_date"] = fy.year_start_date
+            
+            if filters.get("to_date") and getdate(filters.to_date) > getdate(fy.year_end_date):
+                filters["to_date"] = fy.year_end_date
+
+    return filters
 
 @frappe.whitelist()
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
     
-    # Handle Fiscal Year
-    if filters.get("fiscal_year"):
-        fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
-        if fy:
-            filters["from_date"] = fy.year_start_date
-            filters["to_date"] = fy.year_end_date
+    # Fiscal year handled in prepare_filters
 
     # Use the sales_order_report execute function
     base_filters = frappe._dict({
@@ -283,21 +298,41 @@ def get_dashboard_data(filters=None):
     total_gross = 0
     cp_active_rev = 0
     picked_rev = 0
-    dom_picked = 0
-    exp_picked = 0
-    cp_picked = 0
-    
+    delivered_rev = 0
+    returned_rev = 0
     overdue_rev = 0
+    
+    dom_booked = 0
+    dom_cancelled = 0
+    dom_short_close = 0
+    dom_picked = 0
+    dom_delivered = 0
+    dom_returned = 0
     dom_overdue = 0
+    
+    exp_booked = 0
+    exp_cancelled = 0
+    exp_short_close = 0
+    exp_picked = 0
+    exp_delivered = 0
+    exp_returned = 0
     exp_overdue = 0
+    
+    cp_booked = 0
+    cp_cancelled = 0
+    cp_short_close = 0
+    cp_picked = 0
+    cp_delivered = 0
+    cp_returned = 0
     cp_overdue = 0
     today = frappe.utils.getdate()
     
     for row in data:
 
         status = row.get("status")
-        amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
-        deliv_amt = flt(row.get("delivered_net_total_inr") or (amt * (flt(row.get("per_billed", 0)) / 100.0)))
+        amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or 0)
+        deliv_amt = flt(row.get("delivered_net_total") or row.get("delivered_net_total_inr") or (amt * (flt(row.get("per_billed", 0)) / 100.0)))
+        ret_amt = flt(row.get("returned_val") or 0)
         
         # Identification
         d_e = row.get("dom_exp")
@@ -342,6 +377,11 @@ def get_dashboard_data(filters=None):
             elif d_e == "Export": exp_picked += p_amt
             if is_cp: cp_picked += p_amt
 
+            returned_rev += ret_amt
+            if d_e == "Domestic": dom_returned += ret_amt
+            elif d_e == "Export": exp_returned += ret_amt
+            if is_cp: cp_returned += ret_amt
+
         # Chart Totals (Excludes Cancelled/Draft)
         if status not in ("Cancelled", "Draft"):
             g_amt = flt(row.get("gross_total") or amt)
@@ -370,16 +410,16 @@ def get_dashboard_data(filters=None):
             row["balance_net_total_inr"] = flt(row.get("balance_net_total_inr") or (amt - deliv_amt))
 
 
-    actual_book = booked_rev - short_close_rev
+    actual_book = booked_rev - short_close_rev - returned_rev
     final_pending = actual_book - delivered_rev
     
-    dom_actual = dom_booked - dom_short_close
+    dom_actual = dom_booked - dom_short_close - dom_returned
     dom_pending = dom_actual - dom_delivered
     
-    exp_actual = exp_booked - exp_short_close
+    exp_actual = exp_booked - exp_short_close - exp_returned
     exp_pending = exp_actual - exp_delivered
     
-    cp_actual = cp_booked - cp_short_close
+    cp_actual = cp_booked - cp_short_close - cp_returned
     cp_pending = cp_actual - cp_delivered
 
     report_summary = [
@@ -388,6 +428,7 @@ def get_dashboard_data(filters=None):
         {"label": _("Global Cancelled"), "value": cancelled_rev, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Short Close"), "value": short_close_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Actual"), "value": actual_book, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Global Returned"), "value": returned_rev, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Picked"), "value": picked_rev, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Delivered"), "value": delivered_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Global Overdue"), "value": overdue_rev, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
@@ -397,6 +438,7 @@ def get_dashboard_data(filters=None):
         {"label": _("Dom. Cancelled"), "value": dom_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Short Close"), "value": dom_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Actual"), "value": dom_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Dom. Returned"), "value": dom_returned, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Picked"), "value": dom_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Delivered"), "value": dom_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Dom. Overdue"), "value": dom_overdue, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
@@ -406,6 +448,7 @@ def get_dashboard_data(filters=None):
         {"label": _("Exp. Cancelled"), "value": exp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Short Close"), "value": exp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Actual"), "value": exp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Exp. Returned"), "value": exp_returned, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Picked"), "value": exp_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Delivered"), "value": exp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Exp. Overdue"), "value": exp_overdue, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
@@ -416,6 +459,7 @@ def get_dashboard_data(filters=None):
         {"label": _("CP Cancelled"), "value": cp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Short Close"), "value": cp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Actual"), "value": cp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Returned"), "value": cp_returned, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Picked"), "value": cp_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Delivered"), "value": cp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("CP Overdue"), "value": cp_overdue, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
@@ -428,24 +472,31 @@ def get_dashboard_data(filters=None):
     prod_rev_dict = {}
     
     for row in data:
-        # For Chart aggregation, if multiple sales persons exist, we split the credit proportionally
-        # to ensure the chart total matches the global booked total.
-        amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
+        status = row.get("status")
+        if status in ("Cancelled", "Draft"):
+            continue
+            
+        amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or 0)
+        sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
+        ret_amt = flt(row.get("returned_val") or 0)
+        
+        # We show "Actual" (Booked - Short Close - Returned) in charts for real-time accuracy
+        actual_val = amt - sc_amt - ret_amt
         
         # Sales Person split
         sp_raw = str(row.get("sales_person") or "Unassigned")
         sp_list = [s.strip() for s in sp_raw.split(",") if s.strip()]
         if not sp_list: sp_list = ["Unassigned"]
-        split_amt = amt / len(sp_list)
+        split_amt = actual_val / len(sp_list)
         
         for sp in sp_list:
             sp_rev_dict[sp] = sp_rev_dict.get(sp, 0) + split_amt
         
         cust = row.get("customer_name") or "Unknown"
-        cust_rev_dict[cust] = cust_rev_dict.get(cust, 0) + amt
+        cust_rev_dict[cust] = cust_rev_dict.get(cust, 0) + actual_val
         
         prod = row.get("item_name") or row.get("item_code") or "Unknown"
-        prod_rev_dict[prod] = prod_rev_dict.get(prod, 0) + amt
+        prod_rev_dict[prod] = prod_rev_dict.get(prod, 0) + actual_val
 
 
     def get_chart_def(title, data_dict, limit=10):

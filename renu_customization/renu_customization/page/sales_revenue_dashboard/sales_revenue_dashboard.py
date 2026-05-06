@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt
+from frappe.utils import flt, getdate
 from renu_customization.renu_customization.report.sales_invoice_report.sales_invoice_report import execute
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
@@ -24,23 +24,34 @@ def prepare_filters(filters):
     
     filters = frappe._dict(filters)
 
+    # Handle DateRange from JS (Legacy/Compatibility)
+    if filters.get("date_range"):
+        dr = filters.get("date_range")
+        if isinstance(dr, list) and len(dr) == 2:
+            filters["from_date"] = dr[0]
+            filters["to_date"] = dr[1]
+
     # Handle Company Default
     if not filters.get("company"):
         filters["company"] = frappe.defaults.get_user_default("company") or \
                            frappe.db.get_single_value('Global Defaults', 'default_company')
 
-    # PRIORITY LOGIC:
-    # 1. If specific dates are provided (from_date or to_date), they take absolute priority.
-    # 2. If NO dates are provided, but a Fiscal Year is selected, use the Fiscal Year's range.
-    # 3. If neither are provided, the system fetches "All Time" data.
-    
-    has_manual_dates = filters.get("from_date") or filters.get("to_date")
-
-    if filters.get("fiscal_year") and not has_manual_dates:
-        fy = frappe.get_doc("Fiscal Year", filters.fiscal_year)
+    # Handle Fiscal Year Interaction
+    if filters.get("fiscal_year"):
+        fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
         if fy:
-            filters["from_date"] = fy.year_start_date
-            filters["to_date"] = fy.year_end_date
+            # 1. If NO dates provided, use FY defaults
+            if not filters.get("from_date"):
+                filters["from_date"] = fy.year_start_date
+            if not filters.get("to_date"):
+                filters["to_date"] = fy.year_end_date
+            
+            # 2. If dates ARE provided, constrain them to the FY bounds
+            if filters.get("from_date") and getdate(filters.from_date) < getdate(fy.year_start_date):
+                filters["from_date"] = fy.year_start_date
+            
+            if filters.get("to_date") and getdate(filters.to_date) > getdate(fy.year_end_date):
+                filters["to_date"] = fy.year_end_date
     
     return filters
 
@@ -292,9 +303,13 @@ def get_dashboard_data(filters=None):
     
     total_net_rev = 0
     total_grand_rev = 0
+    total_returned_rev = 0
     dom_rev = 0
     exp_rev = 0
     cp_rev = 0
+    dom_returned = 0
+    exp_returned = 0
+    cp_returned = 0
     
     for row in data:
         inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
@@ -335,18 +350,27 @@ def get_dashboard_data(filters=None):
         total_net_rev += amt_allocated
         total_grand_rev += gross_amt_allocated
         
-        d_e = row.get("dom_exp")
-        if d_e == "Domestic": dom_rev += amt_allocated
-        elif d_e == "Export": exp_rev += amt_allocated
+        if is_return:
+            total_returned_rev += abs(amt_allocated)
         
-        if row.get("is_channel_partner"): cp_rev += amt_allocated
+        d_e = row.get("dom_exp")
+        if d_e == "Domestic":
+            dom_rev += amt_allocated
+            if is_return: dom_returned += abs(amt_allocated)
+        elif d_e == "Export":
+            exp_rev += amt_allocated
+            if is_return: exp_returned += abs(amt_allocated)
+        
+        if row.get("is_channel_partner"):
+            cp_rev += amt_allocated
+            if is_return: cp_returned += abs(amt_allocated)
 
     report_summary = [
-        {"label": _("Total Revenue (Net)"), "value": total_net_rev / 1000000, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total Revenue (Gross)"), "value": total_grand_rev / 1000000, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Domestic Revenue"), "value": dom_rev / 1000000, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Export Revenue"), "value": exp_rev / 1000000, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Channel Partner"), "value": cp_rev / 1000000, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
+        {"label": _("Net Revenue"), "value": total_net_rev / 1000000, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Gross Revenue (Grand)"), "value": total_grand_rev / 1000000, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Domestic Net Revenue"), "value": dom_rev / 1000000, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Export Net Revenue"), "value": exp_rev / 1000000, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("CP Net Revenue"), "value": cp_rev / 1000000, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
 
     sp_revenue = {}
@@ -623,8 +647,10 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx = 5
         m_totals_net = {}
         m_totals_gross = {}
+        m_totals_returned = {}
         g_total_net = 0
         g_total_gross = 0
+        g_total_returned = 0
         
         # Pre-calculate totals for footer
         for r in merged_data.values():
@@ -643,6 +669,11 @@ def export_to_excel(filters=None, export_type="all"):
             
             gross_amt = flt(row.get("gross_amount") or 0)
             m_totals_gross[m_key] = m_totals_gross.get(m_key, 0) + gross_amt
+            
+            if row.get("is_return"):
+                ret_val = abs(flt(row.get("amt_allocated") or 0))
+                m_totals_returned[m_key] = m_totals_returned.get(m_key, 0) + ret_val
+                g_total_returned += ret_val
     
         for m_key in sorted_months:
             v_net = flt(m_totals_net.get(m_key, 0))
@@ -670,13 +701,13 @@ def export_to_excel(filters=None, export_type="all"):
         
         row_idx += 1
         
-        # Second footer row for Gross
+        # 3. Grand Total (Gross)
         ws_months.cell(row=row_idx, column=1, value="Grand Total (Gross)").font = header_font
         ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
         for c in range(1, 5):
             ws_months.cell(row=row_idx, column=c).fill = header_fill
             ws_months.cell(row=row_idx, column=c).border = table_border
-        
+            
         col_idx = 5
         for m_key in sorted_months:
             v_gross = flt(m_totals_gross.get(m_key, 0))

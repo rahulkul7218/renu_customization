@@ -195,6 +195,72 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		}
 	});
 
+	// --- FISCAL YEAR & DATE INTERACTION LOGIC ---
+	const fy_field = page.filter_group.fields_dict.fiscal_year;
+	const from_field = page.filter_group.fields_dict.from_date;
+	const to_field = page.filter_group.fields_dict.to_date;
+
+	// Helper to validate date within FY
+	const validate_fy_bounds = (val, field_name) => {
+		const fy = fy_field.get_value();
+		if (!fy || !val || !fy_field._start_date) return true;
+
+		if (val < fy_field._start_date || val > fy_field._end_date) {
+			frappe.show_alert({
+				message: __("Selected date is outside {0} ({1} to {2})", [
+					fy,
+					frappe.datetime.str_to_user(fy_field._start_date),
+					frappe.datetime.str_to_user(fy_field._end_date),
+				]),
+				indicator: "orange",
+			});
+			// Clip to boundary
+			const clipped = val < fy_field._start_date ? fy_field._start_date : fy_field._end_date;
+			page.filter_group.set_value(field_name, clipped);
+			return false;
+		}
+		return true;
+	};
+
+	// Handle Fiscal Year and Date Range Interaction
+	fy_field.on_change = function () {
+		let fy = this.get_value();
+		if (fy) {
+			frappe.db.get_doc("Fiscal Year", fy).then((doc) => {
+				fy_field._start_date = doc.year_start_date;
+				fy_field._end_date = doc.year_end_date;
+
+				// Constrain current values if they are outside the new FY bounds
+				let fd = from_field.get_value();
+				let td = to_field.get_value();
+
+				if (fd && (fd < doc.year_start_date || fd > doc.year_end_date)) {
+					page.filter_group.set_value("from_date", doc.year_start_date);
+				}
+				if (td && (td < doc.year_start_date || td > doc.year_end_date)) {
+					page.filter_group.set_value("to_date", doc.year_end_date);
+				}
+
+				page.refresh();
+			});
+		} else {
+			fy_field._start_date = null;
+			fy_field._end_date = null;
+			page.refresh();
+		}
+	};
+
+	// Override Date Changes with FY Constraint
+	from_field.on_change = function () {
+		validate_fy_bounds(this.get_value(), "from_date");
+		page.refresh();
+	};
+
+	to_field.on_change = function () {
+		validate_fy_bounds(this.get_value(), "to_date");
+		page.refresh();
+	};
+
 	filter_parent.addClass("border-bottom").css({
 		"background-color": "#fff",
 		"margin-bottom": "0",
@@ -428,7 +494,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .detailed-list-table .col-id { position: sticky; left: 50px; z-index: 20; background: #fff !important; border-right: 1px solid #e2e8f0; width: 140px !important; min-width: 140px !important; }
 
         /* Ensure sticky columns stay on top in Header and Footer */
-        .dashboard-table th.col-sno, .dashboard-table th.col-customer, .dashboard-table th.col-id, .dashboard-table th.col-category { z-index: 60 !important; }
+        .dashboard-table th.col-sno, .dashboard-table th.col-customer, .dashboard-table th.col-id, .dashboard-table th.col-category { z-index: 100 !important; }
         .dashboard-table tr.sticky-total td.col-sno, .dashboard-table tr.sticky-total td.col-customer, .dashboard-table tr.sticky-total td.col-id, .dashboard-table tr.sticky-total td.col-category { z-index: 90 !important; }
 
         .col-customer { width: 220px !important; min-width: 220px !important; }
@@ -451,8 +517,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
         /* Sticky Footer */
         .dashboard-table tr.sticky-total td { 
-            position: sticky; background: #f8fafc !important; 
-            border-top: 2px solid #cbd5e1; z-index: 70; font-weight: 700; color: #0f172a;
+            position: sticky !important; background: #f8fafc !important; 
+            border-top: 2px solid #cbd5e1 !important; z-index: 95 !important; font-weight: 700; color: #0f172a;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
             height: 40px !important;
             padding: 8px 14px !important;
@@ -460,8 +526,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
         
         /* Stacked Sticky Footers (Table 1 has two) */
-        .dashboard-table tr.sticky-total:nth-last-child(2) td { bottom: 40px !important; }
-        .dashboard-table tr.sticky-total:nth-last-child(1) td { bottom: 0 !important; }
+        .dashboard-table tr.sticky-total:nth-last-child(2) td { bottom: 40px !important; z-index: 96 !important; }
+        .dashboard-table tr.sticky-total:nth-last-child(1) td { bottom: 0 !important; z-index: 97 !important; }
 
         .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 95 !important; background: #f1f3f5 !important; }
 
@@ -727,6 +793,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				Cancelled: { color: "#ef4444", data: {} },
 				"Short Close": { color: "#f59e0b", data: {} },
 				Actual: { color: "#10b981", data: {} },
+				Returned: { color: "#f43f5e", data: {} },
 				Picked: { color: "#facc15", data: {} },
 				Delivered: { color: "#06b6d4", data: {} },
 				Overdue: { color: "#8b5cf6", data: {} },
@@ -762,6 +829,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						(lifecycle_buckets["Picked"].data[m_key] || 0) + picked_amt;
 				}
 
+				let ret_amt = flt(row.returned_val || 0);
+				if (ret_amt > 0 && status !== "Cancelled" && status !== "Draft") {
+					lifecycle_buckets["Returned"].data[m_key] =
+						(lifecycle_buckets["Returned"].data[m_key] || 0) + ret_amt;
+				}
+
 				let deliv_amt = flt(
 					row.delivered_net_total_inr || amt * (flt(row.per_billed || 0) / 100),
 				);
@@ -782,9 +855,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			// Calculate Actual
 			months.forEach((m) => {
 				let booked = lifecycle_buckets["Booked"].data[m.key] || 0;
-				let cancelled = lifecycle_buckets["Cancelled"].data[m.key] || 0;
 				let sc = lifecycle_buckets["Short Close"].data[m.key] || 0;
-				lifecycle_buckets["Actual"].data[m.key] = booked - sc;
+				let ret = lifecycle_buckets["Returned"].data[m.key] || 0;
+				lifecycle_buckets["Actual"].data[m.key] = booked - sc - ret;
 			});
 
 			Object.keys(lifecycle_buckets).forEach((cat) => {
@@ -895,23 +968,23 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				tbody_month.append(`
                     <tr class="sticky-total">
                         <td class="col-sno">-</td>
-                        <td class="col-customer" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL (NET)</td>
+                        <td class="col-customer" style="text-align: right; padding-right: 20px; color: #1e293b; font-size: 11px; font-weight: 700;">GRAND TOTAL (NET)</td>
                         <td class="col-sp">-</td>
                         <td class="col-prod">-</td>
-                        ${months.map((m) => `<td class="col-amt">${format_currency_short(total_month_amts[m.key] || 0)}</td>`).join("")}
-                        <td class="total-net-col">${format_currency_short(g_total_net)}</td>
-                        <td class="total-net-col">${format_currency_short(g_total_cancelled)}</td>
+                        ${months.map((m) => `<td class="col-amt" style="color: #1e293b;">${format_currency_short(total_month_amts[m.key] || 0)}</td>`).join("")}
+                        <td class="total-net-col" style="color: #1e293b;">${format_currency_short(g_total_net)}</td>
+                        <td class="total-net-col" style="color: #1e293b;">${format_currency_short(g_total_cancelled)}</td>
                         <td class="grand-total-col">-</td>
                     </tr>
                     <tr class="sticky-total">
                         <td class="col-sno">-</td>
-                        <td class="col-customer" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px;">GRAND TOTAL (GROSS)</td>
+                        <td class="col-customer" style="text-align: right; padding-right: 20px; color: #1e293b; font-size: 11px; font-weight: 700;">GRAND TOTAL (GROSS)</td>
                         <td class="col-sp">-</td>
                         <td class="col-prod">-</td>
-                        ${months.map((m) => `<td class="col-amt" style="background: #f0f4ff !important; color: #4338ca;">${format_currency_short(total_month_gross_amts[m.key] || 0)}</td>`).join("")}
+                        ${months.map((m) => `<td class="col-amt" style="color: #1e293b;">${format_currency_short(total_month_gross_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col">-</td>
                         <td class="total-net-col">-</td>
-                        <td class="grand-total-col">${format_currency_short(g_total_gross)}</td>
+                        <td class="grand-total-col" style="color: #1e293b;">${format_currency_short(g_total_gross)}</td>
                     </tr>
                 `);
 			}
