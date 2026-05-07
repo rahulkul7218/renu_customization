@@ -61,26 +61,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			options: "Company",
 			default: frappe.defaults.get_user_default("Company"),
 		},
+
 		{
-			label: __("Customer"),
 			fieldname: "customer",
+			label: __("Customer"),
 			fieldtype: "Link",
 			options: "Customer",
 			placeholder: __("Select Customer"),
-		},
-		{
-			fieldname: "customer_group",
-			label: __("Customer Group"),
-			fieldtype: "Link",
-			options: "Customer Group",
-			placeholder: __("Select Group"),
-		},
-		{
-			label: __("Product (Item)"),
-			fieldname: "item_code",
-			fieldtype: "Link",
-			options: "Item",
-			placeholder: __("Select Item"),
 		},
 		{
 			fieldname: "item_group",
@@ -90,26 +77,32 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			placeholder: __("Select Product Group"),
 		},
 		{
-			label: __("Sales Person"),
+			fieldname: "item_code",
+			label: __("Product (Item)"),
+			fieldtype: "Link",
+			options: "Item",
+			placeholder: __("Select Product"),
+		},
+		{
 			fieldname: "sales_person",
+			label: __("Sales Person"),
 			fieldtype: "Link",
 			options: "Sales Person",
 			placeholder: __("Select Sales Person"),
 		},
 		{
-			fieldname: "territory",
-			label: __("Territory"),
-			fieldtype: "Link",
-			options: "Territory",
-			placeholder: __("Select Territory"),
+			fieldname: "business_region_name",
+			label: __("Business Region Name"),
+			fieldtype: "Select",
+			options: [""],
+			placeholder: __("Select Business Region Name"),
 		},
-
 		{
 			fieldname: "dom_exp",
-			label: __("Type"),
+			label: __("Domestic/Export"),
 			fieldtype: "Select",
 			options: ["", "Domestic", "Export"],
-			placeholder: __("Select Type"),
+			placeholder: __("Select Domestic/Export"),
 		},
 		{
 			fieldname: "invoice_type",
@@ -131,6 +124,28 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		fields: filter_fields,
 	});
 	page.filter_group.make();
+
+	// Populate Business Region Name options from database
+	frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Business Region Code",
+			fields: ["business_region_name"],
+			order_by: "business_region_name asc",
+			limit_page_length: 500,
+		},
+		callback: function (r) {
+			if (r.message) {
+				const names = [...new Set(r.message.map((x) => x.business_region_name))]
+					.filter(Boolean)
+					.sort();
+				page.filter_group.set_df_property("business_region_name", "options", [
+					"",
+					...names,
+				]);
+			}
+		},
+	});
 
 	$("<style>")
 		.text(
@@ -579,38 +594,21 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			return;
 		}
 
-		// 1. KPI Cards Grouped by Section
-		const sections = [
-			{ title: "Global Overview", prefix: "Global" },
-			{ title: "Domestic Performance", prefix: "Dom." },
-			{ title: "Export Performance", prefix: "Exp." },
-			{ title: "Channel Partner (CP) Performance", prefix: "CP" },
-		];
+		// 1. KPI Cards
+		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
+		data.summary.forEach((metric) => {
+			let clean_label = metric.label.replace("Global ", "").trim();
+			let indicator = metric.indicator || "blue";
 
-		sections.forEach((sec) => {
-			let section_metrics = data.summary.filter((m) => m.label.startsWith(sec.prefix));
-			if (section_metrics.length > 0) {
-				$(`<div class="section-title">${__(sec.title)}</div>`).appendTo(page.container);
-				let summary_row = $('<div class="summary-wrapper"></div>').appendTo(
-					page.container,
-				);
-
-				section_metrics.forEach((metric) => {
-					let indicator = (metric.indicator || "blue").toLowerCase();
-					// Clean label: remove prefix
-					let clean_label = metric.label
-						.replace(sec.prefix, "")
-						.replace(/^\.|\s+/, "")
-						.trim();
-
-					$(`
-                        <div class="summary-card ${indicator}">
-                            <div class="label"><span class="indicator bg-${indicator}"></span>${clean_label}</div>
-                            <div class="value">${format_currency_short(metric.value)}</div>
-                        </div>
-                    `).appendTo(summary_row);
-				});
-			}
+			$(`
+                <div class="summary-card ${indicator}">
+                    <div class="label">
+                        <span class="indicator bg-${indicator}"></span>
+                        ${clean_label}
+                    </div>
+                    <div class="value">${format_currency_short(metric.value)}</div>
+                </div>
+            `).appendTo(summary_row);
 		});
 
 		// 2. Charts Row
@@ -843,7 +841,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						(lifecycle_buckets["Delivered"].data[m_key] || 0) + deliv_amt;
 				}
 
-				if (status !== "Cancelled" && status !== "Closed" && status !== "Completed" && status !== "Draft") {
+				if (
+					status !== "Cancelled" &&
+					status !== "Closed" &&
+					status !== "Completed" &&
+					status !== "Draft"
+				) {
 					if (row.delivery_date && moment(row.delivery_date).isBefore(today_moment)) {
 						let balance = flt(row.balance_net_total_inr || amt - deliv_amt);
 						lifecycle_buckets["Overdue"].data[m_key] =
@@ -852,15 +855,21 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				}
 			});
 
-			// Calculate Actual
+			// Calculate Actual and Pending
+			lifecycle_buckets["Pending"] = { color: "#f59e0b", data: {} };
 			months.forEach((m) => {
 				let booked = lifecycle_buckets["Booked"].data[m.key] || 0;
 				let sc = lifecycle_buckets["Short Close"].data[m.key] || 0;
 				let ret = lifecycle_buckets["Returned"].data[m.key] || 0;
-				lifecycle_buckets["Actual"].data[m.key] = booked - sc - ret;
+				let actual = booked - sc - ret;
+				lifecycle_buckets["Actual"].data[m.key] = actual;
+
+				let deliv = lifecycle_buckets["Delivered"].data[m.key] || 0;
+				lifecycle_buckets["Pending"].data[m.key] = actual - deliv;
 			});
 
-			Object.keys(lifecycle_buckets).forEach((cat) => {
+			const display_categories = ["Actual", "Delivered", "Pending", "Overdue"];
+			display_categories.forEach((cat) => {
 				let row_data = lifecycle_buckets[cat];
 				let cells = months
 					.map(
@@ -874,7 +883,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					<tr>
 						<td class="col-category" style="font-weight: 700; color: #475569;">
                             <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${row_data.color}; margin-right: 8px; vertical-align: middle;"></span>
-                            ${cat}
+                            ${cat === "Actual" ? "Total Order Value" : cat}
                         </td>
 						${cells}
 						<td class="lifecycle-total-col">${format_currency_short(total)}</td>
@@ -1011,11 +1020,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						status_color = "orange";
 					if (["Cancelled"].includes(row.status)) status_color = "red";
 
-					let amt = flt(row.total_net_amount_inr || row["total_net_amount_(inr)"] || row.po_total);
+					let amt = flt(
+						row.total_net_amount_inr || row["total_net_amount_(inr)"] || row.po_total,
+					);
 					let cancelled_val = row.status === "Cancelled" ? amt : 0;
 					let deliv_total = flt(row.delivered_net_total_inr || 0);
 					let sc_value = flt(row.sc_value || 0);
-					let balance_total = flt(row.balance_net_total_inr || amt - deliv_total - cancelled_val);
+					let balance_total = flt(
+						row.balance_net_total_inr || amt - deliv_total - cancelled_val,
+					);
 
 					let cust_po = row.po_no || "-";
 					let deliv_date_str = row.delivery_date
@@ -1229,48 +1242,26 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						<p style="font-size: 14px; color: #555; margin: 8px 0;">${period}</p>
 						<p style="font-size: 11px; color: #999; margin: 0;">Generated: ${report_date}</p>
 					</div>
-					${(function () {
-						const sections = [
-							{ title: "Global Overview", prefix: "Global" },
-							{ title: "Domestic Performance", prefix: "Dom." },
-							{ title: "Export Performance", prefix: "Exp." },
-							{ title: "Channel Partner Performance", prefix: "CP" },
-						];
-						return sections
-							.map((sec) => {
-								let metrics = data.summary.filter((m) =>
-									m.label.startsWith(sec.prefix),
-								);
-								if (!metrics.length) return "";
-								let cards = metrics
-									.map((m) => {
-										let color = "#3498db";
-										if (m.indicator === "green") color = "#2ecc71";
-										if (m.indicator === "orange") color = "#e67e22";
-										if (m.indicator === "red") color = "#e74c3c";
-										if (m.indicator === "purple") color = "#9b59b6";
-										let clean_label = m.label
-											.replace(sec.prefix, "")
-											.replace(/^\.|\s+/, "")
-											.trim();
-										return `
+					<div class="kpi-container">
+						${data.summary
+							.map((m) => {
+								let color = "#3498db";
+								if (m.indicator === "green") color = "#2ecc71";
+								if (m.indicator === "cyan") color = "#06b6d4";
+								if (m.indicator === "orange") color = "#e67e22";
+								if (m.indicator === "purple") color = "#9b59b6";
+								if (m.indicator === "red") color = "#e74c3c";
+								
+								return `
 									<div class="kpi-card">
-										<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${clean_label}</div>
+										<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
 										<div class="kpi-value">${format_currency_short(m.value)}</div>
 									</div>
 								`;
-									})
-									.join("");
-								return `
-								<div style="page-break-inside: avoid; margin-bottom: 15px;">
-									<div class="kpi-section-title">${sec.title}</div>
-									<div class="kpi-container">${cards}</div>
-									<div style="clear: both;"></div>
-								</div>
-							`;
 							})
-							.join("");
-					})()}
+							.join("")}
+					</div>
+					<div style="clear: both; margin-bottom: 20px;"></div>
 					<h3>Visual Analytics</h3>
 					${chart_h(png1, "Top Salesperson by Booking")}
                     ${chart_l("top_10_salesperson")}
@@ -1417,7 +1408,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		// Initial table render
 		render_filtered_view(data.results);
 		init_hybrid_ui();
-
 	}
 
 	const export_to_excel = (export_type = "all") => {
@@ -1445,13 +1435,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 };
 
 function format_currency_short(num) {
-	if (!num && num !== 0) return "₹ 0.0000 M";
+	if (!num && num !== 0) return "₹ 0.00 M";
 	let value = flt(num) / 1000000;
 	return (
 		"₹ " +
 		value.toLocaleString("en-US", {
-			minimumFractionDigits: 4,
-			maximumFractionDigits: 4,
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
 		}) +
 		" M"
 	);
