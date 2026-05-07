@@ -101,7 +101,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			fieldname: "dom_exp",
 			label: __("Domestic/Export"),
 			fieldtype: "Select",
-			options: ["", "Domestic", "Export"],
+			options: ["All", "Domestic", "Export"],
+			default: "All",
 			placeholder: __("Select Domestic/Export"),
 		},
 		{
@@ -109,12 +110,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			label: __("Invoice Type"),
 			fieldtype: "Select",
 			options: [
-				"",
+				"All",
 				"Product Domestic",
 				"Product Export",
 				"Engineering Service Domestic",
 				"Engineering Service Export",
 			],
+			default: "All",
 			placeholder: __("Select Invoice Type"),
 		},
 	];
@@ -287,7 +289,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
         .dashboard-content { 
-            padding: 20px; 
+            padding: 24px; 
             background: #ffffff; 
             min-height: 100vh; 
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -295,6 +297,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             width: 100% !important;
             box-sizing: border-box;
         }
+        .page-container { max-width: 100% !important; }
 
         /* KPI Cards Styling */
         .section-title {
@@ -316,7 +319,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
         .summary-wrapper { 
             display: grid !important; 
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important; 
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; 
             gap: 16px; 
             margin-bottom: 24px; 
             width: 100% !important;
@@ -325,13 +328,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             background: #ffffff;
             border: 1px solid #e2e8f0;
             border-radius: 12px; 
-            padding: 10px 16px; 
+            padding: 16px; 
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             border-left: 5px solid #cbd5e1;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
-            min-width: 170px;
-            height: 72px;
+            min-width: 190px;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -483,8 +485,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
         /* Column Widths & Alignment */
         .col-sno { width: 40px !important; min-width: 40px !important; text-align: center !important; }
-        .col-customer { width: 180px !important; min-width: 180px !important; }
-        .col-sp { width: 130px !important; min-width: 130px !important; }
+        .col-customer { width: 220px !important; min-width: 220px !important; }
+        .col-sp { width: 150px !important; min-width: 150px !important; }
         .col-prod { width: 320px !important; min-width: 320px !important; }
         .col-amt { 
             width: 130px !important; min-width: 130px !important; 
@@ -512,9 +514,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .dashboard-table th.col-sno, .dashboard-table th.col-customer, .dashboard-table th.col-id, .dashboard-table th.col-category { z-index: 100 !important; }
         .dashboard-table tr.sticky-total td.col-sno, .dashboard-table tr.sticky-total td.col-customer, .dashboard-table tr.sticky-total td.col-id, .dashboard-table tr.sticky-total td.col-category { z-index: 90 !important; }
 
-        .col-customer { width: 220px !important; min-width: 220px !important; }
-        .col-sp { width: 150px !important; min-width: 150px !important; }
-        .col-prod { width: 280px !important; min-width: 280px !important; }
+
 
         .total-net-col { 
             position: sticky !important; right: 150px; z-index: 25; 

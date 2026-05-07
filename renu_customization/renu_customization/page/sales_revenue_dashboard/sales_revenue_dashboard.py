@@ -53,6 +53,11 @@ def prepare_filters(filters):
             if filters.get("to_date") and getdate(filters.to_date) > getdate(fy.year_end_date):
                 filters["to_date"] = fy.year_end_date
     
+    # Remove "All" values from filters so they don't affect backend queries
+    keys_to_remove = [k for k, v in filters.items() if v == "All"]
+    for k in keys_to_remove:
+        del filters[k]
+
     return filters
 
 @frappe.whitelist()

@@ -107,7 +107,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			label: __("Domestic/Export"),
 			placeholder: __("Select Domestic/Export"),
 			fieldtype: "Select",
-			options: ["", "Domestic", "Export"],
+			options: ["All", "Domestic", "Export"],
+			default: "All",
 		},
 		{
 			fieldname: "invoice_type",
@@ -115,12 +116,13 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Invoice Type"),
 			fieldtype: "Select",
 			options: [
-				"",
+				"All",
 				"Product Domestic",
 				"Product Export",
 				"Engineering Service Domestic",
 				"Engineering Service Export",
 			],
+			default: "All",
 		},
 	];
 
