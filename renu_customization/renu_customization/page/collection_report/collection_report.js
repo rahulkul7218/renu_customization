@@ -571,7 +571,9 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 		let total_amt = 0;
 		data.results.forEach((row) => {
 			let type_label = row.is_export ? "Export" : "Domestic";
-			total_amt += flt(row.base_grand_total);
+			// Round to 4 decimal places in M (same as display) before summing
+			let display_val = Math.round(flt(row.allocated_amount) / 1000000 * 10000) / 10000;
+			total_amt += display_val;
 			$(`
                 <tr>
                     <td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
@@ -590,12 +592,15 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
             `).appendTo(tbody);
 		});
 
+		// Total is already in M and rounded, format directly
+		let total_display = "₹ " + total_amt.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + " M";
+
 		// Add Total Row
 		$(`
 			<tfoot>
 				<tr class="sticky-total">
 					<td colspan="5" style="text-align: right; font-weight: 700; color: #64748b; padding-right: 20px;">GRAND TOTAL</td>
-					<td class="currency-col" style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_currency_short(total_amt)}</td>
+					<td class="currency-col" style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0; background: #f8fafc;">${total_display}</td>
 					<td class="type-col"></td>
 				</tr>
 			</tfoot>
