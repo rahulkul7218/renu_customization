@@ -54,25 +54,18 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Date",
 		},
 		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_user_default("Company"),
+		},
+		{
 			fieldname: "customer",
 			label: __("Customer"),
 			fieldtype: "Link",
 			options: "Customer",
 			placeholder: __("Select Customer"),
-		},
-		{
-			fieldname: "customer_group",
-			label: __("Customer Group"),
-			fieldtype: "Link",
-			options: "Customer Group",
-			placeholder: __("Select Customer Group"),
-		},
-		{
-			fieldname: "item_code",
-			label: __("Product (Item)"),
-			fieldtype: "Link",
-			options: "Item",
-			placeholder: __("Select Product"),
 		},
 		{
 			fieldname: "item_group",
@@ -82,6 +75,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Product Group"),
 		},
 		{
+			fieldname: "item_code",
+			label: __("Product (Item)"),
+			fieldtype: "Link",
+			options: "Item",
+			placeholder: __("Select Product"),
+		},
+		{
 			fieldname: "sales_person",
 			label: __("Sales Person"),
 			fieldtype: "Link",
@@ -89,31 +89,59 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Sales Person"),
 		},
 		{
-			fieldname: "territory",
-			label: __("Territory"),
-			fieldtype: "Link",
-			options: "Territory",
-			placeholder: __("Select Territory"),
+			fieldname: "business_region_name",
+			label: __("Business Region Name"),
+			fieldtype: "Select",
+			options: ["All"],
+			default: "All",
+			placeholder: __("Select Business Region Name"),
 		},
 		{
 			fieldname: "dom_exp",
-			label: __("Type"),
+			label: __("Domestic/Export"),
 			fieldtype: "Select",
-			options: "\nDomestic\nExport",
-			placeholder: __("Select Type"),
+			options: ["All", "Domestic", "Export"],
+			default: "All",
+			placeholder: __("Select Domestic/Export"),
 		},
 		{
 			fieldname: "invoice_type",
 			label: __("Invoice Type"),
 			fieldtype: "Select",
-			options:
-				"\nProduct Domestic\nProduct Export\nEngineering Service Domestic\nEngineering Service Export",
+			options: [
+				"All",
+				"Product Domestic",
+				"Product Export",
+				"Engineering Service Domestic",
+				"Engineering Service Export",
+			],
+			default: "All",
 			placeholder: __("Select Invoice Type"),
 		},
 	];
 
-	page.filter_group = new frappe.ui.FieldGroup({ parent: filter_parent, fields: filter_fields });
+	page.filter_group = new frappe.ui.FieldGroup({
+		parent: filter_parent,
+		fields: filter_fields,
+	});
 	page.filter_group.make();
+
+	// Populate Business Region Name options from database
+	frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Business Region Code",
+			fields: ["business_region_name"],
+			order_by: "business_region_name asc",
+			limit_page_length: 500,
+		},
+		callback: function (r) {
+			if (r.message) {
+				let options = ["All"].concat(r.message.map((d) => d.business_region_name));
+				page.filter_group.set_df_property("business_region_name", "options", options);
+			}
+		},
+	});
 
 	$("<style>")
 		.text(
@@ -309,13 +337,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
     </style>`).appendTo(page.main);
 
 	function format_currency_short(num, fieldtype) {
-		if (!num && num !== 0) return fieldtype === "Percent" ? "0.00%" : "₹ 0.0000 M";
+		if (!num && num !== 0) return fieldtype === "Percent" ? "0.00%" : "₹ 0.00 M";
 		if (fieldtype === "Percent") return flt(num).toFixed(2) + "%";
 		return (
 			"₹ " +
 			(flt(num) / 1000000).toLocaleString("en-US", {
-				minimumFractionDigits: 4,
-				maximumFractionDigits: 4,
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
 			}) +
 			" M"
 		);
@@ -382,8 +410,8 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						formatTooltipY: (d) =>
 							"₹ " +
 							flt(d).toLocaleString("en-US", {
-								minimumFractionDigits: 4,
-								maximumFractionDigits: 4,
+								minimumFractionDigits: 2,
+								maximumFractionDigits: 2,
 							}) +
 							" M",
 					},
@@ -412,7 +440,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 <span class="dot" style="background: ${chart_obj.colors[idx % chart_obj.colors.length]}"></span>
                                 <div class="info">
                                     <span class="label">${display_label}</span>
-                                    <span class="val">₹ ${flt(val).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M (${share})</span>
+                                    <span class="val">₹ ${flt(val).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M (${share})</span>
                                 </div>
                             </div>
                         `).appendTo(legend_container);
@@ -550,7 +578,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 150px;">Product</th>
                                 <th class="text-right" style="min-width: 80px;">Qty</th>
                                 <th class="data-col">Revenue (M)</th>
-                                <th class="data-col">COGS (M)</th>
+                                <th class="data-col">Cost of Goods (M)</th>
                                 <th class="data-col">Margin (M)</th>
                                 <th class="data-col" style="min-width: 100px;">Margin %</th>
                             </tr>

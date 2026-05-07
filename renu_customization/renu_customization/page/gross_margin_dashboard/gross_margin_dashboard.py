@@ -36,7 +36,13 @@ def prepare_filters(filters):
             filters["from_date"] = filters.get("from_date") or fy.year_start_date
             filters["to_date"] = filters.get("to_date") or fy.year_end_date
     
-    return frappe._dict(filters)
+    # Remove "All" values from filters so they don't affect backend queries
+    filters_dict = frappe._dict(filters)
+    keys_to_remove = [k for k, v in filters_dict.items() if v == "All"]
+    for k in keys_to_remove:
+        del filters_dict[k]
+
+    return filters_dict
 
 @frappe.whitelist()
 def get_dashboard_data(filters=None):
@@ -87,7 +93,7 @@ def get_dashboard_data(filters=None):
             else: 
                 dom_exp_map[i.name] = ""
 
-    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"])
+    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory", "business_region_name"])
     customer_map = {c.name: c for c in cust_list}
         
     item_map = {}
@@ -153,27 +159,11 @@ def get_dashboard_data(filters=None):
             if not item_info or str(item_info.item_group) != str(ig_filter):
                 keep = False
 
-        # 5. Customer Group
-        cg_filter = filters.get("customer_group")
-        if keep and cg_filter:
+        # 5. Business Region Name
+        brn_filter = filters.get("business_region_name")
+        if keep and brn_filter:
             cust_info = customer_map.get(inv_cust_id)
-            if not cust_info or str(cust_info.customer_group) != str(cg_filter):
-                keep = False
-                
-        # 6. Territory
-        t_filter = filters.get("territory")
-        if keep and t_filter:
-            cust_info = customer_map.get(inv_cust_id)
-            if not cust_info or str(cust_info.territory) != str(t_filter):
-                keep = False
-                
-        # 7. Status
-        stat_filter = filters.get("status")
-        if keep and stat_filter:
-            current_status = status_map.get(inv_id)
-            if isinstance(stat_filter, str): 
-                stat_filter = [s.strip() for s in stat_filter.split(",")]
-            if current_status not in stat_filter:
+            if not cust_info or str(cust_info.business_region_name) != str(brn_filter):
                 keep = False
 
         # Globally exclude Cancelled invoices
@@ -225,7 +215,7 @@ def get_dashboard_data(filters=None):
 
     report_summary = [
         {"label": _("Total Revenue"), "value": total_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total COGS"), "value": total_cogs, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Cost of Goods"), "value": total_cogs, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Gross Margin"), "value": total_margin, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Margin %"), "value": overall_margin_pct, "indicator": "purple", "fieldtype": "Percent"}
     ]
@@ -291,7 +281,7 @@ def get_dashboard_data(filters=None):
                     "labels": trend_labels,
                     "datasets": [
                         {"name": "Revenue (M)", "values": trend_rev},
-                        {"name": "COGS (M)", "values": trend_cogs},
+                        {"name": "Cost of Goods (M)", "values": trend_cogs},
                         {"name": "Margin (M)", "values": trend_margin}
                     ]
                 },
@@ -368,7 +358,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = flt(s.get('value'))
             if s.get('fieldtype') == 'Currency':
                 val = val / 1000000
-                fmt = '"₹ "#,##0.0000" M"'
+                fmt = '"₹ "#,##0.00" M"'
             else:
                 fmt = '0.00"%"'
                 
@@ -410,7 +400,7 @@ def export_to_excel(filters=None, export_type="all"):
                 
                 val_m = flt(values[i]) / 1000000
                 c2 = ws_overview.cell(row=row_idx, column=2, value=val_m)
-                c2.number_format = '"₹ "#,##0.0000" M"'
+                c2.number_format = '"₹ "#,##0.00" M"'
                 c2.border = table_border
                 c2.alignment = Alignment(horizontal="right")
                 if row_fill: c2.fill = row_fill
@@ -481,13 +471,13 @@ def export_to_excel(filters=None, export_type="all"):
             for m_key in sorted_months:
                 v_m = flt(row["months"].get(m_key, 0)) / 1000000
                 c = ws2.cell(row=row_idx, column=col_idx, value=v_m)
-                c.number_format = '"₹ "#,##0.0000" M"'; c.border = table_border; c.alignment = Alignment(horizontal="right")
+                c.number_format = '"₹ "#,##0.00" M"'; c.border = table_border; c.alignment = Alignment(horizontal="right")
                 if row_fill: c.fill = row_fill
                 col_idx += 1
                 
             tot_m = flt(row["total"]) / 1000000
             c_tot = ws2.cell(row=row_idx, column=col_idx, value=tot_m)
-            c_tot.number_format = '"₹ "#,##0.0000" M"'
+            c_tot.number_format = '"₹ "#,##0.00" M"'
             c_tot.font = Font(bold=True)
             c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_tot.border = table_border
@@ -509,7 +499,7 @@ def export_to_excel(filters=None, export_type="all"):
         for m_key in sorted_months:
             total_m = sum(flt(row["months"].get(m_key, 0)) for row in merged_data.values()) / 1000000
             c = ws2.cell(row=row_idx, column=col_idx, value=total_m)
-            c.number_format = '"₹ "#,##0.0000" M"'
+            c.number_format = '"₹ "#,##0.00" M"'
             c.font = Font(bold=True)
             c.fill = header_fill
             c.font = header_font
@@ -519,7 +509,7 @@ def export_to_excel(filters=None, export_type="all"):
             
         grand_total = sum(flt(row["total"]) for row in merged_data.values()) / 1000000
         c_tot = ws2.cell(row=row_idx, column=col_idx, value=grand_total)
-        c_tot.number_format = '"₹ "#,##0.0000" M"'
+        c_tot.number_format = '"₹ "#,##0.00" M"'
         c_tot.font = Font(bold=True, color="FFFFFF")
         c_tot.fill = header_fill
         c_tot.border = table_border
@@ -540,7 +530,7 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Item", "fieldname": "item", "width": 30},
             {"label": "Qty", "fieldname": "qty", "width": 10},
             {"label": "Revenue (M)", "fieldname": "base_amount", "width": 18},
-            {"label": "COGS (M)", "fieldname": "cogs", "width": 18},
+            {"label": "Cost of Goods (M)", "fieldname": "cogs", "width": 18},
             {"label": "Margin (M)", "fieldname": "margin", "width": 18},
             {"label": "Margin %", "fieldname": "margin_pct", "width": 12},
         ]
@@ -563,7 +553,7 @@ def export_to_excel(filters=None, export_type="all"):
                 
                 if fname in ["base_amount", "cogs", "margin"]:
                     num_val = flt(val or 0) / 1000000
-                    cell.number_format = '"₹ "#,##0.0000" M"'
+                    cell.number_format = '"₹ "#,##0.00" M"'
                     cell.value = num_val; cell.alignment = Alignment(horizontal="right")
                 elif fname == "margin_pct":
                     cell.value = flt(val or 0)
@@ -593,17 +583,17 @@ def export_to_excel(filters=None, export_type="all"):
         total_rev = sum(flt(row.get("base_amount") or 0) for row in data) / 1000000
         c_rev = ws3.cell(row=row_idx, column=7, value=total_rev)
         c_rev.font = header_font; c_rev.fill = header_fill; c_rev.border = table_border; c_rev.alignment = Alignment(horizontal="right")
-        c_rev.number_format = '"₹ "#,##0.0000" M"'
+        c_rev.number_format = '"₹ "#,##0.00" M"'
         
         total_cogs = sum(flt(row.get("cogs") or 0) for row in data) / 1000000
         c_cogs = ws3.cell(row=row_idx, column=8, value=total_cogs)
         c_cogs.font = header_font; c_cogs.fill = header_fill; c_cogs.border = table_border; c_cogs.alignment = Alignment(horizontal="right")
-        c_cogs.number_format = '"₹ "#,##0.0000" M"'
+        c_cogs.number_format = '"₹ "#,##0.00" M"'
     
         total_margin = sum(flt(row.get("margin") or 0) for row in data) / 1000000
         c_margin = ws3.cell(row=row_idx, column=9, value=total_margin)
         c_margin.font = header_font; c_margin.fill = header_fill; c_margin.border = table_border; c_margin.alignment = Alignment(horizontal="right")
-        c_margin.number_format = '"₹ "#,##0.0000" M"'
+        c_margin.number_format = '"₹ "#,##0.00" M"'
     
         avg_margin_pct = (total_margin / total_rev * 100) if total_rev else 0
         c_margin_pct = ws3.cell(row=row_idx, column=10, value=avg_margin_pct)

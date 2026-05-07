@@ -50,6 +50,11 @@ def prepare_filters(filters):
             if filters.get("to_date") and getdate(filters.to_date) > getdate(fy.year_end_date):
                 filters["to_date"] = fy.year_end_date
 
+    # Remove "All" values from filters so they don't affect backend queries
+    keys_to_remove = [k for k, v in filters.items() if v == "All"]
+    for k in keys_to_remove:
+        del filters[k]
+
     return filters
 
 @frappe.whitelist()
@@ -126,7 +131,7 @@ def get_dashboard_data(filters=None):
         """, {"so_names": so_names}, as_dict=1)
         pick_item_map = {d.sales_order_item: flt(d.picked_qty) for d in pick_items}
 
-    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"], limit_page_length=None)
+    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory", "business_region_name"], limit_page_length=None)
     customer_map = {c.name: c for c in cust_list}
 
     item_codes = list(set([d.get("item_code") for d in processed_raw_data if d.get("item_code")]))
@@ -241,11 +246,11 @@ def get_dashboard_data(filters=None):
             if not cust_info or str(cust_info.customer_group) != str(cg_filter):
                 keep = False
 
-        # Territory Filter
-        terr_filter = filters.get("territory")
-        if keep and terr_filter:
+        # Business Region Name Filter
+        brn_filter = filters.get("business_region_name")
+        if keep and brn_filter:
             cust_info = customer_map.get(row.get("customer"))
-            if not cust_info or str(cust_info.territory) != str(terr_filter):
+            if not cust_info or str(cust_info.business_region_name) != str(brn_filter):
                 keep = False
 
         # Type Filter
@@ -410,59 +415,43 @@ def get_dashboard_data(filters=None):
             row["balance_net_total_inr"] = flt(row.get("balance_net_total_inr") or (amt - deliv_amt))
 
 
+    # Tracking unique order IDs for counts
+    booked_so_ids = set()
+    pending_so_ids = set()
+    delivered_so_ids = set()
+    overdue_so_ids = set()
+
+    for row in data:
+        status = row.get("status")
+        so_id = row.get("so_no")
+        amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or 0)
+        deliv_amt = flt(row.get("delivered_net_total") or row.get("delivered_net_total_inr") or (amt * (flt(row.get("per_billed", 0)) / 100.0)))
+        
+        if status not in ("Cancelled", "Draft") and so_id:
+            booked_so_ids.add(so_id)
+            
+            # Pending check
+            sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
+            balance = amt - deliv_amt - sc_amt
+            if balance > 1: # Greater than 1 INR to avoid rounding noise
+                pending_so_ids.add(so_id)
+            
+            if deliv_amt > 1:
+                delivered_so_ids.add(so_id)
+
+            if status not in ("Closed", "Completed"):
+                d_date = row.get("delivery_date")
+                if d_date and frappe.utils.getdate(d_date) < today and balance > 1:
+                    overdue_so_ids.add(so_id)
+
     actual_book = booked_rev - short_close_rev - returned_rev
     final_pending = actual_book - delivered_rev
-    
-    dom_actual = dom_booked - dom_short_close - dom_returned
-    dom_pending = dom_actual - dom_delivered
-    
-    exp_actual = exp_booked - exp_short_close - exp_returned
-    exp_pending = exp_actual - exp_delivered
-    
-    cp_actual = cp_booked - cp_short_close - cp_returned
-    cp_pending = cp_actual - cp_delivered
 
     report_summary = [
-        # Global
-        {"label": _("Global Booked"), "value": booked_rev, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Global Cancelled"), "value": cancelled_rev, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Global Short Close"), "value": short_close_rev, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Global Actual"), "value": actual_book, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Global Returned"), "value": returned_rev, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Global Picked"), "value": picked_rev, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Global Delivered"), "value": delivered_rev, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Global Overdue"), "value": overdue_rev, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
-        
-        # Domestic
-        {"label": _("Dom. Booked"), "value": dom_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Dom. Cancelled"), "value": dom_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Dom. Short Close"), "value": dom_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Dom. Actual"), "value": dom_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Dom. Returned"), "value": dom_returned, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Dom. Picked"), "value": dom_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Dom. Delivered"), "value": dom_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Dom. Overdue"), "value": dom_overdue, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
-
-        # Export
-        {"label": _("Exp. Booked"), "value": exp_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Exp. Cancelled"), "value": exp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Exp. Short Close"), "value": exp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Exp. Actual"), "value": exp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Exp. Returned"), "value": exp_returned, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Exp. Picked"), "value": exp_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Exp. Delivered"), "value": exp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Exp. Overdue"), "value": exp_overdue, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
-
-        
-        # Channel Partner
-        {"label": _("CP Booked"), "value": cp_booked, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("CP Cancelled"), "value": cp_cancelled, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("CP Short Close"), "value": cp_short_close, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("CP Actual"), "value": cp_actual, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("CP Returned"), "value": cp_returned, "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("CP Picked"), "value": cp_picked, "indicator": "yellow", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("CP Delivered"), "value": cp_delivered, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("CP Overdue"), "value": cp_overdue, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
+        {"label": _("Total Order Value"), "value": actual_book, "count": len(booked_so_ids), "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Delivered"), "value": delivered_rev, "count": len(delivered_so_ids), "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Pending"), "value": final_pending, "count": len(pending_so_ids), "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Total Overdue"), "value": overdue_rev, "count": len(overdue_so_ids), "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
     ]
     
 
@@ -583,7 +572,11 @@ def export_to_excel(filters=None, export_type="all"):
             c = 1 + (i % 4) * 2
             bg_color = colors.get(s.get('indicator', 'blue').lower(), "3b82f6")
             
-            cell_l = ws_overview.cell(row=r, column=c, value=s.get('label'))
+            # Clean label (remove 'Global ')
+            clean_label = s.get('label', '').replace('Global ', '').strip()
+            label_text = clean_label
+            
+            cell_l = ws_overview.cell(row=r, column=c, value=label_text)
             cell_l.font = Font(bold=True, color="FFFFFF")
             cell_l.fill = PatternFill(start_color=bg_color, fill_type="solid")
             cell_l.alignment = Alignment(horizontal="center")
@@ -592,7 +585,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = flt(s.get('value')) / 1000000
             cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
-            cell_v.number_format = '"₹ "#,##0.0000" M"'
+            cell_v.number_format = '"₹ "#,##0.00" M"'
             cell_v.alignment = Alignment(horizontal="center")
             cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
@@ -621,7 +614,7 @@ def export_to_excel(filters=None, export_type="all"):
             for i in range(len(labels)):
                 ws_overview.cell(row=row_idx, column=1, value=labels[i]).border = table_border
                 v_cell = ws_overview.cell(row=row_idx, column=2, value=flt(values[i])/1000000)
-                v_cell.number_format = '"₹ "#,##0.0000" M"'
+                v_cell.number_format = '"₹ "#,##0.00" M"'
                 v_cell.border = table_border
                 s_cell = ws_overview.cell(row=row_idx, column=3, value=values[i]/total_v)
                 s_cell.number_format = "0.0%"
@@ -672,20 +665,20 @@ def export_to_excel(filters=None, export_type="all"):
             col_idx = 5
             for m_key in sorted_months:
                 c = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["months"].get(m_key, 0))/1000000)
-                c.number_format, c.border = '"₹ "#,##0.0000" M"', table_border
+                c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
                 col_idx += 1
             c_n = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
-            c_n.number_format = '"₹ "#,##0.0000" M"'
+            c_n.number_format = '"₹ "#,##0.00" M"'
             c_n.font = Font(bold=True)
             c_n.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_n.border = table_border
             col_idx += 1
             c_c = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total_cancelled"])/1000000)
-            c_c.number_format = '"₹ "#,##0.0000" M"'
+            c_c.number_format = '"₹ "#,##0.00" M"'
             c_c.border = table_border
             col_idx += 1
             c_g = ws_months.cell(row=row_idx, column=col_idx, value=flt(row["total_gross"])/1000000)
-            c_g.number_format = '"₹ "#,##0.0000" M"'
+            c_g.number_format = '"₹ "#,##0.00" M"'
             c_g.font = Font(bold=True)
             c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid")
             c_g.border = table_border
@@ -712,19 +705,19 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx = 5
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
-            c.number_format = '"₹ "#,##0.0000" M"'
+            c.number_format = '"₹ "#,##0.00" M"'
             c.font, c.fill, c.border = header_font, header_fill, table_border
             c.alignment = Alignment(horizontal="right")
             col_idx += 1
             
         c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
-        c_gn.number_format = '"₹ "#,##0.0000" M"'
+        c_gn.number_format = '"₹ "#,##0.00" M"'
         c_gn.font, c_gn.fill, c_gn.border = header_font, header_fill, table_border
         c_gn.alignment = Alignment(horizontal="right")
         col_idx += 1
         
         c_gc = ws_months.cell(row=row_idx, column=col_idx, value=g_total_cancelled / 1000000)
-        c_gc.number_format = '"₹ "#,##0.0000" M"'
+        c_gc.number_format = '"₹ "#,##0.00" M"'
         c_gc.font, c_gc.fill, c_gc.border = header_font, header_fill, table_border
         c_gc.alignment = Alignment(horizontal="right")
         col_idx += 1
@@ -743,7 +736,7 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx = 5
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_gross.get(m_key, 0))/1000000)
-            c.number_format = '"₹ "#,##0.0000" M"'
+            c.number_format = '"₹ "#,##0.00" M"'
             c.font, c.fill, c.border = header_font, header_fill, table_border
             c.alignment = Alignment(horizontal="right")
             col_idx += 1
@@ -759,7 +752,7 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx += 1
         
         c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
-        c_gg.number_format = '"₹ "#,##0.0000" M"'
+        c_gg.number_format = '"₹ "#,##0.00" M"'
         c_gg.font, c_gg.fill, c_gg.border = header_font, header_fill, table_border
         c_gg.alignment = Alignment(horizontal="right")
         row_idx += 3
@@ -773,13 +766,14 @@ def export_to_excel(filters=None, export_type="all"):
         row_idx_l += 2
 
         lifecycle_summary_data = {
-            "Booked": {m: 0 for m in sorted_months},
-            "Cancelled": {m: 0 for m in sorted_months},
-            "Short Close": {m: 0 for m in sorted_months},
-            "Actual": {m: 0 for m in sorted_months},
+            "Total Order Value": {m: 0 for m in sorted_months},
             "Delivered": {m: 0 for m in sorted_months},
+            "Pending": {m: 0 for m in sorted_months},
             "Overdue": {m: 0 for m in sorted_months},
         }
+
+        booked_raw = {m: 0 for m in sorted_months}
+        sc_raw = {m: 0 for m in sorted_months}
 
         today = frappe.utils.getdate()
         for row in data:
@@ -794,16 +788,13 @@ def export_to_excel(filters=None, export_type="all"):
             status = row.get("status")
 
             if status != "Cancelled":
-                lifecycle_summary_data["Booked"][m_key] += amt
+                booked_raw[m_key] += amt
             
-            if status == "Cancelled":
-                lifecycle_summary_data["Cancelled"][m_key] += amt
-
             sc_amt = flt(row.get("short_close_qty", 0)) * flt(
                 row.get("base_rate") or row.get("item_rate", 0)
             )
             if sc_amt > 0:
-                lifecycle_summary_data["Short Close"][m_key] += sc_amt
+                sc_raw[m_key] += sc_amt
 
             deliv_amt = flt(row.get("delivered_net_total_inr") or 0)
             if not deliv_amt:
@@ -823,10 +814,10 @@ def export_to_excel(filters=None, export_type="all"):
                         lifecycle_summary_data["Overdue"][m_key] += balance
 
         for m_key in sorted_months:
-            lifecycle_summary_data["Actual"][m_key] = (
-                lifecycle_summary_data["Booked"][m_key]
-                - lifecycle_summary_data["Short Close"][m_key]
-            )
+            actual = booked_raw[m_key] - sc_raw[m_key]
+            delivered = lifecycle_summary_data["Delivered"][m_key]
+            lifecycle_summary_data["Total Order Value"][m_key] = actual
+            lifecycle_summary_data["Pending"][m_key] = actual - delivered
 
         headers_l = ["Category"] + sorted_months + ["Total"]
         for idx, h in enumerate(headers_l, start=1):
@@ -840,7 +831,7 @@ def export_to_excel(filters=None, export_type="all"):
             ws_lifecycle.column_dimensions[get_column_letter(idx)].width = 20
         row_idx_l += 1
 
-        categories = ["Booked", "Cancelled", "Short Close", "Actual", "Delivered", "Overdue"]
+        categories = ["Total Order Value", "Delivered", "Pending", "Overdue"]
         for cat in categories:
             ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).border = table_border
             ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).font = Font(bold=True)
@@ -852,10 +843,10 @@ def export_to_excel(filters=None, export_type="all"):
                 c = ws_lifecycle.cell(
                     row=row_idx_l, column=col_idx, value=flt(val) / 1000000
                 )
-                c.number_format, c.border = '"₹ "#,##0.0000" M"', table_border
+                c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
                 col_idx += 1
             c_tot = ws_lifecycle.cell(row=row_idx_l, column=col_idx, value=flt(total_cat) / 1000000)
-            c_tot.number_format, c_tot.border = '"₹ "#,##0.0000" M"', table_border
+            c_tot.number_format, c_tot.border = '"₹ "#,##0.00" M"', table_border
             c_tot.font = Font(bold=True)
             row_idx_l += 1
     
@@ -904,7 +895,7 @@ def export_to_excel(filters=None, export_type="all"):
                 if isinstance(val, (int, float)):
                     if fname in ["total_net_amount_(inr)", "cancelled_val", "picked_net_total_inr", "delivered_net_total_inr", "sc_value", "balance_net_total_inr"]:
                         val /= 1000000
-                        cell.number_format = '"₹ "#,##0.0000" M"'
+                        cell.number_format = '"₹ "#,##0.00" M"'
                         if fname == "total_net_amount_(inr)":
                             if row.get("status") != "Cancelled":
                                 total_list_amt += flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
@@ -938,7 +929,7 @@ def export_to_excel(filters=None, export_type="all"):
             c_f = ws_list.cell(row=row_idx, column=col, value=val / 1000000)
             c_f.font = header_font
             c_f.fill = header_fill
-            c_f.number_format = '"₹ "#,##0.0000" M"'
+            c_f.number_format = '"₹ "#,##0.00" M"'
             c_f.alignment = Alignment(horizontal="right")
             c_f.border = table_border
 
