@@ -41,15 +41,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
-			fieldname: "company",
-			label: __("Company"),
-			fieldtype: "Link",
-			options: "Company",
-			default: frappe.defaults.get_default("company"),
-			placeholder: __("Select Company"),
-			reqd: 1,
-		},
-		{
 			fieldname: "fiscal_year",
 			label: __("Fiscal Year"),
 			fieldtype: "Link",
@@ -67,6 +58,16 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Date",
 		},
 		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_default("company"),
+			placeholder: __("Select Company"),
+			reqd: 1,
+		},
+
+		{
 			label: __("Customer"),
 			placeholder: __("Select Customer"),
 			fieldname: "customer",
@@ -74,11 +75,11 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			options: "Customer",
 		},
 		{
-			fieldname: "customer_group",
-			label: __("Customer Group"),
-			placeholder: __("Select Customer Group"),
+			fieldname: "item_group",
+			label: __("Product Group"),
+			placeholder: __("Select Product Group"),
 			fieldtype: "Link",
-			options: "Customer Group",
+			options: "Item Group",
 		},
 		{
 			label: __("Product (Item)"),
@@ -87,15 +88,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Link",
 			options: "Item",
 		},
-
-		{
-			fieldname: "item_group",
-			label: __("Product Group"),
-			placeholder: __("Select Product Group"),
-			fieldtype: "Link",
-			options: "Item Group",
-		},
-
 		{
 			label: __("Sales Person"),
 			placeholder: __("Select Sales Person"),
@@ -104,33 +96,34 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			options: "Sales Person",
 		},
 		{
-			fieldname: "territory",
-			label: __("Territory"),
-			placeholder: __("Select Territory"),
-			fieldtype: "Link",
-			options: "Territory",
+			fieldname: "business_region_name",
+			label: __("Business Region Name"),
+			placeholder: __("Select Business Region Name"),
+			fieldtype: "Select",
+			options: ["All"], 
+			default: "All",
 		},
-
 		{
 			fieldname: "dom_exp",
-			label: __("Type"),
-			placeholder: __("Select Type"),
+			label: __("Domestic/Export"),
+			placeholder: __("Select Domestic/Export"),
 			fieldtype: "Select",
-			options: ["", "Domestic", "Export"],
+			options: ["All", "Domestic", "Export"],
+			default: "All",
 		},
-
 		{
 			fieldname: "invoice_type",
 			label: __("Invoice Type"),
 			placeholder: __("Select Invoice Type"),
 			fieldtype: "Select",
 			options: [
-				"",
+				"All",
 				"Product Domestic",
 				"Product Export",
 				"Engineering Service Domestic",
 				"Engineering Service Export",
 			],
+			default: "All",
 		},
 	];
 
@@ -139,6 +132,23 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		fields: filter_fields,
 	});
 	page.filter_group.make();
+	
+	// Populate Business Region Name options from database
+	frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Business Region Code",
+			fields: ["business_region_name"],
+			order_by: "business_region_name asc",
+			limit_page_length: 500
+		},
+		callback: function (r) {
+			if (r.message) {
+				const names = [...new Set(r.message.map(x => x.business_region_name))].filter(Boolean).sort();
+				page.filter_group.set_df_property("business_region_name", "options", ["All", ...names]);
+			}
+		}
+	});
 
 	$("<style>")
 		.text(
@@ -789,8 +799,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 						if (m.indicator === "purple") color = "#9b59b6";
 						
 						let val_str = "₹ " + flt(m.value).toLocaleString("en-US", {
-							minimumFractionDigits: 4,
-							maximumFractionDigits: 4,
+							minimumFractionDigits: 2,
+							maximumFractionDigits: 2,
 						}) + " M";
 						
 						return `
@@ -875,8 +885,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			return (
 				"₹ " +
 				value.toLocaleString("en-US", {
-					minimumFractionDigits: 4,
-					maximumFractionDigits: 4,
+					minimumFractionDigits: 2,
+					maximumFractionDigits: 2,
 				}) +
 				" M"
 			);
@@ -1004,9 +1014,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                 <div class="card-header d-flex justify-content-between align-items-center" style="overflow: visible;">
                     <h6 class="m-0 font-weight-bold text-primary">${__("Month-Wise Revenue")}</h6>
                     <div class="d-flex table-filters" style="gap: 10px; overflow: visible;">
-                        <div id="filter_customer_link" style="width: 200px;"></div>
-                        <div id="filter_sp_link" style="width: 200px;"></div>
-                        <div id="filter_product_link" style="width: 200px;"></div>
+                        <div id="filter_customer_link" style="width: 180px;"></div>
+                        <div id="filter_sp_link" style="width: 180px;"></div>
+                        <div id="filter_product_link" style="width: 180px;"></div>
+                        <div id="filter_br_link" style="width: 180px;"></div>
                         <div class="d-flex" style="gap: 8px; align-self: center; margin-left: 10px;">
                             <span class="export-btn" id="export_month_table" title="Export this table to Excel">
                                 <i class="fa fa-file-excel-o"></i>Export to Excel
@@ -1310,9 +1321,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				.toLowerCase()
 				.trim();
 			const s_val = (f_sp_ctrl.$input ? f_sp_ctrl.$input.val() : "").toLowerCase().trim();
-			const i_val = (f_item_ctrl.$input ? f_item_ctrl.$input.val() : "")
-				.toLowerCase()
-				.trim();
+			const i_val = (f_item_ctrl.$input ? f_item_ctrl.$input.val() : "").toLowerCase().trim();
+			const br_val = (f_br_ctrl.$input ? f_br_ctrl.$input.val() : "").toLowerCase().trim();
 
 			let filtered = data.results.filter((row) => {
 				const cust_match =
@@ -1324,7 +1334,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					!i_val ||
 					(row.item_code || "").toLowerCase().includes(i_val) ||
 					(row.item_name || "").toLowerCase().includes(i_val);
-				return cust_match && sp_match && item_match;
+				const br_match = !br_val || (row.business_region_name || "").toLowerCase().includes(br_val);
+				return cust_match && sp_match && item_match && br_match;
 			});
 			render_filtered_view(filtered);
 		};
@@ -1392,6 +1403,11 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			"filter_product_link",
 			__("Filter Product"),
 			[...new Set(data.results.map((r) => r.item_code))].sort(),
+		);
+		let f_br_ctrl = make_hybrid_filter(
+			"filter_br_link",
+			__("Filter Business Region"),
+			[...new Set(data.results.map((r) => r.business_region_name))].filter(Boolean).sort(),
 		);
 		// Initial render
 		apply_local_filters();

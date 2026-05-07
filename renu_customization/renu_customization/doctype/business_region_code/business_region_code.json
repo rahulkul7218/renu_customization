@@ -10,6 +10,7 @@
   "business_region_code",
   "business_region_name"
  ],
+ "title_field": "business_region_name",
  "fields": [
   {
    "fieldname": "business_region_code",
