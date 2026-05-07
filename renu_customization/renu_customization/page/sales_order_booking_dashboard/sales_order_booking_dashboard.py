@@ -761,13 +761,14 @@ def export_to_excel(filters=None, export_type="all"):
         row_idx_l += 2
 
         lifecycle_summary_data = {
-            "Booked": {m: 0 for m in sorted_months},
-            "Cancelled": {m: 0 for m in sorted_months},
-            "Short Close": {m: 0 for m in sorted_months},
-            "Actual": {m: 0 for m in sorted_months},
+            "Total Order Value": {m: 0 for m in sorted_months},
             "Delivered": {m: 0 for m in sorted_months},
+            "Pending": {m: 0 for m in sorted_months},
             "Overdue": {m: 0 for m in sorted_months},
         }
+
+        booked_raw = {m: 0 for m in sorted_months}
+        sc_raw = {m: 0 for m in sorted_months}
 
         today = frappe.utils.getdate()
         for row in data:
@@ -782,16 +783,13 @@ def export_to_excel(filters=None, export_type="all"):
             status = row.get("status")
 
             if status != "Cancelled":
-                lifecycle_summary_data["Booked"][m_key] += amt
+                booked_raw[m_key] += amt
             
-            if status == "Cancelled":
-                lifecycle_summary_data["Cancelled"][m_key] += amt
-
             sc_amt = flt(row.get("short_close_qty", 0)) * flt(
                 row.get("base_rate") or row.get("item_rate", 0)
             )
             if sc_amt > 0:
-                lifecycle_summary_data["Short Close"][m_key] += sc_amt
+                sc_raw[m_key] += sc_amt
 
             deliv_amt = flt(row.get("delivered_net_total_inr") or 0)
             if not deliv_amt:
@@ -811,10 +809,10 @@ def export_to_excel(filters=None, export_type="all"):
                         lifecycle_summary_data["Overdue"][m_key] += balance
 
         for m_key in sorted_months:
-            lifecycle_summary_data["Actual"][m_key] = (
-                lifecycle_summary_data["Booked"][m_key]
-                - lifecycle_summary_data["Short Close"][m_key]
-            )
+            actual = booked_raw[m_key] - sc_raw[m_key]
+            delivered = lifecycle_summary_data["Delivered"][m_key]
+            lifecycle_summary_data["Total Order Value"][m_key] = actual
+            lifecycle_summary_data["Pending"][m_key] = actual - delivered
 
         headers_l = ["Category"] + sorted_months + ["Total"]
         for idx, h in enumerate(headers_l, start=1):
@@ -828,7 +826,7 @@ def export_to_excel(filters=None, export_type="all"):
             ws_lifecycle.column_dimensions[get_column_letter(idx)].width = 20
         row_idx_l += 1
 
-        categories = ["Booked", "Cancelled", "Short Close", "Actual", "Delivered", "Overdue"]
+        categories = ["Total Order Value", "Delivered", "Pending", "Overdue"]
         for cat in categories:
             ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).border = table_border
             ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).font = Font(bold=True)

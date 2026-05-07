@@ -1242,48 +1242,26 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						<p style="font-size: 14px; color: #555; margin: 8px 0;">${period}</p>
 						<p style="font-size: 11px; color: #999; margin: 0;">Generated: ${report_date}</p>
 					</div>
-					${(function () {
-						const sections = [
-							{ title: "Global Overview", prefix: "Global" },
-							{ title: "Domestic Performance", prefix: "Dom." },
-							{ title: "Export Performance", prefix: "Exp." },
-							{ title: "Channel Partner Performance", prefix: "CP" },
-						];
-						return sections
-							.map((sec) => {
-								let metrics = data.summary.filter((m) =>
-									m.label.startsWith(sec.prefix),
-								);
-								if (!metrics.length) return "";
-								let cards = metrics
-									.map((m) => {
-										let color = "#3498db";
-										if (m.indicator === "green") color = "#2ecc71";
-										if (m.indicator === "orange") color = "#e67e22";
-										if (m.indicator === "red") color = "#e74c3c";
-										if (m.indicator === "purple") color = "#9b59b6";
-										let clean_label = m.label
-											.replace(sec.prefix, "")
-											.replace(/^\.|\s+/, "")
-											.trim();
-										return `
+					<div class="kpi-container">
+						${data.summary
+							.map((m) => {
+								let color = "#3498db";
+								if (m.indicator === "green") color = "#2ecc71";
+								if (m.indicator === "cyan") color = "#06b6d4";
+								if (m.indicator === "orange") color = "#e67e22";
+								if (m.indicator === "purple") color = "#9b59b6";
+								if (m.indicator === "red") color = "#e74c3c";
+								
+								return `
 									<div class="kpi-card">
-										<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${clean_label}</div>
+										<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
 										<div class="kpi-value">${format_currency_short(m.value)}</div>
 									</div>
 								`;
-									})
-									.join("");
-								return `
-								<div style="page-break-inside: avoid; margin-bottom: 15px;">
-									<div class="kpi-section-title">${sec.title}</div>
-									<div class="kpi-container">${cards}</div>
-									<div style="clear: both;"></div>
-								</div>
-							`;
 							})
-							.join("");
-					})()}
+							.join("")}
+					</div>
+					<div style="clear: both; margin-bottom: 20px;"></div>
 					<h3>Visual Analytics</h3>
 					${chart_h(png1, "Top Salesperson by Booking")}
                     ${chart_l("top_10_salesperson")}
