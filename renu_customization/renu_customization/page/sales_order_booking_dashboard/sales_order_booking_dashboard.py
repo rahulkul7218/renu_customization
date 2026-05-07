@@ -461,7 +461,7 @@ def get_dashboard_data(filters=None):
 
     report_summary = [
         {"label": _("Total Booked Value"), "value": booked_rev, "count": len(booked_so_ids), "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Total Order Value"), "value": actual_book, "count": len(booked_so_ids), "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Actual Booked Value"), "value": actual_book, "count": len(booked_so_ids), "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Total Delivered"), "value": delivered_rev, "count": len(delivered_so_ids), "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Total Pending"), "value": final_pending, "count": len(pending_so_ids), "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Total Overdue"), "value": overdue_rev, "count": len(overdue_so_ids), "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
@@ -868,7 +868,7 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Deliv. Date", "fieldname": "delivery_date", "width": 14},
             {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
             {"label": "Booked (M)", "fieldname": "total_net_amount_(inr)", "width": 16},
-            {"label": "Actual (M)", "fieldname": "actual_value", "width": 16},
+            {"label": "Actual Booked (M)", "fieldname": "actual_value", "width": 16},
             {"label": "Returned (M)", "fieldname": "returned_val", "width": 16},
             {"label": "Short Close (M)", "fieldname": "sc_value", "width": 16},
             {"label": "Picked (M)", "fieldname": "picked_net_total_inr", "width": 16},
