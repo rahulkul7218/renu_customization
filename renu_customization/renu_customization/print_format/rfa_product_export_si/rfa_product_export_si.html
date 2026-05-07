@@ -8,6 +8,9 @@
 {% set billing_address = frappe.get_doc("Address", doc.customer_address) if doc.customer_address else "" %}
 {% set shipping_address = frappe.get_doc("Address", doc.shipping_address_name) if doc.shipping_address_name else "" %}
 
+{% set delivery_note = frappe.db.get_value("Sales Invoice Item", {"parent": doc.name, "delivery_note": ["!=", ""]}, "delivery_note") %}
+{% set packing_slip = frappe.db.get_value("Packing Slip", {"delivery_note": delivery_note}, ["total_boxes", "box_gross_weight", "custom_net_weight"], as_dict=1) if delivery_note else None %}
+
 <div class="invoice-container">
   <table>
     <!-- Header -->
@@ -468,17 +471,17 @@
 
       <div style="display:flex; justify-content:space-between;">
         <span>No. of Boxes (Nos)</span>
-        <span>{{ doc.no_of_boxes or 0 }}</span>
+        <span>{{ packing_slip.total_boxes if packing_slip else (doc.no_of_boxes or 0) }}</span>
       </div>
 
       <div style="display:flex; justify-content:space-between;">
         <span>Total Wt. of Boxes (Kg)</span>
-        <span>{{ doc.total_weight or 0 }}</span>
+        <span>{{ packing_slip.box_gross_weight if packing_slip else (doc.total_weight or 0) }}</span>
       </div>
 
       <div style="display:flex; justify-content:space-between;">
         <span>Net Weight in Kg</span>
-        <span>{{ doc.net_weight or 0 }}</span>
+        <span>{{ packing_slip.custom_net_weight if packing_slip else (doc.net_weight or 0) }}</span>
       </div>
     </div>
   </td>
