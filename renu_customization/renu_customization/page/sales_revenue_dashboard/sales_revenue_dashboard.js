@@ -41,15 +41,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 	const filter_fields = [
 		{
-			fieldname: "company",
-			label: __("Company"),
-			fieldtype: "Link",
-			options: "Company",
-			default: frappe.defaults.get_default("company"),
-			placeholder: __("Select Company"),
-			reqd: 1,
-		},
-		{
 			fieldname: "fiscal_year",
 			label: __("Fiscal Year"),
 			fieldtype: "Link",
@@ -65,6 +56,15 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
+		},
+		{
+			fieldname: "company",
+			label: __("Company"),
+			fieldtype: "Link",
+			options: "Company",
+			default: frappe.defaults.get_default("company"),
+			placeholder: __("Select Company"),
+			reqd: 1,
 		},
 
 		{
