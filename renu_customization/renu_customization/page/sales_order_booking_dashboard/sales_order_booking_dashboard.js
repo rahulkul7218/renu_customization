@@ -94,7 +94,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			fieldname: "business_region_name",
 			label: __("Business Region Name"),
 			fieldtype: "Select",
-			options: [""],
+			options: ["All"],
+			default: "All",
 			placeholder: __("Select Business Region Name"),
 		},
 		{
@@ -142,7 +143,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					.filter(Boolean)
 					.sort();
 				page.filter_group.set_df_property("business_region_name", "options", [
-					"",
+					"All",
 					...names,
 				]);
 			}
@@ -712,7 +713,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th class="col-prod">Product</th>
                                 ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
                                 <th class="total-net-col">Total (Net) (M)</th>
-                                <th class="total-net-col">Cancelled (M)</th>
                                 <th class="grand-total-col">Grand Total (Gross) (M)</th>
                             </tr>
                         </thead>
@@ -762,12 +762,14 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th class="col-prod">Item</th>
                                 <th style="width: 110px; white-space: nowrap;">Deliv. Date</th>
                                 <th class="col-sp">Sales Person</th>
-                                <th class="col-amt">Order (M)</th>
-                                <th class="col-amt">Cancelled (M)</th>
-                                <th class="col-amt">Picked (M)</th>
-                                <th class="col-amt">Delivery (M)</th>
+                                <th class="col-amt">Booked (M)</th>
+                                <th class="col-amt">Actual Booked (M)</th>
+                                <th class="col-amt">Returned (M)</th>
                                 <th class="col-amt">Short Close (M)</th>
-                                <th class="col-amt">Open (M)</th>
+                                <th class="col-amt">Picked (M)</th>
+                                <th class="col-amt">Delivered (M)</th>
+                                <th class="col-amt">Pending (M)</th>
+                                <th class="col-amt">Overdue (M)</th>
                             </tr>
                         </thead>
                         <tbody id="so_list_body"></tbody>
@@ -958,7 +960,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             </td>
                             ${cells}
                             <td class="total-net-col">${format_currency_short(row.total)}</td>
-                            <td class="total-net-col">${format_currency_short(row.total_cancelled)}</td>
                             <td class="grand-total-col">${format_currency_short(row.total_gross)}</td>
                         </tr>
                     `);
@@ -982,7 +983,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-prod">-</td>
                         ${months.map((m) => `<td class="col-amt" style="color: #1e293b;">${format_currency_short(total_month_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col" style="color: #1e293b;">${format_currency_short(g_total_net)}</td>
-                        <td class="total-net-col" style="color: #1e293b;">${format_currency_short(g_total_cancelled)}</td>
                         <td class="grand-total-col">-</td>
                     </tr>
                     <tr class="sticky-total">
@@ -992,7 +992,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-prod">-</td>
                         ${months.map((m) => `<td class="col-amt" style="color: #1e293b;">${format_currency_short(total_month_gross_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col">-</td>
-                        <td class="total-net-col">-</td>
                         <td class="grand-total-col" style="color: #1e293b;">${format_currency_short(g_total_gross)}</td>
                     </tr>
                 `);
@@ -1001,11 +1000,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			// 3.2 Detailed Sales Orders List
 			tables_container.find("#so_count").text(`Showing ${filtered_data.length} orders`);
 			let total_amt = 0,
-				total_cancelled = 0,
+				total_actual = 0,
+				total_returned = 0,
+				total_sc = 0,
 				total_picked = 0,
 				total_deliv = 0,
-				total_sc = 0,
-				total_balance = 0;
+				total_pending = 0,
+				total_overdue = 0;
 
 			if (filtered_data.length === 0) {
 				tbody_list.append(
@@ -1023,12 +1024,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					let amt = flt(
 						row.total_net_amount_inr || row["total_net_amount_(inr)"] || row.po_total,
 					);
-					let cancelled_val = row.status === "Cancelled" ? amt : 0;
 					let deliv_total = flt(row.delivered_net_total_inr || 0);
 					let sc_value = flt(row.sc_value || 0);
-					let balance_total = flt(
-						row.balance_net_total_inr || amt - deliv_total - cancelled_val,
-					);
+					let ret_val = flt(row.returned_val || 0);
+					let actual_val = flt(row.actual_value || 0);
+					let pending_val = flt(row.pending_value || 0);
+					let overdue_val = flt(row.overdue_value || 0);
 
 					let cust_po = row.po_no || "-";
 					let deliv_date_str = row.delivery_date
@@ -1036,11 +1037,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						: "-";
 
 					if (row.status !== "Cancelled") total_amt += amt;
-					total_cancelled += cancelled_val;
+					total_actual += actual_val;
+					total_returned += ret_val;
+					total_sc += sc_value;
 					total_picked += flt(row.picked_net_total_inr || 0);
 					total_deliv += deliv_total;
-					total_sc += sc_value;
-					total_balance += balance_total;
+					total_pending += pending_val;
+					total_overdue += overdue_val;
 
 					tbody_list.append(`
                         <tr>
@@ -1059,11 +1062,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <td class="col-deliv-date" style="color: #475569; font-size: 11px; white-space: nowrap;">${deliv_date_str}</td>
                             <td class="col-sp">${row.sales_person || "-"}</td>
                             <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(amt)}</td>
-                            <td class="col-amt" style="color: #0f172a;">${format_currency_short(cancelled_val)}</td>
+                            <td class="col-amt" style="font-weight: 700; color: #059669;">${format_currency_short(actual_val)}</td>
+                            <td class="col-amt" style="color: #f43f5e;">${format_currency_short(ret_val)}</td>
+                            <td class="col-amt" style="color: #f59e0b;">${format_currency_short(sc_value)}</td>
                             <td class="col-amt" style="color: #0f172a;">${format_currency_short(row.picked_net_total_inr || 0)}</td>
-                            <td class="col-amt" style="color: #0f172a;">${format_currency_short(deliv_total)}</td>
-                            <td class="col-amt" style="color: #0f172a; font-weight: 600;">${format_currency_short(sc_value)}</td>
-                            <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(balance_total)}</td>
+                            <td class="col-amt" style="color: #06b6d4;">${format_currency_short(deliv_total)}</td>
+                            <td class="col-amt" style="font-weight: 700; color: #4338ca;">${format_currency_short(pending_val)}</td>
+                            <td class="col-amt" style="font-weight: 700; color: #7c3aed;">${format_currency_short(overdue_val)}</td>
                         </tr>
                     `);
 				});
@@ -1080,11 +1085,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-deliv-date" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-sp" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_amt)}</td>
-                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_cancelled)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #059669; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_actual)}</td>
+                        <td class="col-amt" style="color: #f43f5e; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_returned)}</td>
+                        <td class="col-amt" style="color: #f59e0b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_sc)}</td>
                         <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_picked)}</td>
-                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_deliv)}</td>
-                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_sc)}</td>
-                        <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_balance)}</td>
+                        <td class="col-amt" style="color: #06b6d4; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_deliv)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #4338ca; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_pending)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #7c3aed; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_overdue)}</td>
                     </tr>
                 `);
 			}
@@ -1246,6 +1253,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						${data.summary
 							.map((m) => {
 								let color = "#3498db";
+								if (m.indicator === "blue") color = "#3b82f6";
 								if (m.indicator === "green") color = "#2ecc71";
 								if (m.indicator === "cyan") color = "#06b6d4";
 								if (m.indicator === "orange") color = "#e67e22";
