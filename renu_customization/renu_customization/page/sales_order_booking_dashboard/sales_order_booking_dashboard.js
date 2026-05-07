@@ -94,7 +94,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			fieldname: "business_region_name",
 			label: __("Business Region Name"),
 			fieldtype: "Select",
-			options: [""],
+			options: ["All"],
+			default: "All",
 			placeholder: __("Select Business Region Name"),
 		},
 		{
@@ -142,7 +143,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					.filter(Boolean)
 					.sort();
 				page.filter_group.set_df_property("business_region_name", "options", [
-					"",
+					"All",
 					...names,
 				]);
 			}
