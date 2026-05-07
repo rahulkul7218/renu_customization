@@ -203,7 +203,7 @@ def get_dashboard_data(filters=None):
                 dom_exp_map[i.name] = ""
 
     # Fetch customer info for classification and filtering
-    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory"], limit_page_length=None)
+    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "business_regions_code", "business_region_name"], limit_page_length=None)
     customer_map = {c.name: c for c in cust_list}
         
     # Fetch item metadata (Always needed for freight exclusion and item group filtering)
@@ -252,11 +252,11 @@ def get_dashboard_data(filters=None):
             cust_info = customer_map.get(inv_cust_id)
             if not cust_info or str(cust_info.customer_group) != str(cg_filter): keep = False
                 
-        # Territory
-        t_filter = filters.get("territory")
-        if keep and t_filter:
+        # Business Region
+        br_filter = filters.get("business_region_name")
+        if keep and br_filter:
             cust_info = customer_map.get(inv_cust_id)
-            if not cust_info or str(cust_info.territory) != str(t_filter): keep = False
+            if not cust_info or str(cust_info.business_region_name) != str(br_filter): keep = False
                 
         # Status
         stat_filter = filters.get("status")
@@ -285,6 +285,7 @@ def get_dashboard_data(filters=None):
             cust_id = row.get("customer") or invoice_map.get(inv_id)
             c_info = customer_map.get(cust_id)
             row["customer_group"] = c_info.customer_group if c_info else ""
+            row["business_region_name"] = c_info.business_region_name if c_info else ""
             is_cp = False
             if row["customer_group"]:
                 cg = row["customer_group"].lower()
@@ -367,10 +368,10 @@ def get_dashboard_data(filters=None):
 
     report_summary = [
         {"label": _("Net Revenue"), "value": total_net_rev / 1000000, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("Gross Revenue (Grand)"), "value": total_grand_rev / 1000000, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Gross Revenue"), "value": total_grand_rev / 1000000, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Domestic Net Revenue"), "value": dom_rev / 1000000, "indicator": "green", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Export Net Revenue"), "value": exp_rev / 1000000, "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
-        {"label": _("CP Net Revenue"), "value": cp_rev / 1000000, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
+        {"label": _("Channel Partner"), "value": cp_rev / 1000000, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
 
     sp_revenue = {}
@@ -493,7 +494,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = flt(s.get('value'))
             cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=12)
-            cell_v.number_format = '"₹ "#,##0.0000" M"'
+            cell_v.number_format = '"₹ "#,##0.00" M"'
             cell_v.alignment = Alignment(horizontal="center")
             cell_v.border = Border(left=Side(style='medium', color=bg_color), 
                                    right=Side(style='medium', color=bg_color), 
@@ -531,7 +532,7 @@ def export_to_excel(filters=None, export_type="all"):
                 
                 val_m = flt(values[i])
                 c2 = ws_overview.cell(row=row_idx, column=2, value=val_m)
-                c2.number_format = '"₹ "#,##0.0000" M"'
+                c2.number_format = '"₹ "#,##0.00" M"'
                 c2.border = table_border
                 c2.alignment = Alignment(horizontal="right")
                 if row_fill: c2.fill = row_fill
@@ -612,7 +613,7 @@ def export_to_excel(filters=None, export_type="all"):
             for m_key in sorted_months:
                 v_m = flt(row["months"].get(m_key, 0))
                 c = ws_months.cell(row=row_idx, column=col_idx, value=v_m)
-                c.number_format = '"₹ "#,##0.0000" M"'
+                c.number_format = '"₹ "#,##0.00" M"'
                 c.border = table_border
                 c.alignment = Alignment(horizontal="right")
                 if row_fill: c.fill = row_fill
@@ -620,7 +621,7 @@ def export_to_excel(filters=None, export_type="all"):
                 
             tot_m = flt(row["total"])
             c_tot = ws_months.cell(row=row_idx, column=col_idx, value=tot_m)
-            c_tot.number_format = '"₹ "#,##0.0000" M"'
+            c_tot.number_format = '"₹ "#,##0.00" M"'
             c_tot.font = Font(bold=True)
             c_tot.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
             c_tot.border = table_border
@@ -629,7 +630,7 @@ def export_to_excel(filters=None, export_type="all"):
             
             tot_g = flt(row["total_gross"])
             c_g = ws_months.cell(row=row_idx, column=col_idx, value=tot_g)
-            c_g.number_format = '"₹ "#,##0.0000" M"'
+            c_g.number_format = '"₹ "#,##0.00" M"'
             c_g.font = Font(bold=True)
             c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid") # Slightly different for gross
             c_g.border = table_border
@@ -678,7 +679,7 @@ def export_to_excel(filters=None, export_type="all"):
         for m_key in sorted_months:
             v_net = flt(m_totals_net.get(m_key, 0))
             c = ws_months.cell(row=row_idx, column=col_idx, value=v_net)
-            c.number_format = '"₹ "#,##0.0000" M"'
+            c.number_format = '"₹ "#,##0.00" M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
@@ -686,7 +687,7 @@ def export_to_excel(filters=None, export_type="all"):
             col_idx += 1
             
         c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net)
-        c_gn.number_format = '"₹ "#,##0.0000" M"'
+        c_gn.number_format = '"₹ "#,##0.00" M"'
         c_gn.font = header_font
         c_gn.fill = header_fill
         c_gn.border = table_border
@@ -712,7 +713,7 @@ def export_to_excel(filters=None, export_type="all"):
         for m_key in sorted_months:
             v_gross = flt(m_totals_gross.get(m_key, 0))
             c = ws_months.cell(row=row_idx, column=col_idx, value=v_gross)
-            c.number_format = '"₹ "#,##0.0000" M"'
+            c.number_format = '"₹ "#,##0.00" M"'
             c.font = header_font
             c.fill = header_fill
             c.border = table_border
@@ -727,7 +728,7 @@ def export_to_excel(filters=None, export_type="all"):
         col_idx += 1
         
         c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross)
-        c_gg.number_format = '"₹ "#,##0.0000" M"'
+        c_gg.number_format = '"₹ "#,##0.00" M"'
         c_gg.font = header_font
         c_gg.fill = header_fill
         c_gg.border = table_border
@@ -751,6 +752,7 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Invoice Type", "fieldname": "invoice_type", "width": 20},
             {"label": "Status", "fieldname": "status", "width": 14},
             {"label": "Customer", "fieldname": "customer_name", "width": 25},
+            {"label": "Business Region", "fieldname": "business_region_name", "width": 20},
             {"label": "Item", "fieldname": "item_code", "width": 20},
             {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
             {"label": "Qty", "fieldname": "qty", "width": 10},
@@ -785,7 +787,7 @@ def export_to_excel(filters=None, export_type="all"):
                     num_val = flt(val or 0)
                     if fname == "base_amount":
                         num_val = flt(row.get("amt_allocated") or 0)
-                        cell.number_format = '"₹ "#,##0.0000" M"'
+                        cell.number_format = '"₹ "#,##0.00" M"'
                     else:
                         cell.number_format = "#,##0.00"
                     cell.value = num_val
@@ -799,8 +801,8 @@ def export_to_excel(filters=None, export_type="all"):
         # Add Total Row for Detailed Invoice List
         # -------------------------------------------------------------------------
         ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=10)
-        for c in range(1, 11):
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=11)
+        for c in range(1, 12):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
     
@@ -809,10 +811,10 @@ def export_to_excel(filters=None, export_type="all"):
         for row in data:
             total_list_amt += (row.get("amt_allocated") or 0)
     
-        cell_total = ws_list.cell(row=row_idx, column=11, value=total_list_amt)
+        cell_total = ws_list.cell(row=row_idx, column=12, value=total_list_amt)
         cell_total.font = header_font
         cell_total.fill = header_fill
-        cell_total.number_format = '"₹ "#,##0.0000" M"'
+        cell_total.number_format = '"₹ "#,##0.00" M"'
         cell_total.alignment = Alignment(horizontal="right")
         cell_total.border = table_border
 
