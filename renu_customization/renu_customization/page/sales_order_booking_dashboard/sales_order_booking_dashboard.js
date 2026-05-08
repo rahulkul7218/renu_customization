@@ -770,7 +770,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th style="width: 110px; white-space: nowrap;">Deliv. Date</th>
                                 <th class="col-sp">Sales Person</th>
                                 <th class="col-amt">Booked (M)</th>
-                                <th class="col-amt">Actual Booked (M)</th>
+                                <th class="col-amt">Total Booked (M)</th>
                                 <th class="col-amt">Returned (M)</th>
                                 <th class="col-amt">Short Close (M)</th>
                                 <th class="col-amt">Picked (M)</th>
@@ -799,7 +799,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				Booked: { color: "#3b82f6", data: {} },
 				Cancelled: { color: "#ef4444", data: {} },
 				"Short Close": { color: "#f59e0b", data: {} },
-				Actual: { color: "#10b981", data: {} },
+				"Total Booked Value": { color: "#10b981", data: {} },
 				Returned: { color: "#f43f5e", data: {} },
 				Picked: { color: "#facc15", data: {} },
 				Delivered: { color: "#06b6d4", data: {} },
@@ -880,14 +880,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 				// Balance (Pending) = Booked - Short Close - Delivered
 				let pending = booked - sc - deliv;
-				// Actual = Booked - Returned - Balance
-				let actual = booked - ret - pending;
-
-				lifecycle_buckets["Actual"].data[m.key] = actual;
+				// Total Booked Value = Booked - Short Close (Matches Report)
+				let tbv = booked - sc;
+				lifecycle_buckets["Total Booked Value"].data[m.key] = tbv;
 				lifecycle_buckets["Pending"].data[m.key] = pending;
 			});
 
-			const display_categories = ["Booked", "Short Close", "Returned", "Actual", "Delivered", "Pending", "Overdue"];
+			const display_categories = ["Booked", "Short Close", "Returned", "Total Booked Value", "Delivered", "Pending", "Overdue"];
 			display_categories.forEach((cat) => {
 				let row_data = lifecycle_buckets[cat];
 				let cells = months
@@ -902,7 +901,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					<tr>
 						<td class="col-category" style="font-weight: 700; color: #475569;">
                             <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${row_data.color}; margin-right: 8px; vertical-align: middle;"></span>
-                            ${cat === "Actual" ? "Total Order Value" : cat}
+                             ${cat}
                         </td>
 						${cells}
 						<td class="lifecycle-total-col">${format_currency_short(total)}</td>
@@ -917,7 +916,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let cust = row.customer_name || "-";
 				let item_code = row.item_code || "-";
 				let item_name = row.item_name || "-";
-				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
+				let amt = flt(row.total_booked_value || row["total_net_amount_(inr)"] || row.po_total);
 				let g_amt = flt(row.gross_total || amt);
 				let m_key = moment(row.so_date).format("MMM YYYY");
 				let key = sp + "|" + cust + "|" + item_code;
@@ -1044,7 +1043,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					let deliv_total = flt(row.delivered_net_total_inr || 0);
 					let sc_value = flt(row.sc_value || 0);
 					let ret_val = flt(row.returned_val || 0);
-					let actual_val = flt(row.actual_value || 0);
+					let actual_val = flt(row.total_booked_value || 0);
 					let pending_val = flt(row.pending_value || 0);
 					let overdue_val = flt(row.overdue_value || 0);
 
