@@ -63,6 +63,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		},
 
 		{
+			fieldname: "customer_group",
+			label: __("Customer Group"),
+			fieldtype: "Link",
+			options: "Customer Group",
+			placeholder: __("Select Customer Group"),
+		},
+		{
 			fieldname: "customer",
 			label: __("Customer"),
 			fieldtype: "Link",
@@ -803,17 +810,20 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 			filtered_data.forEach((row) => {
 				let m_key = moment(row.so_date).format("MMM YYYY");
+				// amt is the Net Amount after Short Close (from report SQL total_net_amount_(inr))
 				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
+				// original_amt is the full order value before any subtractions
+				let original_amt = flt(row.booked_net_total || amt);
 				let status = row.status;
 
 				if (status !== "Cancelled" && status !== "Draft") {
 					lifecycle_buckets["Booked"].data[m_key] =
-						(lifecycle_buckets["Booked"].data[m_key] || 0) + amt;
+						(lifecycle_buckets["Booked"].data[m_key] || 0) + original_amt;
 				}
 
 				if (status === "Cancelled") {
 					lifecycle_buckets["Cancelled"].data[m_key] =
-						(lifecycle_buckets["Cancelled"].data[m_key] || 0) + amt;
+						(lifecycle_buckets["Cancelled"].data[m_key] || 0) + original_amt;
 				}
 
 				let sc_qty = flt(row.short_close_qty || 0);
@@ -829,15 +839,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						(lifecycle_buckets["Picked"].data[m_key] || 0) + picked_amt;
 				}
 
-				let ret_amt = flt(row.returned_val || 0);
+				// Use returned_net_total from backend if available
+				let ret_amt = flt(row.returned_net_total || row.returned_val || 0);
 				if (ret_amt > 0 && status !== "Cancelled" && status !== "Draft") {
 					lifecycle_buckets["Returned"].data[m_key] =
 						(lifecycle_buckets["Returned"].data[m_key] || 0) + ret_amt;
 				}
 
-				let deliv_amt = flt(
-					row.delivered_net_total_inr || amt * (flt(row.per_billed || 0) / 100),
-				);
+				// Use net_delivered_net_total from backend if available
+				let deliv_amt = flt(row.net_delivered_net_total || row.delivered_net_total_inr || 0);
 				if (status !== "Cancelled" && status !== "Draft") {
 					lifecycle_buckets["Delivered"].data[m_key] =
 						(lifecycle_buckets["Delivered"].data[m_key] || 0) + deliv_amt;
@@ -870,7 +880,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				lifecycle_buckets["Pending"].data[m.key] = actual - deliv;
 			});
 
-			const display_categories = ["Actual", "Delivered", "Pending", "Overdue"];
+			const display_categories = ["Booked", "Short Close", "Returned", "Actual", "Delivered", "Pending", "Overdue"];
 			display_categories.forEach((cat) => {
 				let row_data = lifecycle_buckets[cat];
 				let cells = months
@@ -1036,7 +1046,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						? frappe.datetime.str_to_user(row.delivery_date)
 						: "-";
 
-					if (row.status !== "Cancelled") total_amt += amt;
+					let original_amt = flt(row.booked_net_total || amt);
+					if (row.status !== "Cancelled") total_amt += original_amt;
 					total_actual += actual_val;
 					total_returned += ret_val;
 					total_sc += sc_value;
@@ -1061,7 +1072,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             </td>
                             <td class="col-deliv-date" style="color: #475569; font-size: 11px; white-space: nowrap;">${deliv_date_str}</td>
                             <td class="col-sp">${row.sales_person || "-"}</td>
-                            <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(amt)}</td>
+                            <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(original_amt)}</td>
                             <td class="col-amt" style="font-weight: 700; color: #059669;">${format_currency_short(actual_val)}</td>
                             <td class="col-amt" style="color: #f43f5e;">${format_currency_short(ret_val)}</td>
                             <td class="col-amt" style="color: #f59e0b;">${format_currency_short(sc_value)}</td>
