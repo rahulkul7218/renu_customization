@@ -3,12 +3,15 @@ from renu_customization.renu_customization.page.sales_order_booking_dashboard.sa
 
 def check():
     frappe.set_user("Administrator")
-    company = "RENU FACTORY AUTOMATION PVT. LTD"
-    filters = {"company": company}
-    data = get_dashboard_data(filters)
+    filters = {"company": "RENU FACTORY AUTOMATION PVT. LTD"}
+    result = get_dashboard_data(filters)
     
-    summary = {s['label']: s['value'] for s in data.get('summary', [])}
-    
-    print(f"\n--- All Time Sales Booking for {company} ---")
-    for label, val in summary.items():
-        print(f"{label}: {val} M")
+    print(f"--- Detailed Dashboard Totals for {filters['company']} ---")
+    summary = result.get("summary", [])
+    if not summary:
+        print("No summary found in result keys:", result.keys())
+    for card in summary:
+        print(f"{card['label']}: {card['value']}")
+
+if __name__ == "__main__":
+    check()

@@ -469,7 +469,7 @@ def get_data(filters):
         LEFT JOIN `tabAddress` a ON a.name = so.customer_address
        
         WHERE 1 = 1
-        AND so.docstatus IN (1, 2)
+        AND so.docstatus = 1
         # Included all items to match user's global booking total (375,461,138.54)
         # AND (so.amended_from IS NULL OR so.name = (
         #     SELECT MAX(name)
