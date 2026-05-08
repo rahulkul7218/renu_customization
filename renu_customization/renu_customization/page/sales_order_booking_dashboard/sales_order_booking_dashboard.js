@@ -860,7 +860,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					status !== "Draft"
 				) {
 					if (row.delivery_date && moment(row.delivery_date).isBefore(today_moment)) {
-						let balance = flt(row.balance_net_total_inr || amt - deliv_amt);
+						let balance = flt(row.balance_net_total_inr);
+						if (!row.hasOwnProperty("balance_net_total_inr")) {
+							balance = amt - deliv_amt - sc_amt;
+						}
 						lifecycle_buckets["Overdue"].data[m_key] =
 							(lifecycle_buckets["Overdue"].data[m_key] || 0) + balance;
 					}
@@ -873,11 +876,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let booked = lifecycle_buckets["Booked"].data[m.key] || 0;
 				let sc = lifecycle_buckets["Short Close"].data[m.key] || 0;
 				let ret = lifecycle_buckets["Returned"].data[m.key] || 0;
-				let actual = booked - sc - ret;
-				lifecycle_buckets["Actual"].data[m.key] = actual;
-
 				let deliv = lifecycle_buckets["Delivered"].data[m.key] || 0;
-				lifecycle_buckets["Pending"].data[m.key] = actual - deliv;
+
+				// Balance (Pending) = Booked - Short Close - Delivered
+				let pending = booked - sc - deliv;
+				// Actual = Booked - Returned - Balance
+				let actual = booked - ret - pending;
+
+				lifecycle_buckets["Actual"].data[m.key] = actual;
+				lifecycle_buckets["Pending"].data[m.key] = pending;
 			});
 
 			const display_categories = ["Booked", "Short Close", "Returned", "Actual", "Delivered", "Pending", "Overdue"];
