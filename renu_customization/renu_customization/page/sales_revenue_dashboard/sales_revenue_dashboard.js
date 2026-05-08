@@ -68,6 +68,13 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		},
 
 		{
+			fieldname: "customer_group",
+			label: __("Customer Group"),
+			fieldtype: "Link",
+			options: "Customer Group",
+			placeholder: __("Select Customer Group"),
+		},
+		{
 			label: __("Customer"),
 			placeholder: __("Select Customer"),
 			fieldname: "customer",

@@ -106,19 +106,6 @@ def get_dashboard_data(filters=None):
         sos = frappe.get_all("Sales Order", filters={"name": ("in", so_names)}, fields=so_fields, limit_page_length=None)
         so_info_map = {s.name: s for s in sos}
 
-    so_item_map = {}
-    if so_names:
-        so_items = frappe.get_all("Sales Order Item", 
-            filters={"parent": ("in", so_names)}, 
-            fields=["parent", "item_code", "returned_qty", "base_rate"],
-            limit_page_length=None
-        )
-        for item in so_items:
-            key = (item.parent, item.item_code)
-            if key not in so_item_map:
-                so_item_map[key] = []
-            so_item_map[key].append(item)
-
     # Fetch Pick List Item info for "Picked" metric
     pick_item_map = {}
     if so_names:
@@ -172,14 +159,10 @@ def get_dashboard_data(filters=None):
         row["si_net_total"] = si_net
         row["si_grand_total"] = si_grand
 
-        # Handle Returns
-        base_line_amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
-        returned_val = 0
-        if so_id and item_code and (so_id, item_code) in so_item_map:
-            matched_items = so_item_map[(so_id, item_code)]
-            if matched_items:
-                mi = matched_items.pop(0)
-                returned_val = flt(mi.get("returned_qty", 0)) * flt(mi.get("base_rate", 0))
+        # Handle Returns and Values from Report
+        base_line_amt = flt(row.get("booked_net_total") or row.get("total_net_amount_(inr)") or row.get("po_total"))
+        net_amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total")) # This is Net of Short Close
+        returned_val = flt(row.get("returned_net_total") or 0)
 
         # Booked amount should be the full order value to match target 375,461,138.54
         net_amt = base_line_amt
@@ -335,9 +318,13 @@ def get_dashboard_data(filters=None):
     for row in data:
 
         status = row.get("status")
+        # amt is Net of Short Close (from report SQL)
         amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or 0)
-        deliv_amt = flt(row.get("delivered_net_total") or row.get("delivered_net_total_inr") or (amt * (flt(row.get("per_billed", 0)) / 100.0)))
-        ret_amt = flt(row.get("returned_val") or 0)
+        # original_amt is the full order value (Booked)
+        original_amt = flt(row.get("booked_net_total") or amt)
+        # deliv_amt is Net Delivered (Delivered - Returned)
+        deliv_amt = flt(row.get("net_delivered_net_total") or row.get("delivered_net_total") or 0)
+        ret_amt = flt(row.get("returned_net_total") or 0)
         
         # Identification
         d_e = row.get("dom_exp")
@@ -353,10 +340,10 @@ def get_dashboard_data(filters=None):
         sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
         
         if status not in ("Cancelled", "Draft"):
-            booked_rev += amt
-            if d_e == "Domestic": dom_booked += amt
-            elif d_e == "Export": exp_booked += amt
-            if is_cp: cp_booked += amt
+            booked_rev += original_amt
+            if d_e == "Domestic": dom_booked += original_amt
+            elif d_e == "Export": exp_booked += original_amt
+            if is_cp: cp_booked += original_amt
             
         if status == "Cancelled":
             cancelled_rev += amt
@@ -410,7 +397,8 @@ def get_dashboard_data(filters=None):
         row["sc_value"] = sc_amt
         row["returned_val"] = ret_amt
         row["delivered_net_total_inr"] = deliv_amt
-        row["actual_value"] = (amt - sc_amt - ret_amt) if status != "Cancelled" else 0
+        # amt is already Net of Short Close. Actual value is Net of Short Close AND Returned.
+        row["actual_value"] = (amt - ret_amt) if status != "Cancelled" else 0
         
         # Pending & Overdue values per row
         pending = 0
@@ -770,6 +758,7 @@ def export_to_excel(filters=None, export_type="all"):
         lifecycle_summary_data = {
             "Total Order Value": {m: 0 for m in sorted_months},
             "Delivered": {m: 0 for m in sorted_months},
+            "Returned": {m: 0 for m in sorted_months},
             "Pending": {m: 0 for m in sorted_months},
             "Overdue": {m: 0 for m in sorted_months},
         }
@@ -798,12 +787,14 @@ def export_to_excel(filters=None, export_type="all"):
             if sc_amt > 0:
                 sc_raw[m_key] += sc_amt
 
+            # Use the calculated delivered amount from the main loop logic
             deliv_amt = flt(row.get("delivered_net_total_inr") or 0)
-            if not deliv_amt:
-                deliv_amt = amt * (flt(row.get("per_billed", 0)) / 100.0)
+            original_amt = flt(row.get("booked_net_total") or amt)
+            ret_amt = flt(row.get("returned_net_total") or 0)
 
             if status != "Cancelled":
                 lifecycle_summary_data["Delivered"][m_key] += deliv_amt
+                lifecycle_summary_data["Returned"][m_key] += ret_amt
 
             if status not in ("Cancelled", "Closed", "Completed"):
                 delivery_date = row.get("delivery_date")
@@ -816,7 +807,8 @@ def export_to_excel(filters=None, export_type="all"):
                         lifecycle_summary_data["Overdue"][m_key] += balance
 
         for m_key in sorted_months:
-            actual = booked_raw[m_key] - sc_raw[m_key] - flt(lifecycle_summary_data.get("Returned", {}).get(m_key, 0))
+            # Actual Booked = Original - Short Close - Returned
+            actual = booked_raw[m_key] - sc_raw[m_key] - lifecycle_summary_data["Returned"][m_key]
             delivered = lifecycle_summary_data["Delivered"][m_key]
             lifecycle_summary_data["Total Order Value"][m_key] = actual
             lifecycle_summary_data["Pending"][m_key] = actual - delivered
@@ -833,7 +825,7 @@ def export_to_excel(filters=None, export_type="all"):
             ws_lifecycle.column_dimensions[get_column_letter(idx)].width = 20
         row_idx_l += 1
 
-        categories = ["Total Order Value", "Delivered", "Pending", "Overdue"]
+        categories = ["Total Order Value", "Delivered", "Returned", "Pending", "Overdue"]
         for cat in categories:
             ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).border = table_border
             ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).font = Font(bold=True)
