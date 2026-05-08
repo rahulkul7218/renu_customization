@@ -290,6 +290,13 @@
  
 import frappe
 from frappe import _
+from frappe.utils import flt
+import json
+import base64
+from io import BytesIO
+import openpyxl
+from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
+from openpyxl.utils import get_column_letter
  
  
 def execute(filters=None):
@@ -339,8 +346,11 @@ def get_columns():
             "fieldtype": "Float",
             "disable_total": 1
         },
+        _("Booked Net Total") + ":Float:180",
         _("Total Net Amount (INR)") + ":Float:180",
+        _("Returned Net Total") + ":Float:180",
         _("Delivered Net Total") + ":Float:180",
+        _("Net Delivered Net Total") + ":Float:180",
         _("Balance Net Total") + ":Float:170",
         _("Delivery Date") + ":Date:120",
         _("Stock") + ":Float:150",
@@ -351,6 +361,8 @@ def get_columns():
  
  
 def get_conditions(filters):
+    if not filters:
+        filters = {}
     conditions = ""
  
     # -------- Status filter (multiple selection) --------
@@ -398,6 +410,8 @@ def get_conditions(filters):
  
  
 def get_data(filters):
+    if not filters:
+        filters = {}
     conditions = get_conditions(filters)
  
     sql = f"""
@@ -421,13 +435,16 @@ def get_data(filters):
             soi.qty AS order_quantity,
             soi.delivered_qty AS delivered_qty,
             soi.total_short_close_qty AS short_close_qty,
-            (soi.qty - soi.delivered_qty -soi.custom_picked_but_not_delivered - soi.total_short_close_qty) AS open_qty,
+            (soi.qty - soi.delivered_qty - IFNULL(soi.custom_picked_but_not_delivered, 0) - IFNULL(soi.total_short_close_qty, 0)) AS open_qty,
             soi.rate AS item_rate,
             soi.base_rate AS base_rate,
             so.currency AS currency,
             so.conversion_rate AS exchange_rate,
+            (soi.qty * soi.base_rate) AS booked_net_total,
             ((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) AS `total_net_amount_(inr)`,
+            (IFNULL(soi.returned_qty, 0) * soi.base_rate) AS returned_net_total,
             (soi.delivered_qty * soi.base_rate) AS delivered_net_total,
+            ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate) AS net_delivered_net_total,
             (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - (soi.delivered_qty * soi.base_rate)) AS balance_net_total,
             soi.delivery_date AS delivery_date,
  
@@ -482,14 +499,7 @@ def get_data(filters):
  
  
  
-import base64
-from io import BytesIO
-from frappe.utils import flt
-import frappe
-import json
-import openpyxl
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
+
  
 @frappe.whitelist()
 def download_xlsx(filters=None, include_filters=1):
