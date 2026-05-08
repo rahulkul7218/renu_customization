@@ -289,6 +289,7 @@ def get_dashboard_data(filters=None):
     delivered_rev = 0
     returned_rev = 0
     overdue_rev = 0
+    balance_rev = 0
     
     dom_booked = 0
     dom_cancelled = 0
@@ -397,8 +398,14 @@ def get_dashboard_data(filters=None):
         row["sc_value"] = sc_amt
         row["returned_val"] = ret_amt
         row["delivered_net_total_inr"] = deliv_amt
-        # amt is already Net of Short Close. Actual value is Net of Short Close AND Returned.
-        row["actual_value"] = (amt - ret_amt) if status != "Cancelled" else 0
+        # Pending calculation: Booked - Delivered - Short Close
+        pending = 0
+        if status not in ("Cancelled", "Draft"):
+            pending = amt - deliv_amt - sc_amt
+        
+        # User formula: Actual = Booked - Returned - Balance
+        row["actual_value"] = (amt - ret_amt - pending) if status != "Cancelled" else 0
+        row["pending_value"] = pending
         
         # Pending & Overdue values per row
         pending = 0
@@ -413,6 +420,9 @@ def get_dashboard_data(filters=None):
         row["pending_value"] = pending
         row["overdue_value"] = overdue
         row["balance_net_total_inr"] = pending # Compatibility
+
+        if status not in ("Cancelled", "Draft"):
+            balance_rev += pending
 
 
     # Tracking unique order IDs for counts
@@ -444,8 +454,8 @@ def get_dashboard_data(filters=None):
                 if d_date and frappe.utils.getdate(d_date) < today and balance > 1:
                     overdue_so_ids.add(so_id)
 
-    actual_book = booked_rev - short_close_rev - returned_rev
-    final_pending = actual_book - delivered_rev
+    actual_book = booked_rev - returned_rev - balance_rev
+    final_pending = balance_rev
 
     report_summary = [
         {"label": _("Total Booked Value"), "value": booked_rev, "count": len(booked_so_ids), "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
@@ -470,8 +480,8 @@ def get_dashboard_data(filters=None):
         sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
         ret_amt = flt(row.get("returned_val") or 0)
         
-        # We show "Actual" (Booked - Short Close - Returned) in charts for real-time accuracy
-        actual_val = amt - sc_amt - ret_amt
+        # We show "Actual" (Booked - Returned - Balance) in charts for real-time accuracy
+        actual_val = amt - ret_amt - flt(row.get("pending_value"))
         
         # Sales Person split
         sp_raw = str(row.get("sales_person") or "Unassigned")
@@ -807,11 +817,13 @@ def export_to_excel(filters=None, export_type="all"):
                         lifecycle_summary_data["Overdue"][m_key] += balance
 
         for m_key in sorted_months:
-            # Actual Booked = Original - Short Close - Returned
-            actual = booked_raw[m_key] - sc_raw[m_key] - lifecycle_summary_data["Returned"][m_key]
-            delivered = lifecycle_summary_data["Delivered"][m_key]
+            # Balance = Booked - Delivered - Short Close
+            balance = booked_raw[m_key] - lifecycle_summary_data["Delivered"][m_key] - sc_raw[m_key]
+            # Actual Booked = Booked - Returned - Balance
+            actual = booked_raw[m_key] - lifecycle_summary_data["Returned"][m_key] - balance
+            
             lifecycle_summary_data["Total Order Value"][m_key] = actual
-            lifecycle_summary_data["Pending"][m_key] = actual - delivered
+            lifecycle_summary_data["Pending"][m_key] = balance
 
         headers_l = ["Category"] + sorted_months + ["Total"]
         for idx, h in enumerate(headers_l, start=1):
