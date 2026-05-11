@@ -347,7 +347,8 @@ def get_columns():
             "disable_total": 1
         },
         _("Total Net Amount (INR)") + ":Float:180",
-        _("Delivered Net Total") + ":Float:180",
+        # _("Delivered Net Total") + ":Float:180",
+        _("Net Delivered Net Total") + ":Float:180",
         _("Balance Net Total") + ":Float:170",
         _("Delivery Date") + ":Date:120",
         _("Stock") + ":Float:150",
@@ -439,7 +440,8 @@ def get_data(filters):
             so.conversion_rate AS exchange_rate,
             ((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) AS `total_net_amount_(inr)`,
             (soi.delivered_qty * soi.base_rate) AS delivered_net_total,
-            (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - (soi.delivered_qty * soi.base_rate)) AS balance_net_total,
+            ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate) AS net_delivered_net_total,
+            (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate)) AS balance_net_total,
             soi.delivery_date AS delivery_date,
  
             (
@@ -464,6 +466,8 @@ def get_data(filters):
        
         WHERE 1 = 1
         AND so.docstatus = 1
+        AND IFNULL(i.custom_is_freight_item, 0) = 0
+        AND soi.item_name != 'Freight'
         # Included all items to match user's global booking total (375,461,138.54)
         # AND (so.amended_from IS NULL OR so.name = (
         #     SELECT MAX(name)

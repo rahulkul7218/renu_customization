@@ -215,6 +215,7 @@ frappe.dom.set_style(`
     [data-fieldname="exchange_rate"],
     [data-fieldname="total_net_amount_(inr)"],
     [data-fieldname="delivered_net_total"],
+    [data-fieldname="net_delivered_net_total"],
     [data-fieldname="balance_net_total"],
     [data-fieldname="stock"] {
         text-align: right !important;
