@@ -159,12 +159,17 @@ def get_dashboard_data(filters=None):
         row["si_net_total"] = si_net
         row["si_grand_total"] = si_grand
 
-        # Handle Values from Report - Don't overwrite the report's net fields!
-        # Use internal keys for dashboard-specific tracking
-        row["dashboard_booked_gross"] = flt(row.get("booked_net_total") or row.get("total_net_amount_(inr)") or row.get("po_total"))
-        row["dashboard_net_delivered"] = flt(row.get("net_delivered_net_total") or 0)
-        row["dashboard_returned"] = flt(row.get("returned_net_total") or 0)
+        # Handle Values from Report - Adapt to simplified report columns
+        # total_net_amount_(inr) is now the primary source for Net Booking (after Short Close)
+        amt_net = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or 0)
         row["dashboard_sc_value"] = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
+        
+        # Gross Booked = Net + Short Close
+        row["dashboard_booked_gross"] = flt(row.get("booked_net_total") or (amt_net + row["dashboard_sc_value"]))
+        
+        # Delivered: Use delivered_net_total if net_delivered_net_total is missing
+        row["dashboard_net_delivered"] = flt(row.get("net_delivered_net_total") or row.get("delivered_net_total") or 0)
+        row["dashboard_returned"] = flt(row.get("returned_net_total") or 0)
         
         row["gross_total"] = row["dashboard_booked_gross"] * (si_grand / si_net) if si_net else row["dashboard_booked_gross"]
         row["dom_exp"] = row.get("domestic/export") or row.get("domestic_export")
@@ -828,10 +833,15 @@ def export_to_excel(filters=None, export_type="all"):
             ws_lifecycle.column_dimensions[get_column_letter(idx)].width = 20
         row_idx_l += 1
 
-        categories = ["Booked", "Short Close", "Returned", "Total Booked Value", "Delivered", "Pending", "Overdue"]
+        categories = ["Total Booked Value", "Delivered", "Pending", "Overdue"]
         for cat in categories:
-            ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).border = table_border
-            ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).font = Font(bold=True)
+            display_name = cat
+            if cat == "Delivered": display_name = "Total Delivered"
+            if cat == "Pending": display_name = "Total Pending"
+            if cat == "Overdue": display_name = "Total Overdue"
+
+            ws_lifecycle.cell(row=row_idx_l, column=1, value=display_name).border = table_border
+            ws_lifecycle.cell(row=row_idx_l, column=1, value=display_name).font = Font(bold=True)
             col_idx = 2
             total_cat = 0
             for m_key in sorted_months:
