@@ -346,10 +346,8 @@ def get_columns():
             "fieldtype": "Float",
             "disable_total": 1
         },
-        _("Booked Net Total") + ":Float:180",
         _("Total Net Amount (INR)") + ":Float:180",
-        _("Returned Net Total") + ":Float:180",
-        _("Delivered Net Total") + ":Float:180",
+        # _("Delivered Net Total") + ":Float:180",
         _("Net Delivered Net Total") + ":Float:180",
         _("Balance Net Total") + ":Float:170",
         _("Delivery Date") + ":Date:120",
@@ -440,12 +438,9 @@ def get_data(filters):
             soi.base_rate AS base_rate,
             so.currency AS currency,
             so.conversion_rate AS exchange_rate,
-            (soi.qty * soi.base_rate) AS booked_net_total,
             ((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) AS `total_net_amount_(inr)`,
-            (IFNULL(soi.returned_qty, 0) * soi.base_rate) AS returned_net_total,
-            (soi.delivered_qty * soi.base_rate) AS delivered_net_total,
             ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate) AS net_delivered_net_total,
-            (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - (soi.delivered_qty * soi.base_rate)) AS balance_net_total,
+            (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate)) AS balance_net_total,
             soi.delivery_date AS delivery_date,
  
             (
@@ -470,6 +465,8 @@ def get_data(filters):
        
         WHERE 1 = 1
         AND so.docstatus = 1
+        AND IFNULL(i.custom_is_freight_item, 0) = 0
+        AND soi.item_name != 'Freight'
         # Included all items to match user's global booking total (375,461,138.54)
         # AND (so.amended_from IS NULL OR so.name = (
         #     SELECT MAX(name)
@@ -530,7 +527,6 @@ def download_xlsx(filters=None, include_filters=1):
     else:
     # Fetch all data (no filters)
         columns, data = execute({})
- 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Sales Order Report"
@@ -551,42 +547,67 @@ def download_xlsx(filters=None, include_filters=1):
     full_name = frappe.db.get_value("User", frappe.session.user, "full_name")
     ws["B3"].value = full_name or frappe.session.user
  
-    ws.append([])
+    # -----------------------------
+    #   FILTERS SECTION
+    # -----------------------------
+    row_idx = 4
+    if filters:
+        for key, val in filters.items():
+            if not val or key in ["include_filters", "report_name", "current_datetime"]:
+                continue
+            
+            label = frappe.unscrub(key)
+            if isinstance(val, (list, tuple)):
+                val = ", ".join([str(v) for v in val])
+            
+            ws.cell(row=row_idx, column=1, value=label).font = Font(bold=True)
+            ws.cell(row=row_idx, column=2, value=str(val))
+            row_idx += 1
+    
+    row_idx += 1 # Space before table
  
-    row_idx = 5
- 
-   
+    # -----------------------------
+    #   FILTER OUT HIDDEN COLUMNS
+    # -----------------------------
+    keep_indices = []
+    filtered_columns = []
+    for i, col in enumerate(columns):
+        if isinstance(col, dict) and col.get("hidden"):
+            continue
+        keep_indices.append(i)
+        filtered_columns.append(col)
+    
+    columns = filtered_columns
+    data = [[row[i] for i in keep_indices] for row in data]
  
     # -----------------------------
     #   COLUMN HEADERS
     # -----------------------------
+    header_row = row_idx
     for idx, col in enumerate(columns, start=1):
-        # label = col.split(":")[0]
         label = col["label"] if isinstance(col, dict) else col.split(":")[0]
-        c = ws.cell(row=row_idx, column=idx, value=label)
+        c = ws.cell(row=header_row, column=idx, value=label)
         c.font = Font(bold=True)
         c.alignment = Alignment(horizontal="center")
  
     row_idx += 1
  
     # -----------------------------
-    #   NUMERIC COLUMNS MAP
+    #   NUMERIC COLUMNS MAP (DYNAMIC)
     # -----------------------------
-    numeric_index_map = {
-        13: True, # Order Quantity
-        14: True, # Delivered Qty
-        15: True, # Short Close Qty
-        16: True, # Open Qty
-        17: True, # Item Rate
-        18: True, # Base Rate (New)
-        20: True, # Exchange Rate (Was 19)
-        21: True, # Total Net Amount (Was 20)
-        22: True, # Delivered Net Total (Was 21)
-        23: True, # Balance Net Total (Was 22)
-        25: True  # Stock (Was 24?)
-    }
- 
-    no_total_index_set = {2, 17, 18, 19, 20} # Date, Rates, Currency
+    numeric_index_map = {}
+    no_total_index_set = set()
+    
+    for i, col in enumerate(columns):
+        label = col["label"] if isinstance(col, dict) else col.split(":")[0]
+        f_type = col.get("fieldtype") if isinstance(col, dict) else (col.split(":")[1] if ":" in col else "")
+        
+        if f_type in ["Float", "Int", "Currency", "Percent"]:
+            numeric_index_map[i] = True
+            
+        # Skip totals for rates, dates, etc.
+        if label in ["SO Date", "Item Rate", "Base Rate", "Currency", "Exchange Rate", "Supplier PO Date", "Customer PO Date", "Delivery Date"]:
+            no_total_index_set.add(i)
  
     # -----------------------------
     #   DATA ROWS
@@ -594,12 +615,10 @@ def download_xlsx(filters=None, include_filters=1):
     for row in data:
         for col_idx, value in enumerate(row, start=1):
             cell = ws.cell(row=row_idx, column=col_idx)
- 
-            # field_label = columns[col_idx - 1].split(":")[0]  # Detect SR.NO
+            
             col_def = columns[col_idx - 1]
-            field_label = col_def["label"] if isinstance(col_def, dict) else col_def.split(":")[0]
- 
-            fieldname = field_label.lower().replace(" ", "_")
+            label = col_def["label"] if isinstance(col_def, dict) else col_def.split(":")[0]
+            fieldname = label.lower().replace(" ", "_")
  
             # ---- SR.NO FIX ----
             if fieldname in ("sr.no.", "sr_no", "sr_no.", "sr.no"):
@@ -626,10 +645,8 @@ def download_xlsx(filters=None, include_filters=1):
     #   TOTAL ROW
     # -----------------------------
     total_row = row_idx
- 
     for col_idx in range(1, len(columns) + 1):
         cell = ws.cell(row=total_row, column=col_idx)
- 
         cell.fill = PatternFill(start_color="D3D3D3", fill_type="solid")
         cell.font = Font(bold=True)
  
@@ -639,14 +656,11 @@ def download_xlsx(filters=None, include_filters=1):
             continue
  
         field_idx = col_idx - 1
- 
-        # Only calculate total where allowed
         if field_idx in numeric_index_map and field_idx not in no_total_index_set:
             try:
                 total_val = sum(flt(r[field_idx]) for r in data)
             except:
                 total_val = 0
- 
             cell.value = total_val
             cell.number_format = "#,##0.00"
             cell.alignment = Alignment(horizontal="right")
@@ -667,5 +681,6 @@ def download_xlsx(filters=None, include_filters=1):
     out.seek(0)
  
     return base64.b64encode(out.read()).decode()
+
  
  

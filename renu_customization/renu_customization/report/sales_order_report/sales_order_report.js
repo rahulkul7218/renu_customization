@@ -206,15 +206,17 @@ frappe.query_reports["Sales Order Report"] = {
 // ---------------------------------------------------------
 
 frappe.dom.set_style(`
-    [data-fieldname="po_qty"],
+    [data-fieldname="order_quantity"],
     [data-fieldname="delivered_qty"],
     [data-fieldname="short_close_qty"],
     [data-fieldname="open_qty"],
     [data-fieldname="item_rate"],
+    [data-fieldname="base_rate"],
     [data-fieldname="exchange_rate"],
-    [data-fieldname="po_total"],
-    [data-fieldname="delivered_net_total_inr"],
-    [data-fieldname="balance_net_total_inr"],
+    [data-fieldname="total_net_amount_(inr)"],
+    [data-fieldname="delivered_net_total"],
+    [data-fieldname="net_delivered_net_total"],
+    [data-fieldname="balance_net_total"],
     [data-fieldname="stock"] {
         text-align: right !important;
     }
