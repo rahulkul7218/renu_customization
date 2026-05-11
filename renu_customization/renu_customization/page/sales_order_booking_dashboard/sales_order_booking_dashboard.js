@@ -484,6 +484,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             border-bottom: 1px solid #e2e8f0;
             text-transform: uppercase;
             letter-spacing: 0.05em;
+            white-space: nowrap !important;
         }
         
         .dashboard-table td { 
@@ -492,17 +493,17 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
 
         /* Column Widths & Alignment */
-        .col-sno { width: 40px !important; min-width: 40px !important; text-align: center !important; }
-        .col-customer { width: 220px !important; min-width: 220px !important; }
-        .col-sp { width: 150px !important; min-width: 150px !important; }
-        .col-prod { width: 320px !important; min-width: 320px !important; }
+        .col-sno { width: 60px !important; min-width: 60px !important; text-align: center !important; }
+        .col-customer { width: 280px !important; min-width: 280px !important; }
+        .col-sp { width: 180px !important; min-width: 180px !important; }
+        .col-prod { width: 350px !important; min-width: 350px !important; }
         .col-amt { 
-            width: 130px !important; min-width: 130px !important; 
+            width: 110px !important; min-width: 110px !important; 
             text-align: right !important; 
             white-space: nowrap !important;
         }
         .col-qty { width: 80px !important; min-width: 80px !important; text-align: right !important; }
-        .col-date { width: 120px !important; min-width: 120px !important; }
+        .col-date { width: 110px !important; min-width: 110px !important; }
         .col-id { width: 140px !important; min-width: 140px !important; }
         .col-status { width: 120px !important; min-width: 120px !important; }
         
@@ -765,9 +766,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th class="col-date" style="white-space: nowrap;">Date</th>
                                 <th class="col-status">Status</th>
                                 <th class="col-customer">Customer</th>
-                                <th style="width: 140px; white-space: nowrap;">Cust. PO No.</th>
+                                <th class="col-po" style="width: 140px; white-space: nowrap;">Cust. PO No.</th>
                                 <th class="col-prod">Item</th>
-                                <th style="width: 110px; white-space: nowrap;">Deliv. Date</th>
+                                <th class="col-deliv-date" style="width: 110px; white-space: nowrap;">Deliv. Date</th>
                                 <th class="col-sp">Sales Person</th>
                                 <th class="col-amt">Booked (M)</th>
                                 <th class="col-amt">Total Booked (M)</th>
@@ -886,9 +887,16 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				lifecycle_buckets["Pending"].data[m.key] = pending;
 			});
 
-			const display_categories = ["Booked", "Short Close", "Returned", "Total Booked Value", "Delivered", "Pending", "Overdue"];
+			const display_categories = ["Total Booked Value", "Delivered", "Pending", "Overdue"];
 			display_categories.forEach((cat) => {
 				let row_data = lifecycle_buckets[cat];
+				if (!row_data) return;
+
+				let display_name = cat;
+				if (cat === "Delivered") display_name = "Total Delivered";
+				if (cat === "Pending") display_name = "Total Pending";
+				if (cat === "Overdue") display_name = "Total Overdue";
+
 				let cells = months
 					.map(
 						(m) =>
@@ -901,7 +909,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					<tr>
 						<td class="col-category" style="font-weight: 700; color: #475569;">
                             <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: ${row_data.color}; margin-right: 8px; vertical-align: middle;"></span>
-                             ${cat}
+                             ${display_name}
                         </td>
 						${cells}
 						<td class="lifecycle-total-col">${format_currency_short(total)}</td>
@@ -1225,9 +1233,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: fixed; page-break-inside: auto; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 7px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto; }
                         tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-                        td, th { page-break-inside: avoid !important; border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; position: static !important; }
+                        td, th { page-break-inside: avoid !important; border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; vertical-align: top; word-wrap: break-word; position: static !important; }
                         thead { display: table-header-group; }
                         tfoot { display: table-footer-group; }
                         thead th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; position: static !important; }
@@ -1238,19 +1246,19 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         .font-weight-bold { font-weight: 700; }
                         .page-break { page-break-after: always; }
 
-                        /* Column Widths */
-                        .col-sno { width: 35px; text-align: center; }
-                        .col-id { width: 100px; }
-                        .col-date { width: 80px; }
-                        .col-status { width: 90px; text-align: center; }
-                        .col-customer, .col-supplier { width: 160px; }
-                        .col-sp { width: 110px; }
-                        .col-prod { width: 180px; }
-                        .col-amt { width: 85px; text-align: right; }
-                        .col-po { width: 110px; }
-                        .col-deliv-date { width: 85px; }
-                        .col-category { width: 140px; font-weight: 700; background: #f8fafc !important; }
-                        .total-net-col, .grand-total-col, .lifecycle-total-col { width: 100px; text-align: right; font-weight: 700; }
+                        /* Column Widths (Reduced for PDF to fit landscape) */
+                        .col-sno { width: 25px; text-align: center; }
+                        .col-id { width: 70px; }
+                        .col-date { width: 60px; }
+                        .col-status { width: 70px; text-align: center; }
+                        .col-customer, .col-supplier { width: 120px; }
+                        .col-sp { width: 90px; }
+                        .col-prod { width: 130px; }
+                        .col-amt { width: 55px; text-align: right; }
+                        .col-po { width: 80px; }
+                        .col-deliv-date { width: 65px; }
+                        .col-category { width: 110px; font-weight: 700; background: #f8fafc !important; }
+                        .total-net-col, .grand-total-col, .lifecycle-total-col { width: 70px; text-align: right; font-weight: 700; }
 
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
                         .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }

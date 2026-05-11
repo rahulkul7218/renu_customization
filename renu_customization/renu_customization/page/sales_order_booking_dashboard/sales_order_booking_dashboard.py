@@ -1,7 +1,6 @@
 import frappe
 from frappe import _
 from frappe.utils import flt, getdate
-from renu_customization.renu_customization.report.sales_order_report.sales_order_report import execute
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -61,196 +60,146 @@ def prepare_filters(filters):
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
     
-    # Fiscal year handled in prepare_filters
-
-    # Use the sales_order_report execute function
-    base_filters = frappe._dict({
-        "from_date": filters.from_date,
-        "to_date": filters.to_date,
-        "company": filters.company
-    })
+    # Base SQL conditions
+    conditions = "WHERE so.docstatus = 1"
     
-    report_result = execute(base_filters)
-    columns = report_result[0]
-    raw_data = report_result[1]
+    # Build dynamic filters for SQL performance
+    if filters.get("from_date"):
+        conditions += " AND so.transaction_date >= %(from_date)s"
+    if filters.get("to_date"):
+        conditions += " AND so.transaction_date <= %(to_date)s"
+    if filters.get("company"):
+        conditions += " AND so.company = %(company)s"
+    if filters.get("customer"):
+        conditions += " AND so.customer = %(customer)s"
+    if filters.get("customer_group"):
+        conditions += " AND c.customer_group = %(customer_group)s"
+    if filters.get("item_group"):
+        conditions += " AND i.item_group = %(item_group)s"
+    if filters.get("item_code"):
+        conditions += " AND soi.item_code = %(item_code)s"
+    if filters.get("sales_person"):
+        conditions += " AND EXISTS (SELECT 1 FROM `tabSales Team` WHERE parent = so.name AND sales_person = %(sales_person)s)"
+    if filters.get("business_region_name"):
+        conditions += " AND c.business_region_name = %(business_region_name)s"
+    if filters.get("dom_exp"):
+        if filters.dom_exp == "Domestic":
+            conditions += " AND IFNULL(a.country, '') = 'India'"
+        elif filters.dom_exp == "Export":
+            conditions += " AND IFNULL(a.country, '') != 'India'"
     
-    if not raw_data:
-        return {
-            "summary": [], "charts": {}, "results": [], "columns": columns
-        }
+    has_inv_type = frappe.get_meta("Sales Order").has_field("invoice_type")
+    if has_inv_type and filters.get("invoice_type"):
+        conditions += " AND so.invoice_type = %(invoice_type)s"
 
-    data = []
-    # Map raw list to dict using columns fieldnames
-    col_fieldnames = []
-    for col in columns:
-        if isinstance(col, dict):
-            col_fieldnames.append(col.get("fieldname"))
+    # Status filter (multi-select)
+    if filters.get("status"):
+        if isinstance(filters.status, str):
+            status_list = [s.strip() for s in filters.status.split(",") if s.strip()]
         else:
-            col_fieldnames.append(col.split(":")[0].lower().replace(" ", "_").replace(".", ""))
+            status_list = filters.status
+        if status_list:
+            filters["status_list"] = tuple(status_list)
+            conditions += " AND so.status IN %(status_list)s"
 
-    processed_raw_data = []
-    for row in raw_data:
-        row_dict = {}
-        for i, val in enumerate(row):
-            if i < len(col_fieldnames):
-                row_dict[col_fieldnames[i]] = val
-        processed_raw_data.append(row_dict)
+    # The Core Query - optimized for transaction data
+    sql = f"""
+        SELECT
+            soi.name AS name,
+            so.name AS so_no,
+            so.transaction_date AS so_date,
+            soi.idx AS sr_no,
+            so.po_no AS customer_po_no,
+            so.po_date AS customer_po_date,
+            so.status AS status,
+            so.customer AS customer,
+            so.customer_name AS customer_name,
+            soi.item_code AS item_code,
+            soi.item_name AS item_name,
+            REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
+            soi.qty AS order_quantity,
+            soi.delivered_qty AS delivered_qty,
+            soi.total_short_close_qty AS short_close_qty,
+            soi.rate AS item_rate,
+            soi.base_rate AS base_rate,
+            so.currency AS currency,
+            so.conversion_rate AS exchange_rate,
+            so.base_net_total AS si_net_total,
+            so.base_grand_total AS si_grand_total,
+            so.per_billed AS per_billed,
+            soi.delivery_date AS delivery_date,
+            
+            -- Picked Qty from Pick List
+            (SELECT IFNULL(SUM(pli.picked_qty), 0) 
+             FROM `tabPick List Item` pli 
+             WHERE pli.sales_order_item = soi.name AND pli.docstatus = 1) AS picked_qty_val,
+            
+            -- Calculated values to match report logic
+            ((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) AS `total_net_amount_(inr)`,
+            ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate) AS net_delivered_net_total,
+            (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate)) AS balance_net_total,
+            
+            -- Enrichment fields
+            c.customer_group,
+            c.business_region_name,
+            i.item_group,
+            CASE WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic' ELSE 'Export' END AS `dom_exp`,
+            (SELECT GROUP_CONCAT(DISTINCT sales_person SEPARATOR ', ') FROM `tabSales Team` WHERE parent = so.name) AS sales_person
+            {", so.invoice_type" if has_inv_type else ""}
 
-    # Pre-fetch status, customer, and per_billed info
-    so_names = list(set([d.get("so_no") for d in processed_raw_data if d.get("so_no")]))
-    so_info_map = {}
-    if so_names:
-        so_fields = ["name", "status", "customer", "per_billed", "base_net_total", "base_grand_total"]
-        if frappe.get_meta("Sales Order").has_field("invoice_type"):
-            so_fields.append("invoice_type")
-        sos = frappe.get_all("Sales Order", filters={"name": ("in", so_names)}, fields=so_fields, limit_page_length=None)
-        so_info_map = {s.name: s for s in sos}
+        FROM `tabSales Order` so
+        INNER JOIN `tabSales Order Item` soi ON soi.parent = so.name
+        LEFT JOIN `tabCustomer` c ON so.customer = c.name
+        LEFT JOIN `tabItem` i ON i.name = soi.item_code
+        LEFT JOIN `tabAddress` a ON a.name = so.customer_address
+        {conditions}
+        AND IFNULL(i.custom_is_freight_item, 0) = 0
+        AND soi.item_name != 'Freight'
+        ORDER BY so.transaction_date ASC, so.name ASC, soi.idx ASC
+    """
+    
+    data = frappe.db.sql(sql, filters, as_dict=1)
+    
+    if not data:
+        return { "summary": [], "charts": {}, "results": [], "columns": [] }
 
-    # Fetch Pick List Item info for "Picked" metric
-    pick_item_map = {}
-    if so_names:
-        pick_items = frappe.db.sql("""
-            SELECT sales_order_item, SUM(picked_qty) as picked_qty
-            FROM `tabPick List Item`
-            WHERE sales_order IN %(so_names)s
-            AND docstatus = 1
-            GROUP BY sales_order_item
-        """, {"so_names": so_names}, as_dict=1)
-        pick_item_map = {d.sales_order_item: flt(d.picked_qty) for d in pick_items}
+    # Define columns for compatibility (formerly from report)
+    columns = [
+        {"label": "name", "fieldname": "name", "fieldtype": "Data", "hidden": 1},
+        {"label": "SO No", "fieldname": "so_no", "fieldtype": "Link", "options": "Sales Order", "width": 150},
+        {"label": "SO Date", "fieldname": "so_date", "fieldtype": "Date", "width": 120},
+        {"label": "Sr.No.", "fieldname": "sr_no", "fieldtype": "Int", "width": 70},
+        {"label": "Customer PO No.", "fieldname": "customer_po_no", "fieldtype": "Data", "width": 170},
+        {"label": "Customer PO Date", "fieldname": "customer_po_date", "fieldtype": "Date", "width": 170},
+        {"label": "Customer Name", "fieldname": "customer_name", "fieldtype": "Data", "width": 180},
+        {"label": "Item Code", "fieldname": "item_code", "fieldtype": "Link", "options": "Item", "width": 120},
+        {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 180},
+        {"label": "Order Quantity", "fieldname": "order_quantity", "fieldtype": "Float", "width": 130},
+        {"label": "Delivered Qty", "fieldname": "delivered_qty", "fieldtype": "Float", "width": 120},
+        {"label": "Total Net Amount (INR)", "fieldname": "total_net_amount_(inr)", "fieldtype": "Float", "width": 180},
+        {"label": "Net Delivered Net Total", "fieldname": "net_delivered_net_total", "fieldtype": "Float", "width": 180},
+        {"label": "Balance Net Total", "fieldname": "balance_net_total", "fieldtype": "Float", "width": 170},
+        {"label": "Delivery Date", "fieldname": "delivery_date", "fieldtype": "Date", "width": 120},
+        {"label": "Sales Person", "fieldname": "sales_person", "fieldtype": "Data", "width": 150},
+        {"label": "Domestic/Export", "fieldname": "dom_exp", "fieldtype": "Data", "width": 150},
+    ]
 
-    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory", "business_region_name"], limit_page_length=None)
-    customer_map = {c.name: c for c in cust_list}
-
-    item_codes = list(set([d.get("item_code") for d in processed_raw_data if d.get("item_code")]))
-    item_group_map = {}
-    if item_codes:
-        items = frappe.get_all("Item", filters={"name": ("in", item_codes)}, fields=["name", "item_group"], limit_page_length=None)
-        item_group_map = {i.name: i.item_group for i in items}
-
-    # Group and collapse duplicates from report (e.g. due to Sales Team joins)
-    unique_data_map = {}
-    for row in processed_raw_data:
-        so_id = row.get("so_no")
-        # Use a combination of keys to uniquely identify a Sales Order Item line
-        sr_no = row.get("sr_no") or row.get("idx") or ""
-        item_code = row.get("item_code") or ""
-        qty = flt(row.get("order_quantity") or row.get("po_qty"))
+    # Post-processing (Formatting for Dashboard logic)
+    for row in data:
+        row["dashboard_sc_value"] = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate", 0))
+        row["dashboard_booked_gross"] = flt(row.get("total_net_amount_(inr)", 0)) + row["dashboard_sc_value"]
+        row["dashboard_net_delivered"] = flt(row.get("net_delivered_net_total", 0))
+        row["dashboard_returned"] = flt(row.get("returned_qty", 0)) * flt(row.get("base_rate", 0))
         
-        # Unique key for the item line
-        item_key = (so_id, str(sr_no), item_code, qty)
-        
-        if item_key in unique_data_map:
-            existing = unique_data_map[item_key]
-            # If we see the same item again, it's likely a duplicate row for a different Sales Person
-            new_sp = str(row.get("sales_person") or "").strip()
-            if new_sp and new_sp not in str(existing.get("sales_person") or ""):
-                existing["sales_person"] = (str(existing.get("sales_person") or "") + ", " + new_sp).strip(", ")
-            continue
-
-        # Enrichment logic (only run once per unique item)
-        s_info = so_info_map.get(so_id, {})
-        row["status"] = s_info.get("status")
-        row["customer"] = s_info.get("customer")
-        row["per_billed"] = s_info.get("per_billed", 0)
-        row["invoice_type"] = row.get("invoice_type") or s_info.get("invoice_type")
-        
-        si_net = flt(s_info.get("base_net_total") or 1)
-        si_grand = flt(s_info.get("base_grand_total") or si_net)
-        row["si_net_total"] = si_net
-        row["si_grand_total"] = si_grand
-
-        # Handle Values from Report - Don't overwrite the report's net fields!
-        # Use internal keys for dashboard-specific tracking
-        row["dashboard_booked_gross"] = flt(row.get("booked_net_total") or row.get("total_net_amount_(inr)") or row.get("po_total"))
-        row["dashboard_net_delivered"] = flt(row.get("net_delivered_net_total") or 0)
-        row["dashboard_returned"] = flt(row.get("returned_net_total") or 0)
-        row["dashboard_sc_value"] = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
-        
+        si_net = flt(row.get("si_net_total") or 1)
+        si_grand = flt(row.get("si_grand_total") or si_net)
         row["gross_total"] = row["dashboard_booked_gross"] * (si_grand / si_net) if si_net else row["dashboard_booked_gross"]
-        row["dom_exp"] = row.get("domestic/export") or row.get("domestic_export")
         
-        # Picked and Delivered Metrics
-        soi_name = row.get("name") # This assumes the report returns the soi name
-        row["picked_qty_val"] = pick_item_map.get(soi_name, 0)
-        row["picked_net_total_inr"] = flt(row["picked_qty_val"]) * flt(row.get("base_rate", 0))
-        # Note: dashboard_returned is tracked but not subtracted from the "Booked" KPI
+        row["picked_net_total_inr"] = flt(row.get("picked_qty_val", 0)) * flt(row.get("base_rate", 0))
         row["returned_val"] = row["dashboard_returned"]
-        row["cancelled_val"] = row["dashboard_booked_gross"] if row.get("status") == "Cancelled" else 0
         row["sc_value"] = row["dashboard_sc_value"]
+        row["cancelled_val"] = row["dashboard_booked_gross"] if row.get("status") == "Cancelled" else 0
 
-        # Filtering logic
-        keep = True
-        
-        # Status Filter
-        stat_filter = filters.get("status")
-        if stat_filter:
-            if isinstance(stat_filter, str):
-                stat_filter = [s.strip() for s in stat_filter.split(",")]
-            if row.get("status") not in stat_filter:
-                keep = False
-
-        # Sales Person Filter
-        sp_filter = filters.get("sales_person")
-        if keep and sp_filter:
-            row_sp = str(row.get("sales_person") or "").strip().lower()
-            if str(sp_filter).strip().lower() not in row_sp:
-                keep = False
-            
-        # Customer Filter
-        cust_filter = filters.get("customer") or filters.get("customer_name")
-        if keep and cust_filter:
-            f_cust = str(cust_filter).strip().lower()
-            row_cust_id = str(row.get("customer") or row.get("customer_code") or "").strip().lower()
-            row_cust_name = str(row.get("customer_name") or "").strip().lower()
-            if f_cust != row_cust_id and f_cust != row_cust_name and f_cust not in row_cust_name:
-                keep = False
-            
-        # Product Filter
-        prod_filter = filters.get("item") or filters.get("item_code") or filters.get("product")
-        if keep and prod_filter:
-            f_prod = str(prod_filter).strip().lower()
-            row_prod_code = str(row.get("item_code") or "").strip().lower()
-            row_prod_name = str(row.get("item_name") or "").strip().lower()
-            if f_prod != row_prod_code and f_prod != row_prod_name and f_prod not in row_prod_name:
-                keep = False
-
-        # Item Group Filter
-        ig_filter = filters.get("item_group")
-        if keep and ig_filter:
-            row_item_group = item_group_map.get(row.get("item_code"))
-            if str(row_item_group) != str(ig_filter):
-                keep = False
-
-        # Customer Group Filter
-        cg_filter = filters.get("customer_group")
-        if keep and cg_filter:
-            cust_info = customer_map.get(row.get("customer"))
-            if not cust_info or str(cust_info.customer_group) != str(cg_filter):
-                keep = False
-
-        # Business Region Name Filter
-        brn_filter = filters.get("business_region_name")
-        if keep and brn_filter:
-            cust_info = customer_map.get(row.get("customer"))
-            if not cust_info or str(cust_info.business_region_name) != str(brn_filter):
-                keep = False
-
-        # Type Filter
-        dom_exp_f = filters.get("dom_exp")
-        if keep and dom_exp_f:
-            if str(dom_exp_f) != str(row.get("dom_exp")):
-                keep = False
-                
-        # Invoice Type Filter
-        inv_type_f = filters.get("invoice_type")
-        if keep and inv_type_f:
-            if str(inv_type_f) != str(row.get("invoice_type")):
-                keep = False
-
-        if keep:
-            unique_data_map[item_key] = row
-
-    data = list(unique_data_map.values())
 
 
     if not data:
@@ -262,66 +211,25 @@ def get_dashboard_data(filters=None):
     short_close_rev = 0
     delivered_rev = 0
     
-    # Lifecycle Metrics: Domestic
-    dom_booked = 0
-    dom_cancelled = 0
-    dom_short_close = 0
-    dom_delivered = 0
-    
-    # Lifecycle Metrics: Export
-    exp_booked = 0
-    exp_cancelled = 0
-    exp_short_close = 0
-    exp_delivered = 0
-    
-    # Lifecycle Metrics: Channel Partner
-    cp_booked = 0
-    cp_cancelled = 0
-    cp_short_close = 0
-    cp_delivered = 0
+    # Lifecycle Metrics: Regional & CP
+    dom_booked = dom_cancelled = dom_short_close = dom_delivered = 0
+    exp_booked = exp_cancelled = exp_short_close = exp_delivered = 0
+    cp_booked = cp_cancelled = cp_short_close = cp_delivered = 0
     
     # Chart-related totals
-    total_rev = 0
-    total_gross = 0
-    cp_active_rev = 0
-    picked_rev = 0
-    delivered_rev = 0
-    returned_rev = 0
-    overdue_rev = 0
-    balance_rev = 0
+    total_rev = total_gross = cp_active_rev = picked_rev = returned_rev = overdue_rev = balance_rev = 0
+    dom_picked = dom_returned = dom_overdue = 0
+    exp_picked = exp_returned = exp_overdue = 0
+    cp_picked = cp_returned = cp_overdue = 0
     
-    dom_booked = 0
-    dom_cancelled = 0
-    dom_short_close = 0
-    dom_picked = 0
-    dom_delivered = 0
-    dom_returned = 0
-    dom_overdue = 0
-    
-    exp_booked = 0
-    exp_cancelled = 0
-    exp_short_close = 0
-    exp_picked = 0
-    exp_delivered = 0
-    exp_returned = 0
-    exp_overdue = 0
-    
-    cp_booked = 0
-    cp_cancelled = 0
-    cp_short_close = 0
-    cp_picked = 0
-    cp_delivered = 0
-    cp_returned = 0
-    cp_overdue = 0
     today = frappe.utils.getdate()
     
     for row in data:
-
         status = row.get("status")
         # original_amt is the full order value (Gross Booked)
         original_amt = row.get("dashboard_booked_gross", 0)
         # amt is Net of Short Close (from report SQL total_net_amount_(inr))
-        amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or original_amt)
+        amt = flt(row.get("total_net_amount_(inr)") or original_amt)
         # deliv_amt is Net Delivered (Delivered - Returned)
         deliv_amt = row.get("dashboard_net_delivered", 0)
         ret_amt = row.get("dashboard_returned", 0)
@@ -329,12 +237,9 @@ def get_dashboard_data(filters=None):
         # Identification
         d_e = row.get("dom_exp")
         is_cp = False
-        cust_id = row.get("customer")
-        cust_info = customer_map.get(cust_id)
-        if cust_info and cust_info.customer_group:
-            cg = (cust_info.customer_group or "").lower()
-            if any(x in cg for x in ["system integrator", "distributor", "distributer"]):
-                is_cp = True
+        cg = (row.get("customer_group") or "").lower()
+        if any(x in cg for x in ["system integrator", "distributor", "distributer"]):
+            is_cp = True
 
         # Global Metrics
         sc_amt = row.get("sc_value", 0)
@@ -383,9 +288,7 @@ def get_dashboard_data(filters=None):
                 cp_active_rev += amt
 
         # Pending calculation: Match report's balance_net_total
-        # Report Balance = (Booked - SC) - Delivered_Gross
-        # Our pending should match this exactly.
-        pending = flt(row.get("balance_net_total") or row.get("balance_net_total_inr"))
+        pending = flt(row.get("balance_net_total") or 0)
         
         # Overdue Calculation
         overdue = 0
@@ -399,18 +302,18 @@ def get_dashboard_data(filters=None):
                     elif d_e == "Export": exp_overdue += overdue
                     if is_cp: cp_overdue += overdue
 
-        # User formula: Total Booked Value = Booked - Short Close
-        # This matches the report's "Total Net Amount (INR)"
+        # Summary values
         row["total_booked_value"] = amt if status != "Cancelled" else 0
         row["pending_value"] = pending
         row["overdue_value"] = overdue
         row["sc_value"] = sc_amt
         row["returned_val"] = ret_amt
         row["delivered_net_total_inr"] = deliv_amt
-        row["balance_net_total_inr"] = pending # Compatibility
+        row["balance_net_total_inr"] = pending
 
         if status not in ("Cancelled", "Draft"):
             balance_rev += pending
+
 
 
     # Tracking unique order IDs for counts
@@ -422,24 +325,21 @@ def get_dashboard_data(filters=None):
     for row in data:
         status = row.get("status")
         so_id = row.get("so_no")
-        amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or 0)
-        deliv_amt = flt(row.get("delivered_net_total") or row.get("delivered_net_total_inr") or (amt * (flt(row.get("per_billed", 0)) / 100.0)))
         
         if status not in ("Cancelled", "Draft") and so_id:
             booked_so_ids.add(so_id)
             
             # Pending check
-            sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
-            balance = amt - deliv_amt - sc_amt
+            balance = row.get("pending_value", 0)
             if balance > 1: # Greater than 1 INR to avoid rounding noise
                 pending_so_ids.add(so_id)
             
+            deliv_amt = row.get("delivered_net_total_inr", 0)
             if deliv_amt > 1:
                 delivered_so_ids.add(so_id)
 
             if status not in ("Closed", "Completed"):
-                d_date = row.get("delivery_date")
-                if d_date and frappe.utils.getdate(d_date) < today and balance > 1:
+                if row.get("overdue_value", 0) > 1:
                     overdue_so_ids.add(so_id)
 
     actual_book = booked_rev - returned_rev - balance_rev
@@ -828,10 +728,15 @@ def export_to_excel(filters=None, export_type="all"):
             ws_lifecycle.column_dimensions[get_column_letter(idx)].width = 20
         row_idx_l += 1
 
-        categories = ["Booked", "Short Close", "Returned", "Total Booked Value", "Delivered", "Pending", "Overdue"]
+        categories = ["Total Booked Value", "Delivered", "Pending", "Overdue"]
         for cat in categories:
-            ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).border = table_border
-            ws_lifecycle.cell(row=row_idx_l, column=1, value=cat).font = Font(bold=True)
+            display_name = cat
+            if cat == "Delivered": display_name = "Total Delivered"
+            if cat == "Pending": display_name = "Total Pending"
+            if cat == "Overdue": display_name = "Total Overdue"
+
+            ws_lifecycle.cell(row=row_idx_l, column=1, value=display_name).border = table_border
+            ws_lifecycle.cell(row=row_idx_l, column=1, value=display_name).font = Font(bold=True)
             col_idx = 2
             total_cat = 0
             for m_key in sorted_months:
