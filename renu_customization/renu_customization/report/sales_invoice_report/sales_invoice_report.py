@@ -9,6 +9,7 @@ def execute(filters=None):
     # 🔴 ADDED: Exclude Draft documents (docstatus = 0)
     conditions += " AND si.docstatus != 0 "
     conditions += " AND si.docstatus != 2 "
+    conditions += " AND IFNULL(it.custom_is_freight_item, 0) = 0 "
     
     if filters.get("company"):
         conditions += " AND si.company = %(company)s"
@@ -285,9 +286,22 @@ def download_xlsx(filters=None):
     ws["B3"].value = full_name or frappe.session.user
    
     ws.append([])
-    row_idx = 5
- 
     # ---------- FILTERS SECTION ----------
+    row_idx = 4
+    if filters:
+        for key, val in filters.items():
+            if not val or key in ["include_filters", "report_name", "current_datetime"]:
+                continue
+            
+            label = frappe.unscrub(key)
+            if isinstance(val, (list, tuple)):
+                val = ", ".join([str(v) for v in val])
+            
+            ws.cell(row=row_idx, column=1, value=label).font = Font(bold=True)
+            ws.cell(row=row_idx, column=2, value=str(val))
+            row_idx += 1
+            
+    row_idx += 1 # Empty line
  
  
     # ---------- COLUMN HEADERS ----------
