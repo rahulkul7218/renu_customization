@@ -70,7 +70,7 @@ def get_dashboard_data(filters=None):
             pe.posting_date,
             pe.party as customer,
             per.reference_name as name,
-            per.base_allocated_amount,
+            per.allocated_amount,
             si.is_export, 
             si.is_domestic,
             si.status,
@@ -119,7 +119,7 @@ def get_dashboard_data(filters=None):
         
         # Calculate item's share of the allocated payment (Pro-rata allocation)
         if flt(d.base_net_total) > 0:
-            d.allocated_amount = (flt(d.item_amount) / flt(d.base_net_total)) * flt(d.base_allocated_amount)
+            d.allocated_amount = (flt(d.item_amount) / flt(d.base_net_total)) * flt(d.allocated_amount)
         else:
             d.allocated_amount = flt(d.item_amount)
             
@@ -129,7 +129,7 @@ def get_dashboard_data(filters=None):
         alloc_key = f"{d.payment_entry}-{d.name}"
         if alloc_key not in unique_allocations:
             unique_allocations[alloc_key] = {
-                "amount": flt(d.base_allocated_amount),
+                "amount": flt(d.allocated_amount),
                 "is_export": d.is_export,
                 "is_domestic": d.is_domestic
             }
