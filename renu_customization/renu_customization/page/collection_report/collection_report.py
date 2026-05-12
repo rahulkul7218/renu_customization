@@ -40,18 +40,21 @@ def prepare_filters(filters):
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
 
-    conditions = ["si.docstatus < 2", "si.status NOT IN ('Cancelled', 'Draft', 'Return')", "si.is_return = 0"]
-    
-    # Fiscal year handled in prepare_filters
+    conditions = [
+        "pe.docstatus = 1",
+        "pe.payment_type = 'Receive'",
+        "pe.party_type = 'Customer'",
+        "per.reference_doctype = 'Sales Invoice'"
+    ]
     
     if filters.get("customer"):
-        conditions.append(f"si.customer = {frappe.db.escape(filters.get('customer'))}")
+        conditions.append(f"pe.party = {frappe.db.escape(filters.get('customer'))}")
     
     if filters.get("from_date"):
-        conditions.append(f"si.posting_date >= {frappe.db.escape(filters.get('from_date'))}")
+        conditions.append(f"pe.posting_date >= {frappe.db.escape(filters.get('from_date'))}")
     
     if filters.get("to_date"):
-        conditions.append(f"si.posting_date <= {frappe.db.escape(filters.get('to_date'))}")
+        conditions.append(f"pe.posting_date <= {frappe.db.escape(filters.get('to_date'))}")
  
     if filters.get("dom_exp"):
         if filters.get("dom_exp") == "Domestic":
@@ -63,10 +66,11 @@ def get_dashboard_data(filters=None):
     
     query = f"""
         SELECT 
-            si.name, 
-            si.customer, 
-            si.posting_date, 
-            si.base_grand_total, 
+            pe.name as payment_entry,
+            pe.posting_date,
+            pe.party as customer,
+            per.reference_name as name,
+            per.base_allocated_amount,
             si.is_export, 
             si.is_domestic,
             si.status,
@@ -74,10 +78,12 @@ def get_dashboard_data(filters=None):
             sii.item_name,
             sii.base_amount as item_amount,
             si.base_net_total
-        FROM `tabSales Invoice` si
+        FROM `tabPayment Entry` pe
+        JOIN `tabPayment Entry Reference` per ON per.parent = pe.name
+        JOIN `tabSales Invoice` si ON si.name = per.reference_name
         JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
         WHERE {where_clause}
-        ORDER BY si.posting_date DESC, si.name DESC
+        ORDER BY pe.posting_date DESC, pe.name DESC
     """
     
     data = frappe.db.sql(query, as_dict=True)
@@ -99,8 +105,8 @@ def get_dashboard_data(filters=None):
     final_data = []
     sp_filter = filters.get("sales_person")
     
-    # Track unique invoices for KPI calculations to avoid double counting
-    unique_invoices = {}
+    # Track unique allocations for KPI calculations to avoid double counting due to item join
+    unique_allocations = {}
     
     for d in data:
         d.sales_person = ", ".join(sales_map.get(d.name, []))
@@ -108,31 +114,30 @@ def get_dashboard_data(filters=None):
         if sp_filter and sp_filter not in (d.sales_person or ""):
             continue
         
-        # Format Item (Brackets removed for UI stack)
+        # Format Item
         d.item = f"{d.item_code} {d.item_name}" if d.item_code else (d.item_name or "")
         
-        # Calculate item's share of grand total (Pro-rata allocation of taxes/discounts)
-        # item_share = (item_net_amount / invoice_net_total) * invoice_grand_total
+        # Calculate item's share of the allocated payment (Pro-rata allocation)
         if flt(d.base_net_total) > 0:
-            d.allocated_amount = (flt(d.item_amount) / flt(d.base_net_total)) * flt(d.base_grand_total)
+            d.allocated_amount = (flt(d.item_amount) / flt(d.base_net_total)) * flt(d.base_allocated_amount)
         else:
             d.allocated_amount = flt(d.item_amount)
             
         final_data.append(d)
         
-        # For KPIs, we sum unique invoice grand totals
-        if d.name not in unique_invoices:
-            unique_invoices[d.name] = {
-                "amount": flt(d.base_grand_total),
+        # For KPIs, we sum unique payment-to-invoice allocations
+        alloc_key = f"{d.payment_entry}-{d.name}"
+        if alloc_key not in unique_allocations:
+            unique_allocations[alloc_key] = {
+                "amount": flt(d.base_allocated_amount),
                 "is_export": d.is_export,
                 "is_domestic": d.is_domestic
             }
  
-    # Calculate KPIs from unique invoices - round each value to 4 decimal places in M
-    # before summing so card totals match the sum of displayed row values
-    total_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values()) * 1000000
-    export_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values() if v["is_export"]) * 1000000
-    domestic_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values() if not v["is_export"]) * 1000000
+    # Calculate KPIs from unique allocations - round each value to 4 decimal places in M
+    total_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values()) * 1000000
+    export_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values() if v["is_export"]) * 1000000
+    domestic_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values() if not v["is_export"]) * 1000000
     
     summary = [
         {"label": _("TOTAL Collection"), "value": total_collection, "indicator": "Blue"},

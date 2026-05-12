@@ -250,8 +250,9 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 	page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 
 	let filter_parent = $(
-		'<div class="dashboard-filter-area border-bottom" style="background: transparent; padding: 0;"></div>',
+		'<div class="dashboard-filter-area border-bottom" style="background: #fff; padding: 12px 20px; width: 100%;"></div>',
 	).prependTo(page.main);
+
 	const filter_fields = [
 		{
 			fieldname: "fiscal_year",
@@ -300,18 +301,31 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 		},
 	];
 
-	page.filter_group = new frappe.ui.FieldGroup({ parent: filter_parent, fields: filter_fields });
-	page.filter_group.make();
+	// Use setTimeout to ensure the page container has its full width before rendering filters
+	setTimeout(() => {
+		page.filter_group = new frappe.ui.FieldGroup({
+			parent: filter_parent,
+			fields: filter_fields,
+		});
+		page.filter_group.make();
 
-	Object.keys(page.filter_group.fields_dict).forEach((key) => {
-		let field = page.filter_group.fields_dict[key];
-		field.on_change = () => page.refresh();
-		if (field.$input) {
-			field.$input.on("change input blur", () => {
-				setTimeout(() => page.refresh(), 50);
-			});
-		}
-	});
+		// Ensure layout is horizontal and consistent
+		filter_parent.find('.section-body').css({
+			'display': 'flex',
+			'flex-wrap': 'wrap',
+			'gap': '10px'
+		});
+
+		Object.keys(page.filter_group.fields_dict).forEach((key) => {
+			let field = page.filter_group.fields_dict[key];
+			field.on_change = () => page.refresh();
+			if (field.$input) {
+				field.$input.on("change input blur", () => {
+					setTimeout(() => page.refresh(), 50);
+				});
+			}
+		});
+	}, 100);
 
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
