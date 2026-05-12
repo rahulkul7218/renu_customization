@@ -48,13 +48,13 @@ def get_dashboard_data(filters=None):
     ]
     
     if filters.get("customer"):
-        conditions.append(f"pe.party = {frappe.db.escape(filters.get('customer'))}")
+        conditions.append(f"si.customer = {frappe.db.escape(str(filters.get('customer')))}")
     
     if filters.get("from_date"):
-        conditions.append(f"pe.posting_date >= {frappe.db.escape(filters.get('from_date'))}")
+        conditions.append(f"pe.posting_date >= {frappe.db.escape(str(filters.get('from_date')))}")
     
     if filters.get("to_date"):
-        conditions.append(f"pe.posting_date <= {frappe.db.escape(filters.get('to_date'))}")
+        conditions.append(f"pe.posting_date <= {frappe.db.escape(str(filters.get('to_date')))}")
  
     if filters.get("dom_exp"):
         if filters.get("dom_exp") == "Domestic":
@@ -64,6 +64,35 @@ def get_dashboard_data(filters=None):
  
     where_clause = " AND ".join(conditions)
     
+    # Calculate On Account Total (Unallocated amounts)
+    pe_conditions = [
+        "pe.docstatus = 1",
+        "pe.payment_type = 'Receive'",
+        "pe.party_type = 'Customer'"
+    ]
+    if filters.get("customer"):
+        pe_conditions.append(f"pe.party = {frappe.db.escape(str(filters.get('customer')))}")
+    if filters.get("from_date"):
+        pe_conditions.append(f"pe.posting_date >= {frappe.db.escape(str(filters.get('from_date')))}")
+    if filters.get("to_date"):
+        pe_conditions.append(f"pe.posting_date <= {frappe.db.escape(str(filters.get('to_date')))}")
+    
+    pe_where = " AND ".join(pe_conditions)
+    
+    # Calculate On Account Total (Sum of paid_amount where NO Sales Invoice reference exists)
+    on_account_query = f"""
+        SELECT SUM(pe.paid_amount) 
+        FROM `tabPayment Entry` pe 
+        WHERE {pe_where}
+          AND NOT EXISTS (
+              SELECT 1 
+              FROM `tabPayment Entry Reference` per 
+              WHERE per.parent = pe.name 
+                AND per.reference_doctype = 'Sales Invoice'
+          )
+    """
+    on_account_total = flt(frappe.db.sql(on_account_query)[0][0])
+
     query = f"""
         SELECT 
             pe.name as payment_entry,
@@ -135,12 +164,16 @@ def get_dashboard_data(filters=None):
             }
  
     # Calculate KPIs from unique allocations - round each value to 4 decimal places in M
-    total_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values()) * 1000000
+    allocated_total = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values()) * 1000000
     export_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values() if v["is_export"]) * 1000000
     domestic_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values() if not v["is_export"]) * 1000000
     
+    # TOTAL Collection = Allocated + On Account
+    total_collection = allocated_total + on_account_total
+
     summary = [
         {"label": _("TOTAL Collection"), "value": total_collection, "indicator": "Blue"},
+        {"label": _("On Account"), "value": on_account_total, "indicator": "Purple"},
         {"label": _("Export Collection"), "value": export_collection, "indicator": "Green"},
         {"label": _("Domestic Collection"), "value": domestic_collection, "indicator": "Orange"}
     ]
