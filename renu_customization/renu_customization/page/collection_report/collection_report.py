@@ -229,7 +229,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_list.cell(row=row_idx, column=1, value="Detailed Collection List").font = section_font
         row_idx += 2
         
-        headers = ["S.No.", "Invoice ID", "Date", "Customer", "Item", "Sales Person", "Amount (M)", "Type", "Status"]
+        headers = ["S.No.", "Payment ID", "Invoice ID", "Date", "Customer", "Item", "Sales Person", "Amount (M)", "Type", "Status"]
         for idx, h in enumerate(headers, start=1):
             cell = ws_list.cell(row=row_idx, column=idx, value=h)
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
@@ -237,38 +237,39 @@ def export_to_excel(filters=None, export_type="all"):
         
         for r_idx, row in enumerate(data):
             ws_list.cell(row=row_idx, column=1, value=r_idx + 1).border = table_border
-            ws_list.cell(row=row_idx, column=2, value=row['name']).border = table_border
-            ws_list.cell(row=row_idx, column=3, value=row['posting_date']).border = table_border
-            ws_list.cell(row=row_idx, column=4, value=row['customer']).border = table_border
-            ws_list.cell(row=row_idx, column=5, value=row['item']).border = table_border
-            ws_list.cell(row=row_idx, column=6, value=row['sales_person']).border = table_border
+            ws_list.cell(row=row_idx, column=2, value=row['payment_entry']).border = table_border
+            ws_list.cell(row=row_idx, column=3, value=row['name']).border = table_border
+            ws_list.cell(row=row_idx, column=4, value=row['posting_date']).border = table_border
+            ws_list.cell(row=row_idx, column=5, value=row['customer']).border = table_border
+            ws_list.cell(row=row_idx, column=6, value=row['item']).border = table_border
+            ws_list.cell(row=row_idx, column=7, value=row['sales_person']).border = table_border
             
-            amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['allocated_amount']) / 1000000)
+            amt_cell = ws_list.cell(row=row_idx, column=8, value=flt(row['allocated_amount']) / 1000000)
             amt_cell.number_format, amt_cell.border = '"₹ "#,##0.0000" M"', table_border
             
-            ws_list.cell(row=row_idx, column=8, value="Export" if row['is_export'] else "Domestic").border = table_border
-            ws_list.cell(row=row_idx, column=9, value=row['status']).border = table_border
+            ws_list.cell(row=row_idx, column=9, value="Export" if row['is_export'] else "Domestic").border = table_border
+            ws_list.cell(row=row_idx, column=10, value=row['status']).border = table_border
             row_idx += 1
     
         # Add Total Row
         ws_list.cell(row=row_idx, column=1, value="Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
-        for c in range(1, 7):
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
+        for c in range(1, 8):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
             if c == 1:
                 ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
                 
         total_amt = sum(flt(r['allocated_amount']) for r in data) / 1000000
-        total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
+        total_cell = ws_list.cell(row=row_idx, column=8, value=total_amt)
         total_cell.font = header_font
         total_cell.fill = header_fill
         total_cell.number_format, total_cell.border = '"₹ "#,##0.0000" M"', table_border
         
-        ws_list.cell(row=row_idx, column=8, value="").fill = header_fill
-        ws_list.cell(row=row_idx, column=8, value="").border = table_border
         ws_list.cell(row=row_idx, column=9, value="").fill = header_fill
         ws_list.cell(row=row_idx, column=9, value="").border = table_border
+        ws_list.cell(row=row_idx, column=10, value="").fill = header_fill
+        ws_list.cell(row=row_idx, column=10, value="").border = table_border
         row_idx += 1
 
     # Remove dummy if detail only
