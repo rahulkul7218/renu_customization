@@ -717,6 +717,23 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         }
     </style>`).appendTo(page.main);
 
+	function format_currency_short(num, fieldtype, force_precision = false) {
+		if (!num && num !== 0) return "₹ 0.00 M";
+		if (fieldtype === "Int") return num;
+
+		let value = flt(num);
+		let precision = 2;
+
+		return (
+			"₹ " +
+			value.toLocaleString("en-US", {
+				minimumFractionDigits: precision,
+				maximumFractionDigits: precision,
+			}) +
+			" M"
+		);
+	}
+
 	let current_dashboard_data = null;
 
 	const export_pdf = async () => {
@@ -736,21 +753,36 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		} else if (filters.to_date) {
 			period = `Up to ${frappe.datetime.str_to_user(filters.to_date)}`;
 		}
-
+		
 		// Helper to capture chart images
 		const get_chart_image = (chart_id) => {
 			const chart_svg = page.container.find(`#wrapper_${chart_id} svg`)[0];
 			if (!chart_svg) return null;
+			
+			// Clone and hide internal legend to avoid duplicates
+			const clone = chart_svg.cloneNode(true);
+			const internal_legend = clone.querySelector(".chart-legend, .legend, .frappe-chart-legend");
+			if (internal_legend) internal_legend.style.display = "none";
+
 			return new Promise((resolve) => {
 				const canvas = document.createElement("canvas");
-				const svg_data = new XMLSerializer().serializeToString(chart_svg);
+				const svg_data = new XMLSerializer().serializeToString(clone);
 				const img = new Image();
+				
+				const timeout = setTimeout(() => {
+					console.warn(`Chart capture timeout for ${chart_id}`);
+					resolve(null);
+				}, 5000);
+
 				const svg_blob = new Blob([svg_data], { type: "image/svg+xml;charset=utf-8" });
 				const url = URL.createObjectURL(svg_blob);
 
 				img.onload = () => {
-					canvas.width = img.width * 2;
-					canvas.height = img.height * 2;
+					clearTimeout(timeout);
+					const w = img.width || 800;
+					const h = img.height || 350;
+					canvas.width = w * 2;
+					canvas.height = h * 2;
 					const ctx = canvas.getContext("2d");
 					ctx.fillStyle = "white";
 					ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -758,83 +790,193 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					URL.revokeObjectURL(url);
 					resolve(canvas.toDataURL("image/png"));
 				};
+				img.onerror = () => {
+					clearTimeout(timeout);
+					resolve(null);
+				};
 				img.src = url;
 			});
 		};
 
+		// Chart Data Legend (re-built for PDF)
+		const chart_l = (chart_id) => {
+			const c_obj = data.charts[chart_id];
+			if (!c_obj || !c_obj.data.labels.length) return "";
+			const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+
+			let legend_html = '<div class="pdf-legend">';
+			c_obj.data.labels.forEach((l, i) => {
+				const val = c_obj.data.datasets[0].values[i];
+				const color = c_obj.colors[i % c_obj.colors.length];
+				const share = ((val / total_val) * 100).toFixed(1);
+				let display_label = l;
+				if (l && l.includes(" - ")) {
+					let parts = l.split(" - ");
+					if (parts[0] === parts[1]) display_label = parts[0];
+				}
+				legend_html += `
+					<div class="pdf-legend-item">
+						<span class="pdf-dot" style="background: ${color}"></span>
+						<div class="pdf-legend-info">
+							<div class="pdf-legend-label">${display_label}</div>
+							<div class="pdf-legend-val">${format_currency_short(val)} (${share}%)</div>
+						</div>
+					</div>
+				`;
+			});
+			legend_html += "</div>";
+			return legend_html;
+		};
+
+		// Chart Section Block (Image + Legend)
+		const chart_block = (src, chart_id, title) => {
+			if (!src) return "";
+			return `
+				<div class="pdf-card chart-section">
+					<h4 class="card-title">${title}</h4>
+					<div class="chart-content">
+						<img src="${src}" class="chart-img">
+						${chart_l(chart_id)}
+					</div>
+				</div>
+			`;
+		};
+
+		// Chart Data Table Section (Separate Card)
+		const chart_t = (chart_id, title) => {
+			const c_obj = data.charts[chart_id];
+			if (!c_obj || !c_obj.data.labels.length) return "";
+			const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
+			let rows = c_obj.data.labels.map((l, i) => {
+				const val = c_obj.data.datasets[0].values[i];
+				const share = ((val / total_val) * 100).toFixed(1);
+				let display_label = l;
+				if (l && l.includes(" - ")) {
+					let parts = l.split(" - ");
+					if (parts[0] === parts[1]) display_label = parts[0];
+				}
+				return `<tr><td style="text-align:center;">${i+1}</td><td>${display_label}</td><td style="text-align:right;">${format_currency_short(val)}</td><td style="text-align:right;">${share}%</td></tr>`;
+			}).join("");
+			
+			return `
+				<div class="pdf-card table-section">
+					<h4 class="card-title">${title} Breakdown</h4>
+					<table class="chart-data-table">
+						<thead>
+							<tr>
+								<th style="width: 40px; text-align:center;">S.No.</th>
+								<th style="text-align:left;">${title}</th>
+								<th style="width: 120px; text-align:right;">Amount (M)</th>
+								<th style="width: 80px; text-align:right;">Share %</th>
+							</tr>
+						</thead>
+						<tbody>${rows}</tbody>
+					</table>
+				</div>
+			`;
+		};
+
 		frappe.show_alert({ message: __("Preparing PDF..."), indicator: "blue" });
 
-		const png1 = await get_chart_image("top_10_salesperson");
-		const png2 = await get_chart_image("top_10_customers");
-		const png3 = await get_chart_image("top_10_products");
-
-		const chart_h = (src, title) =>
-			src ? `<h4 style="margin-top:20px; color:#444;">${title}</h4><img src="${src}" style="width:100%; max-height:400px; object-fit:contain; border:1px solid #eee; padding:10px; border-radius:8px;">` : "";
+		const [png1, png2, png3] = await Promise.all([
+			get_chart_image("top_10_salesperson"),
+			get_chart_image("top_10_customers"),
+			get_chart_image("top_10_products")
+		]);
 
 		const html = `
 			<html>
 			<head>
 				<style>
-					body { font-family: 'Inter', sans-serif; padding: 30px; color: #333; background: #fff; }
-					.report-header { text-align: center; border-bottom: 2px solid #3b82f6; padding-bottom: 20px; margin-bottom: 30px; }
-					.kpi-wrapper { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 30px; justify-content: center; }
-					.kpi-card { flex: 1; min-width: 160px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; border-left: 5px solid #3b82f6; }
-					.kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-					.kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+					body { font-family: 'Inter', -apple-system, sans-serif; padding: 15px; color: #1e293b; background: #fff; line-height: 1.4; }
+					@page { size: landscape; margin: 8mm; }
 					
-					h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
+					.report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
+					.header-title { margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase; letter-spacing: 1px; }
 					
-					table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: fixed; }
-					th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
-					thead th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
-					.text-right { text-align: right; }
+					.kpi-wrapper { width: 100%; clear: both; margin-bottom: 15px; display: block; }
+					.kpi-card { float: left; width: 18.5%; border: 1px solid #e2e8f0; padding: 10px 6px; margin: 0.5%; border-radius: 8px; background: #f8fafc; text-align: center; border-left: 4px solid #3b82f6; box-sizing: border-box; height: 50px; }
+					.kpi-label { font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+					.kpi-value { font-size: 12px; font-weight: 800; color: #0f172a; white-space: nowrap; }
+					
+					h3.section-title { font-size: 13px; font-weight: 700; color: #3b82f6; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+					
+					.pdf-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }
+					.card-title { margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+					
+					.chart-content { text-align: center; }
+					.chart-img { width: 70%; max-height: 260px; object-fit: contain; margin-bottom: 15px; }
+					
+					.pdf-legend { display: block; text-align: left; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; margin-top: 10px; }
+					.pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 8px; vertical-align: top; margin-right: 2%; }
+					.pdf-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+					.pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 20px); }
+					.pdf-legend-label { font-size: 9px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+					.pdf-legend-val { font-size: 8px; color: #64748b; }
+
+					table { width: 100%; border-collapse: collapse; font-size: 8px; border: 1px solid #e2e8f0; table-layout: fixed; }
+					th, td { border: 1px solid #e2e8f0; padding: 5px 8px; text-align: left; word-wrap: break-word; }
+					thead th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
+					
+					.month-revenue-table, .invoice-list-table { margin-top: 10px; page-break-inside: auto; }
+					.month-revenue-table tr, .invoice-list-table tr { page-break-inside: avoid; }
+					
+					.total-col { font-weight: 700; text-align: right; }
+					.sticky-total td { font-weight: 800; background: #f8fafc !important; }
+					
 					.page-break { page-break-after: always; }
+					.clear { clear: both; }
 				</style>
 			</head>
 			<body>
 				<div class="report-header">
-					<h1 style="margin:0; font-size: 24px;">Sales Revenue Dashboard</h1>
-					<p style="font-size: 14px; color: #555; margin: 8px 0;">${period}</p>
-					<p style="font-size: 11px; color: #999; margin: 0;">Generated: ${report_date}</p>
+					<h1 class="header-title">Sales Revenue Dashboard</h1>
+					<p style="font-size: 11px; color: #64748b; margin: 4px 0;">${period}</p>
+					<p style="font-size: 9px; color: #94a3b8; margin: 0;">Generated: ${report_date}</p>
 				</div>
 
 				<div class="kpi-wrapper">
 					${data.summary.map((m) => {
-						let color = "#3498db";
-						if (m.indicator === "green") color = "#2ecc71";
-						if (m.indicator === "orange") color = "#e67e22";
-						if (m.indicator === "purple") color = "#9b59b6";
-						
-						let val_str = "₹ " + flt(m.value).toLocaleString("en-US", {
-							minimumFractionDigits: 2,
-							maximumFractionDigits: 2,
-						}) + " M";
-						
+						let color = "#3b82f6";
+						if (m.indicator === "green") color = "#10b981";
+						if (m.indicator === "orange") color = "#f59e0b";
+						if (m.indicator === "purple") color = "#8b5cf6";
+						if (m.indicator === "red") color = "#ef4444";
+						if (m.indicator === "cyan") color = "#06b6d4";
 						return `
 							<div class="kpi-card" style="border-left-color: ${color}">
 								<div class="kpi-label">${m.label}</div>
-								<div class="kpi-value">${val_str}</div>
+								<div class="kpi-value">${format_currency_short(m.value, m.fieldtype)}</div>
 							</div>
 						`;
 					}).join("")}
 				</div>
+				<div class="clear"></div>
 
-				<h3>Visual Analytics Breakdown</h3>
-				<div style="text-align: center;">
-					${chart_h(png1, "Top 10 Salesperson Performance")}
-					${chart_h(png2, "Top 10 Customers Performance")}
-					${chart_h(png3, "Top 10 Products Performance")}
-				</div>
+				<h3 class="section-title">Visual Analytics Breakdown</h3>
+				
+				${chart_block(png1, "top_10_salesperson", "Top 10 Salesperson Performance")}
+				${chart_t("top_10_salesperson", "Salesperson")}
+				
+				<div class="page-break"></div>
+				
+				${chart_block(png2, "top_10_customers", "Top 10 Customers Performance")}
+				${chart_t("top_10_customers", "Customer")}
 
 				<div class="page-break"></div>
-				<h3>Month-Wise Revenue Breakdown (M)</h3>
+
+				${chart_block(png3, "top_10_products", "Top 10 Products Performance")}
+				${chart_t("top_10_products", "Product")}
+
+				<div class="page-break"></div>
+				<h3 class="section-title">Month-Wise Revenue Breakdown (M INR)</h3>
 				<table class="month-revenue-table">
 					<thead>${page.container.find("#consolidated_table thead").html() || ""}</thead>
 					<tbody>${page.container.find("#consolidated_table_body").html() || ""}</tbody>
 				</table>
 
 				<div class="page-break"></div>
-				<h3>Detailed Sales Invoices List (M)</h3>
+				<h3 class="section-title">Detailed Sales Invoices List (M INR)</h3>
 				<table class="invoice-list-table">
 					<thead>${page.container.find("#invoice_list_table thead").html() || ""}</thead>
 					<tbody>${page.container.find("#invoice_table_body").html() || ""}</tbody>
@@ -845,7 +987,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		`;
 
 		const method_url = "/api/method/renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.export_to_pdf";
-		const $form = $(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
+		const $form = $(`<form action="${method_url}" method="POST" style="display:none;">
 			<input type="hidden" name="html" value="">
 			<input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
 		</form>`).appendTo("body");
@@ -880,23 +1022,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                     </div>
                 `).appendTo(summary_row);
 			});
-		}
-
-		function format_currency_short(num, fieldtype) {
-			if (!num && num !== 0) return "₹ 0.0000 M";
-			if (fieldtype === "Int") return num;
-
-			// Value is already in Million INR from backend
-			let value = flt(num);
-
-			return (
-				"₹ " +
-				value.toLocaleString("en-US", {
-					minimumFractionDigits: 2,
-					maximumFractionDigits: 2,
-				}) +
-				" M"
-			);
 		}
 
 		// 2. Charts Row
@@ -1263,10 +1388,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				);
 			} else {
 				results.forEach((row, idx) => {
-					let b_amt = flt(row.base_amount || 0);
-					if (row.is_return) b_amt = -Math.abs(b_amt);
-					let row_amt = b_amt * (flt(row.allocated_percentage || 100) / 100);
-
+					let row_amt = flt(row.amt_allocated || 0);
 					total_qty += flt(row.qty);
 					total_amt += row_amt;
 
@@ -1306,7 +1428,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             <td class="sp-col">${row.sales_person || "-"}</td>
                             <td class="qty-col">${frappe.format(row.qty, { fieldtype: "Float" })}</td>
                             <td class="amount-col" style="font-weight: 600;">
-                                ${format_currency_short(row.amt_allocated || 0)}
+                                 ${format_currency_short(row.amt_allocated || 0)}
                             </td>
                         </tr>
                     `);
