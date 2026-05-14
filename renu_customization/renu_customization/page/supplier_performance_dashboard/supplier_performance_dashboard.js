@@ -1,7 +1,7 @@
-frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
+frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Supplier Order Dashboard "),
+		title: __("Supplier Performance Dashboard "),
 		single_column: true,
 	});
 
@@ -23,7 +23,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		if (page.container) page.container.css("opacity", "0.6");
 
 		frappe.call({
-			method: "renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.get_dashboard_data",
+			method: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
 				if (page.container) page.container.css("opacity", "1");
@@ -114,8 +114,8 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 			`
 		.dashboard-filter-area {
 			padding: 15px 20px 5px 20px !important;
-			background-color: #fff !important;
-			border-bottom: 1px solid #e2e8f0 !important;
+			background-color: var(--bg-color) !important;
+			border-bottom: 1px solid var(--border-color) !important;
 		}
 		.dashboard-filter-area .form-section .section-body,
 		.dashboard-filter-area .section-body,
@@ -192,7 +192,22 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 
 	Object.keys(page.filter_group.fields_dict).forEach((key) => {
 		let field = page.filter_group.fields_dict[key];
-		field.on_change = () => page.refresh();
+		field.on_change = () => {
+			if (key === "fiscal_year") {
+				let fy = page.filter_group.get_value("fiscal_year");
+				if (fy) {
+					frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
+						if (r) {
+							page.filter_group.set_values({
+								from_date: r.year_start_date,
+								to_date: r.year_end_date
+							});
+						}
+					});
+				}
+			}
+			page.refresh();
+		};
 		if (field.$input) {
 			field.$input.on("change input blur", () => {
 				setTimeout(() => page.refresh(), 50);
@@ -201,7 +216,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 	});
 
 	filter_parent.addClass("border-bottom").css({
-		"background-color": "#fff",
+		"background-color": "var(--bg-color)",
 		"margin-bottom": "0",
 	});
 
@@ -212,7 +227,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
         
         .dashboard-content { 
             padding: 20px; 
-            background: #ffffff; 
+            background: var(--bg-color); 
             min-height: 100vh; 
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: #1e293b;
@@ -228,8 +243,8 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             width: 100% !important;
         }
         .summary-card { 
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
+            background: var(--card-bg) !important;
+            border: 1px solid var(--border-color);
             border-radius: 12px; 
             padding: 16px; 
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
@@ -283,9 +298,9 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             width: 100%;
         }
         .chart-card { 
-            background: #fff; border-radius: 12px; padding: 24px; 
+            background: var(--card-bg) !important; border-radius: 12px; padding: 24px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border-color);
         }
         .chart-card .title { 
             font-size: 15px; font-weight: 700; color: #1e293b; 
@@ -312,16 +327,16 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
         .frappe-chart text { font-size: 11px !important; }
 
         .table-card { 
-            background: #fff; border-radius: 12px; 
+            background: var(--card-bg) !important; border-radius: 12px; 
             box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
             margin-bottom: 24px; overflow: hidden;
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border-color);
             width: 100%;
         }
         .table-card .header { 
-            padding: 15px 24px; background: #fff;
-            border-bottom: 1px solid #f1f5f9; font-weight: 700; 
-            color: #0f172a; display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 24px; background: var(--card-bg) !important;
+            border-bottom: 1px solid var(--border-color); font-weight: 700; 
+            color: var(--text-color); display: flex; justify-content: space-between; align-items: center;
         }
         .table-actions { display: flex; gap: 12px; align-items: center; }
         .export-btn { font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; padding: 6px 14px; border-radius: 6px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e8f0; white-space: nowrap; }
@@ -386,8 +401,8 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 				m.fieldtype === "Currency"
 					? "₹ " +
 						(flt(m.value) / 1000000).toLocaleString("en-US", {
-							minimumFractionDigits: 4,
-							maximumFractionDigits: 4,
+							minimumFractionDigits: 2,
+							maximumFractionDigits: 2,
 						}) +
 						" M"
 					: m.value;
@@ -440,8 +455,8 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 								is_currency
 									? "₹ " +
 										d.toLocaleString("en-US", {
-											minimumFractionDigits: 4,
-											maximumFractionDigits: 4,
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
 										}) +
 										" M"
 									: d,
@@ -460,8 +475,8 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						let val_str = is_currency
 							? "₹ " +
 								(val / 1000000).toLocaleString("en-US", {
-									minimumFractionDigits: 4,
-									maximumFractionDigits: 4,
+									minimumFractionDigits: 2,
+									maximumFractionDigits: 2,
 								}) +
 								" M"
 							: val;
@@ -550,7 +565,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                                 <th class="col-sno">S.No.</th>
                                 <th class="col-supplier">Supplier</th>
                                 ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
-                                <th class="col-amt" style="position: sticky; right: 0; background: #f8fafc; z-index: 60; text-align: right;">Total (Net)</th>
+                                <th class="col-amt" style="position: sticky; right: 0; background: var(--bg-color); z-index: 60; text-align: right;">Total (Net)</th>
                             </tr>
                         </thead>
                         <tbody id="po_month_body"></tbody>
@@ -619,7 +634,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 					.map((m) => {
 						let val = row.months[m.key] || 0;
 						total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
-						return `<td class="col-amt" style="text-align: right;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>`;
+						return `<td class="col-amt" style="text-align: right;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
 					})
 					.join("");
 
@@ -628,7 +643,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 						<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
 						<td class="col-supplier" style="font-weight: 600; color: #0f172a;">${row.supp}</td>
 						${cells}
-						<td class="col-amt" style="position: sticky; right: 0; background: #f8fafc; font-weight: 700; color: #4338ca; text-align: right; border-left: 1px solid #e2e8f0;">₹ ${(row.total / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
+						<td class="col-amt" style="position: sticky; right: 0; background: var(--bg-color); font-weight: 700; color: var(--primary); text-align: right; border-left: 1px solid var(--border-color);">₹ ${(row.total / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
 					</tr>
 				`);
 			});
@@ -642,10 +657,10 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 					${months
 						.map((m) => {
 							let val = total_month_amts[m.key] || 0;
-							return `<td class="col-amt" style="text-align: right; background: #f1f3f5 !important; border-top: 2px solid #ddd;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>`;
+							return `<td class="col-amt" style="text-align: right; background: #f1f3f5 !important; border-top: 2px solid #ddd;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
 						})
 						.join("")}
-					<td class="col-amt" style="position: sticky; right: 0; background: #f0f4ff !important; z-index: 80; text-align: right; border-left: 1px solid #e2e8f0; border-top: 2px solid #ddd; font-weight: 800;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
+					<td class="col-amt" style="position: sticky; right: 0; background: var(--control-bg) !important; z-index: 80; text-align: right; border-left: 1px solid var(--border-color); border-top: 2px solid var(--border-color); font-weight: 800;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
 				</tr>
 			`);
 		}
@@ -675,7 +690,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
                     <td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
                     <td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
-                    <td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
+                    <td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
                 </tr>
             `);
 		});
@@ -686,14 +701,14 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		tfoot_list.append(`
             <tr class="sticky-total">
                 <td colspan="7" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
-                <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid #e2e8f0;">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 })} M</td>
+                <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid var(--border-color);">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
             </tr>
         `);
 
 		const export_to_excel = (export_type = "all") => {
 			let filters = page.filter_group.get_values();
 			frappe.call({
-				method: "renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.export_to_excel",
+				method: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_excel",
 				args: { filters: filters, export_type: export_type },
 				callback: function (r) {
 					if (r.message) {
@@ -894,7 +909,7 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
             `;
 
 			const method_url =
-				"/api/method/renu_customization.renu_customization.page.supplier_order_dashboard.supplier_order_dashboard.export_to_pdf";
+				"/api/method/renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_pdf";
 			const $form =
 				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
                 <input type="hidden" name="html" value="">
@@ -913,5 +928,19 @@ frappe.pages["supplier_order_dashboard"].on_page_load = function (wrapper) {
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
 	}
 
-	page.refresh();
+	// Set default Fiscal Year and trigger initial load
+	frappe.call({
+		method: "frappe.client.get_value",
+		args: {
+			doctype: "Fiscal Year",
+			filters: { year_start_date: ["<=", frappe.datetime.nowdate()], year_end_date: [">=", frappe.datetime.nowdate()] },
+			fieldname: "name"
+		},
+		callback: function (r) {
+			if (r.message) {
+				page.filter_group.set_value("fiscal_year", r.message.name);
+			}
+			page.refresh();
+		}
+	});
 };
