@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"UaaXwP-m5M\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Shortcuts and Reports</span>\",\"col\":12}},{\"id\":\"ryApkPQTcy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Dashboard\",\"col\":3}},{\"id\":\"ceSDfjurUS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Order Booking Dashboard\",\"col\":3}},{\"id\":\"HuLeENQyue\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gross Margin Dashboard\",\"col\":3}},{\"id\":\"gE849oOb21\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Supplier Performance Dashboard\",\"col\":3}},{\"id\":\"3traMjvfM7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Collection Dashboard\",\"col\":3}},{\"id\":\"BSGCJCFgwd\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Overdue Receivables Dashboard\",\"col\":3}},{\"id\":\"94m6o_MkcN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Performance Dashboard\",\"col\":3}}]",
+ "content": "[{\"id\":\"UaaXwP-m5M\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Shortcuts and Reports</span>\",\"col\":12}},{\"id\":\"ryApkPQTcy\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Revenue Dashboard\",\"col\":3}},{\"id\":\"ceSDfjurUS\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Sales Order Booking Dashboard\",\"col\":3}},{\"id\":\"HuLeENQyue\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Gross Margin Dashboard\",\"col\":3}},{\"id\":\"MB_DB_001\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Margin Build Dashboard\",\"col\":3}},{\"id\":\"gE849oOb21\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Supplier Performance Dashboard\",\"col\":3}},{\"id\":\"3traMjvfM7\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Collection Dashboard\",\"col\":3}},{\"id\":\"BSGCJCFgwd\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Overdue Receivables Dashboard\",\"col\":3}},{\"id\":\"94m6o_MkcN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Customer Performance Dashboard\",\"col\":3}}]",
  "creation": "2026-04-15 17:31:35.106441",
  "custom_blocks": [],
  "docstatus": 0,
@@ -13,7 +13,7 @@
  "is_hidden": 0,
  "label": "Shortcuts and Reports",
  "links": [],
- "modified": "2026-05-13 14:13:15.998358",
+ "modified": "2026-05-14 14:49:11.222767",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "Shortcuts and Reports",
@@ -30,6 +30,13 @@
    "doc_view": "List",
    "label": "Supplier Performance Dashboard",
    "link_to": "supplier_performance_dashboard",
+   "type": "Page"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "List",
+   "label": "Collection Dashboard",
+   "link_to": "collection_dashboard",
    "type": "Page"
   },
   {
@@ -56,15 +63,15 @@
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Sales Order Booking Dashboard",
-   "link_to": "sales_order_booking_dashboard",
+   "label": "Margin Build Dashboard",
+   "link_to": "margin_build_dashboard",
    "type": "Page"
   },
   {
    "color": "Grey",
    "doc_view": "List",
-   "label": "Collection Dashboard",
-   "link_to": "collection_report",
+   "label": "Sales Order Booking Dashboard",
+   "link_to": "sales_order_booking_dashboard",
    "type": "Page"
   },
   {

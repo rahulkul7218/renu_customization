@@ -68,10 +68,10 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 					context.fillStyle = "white";
 					context.fillRect(0, 0, canvas.width, canvas.height);
 					context.drawImage(img, 0, 0, canvas.width, canvas.height);
-					
+
 					// Restore legend on screen
 					if (legend) legend.style.display = "";
-					
+
 					resolve(canvas.toDataURL("image/png"));
 				};
 				img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
@@ -82,7 +82,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		const get_legend_html = (chart_key) => {
 			const chart = data.charts[chart_key];
 			const total_val = chart.data.datasets[0].values.reduce((a, b) => a + (b || 0), 0) || 1;
-			
+
 			return chart.data.labels.map((label, i) => {
 				const val = chart.data.datasets[0].values[i] || 0;
 				const color = chart.colors[i % chart.colors.length];
@@ -412,7 +412,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 
 				.summary-wrapper { 
                     display: grid !important; 
-                    grid-template-columns: repeat(4, 1fr) !important; 
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; 
                     gap: 16px; 
                     margin-bottom: 24px; 
                     width: 100% !important; 
@@ -713,10 +713,10 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let total_outstanding_raw = 0;
 		data.results.forEach((row) => {
 			total_outstanding_raw += flt(row.outstanding_amount);
-			
+
 			let display_name = row.name;
 			let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
-			
+
 			if (row.outstanding_amount < 0 && row.name === __("On Account")) {
 				display_name = __("On Account Advance");
 				link_url = "#";

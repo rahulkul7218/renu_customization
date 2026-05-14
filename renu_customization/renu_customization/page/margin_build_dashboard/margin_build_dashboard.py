@@ -12,7 +12,7 @@ from renu_customization.renu_customization.report.sales_invoice_report.sales_inv
 @frappe.whitelist()
 def export_to_pdf(html):
     pdf_content = frappe.utils.pdf.get_pdf(html, {"orientation": "Landscape"})
-    frappe.response.filename = f"Margin_Build_{nowdate()}.pdf"
+    frappe.response.filename = f"Margin_Build_Dashboard_{nowdate()}.pdf"
     frappe.response.filecontent = pdf_content
     frappe.response.type = "download"
 
@@ -204,7 +204,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = s.get('value')
             if s.get('fieldtype') == 'Currency':
                 cell_v = ws_overview.cell(row=r+1, column=c, value=flt(val) / 1000000)
-                cell_v.number_format = '"₹ "#,##0.0000" M"'
+                cell_v.number_format = '"₹ "#,##0.00" M"'
             else:
                 cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
@@ -232,13 +232,13 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=6, value=row['type']).border = table_border
             
             rev_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['revenue']) / 1000000)
-            rev_cell.number_format, rev_cell.border = '"₹ "#,##0.0000" M"', table_border
+            rev_cell.number_format, rev_cell.border = '"₹ "#,##0.00" M"', table_border
             
             cogs_cell = ws_list.cell(row=row_idx, column=8, value=flt(row['cogs']) / 1000000)
-            cogs_cell.number_format, cogs_cell.border = '"₹ "#,##0.0000" M"', table_border
+            cogs_cell.number_format, cogs_cell.border = '"₹ "#,##0.00" M"', table_border
             
             margin_cell = ws_list.cell(row=row_idx, column=9, value=flt(row['margin']) / 1000000)
-            margin_cell.number_format, margin_cell.border = '"₹ "#,##0.0000" M"', table_border
+            margin_cell.number_format, margin_cell.border = '"₹ "#,##0.00" M"', table_border
             
             row_idx += 1
     
@@ -251,17 +251,17 @@ def export_to_excel(filters=None, export_type="all"):
             
         total_rev = sum(flt(row['revenue']) for row in data) / 1000000
         c_rev = ws_list.cell(row=row_idx, column=7, value=total_rev)
-        c_rev.number_format, c_rev.font, c_rev.fill, c_rev.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
+        c_rev.number_format, c_rev.font, c_rev.fill, c_rev.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
         c_rev.alignment = Alignment(horizontal="right")
         
         total_cogs = sum(flt(row['cogs']) for row in data) / 1000000
         c_cogs = ws_list.cell(row=row_idx, column=8, value=total_cogs)
-        c_cogs.number_format, c_cogs.font, c_cogs.fill, c_cogs.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
+        c_cogs.number_format, c_cogs.font, c_cogs.fill, c_cogs.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
         c_cogs.alignment = Alignment(horizontal="right")
         
         total_margin = sum(flt(row['margin']) for row in data) / 1000000
         c_margin = ws_list.cell(row=row_idx, column=9, value=total_margin)
-        c_margin.number_format, c_margin.font, c_margin.fill, c_margin.border = '"₹ "#,##0.0000" M"', header_font, header_fill, table_border
+        c_margin.number_format, c_margin.font, c_margin.fill, c_margin.border = '"₹ "#,##0.00" M"', header_font, header_fill, table_border
         c_margin.alignment = Alignment(horizontal="right")
 
     # Remove dummy if detail only
@@ -277,9 +277,9 @@ def export_to_excel(filters=None, export_type="all"):
     wb.save(output)
     output.seek(0)
     
-    filename = f"Margin_Build_{nowdate()}.xlsx"
+    filename = f"Margin_Build_Dashboard_{nowdate()}.xlsx"
     if export_type == "detail":
-        filename = f"Detailed_Margin_List_{nowdate()}.xlsx"
+        filename = f"Detailed_Margin_Dashboard_{nowdate()}.xlsx"
         
     return {
         "filename": filename,
