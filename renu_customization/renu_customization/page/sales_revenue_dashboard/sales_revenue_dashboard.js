@@ -64,7 +64,6 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			options: "Company",
 			default: frappe.defaults.get_default("company"),
 			placeholder: __("Select Company"),
-			reqd: 1,
 		},
 
 		{
