@@ -206,7 +206,9 @@ def get_dashboard_data(filters=None):
                 'Unallocated' as status,
                 '' as item_code,
                 'Unallocated Payment' as item_name,
-                pe.paid_amount as item_amount
+                pe.paid_amount as item_amount,
+                NULL as due_date,
+                0 as due_days
             FROM `tabPayment Entry` pe 
             WHERE {pe_where}
               AND NOT EXISTS (
