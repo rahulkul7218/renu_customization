@@ -1,7 +1,6 @@
 import frappe
 from frappe import _
 from frappe.utils import flt, getdate
-from renu_customization.renu_customization.report.sales_invoice_report.sales_invoice_report import execute
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -64,313 +63,173 @@ def prepare_filters(filters):
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
     
-    # Pass filters to report execution. Only include dates if they are explicitly set.
-    base_filters = frappe._dict({
-        "company": filters.company
-    })
+    # 1. Base SQL Conditions
+    conditions = "WHERE si.docstatus = 1 AND si.status != 'Cancelled'"
+    query_params = {}
+
+    # Standard Filters
     if filters.get("from_date"):
-        base_filters["from_date"] = filters.from_date
+        conditions += " AND si.posting_date >= %(from_date)s"
+        query_params["from_date"] = filters.from_date
     if filters.get("to_date"):
-        base_filters["to_date"] = filters.to_date
+        conditions += " AND si.posting_date <= %(to_date)s"
+        query_params["to_date"] = filters.to_date
+    if filters.get("company"):
+        conditions += " AND si.company = %(company)s"
+        query_params["company"] = filters.company
+    if filters.get("customer"):
+        conditions += " AND si.customer = %(customer)s"
+        query_params["customer"] = filters.customer
+    if filters.get("customer_group"):
+        conditions += " AND c.customer_group = %(customer_group)s"
+        query_params["customer_group"] = filters.customer_group
+    if filters.get("item_group"):
+        conditions += " AND i.item_group = %(item_group)s"
+        query_params["item_group"] = filters.item_group
+    if filters.get("item_code"):
+        conditions += " AND sii.item_code = %(item_code)s"
+        query_params["item_code"] = filters.item_code
+    if filters.get("sales_person"):
+        conditions += " AND EXISTS (SELECT 1 FROM `tabSales Team` WHERE parent = si.name AND sales_person = %(sales_person)s)"
+        query_params["sales_person"] = filters.sales_person
+    if filters.get("business_region_name"):
+        conditions += " AND c.business_region_name = %(business_region_name)s"
+        query_params["business_region_name"] = filters.business_region_name
+    if filters.get("dom_exp"):
+        if filters.dom_exp == "Domestic":
+            conditions += " AND (si.is_domestic = 1 OR IFNULL(si.is_export, 0) = 0)"
+        elif filters.dom_exp == "Export":
+            conditions += " AND si.is_export = 1"
+    if filters.get("invoice_type"):
+        conditions += " AND si.invoice_type = %(invoice_type)s"
+        query_params["invoice_type"] = filters.invoice_type
+    if filters.get("status"):
+        if isinstance(filters.status, str):
+            status_list = [s.strip() for s in filters.status.split(",") if s.strip()]
+        else:
+            status_list = filters.status
+        conditions += " AND si.status IN %(status_list)s"
+        query_params["status_list"] = tuple(status_list)
+
+    # 2. Main Transactional Query
+    # We join Sales Invoice Item with Sales Team to handle revenue splits correctly
+    # We only include items that hit 'Income' root type accounts to match P&L
+    sql = f"""
+        SELECT 
+            si.name as invoice_id,
+            si.posting_date as invoice_date,
+            si.customer,
+            si.customer_name,
+            si.status,
+            si.invoice_type,
+            si.is_domestic,
+            si.is_export,
+            si.base_net_total,
+            si.base_grand_total,
+            sii.item_code,
+            sii.item_name,
+            sii.base_net_amount as item_net_amount,
+            sii.income_account,
+            sii.qty,
+            st.sales_person,
+            st.allocated_percentage,
+            c.customer_group,
+            c.business_region_name,
+            i.item_group,
+            (SELECT SUM(base_tax_amount) 
+             FROM `tabSales Taxes and Charges` 
+             WHERE parent = si.name 
+             AND account_head IN (SELECT name FROM `tabAccount` WHERE root_type = 'Income')) as tax_income
+        FROM `tabSales Invoice` si
+        JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
+        LEFT JOIN `tabSales Team` st ON st.parent = si.name
+        LEFT JOIN `tabCustomer` c ON c.name = si.customer
+        LEFT JOIN `tabItem` i ON i.name = sii.item_code
+        JOIN `tabAccount` acc ON acc.name = sii.income_account AND acc.root_type = 'Income'
+        {conditions} AND IFNULL(i.custom_is_freight_item, 0) = 0
+        ORDER BY si.posting_date DESC, si.name DESC
+    """
     
-    report_result = execute(base_filters)
-    columns = report_result[0]
-    raw_data = report_result[1]
+    raw_data = frappe.db.sql(sql, query_params, as_dict=1)
     
     if not raw_data:
-        return {
-            "summary": [], "charts": {}, "results": [], "columns": columns
-        }
+        return { "summary": [], "charts": {}, "results": [], "columns": [] }
 
-    # MANUALLY FILTER DATA (Since we cannot change the report script)
+    # 3. Process Data & Calculate Metrics (Million INR)
     data = []
-    
-    # Pre-fetch filter mappings for performance if needed
-    customer_map = {}
-    item_map = {}
-    invoice_map = {}
-    status_map = {}
-
-    inv_names = list(set([d.get("invoice_id") or d.get("name") or d.get("parent") for d in raw_data if d.get("invoice_id") or d.get("name") or d.get("parent")])) if raw_data else []
-
-    if inv_names:
-        # 3. Fetch Income-related Charges from Taxes table (Freight, Services, etc.) using precise Account Types
-        # Also fetch Global Discounts to subtract them from item revenue
-        account_list = frappe.get_all("Account", fields=["name", "root_type"], limit_page_length=None)
-        income_accounts = {a.name for a in account_list if a.root_type == "Income"}
-        
-        tax_rows = frappe.get_all("Sales Taxes and Charges", 
-                                  filters={"parent": ("in", inv_names)},
-                                  fields=["parent", "account_head", "base_tax_amount"],
-                                  limit_page_length=None)
-        
-        invoice_income_charges = {}
-        for tr in tax_rows:
-            if tr.account_head in income_accounts:
-                invoice_income_charges[tr.parent] = invoice_income_charges.get(tr.parent, 0) + flt(tr.base_tax_amount)
-        
-        # 4. Fetch Invoice level info for classification and discounts
-        invoices = frappe.get_all("Sales Invoice", filters={"name": ("in", inv_names)}, 
-                                  fields=["name", "customer", "status", "invoice_type", "is_domestic", "is_export", 
-                                          "base_discount_amount", "base_total", "base_net_total", "base_grand_total"],
-                                  limit_page_length=None)
-        
-        invoice_map = {i.name: i.customer for i in invoices}
-        status_map = {i.name: i.status for i in invoices}
-        type_map = {i.name: i.invoice_type for i in invoices}
-        invoice_discount_map = {i.name: flt(i.base_discount_amount) for i in invoices}
-        invoice_total_map = {i.name: flt(i.base_total) for i in invoices}
-        invoice_grand_total_map = {i.name: flt(i.base_grand_total) for i in invoices}
-        invoice_net_total_map = {i.name: i.base_net_total for i in invoices}
-        
-    # 5. FETCH MASTER REVENUE FROM GL ENTRIES (Exactly as P&L does)
-    # This ensures 100% match with Profit & Loss "Total Income"
-    from_date = filters.get("from_date")
-    to_date = filters.get("to_date")
-    company = filters.get("company")
-    
-    master_gl_income = 0
-    if company:
-        # Find all accounts where root_type is Income for this company
-        gl_query = """
-            SELECT SUM(gl.credit - gl.debit) as total_income
-            FROM `tabGL Entry` gl
-            JOIN `tabAccount` acc ON gl.account = acc.name
-            WHERE gl.company = %(company)s 
-            AND gl.is_cancelled = 0
-            AND acc.root_type = 'Income'
-        """
-        query_params = {"company": company}
-        
-        if filters.get("from_date"):
-            gl_query += " AND gl.posting_date >= %(from_date)s "
-            query_params["from_date"] = filters.from_date
-        if filters.get("to_date"):
-            gl_query += " AND gl.posting_date <= %(to_date)s "
-            query_params["to_date"] = filters.to_date
-            
-        gl_data = frappe.db.sql(gl_query, query_params, as_dict=1)
-        master_gl_income = flt(gl_data[0].total_income) if gl_data else 0
-    
-    # 6. CALCULATE GLOBAL ALIGNMENT FACTOR (Before User Filtering)
-    # We must calculate this based on EVERYTHING returned by execute() 
-    # to avoid wild fluctuations when user filters for a specific salesperson/customer.
-    global_total_invoice_rev = 0
-    unique_items_global = set()
-    
-    for row in raw_data:
-        inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
-        sr_no = row.get("sr_no")
-        item_key = (inv_id, sr_no)
-        
-        if item_key not in unique_items_global:
-            is_return = flt(row.get("is_return") or 0)
-            base_amt_raw = flt(row.get("base_amount_raw") or row.get("base_amount") or 0)
-            if is_return: base_amt_raw = -abs(base_amt_raw)
-            
-            si_total = flt(invoice_total_map.get(inv_id, 0))
-            inv_charges = flt(invoice_income_charges.get(inv_id, 0))
-            inv_discount = flt(invoice_discount_map.get(inv_id, 0))
-            
-            if si_total > 0:
-                share_factor = base_amt_raw / si_total
-                item_charge_share = share_factor * inv_charges
-                item_discount_share = share_factor * inv_discount
-            else:
-                item_charge_share = 0
-                item_discount_share = 0
-                
-            # For "Sales Invoice Data" revenue, we only use base amount and item-level discounts
-            # This ensures we match the sum of base_net_total exactly (Target: 162,061,181.73)
-            rev_item = base_amt_raw - item_discount_share
-            global_total_invoice_rev += rev_item
-            unique_items_global.add(item_key)
-
-    # ALIGNMENT FACTOR: Disabled to match "Sales Invoice Data" exactly as requested.
-    # The previous GL alignment included non-invoice income accounts (Duty Drawback etc.)
-    alignment_factor = 1.0
-    # if global_total_invoice_rev > 0 and master_gl_income > 0:
-    #    alignment_factor = master_gl_income / global_total_invoice_rev
-
-    if inv_names:
-        # Build domestic/export classification map
-        dom_exp_map = {}
-        for i in invoices:
-            if i.is_domestic: 
-                dom_exp_map[i.name] = "Domestic"
-            elif i.is_export: 
-                dom_exp_map[i.name] = "Export"
-            elif i.invoice_type and "Domestic" in i.invoice_type:
-                dom_exp_map[i.name] = "Domestic"
-            elif i.invoice_type and "Export" in i.invoice_type:
-                dom_exp_map[i.name] = "Export"
-            else: 
-                dom_exp_map[i.name] = ""
-
-    # Fetch customer info for classification and filtering
-    cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "business_regions_code", "business_region_name"], limit_page_length=None)
-    customer_map = {c.name: c for c in cust_list}
-        
-    # Fetch item metadata (Always needed for freight exclusion and item group filtering)
-    item_list = frappe.get_all("Item", fields=["name", "item_group", "is_stock_item", "custom_is_freight_item"], limit_page_length=None)
-    item_map = {i.name: i for i in item_list}
-
-    # 7. APPLY USER FILTERS
-    data = []
-    for row in raw_data:
-        keep = True
-        inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
-        inv_cust_id = invoice_map.get(inv_id)
-        
-        # Sales Person
-        sp_filter = filters.get("sales_person")
-        if keep and sp_filter:
-            row_sp = str(row.get("sales_person") or row.get("sales_team") or row.get("sales_team_member") or "").strip().lower()
-            f_sp = str(sp_filter).strip().lower()
-            if f_sp not in row_sp: keep = False
-            
-        # Customer
-        cust_filter = filters.get("customer") or filters.get("customer_name")
-        if keep and cust_filter:
-            f_cust = str(cust_filter).strip().lower()
-            row_cust_id = str(inv_cust_id or "").strip().lower()
-            row_cust_name = str(row.get("customer_name") or row.get("customer") or "").strip().lower()
-            if f_cust != row_cust_id and f_cust != row_cust_name and f_cust not in row_cust_name: keep = False
-            
-        # Product
-        prod_filter = filters.get("item") or filters.get("item_code")
-        if keep and prod_filter:
-            f_prod = str(prod_filter).strip().lower()
-            row_prod_code = str(row.get("item_code") or "").strip().lower()
-            row_prod_name = str(row.get("item_name") or "").strip().lower()
-            if f_prod != row_prod_code and f_prod != row_prod_name: keep = False
-            
-        # Product Group
-        ig_filter = filters.get("item_group")
-        if keep and ig_filter:
-            item_info = item_map.get(row.get("item_code"))
-            if not item_info or str(item_info.item_group) != str(ig_filter): keep = False
-
-        # Customer Group
-        cg_filter = filters.get("customer_group")
-        if keep and cg_filter:
-            cust_info = customer_map.get(inv_cust_id)
-            if not cust_info or str(cust_info.customer_group) != str(cg_filter): keep = False
-                
-        # Business Region
-        br_filter = filters.get("business_region_name")
-        if keep and br_filter:
-            cust_info = customer_map.get(inv_cust_id)
-            if not cust_info or str(cust_info.business_region_name) != str(br_filter): keep = False
-                
-        # Status
-        stat_filter = filters.get("status")
-        if keep and stat_filter:
-            current_status = status_map.get(inv_id)
-            if isinstance(stat_filter, str): stat_filter = [s.strip() for s in stat_filter.split(",")]
-            if current_status not in stat_filter: keep = False
-
-        row["status"] = status_map.get(inv_id)
-        row["invoice_type"] = type_map.get(inv_id)
-        row["dom_exp"] = dom_exp_map.get(inv_id, "")
-        
-        if keep and row["status"] in ["Cancelled", "Draft"]: keep = False
-
-        # Type (Domestic/Export)
-        dom_exp_f = filters.get("dom_exp")
-        if keep and dom_exp_f:
-            if str(dom_exp_f) != str(row.get("dom_exp")): keep = False
-
-        # Invoice Type
-        inv_type_f = filters.get("invoice_type")
-        if keep and inv_type_f:
-            if str(inv_type_f) != str(row.get("invoice_type")): keep = False
-
-        if keep:
-            cust_id = row.get("customer") or invoice_map.get(inv_id)
-            c_info = customer_map.get(cust_id)
-            row["customer_group"] = c_info.customer_group if c_info else ""
-            row["business_region_name"] = c_info.business_region_name if c_info else ""
-            is_cp = False
-            if row["customer_group"]:
-                cg = row["customer_group"].lower()
-                if any(term in cg for term in ["system integrator", "distributor", "partner", "reseller"]):
-                    is_cp = True
-            row["is_channel_partner"] = is_cp
-            data.append(row)
-
-    if not data:
-        return { "summary": [], "charts": {}, "results": [], "columns": columns }
-
-    # 8. PASS 2: CALCULATE ATTRIBUTED TOTALS (RESPECTING FILTERS)
-    # Strategy: 
-    # - Apply global alignment factor to filtered items
-    # - Sum for KPIs using allocated amounts (respects salesperson shares)
-    
     total_net_rev = 0
     total_grand_rev = 0
-    total_returned_rev = 0
     dom_rev = 0
     exp_rev = 0
     cp_rev = 0
-    dom_returned = 0
-    exp_returned = 0
-    cp_returned = 0
     
-    for row in data:
-        inv_id = row.get("invoice_id") or row.get("name") or row.get("parent")
-        is_return = flt(row.get("is_return") or 0)
-        base_amt_raw = flt(row.get("base_amount_raw") or row.get("base_amount") or 0)
-        if is_return: base_amt_raw = -abs(base_amt_raw)
+    sp_revenue = {}
+    cust_revenue = {}
+    prod_revenue = {}
+    
+    processed_items = set()
+
+    for row in raw_data:
+        # Avoid duplicate counting for multi-salesperson rows in grand totals
+        # But for SP charts, we must split the amount
+        inv_id = row.invoice_id
         
-        si_total = flt(invoice_total_map.get(inv_id, 0))
-        inv_charges = flt(invoice_income_charges.get(inv_id, 0))
-        inv_discount = flt(invoice_discount_map.get(inv_id, 0))
+        alloc_p = flt(row.allocated_percentage) or 100
         
-        if si_total > 0:
-            share_factor = base_amt_raw / si_total
-            item_charge_share = share_factor * inv_charges
-            item_discount_share = share_factor * inv_discount
-        else:
-            item_charge_share = 0
-            item_discount_share = 0
-            
-        # Match the "Sales Invoice Data" calculation (Base - Discount)
-        rev_with_adjustments = (base_amt_raw - item_discount_share) * alignment_factor
+        # Revenue Attribution: Match "Sales Invoice Data" exactly (Base Net Amount)
+        # We do NOT add tax_income here to avoid double-counting or mismatch with standard reports.
+        total_item_revenue = flt(row.item_net_amount)
         
-        # Attribution for Charts (Handles multiple sales persons per row)
-        alloc_p = flt(row.get("allocated_percentage") or 100)
-        amt_allocated = rev_with_adjustments * (alloc_p / 100)
+        amt_allocated = total_item_revenue * (alloc_p / 100)
+        qty_allocated = flt(row.qty) * (alloc_p / 100)
         
-        si_net = flt(invoice_net_total_map.get(inv_id, 0))
-        si_grand = flt(invoice_grand_total_map.get(inv_id, 0))
-        gross_factor = (si_grand / si_net) if si_net else 1.0
+        # Gross Attribution (Proportionate share of Grand Total)
+        si_net_total = flt(row.base_net_total) or 1
+        gross_factor = (flt(row.base_grand_total) / si_net_total) if si_net_total else 1.0
         gross_amt_allocated = amt_allocated * gross_factor
         
-        # Store for frontend/export (in Million INR)
-        row["gross_amount"] = gross_amt_allocated / 1000000
-        row["amt_allocated"] = amt_allocated / 1000000
-        row["base_amount"] = (base_amt_raw * alignment_factor * (alloc_p / 100)) / 1000000
+        # Store processed row for table
+        row_copy = frappe._dict(row)
+        row_copy.amt_allocated = amt_allocated / 1000000
+        row_copy.gross_amount = gross_amt_allocated / 1000000
+        row_copy.qty = qty_allocated # Split qty for correct totals
+        row_copy.dom_exp = "Export" if row.is_export else "Domestic"
+        
+        # Classification for Channel Partner
+        is_cp = False
+        if row.customer_group:
+            cg = row.customer_group.lower()
+            if any(term in cg for term in ["system integrator", "distributor", "partner", "reseller"]):
+                is_cp = True
+        row_copy.is_channel_partner = is_cp
+        
+        data.append(row_copy)
 
-        # Sum for KPIs (Allocated amounts ensure correctness even with shared items)
+        # Aggregate for KPIs (Only once per item-SP combination)
         total_net_rev += amt_allocated
         total_grand_rev += gross_amt_allocated
         
-        if is_return:
-            total_returned_rev += abs(amt_allocated)
-        
-        d_e = row.get("dom_exp")
-        if d_e == "Domestic":
-            dom_rev += amt_allocated
-            if is_return: dom_returned += abs(amt_allocated)
-        elif d_e == "Export":
+        if row.is_export:
             exp_rev += amt_allocated
-            if is_return: exp_returned += abs(amt_allocated)
-        
-        if row.get("is_channel_partner"):
+        else:
+            dom_rev += amt_allocated
+            
+        if is_cp:
             cp_rev += amt_allocated
-            if is_return: cp_returned += abs(amt_allocated)
 
+        # Aggregate for Charts
+        sp = row.sales_person or "No Sales Person"
+        sp_revenue[sp] = sp_revenue.get(sp, 0) + amt_allocated
+        
+        cust = row.customer_name or row.customer or "Unknown"
+        # Since we have multiple rows per customer (per item), we should only add this once per item-SP
+        # The logic above already handles this by iterating over every item row
+        cust_revenue[cust] = cust_revenue.get(cust, 0) + amt_allocated
+        
+        prod = row.item_name or row.item_code or "Unknown"
+        prod_revenue[prod] = prod_revenue.get(prod, 0) + amt_allocated
+
+    # 4. Final Output Generation
     report_summary = [
         {"label": _("Net Revenue"), "value": total_net_rev / 1000000, "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Gross Revenue"), "value": total_grand_rev / 1000000, "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
@@ -379,21 +238,6 @@ def get_dashboard_data(filters=None):
         {"label": _("Channel Partner"), "value": cp_rev / 1000000, "indicator": "purple", "fieldtype": "Currency", "currency": "INR"}
     ]
 
-    sp_revenue = {}
-    cust_revenue = {}
-    prod_revenue = {}
-    
-    for row in data:
-        sp = row.get("sales_person") or "No Sales Person"
-        amt = row.get("amt_allocated") or 0
-        sp_revenue[sp] = sp_revenue.get(sp, 0) + amt
-        
-        cust = row.get("customer_name") or row.get("customer") or "Unknown Customer"
-        cust_revenue[cust] = cust_revenue.get(cust, 0) + amt
-        
-        prod_name = row.get("item_name") or row.get("item_code") or "Unknown Product"
-        prod_revenue[prod_name] = prod_revenue.get(prod_name, 0) + amt
-
     def get_chart_def(title, data_dict, limit=10):
         sorted_items = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
         top_items = sorted_items[:limit]
@@ -401,7 +245,7 @@ def get_dashboard_data(filters=None):
             "title": title,
             "data": {
                 "labels": [x[0] for x in top_items],
-                "datasets": [{"name": title, "values": [flt(x[1], 4) for x in top_items]}]
+                "datasets": [{"name": title, "values": [flt(x[1] / 1000000, 4) for x in top_items]}]
             },
             "type": "donut",
             "height": 300,
@@ -411,12 +255,12 @@ def get_dashboard_data(filters=None):
     return {
         "summary": report_summary,
         "charts": {
-            "top_10_salesperson": get_chart_def("Top 10 Salesperson by Revenue", sp_revenue, limit=10),
-            "top_10_customers": get_chart_def("Top 10 Customers by Revenue", cust_revenue, limit=10),
-            "top_10_products": get_chart_def("Top 10 Products by Revenue", prod_revenue, limit=10)
+            "top_10_salesperson": get_chart_def("Top 10 Salesperson", sp_revenue, limit=10),
+            "top_10_customers": get_chart_def("Top 10 Customers", cust_revenue, limit=10),
+            "top_10_products": get_chart_def("Top 10 Products", prod_revenue, limit=10)
         },
         "results": data,
-        "columns": columns
+        "columns": [] # Frontend handles column rendering
     }
 
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side

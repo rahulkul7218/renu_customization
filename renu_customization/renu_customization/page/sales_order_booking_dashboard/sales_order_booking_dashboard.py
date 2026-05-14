@@ -118,7 +118,7 @@ def get_dashboard_data(filters=None):
             soi.item_name AS item_name,
             REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
             soi.qty AS order_quantity,
-            soi.delivered_qty AS delivered_qty,
+            soi.delivered_qty AS delivered_qty, soi.returned_qty AS returned_qty,
             soi.total_short_close_qty AS short_close_qty,
             soi.rate AS item_rate,
             soi.base_rate AS base_rate,
@@ -136,7 +136,7 @@ def get_dashboard_data(filters=None):
             
             -- Calculated values to match report logic
             ((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) AS `total_net_amount_(inr)`,
-            ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate) AS net_delivered_net_total,
+            (soi.delivered_qty * soi.rate * so.conversion_rate) AS delivery_amount,
             (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate)) AS balance_net_total,
             
             -- Enrichment fields
@@ -176,143 +176,98 @@ def get_dashboard_data(filters=None):
         {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 180},
         {"label": "Order Quantity", "fieldname": "order_quantity", "fieldtype": "Float", "width": 130},
         {"label": "Delivered Qty", "fieldname": "delivered_qty", "fieldtype": "Float", "width": 120},
+        {"label": "Returned Qty", "fieldname": "returned_qty", "fieldtype": "Float", "width": 120},
         {"label": "Total Net Amount (INR)", "fieldname": "total_net_amount_(inr)", "fieldtype": "Float", "width": 180},
-        {"label": "Net Delivered Net Total", "fieldname": "net_delivered_net_total", "fieldtype": "Float", "width": 180},
+        {"label": "Delivery Amount", "fieldname": "delivery_amount", "fieldtype": "Float", "width": 180},
         {"label": "Balance Net Total", "fieldname": "balance_net_total", "fieldtype": "Float", "width": 170},
         {"label": "Delivery Date", "fieldname": "delivery_date", "fieldtype": "Date", "width": 120},
         {"label": "Sales Person", "fieldname": "sales_person", "fieldtype": "Data", "width": 150},
         {"label": "Domestic/Export", "fieldname": "dom_exp", "fieldtype": "Data", "width": 150},
     ]
 
-    # Post-processing (Formatting for Dashboard logic)
-    for row in data:
-        row["dashboard_sc_value"] = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate", 0))
-        row["dashboard_booked_gross"] = flt(row.get("total_net_amount_(inr)", 0)) + row["dashboard_sc_value"]
-        row["dashboard_net_delivered"] = flt(row.get("net_delivered_net_total", 0))
-        row["dashboard_returned"] = flt(row.get("returned_qty", 0)) * flt(row.get("base_rate", 0))
-        
-        si_net = flt(row.get("si_net_total") or 1)
-        si_grand = flt(row.get("si_grand_total") or si_net)
-        row["gross_total"] = row["dashboard_booked_gross"] * (si_grand / si_net) if si_net else row["dashboard_booked_gross"]
-        
-        row["picked_net_total_inr"] = flt(row.get("picked_qty_val", 0)) * flt(row.get("base_rate", 0))
-        row["returned_val"] = row["dashboard_returned"]
-        row["sc_value"] = row["dashboard_sc_value"]
-        row["cancelled_val"] = row["dashboard_booked_gross"] if row.get("status") == "Cancelled" else 0
-
-
-
-    if not data:
-        return { "summary": [], "charts": {}, "results": [], "columns": columns }
-
-    # Lifecycle Metrics: Global
-    booked_rev = 0
-    cancelled_rev = 0
-    short_close_rev = 0
-    delivered_rev = 0
-    
-    # Lifecycle Metrics: Regional & CP
-    dom_booked = dom_cancelled = dom_short_close = dom_delivered = 0
-    exp_booked = exp_cancelled = exp_short_close = exp_delivered = 0
-    cp_booked = cp_cancelled = cp_short_close = cp_delivered = 0
-    
-    # Chart-related totals
+    # Initialize KPI/Chart totals
+    booked_rev = cancelled_rev = short_close_rev = delivered_rev = 0
     total_rev = total_gross = cp_active_rev = picked_rev = returned_rev = overdue_rev = balance_rev = 0
-    dom_picked = dom_returned = dom_overdue = 0
-    exp_picked = exp_returned = exp_overdue = 0
-    cp_picked = cp_returned = cp_overdue = 0
+    
+    # Regional/CP Breakdowns
+    dom_booked = dom_cancelled = dom_short_close = dom_delivered = dom_picked = dom_returned = dom_overdue = 0
+    exp_booked = exp_cancelled = exp_short_close = exp_delivered = exp_picked = exp_returned = exp_overdue = 0
+    cp_booked = cp_cancelled = cp_short_close = cp_delivered = cp_picked = cp_returned = cp_overdue = 0
     
     today = frappe.utils.getdate()
     
     for row in data:
         status = row.get("status")
-        # original_amt is the full order value (Gross Booked)
-        original_amt = row.get("dashboard_booked_gross", 0)
-        # amt is Net of Short Close (from report SQL total_net_amount_(inr))
-        amt = flt(row.get("total_net_amount_(inr)") or original_amt)
-        # deliv_amt is Net Delivered (Delivered - Returned)
-        deliv_amt = row.get("dashboard_net_delivered", 0)
-        ret_amt = row.get("dashboard_returned", 0)
+        # 1. Base amount calculations (Calculated in-place for every row)
+        # sc_value is the amount short closed
+        sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate", 0))
+        # base_net is the amount from SQL (Qty - SC Qty) * Rate
+        base_net = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or 0)
+        # gross_booked is before any short close
+        gross_booked = base_net + sc_amt
+        # total_booked_value is the ACTUAL amount we expect to deliver (Net)
+        net_booked = base_net if status != "Cancelled" else 0
         
-        # Identification
+        # 2. Update row with consistent fields for tables and charts
+        row["sc_value"] = sc_amt
+        row["booked_net_total"] = gross_booked # For "Booked" column (Gross)
+        row["total_booked_value"] = net_booked # For "Total Booked Value" column (Net)
+        row["returned_val"] = flt(row.get("returned_qty", 0)) * flt(row.get("base_rate", 0))
+        row["delivered_net_total_inr"] = flt(row.get("delivery_amount", 0))
+        row["picked_net_total_inr"] = flt(row.get("picked_qty_val", 0)) * flt(row.get("base_rate", 0))
+        row["pending_value"] = max(0, net_booked - row["delivered_net_total_inr"] - row["returned_val"])
+        
+        # Overdue logic
+        row["overdue_value"] = 0
+        if row.get("delivery_date") and row["pending_value"] > 0:
+            if frappe.utils.getdate(row["delivery_date"]) < today:
+                row["overdue_value"] = row["pending_value"]
+        
+        # Gross Total (with taxes/extras percentage if available)
+        si_net = flt(row.get("si_net_total") or 1)
+        si_grand = flt(row.get("si_grand_total") or si_net)
+        row["gross_total"] = gross_booked * (si_grand / si_net) if si_net else gross_booked
+        
+        # 3. Aggregate KPI Values (Excludes Drafts usually, following existing pattern)
         d_e = row.get("dom_exp")
-        is_cp = False
         cg = (row.get("customer_group") or "").lower()
-        if any(x in cg for x in ["system integrator", "distributor", "distributer"]):
-            is_cp = True
-
-        # Global Metrics
-        sc_amt = row.get("sc_value", 0)
+        is_cp = any(x in cg for x in ["system integrator", "distributor", "distributer"])
         
         if status not in ("Cancelled", "Draft"):
-            booked_rev += original_amt
-            if d_e == "Domestic": dom_booked += original_amt
-            elif d_e == "Export": exp_booked += original_amt
-            if is_cp: cp_booked += original_amt
+            booked_rev += net_booked # Using Net for Booked Rev KPI
+            delivered_rev += row["delivered_net_total_inr"]
+            picked_rev += row["picked_net_total_inr"]
+            returned_rev += row["returned_val"]
+            overdue_rev += row["overdue_value"]
+            balance_rev += row["pending_value"]
+            total_rev += net_booked
+            total_gross += row["gross_total"]
+            if is_cp: cp_active_rev += net_booked
             
-        if status == "Cancelled":
-            cancelled_rev += amt
-            if d_e == "Domestic": dom_cancelled += amt
-            elif d_e == "Export": exp_cancelled += amt
-            if is_cp: cp_cancelled += amt
-        
+            # Breakdowns
+            if d_e == "Domestic":
+                dom_booked += net_booked; dom_delivered += row["delivered_net_total_inr"]
+                dom_picked += row["picked_net_total_inr"]; dom_returned += row["returned_val"]; dom_overdue += row["overdue_value"]
+            elif d_e == "Export":
+                exp_booked += net_booked; exp_delivered += row["delivered_net_total_inr"]
+                exp_picked += row["picked_net_total_inr"]; exp_returned += row["returned_val"]; exp_overdue += row["overdue_value"]
+            if is_cp:
+                cp_booked += net_booked; cp_delivered += row["delivered_net_total_inr"]
+                cp_picked += row["picked_net_total_inr"]; cp_returned += row["returned_val"]; cp_overdue += row["overdue_value"]
+
+        elif status == "Cancelled":
+            # For Cancelled, we track the Gross amount lost? or Net? 
+            # Existing code used 'amt' which could be Gross. Let's use Gross for cancelled tracking.
+            cancelled_rev += gross_booked
+            if d_e == "Domestic": dom_cancelled += gross_booked
+            elif d_e == "Export": exp_cancelled += gross_booked
+            if is_cp: cp_cancelled += gross_booked
+
         if sc_amt > 0 and status not in ("Cancelled", "Draft"):
             short_close_rev += sc_amt
             if d_e == "Domestic": dom_short_close += sc_amt
             elif d_e == "Export": exp_short_close += sc_amt
             if is_cp: cp_short_close += sc_amt
-        
-        if status not in ("Cancelled", "Draft"):
-            delivered_rev += deliv_amt
-            if d_e == "Domestic": dom_delivered += deliv_amt
-            elif d_e == "Export": exp_delivered += deliv_amt
-            if is_cp: cp_delivered += deliv_amt
-            
-            p_amt = flt(row.get("picked_net_total_inr", 0))
-            picked_rev += p_amt
-            if d_e == "Domestic": dom_picked += p_amt
-            elif d_e == "Export": exp_picked += p_amt
-            if is_cp: cp_picked += p_amt
-
-            returned_rev += ret_amt
-            if d_e == "Domestic": dom_returned += ret_amt
-            elif d_e == "Export": exp_returned += ret_amt
-            if is_cp: cp_returned += ret_amt
-
-        # Chart Totals (Excludes Cancelled/Draft)
-        if status not in ("Cancelled", "Draft"):
-            g_amt = flt(row.get("gross_total") or amt)
-            total_rev += amt
-            total_gross += g_amt
-            if is_cp:
-                cp_active_rev += amt
-
-        # Pending calculation: Match report's balance_net_total
-        pending = flt(row.get("balance_net_total") or 0)
-        
-        # Overdue Calculation
-        overdue = 0
-        if status not in ("Cancelled", "Closed", "Completed", "Draft"):
-            d_date = row.get("delivery_date")
-            if d_date:
-                if frappe.utils.getdate(d_date) < today:
-                    overdue = pending
-                    overdue_rev += overdue
-                    if d_e == "Domestic": dom_overdue += overdue
-                    elif d_e == "Export": exp_overdue += overdue
-                    if is_cp: cp_overdue += overdue
-
-        # Summary values
-        row["total_booked_value"] = amt if status != "Cancelled" else 0
-        row["pending_value"] = pending
-        row["overdue_value"] = overdue
-        row["sc_value"] = sc_amt
-        row["returned_val"] = ret_amt
-        row["delivered_net_total_inr"] = deliv_amt
-        row["balance_net_total_inr"] = pending
-
-        if status not in ("Cancelled", "Draft"):
-            balance_rev += pending
 
 
 
@@ -342,12 +297,10 @@ def get_dashboard_data(filters=None):
                 if row.get("overdue_value", 0) > 1:
                     overdue_so_ids.add(so_id)
 
-    actual_book = booked_rev - returned_rev - balance_rev
-    final_pending = balance_rev
+    # Summary calculations (Calculated in main loop)
 
-    # New primary KPI: Total Booked Value = Booked - Short Close
-    # Based on user instruction: Remove old Gross card, Rename Actual to Total Booked
-    total_booked_net = booked_rev - short_close_rev
+    # Using net booked directly
+    total_booked_net = booked_rev
 
     report_summary = [
         {"label": _("Total Booked Value"), "value": total_booked_net, "count": len(booked_so_ids), "indicator": "blue", "fieldtype": "Currency", "currency": "INR"},
@@ -362,17 +315,23 @@ def get_dashboard_data(filters=None):
     cust_rev_dict = {}
     prod_rev_dict = {}
     
+    # 3. Final Pass: Summarize and Chart (Consolidated)
     for row in data:
         status = row.get("status")
+        so_id = row.get("so_no")
+        
+        # Identification for regional/CP logic (already done in main loop, but here we need counts)
+        if status not in ("Cancelled", "Draft") and so_id:
+            booked_so_ids.add(so_id)
+            if row["pending_value"] > 1: pending_so_ids.add(so_id)
+            if row["delivered_net_total_inr"] > 1: delivered_so_ids.add(so_id)
+            if row["overdue_value"] > 1: overdue_so_ids.add(so_id)
+
+        # Skip chart processing for Cancelled/Draft
         if status in ("Cancelled", "Draft"):
             continue
             
-        amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total") or 0)
-        sc_amt = flt(row.get("short_close_qty", 0)) * flt(row.get("base_rate") or (flt(row.get("item_rate", 0)) * flt(row.get("exchange_rate", 1))))
-        ret_amt = flt(row.get("returned_val") or 0)
-        
-        # Use the new Total Booked Value (Net of SC) for charts
-        actual_val = row.get("total_booked_value", 0)
+        actual_val = row["total_booked_value"]
         
         # Sales Person split
         sp_raw = str(row.get("sales_person") or "Unassigned")
@@ -534,7 +493,11 @@ def export_to_excel(filters=None, export_type="all"):
         months_set = set()
         for row in data:
             sp, cust, prod = row.get("sales_person") or "-", row.get("customer_name") or "-", row.get("item_name") or row.get("item_code") or "-"
-            amt, g_amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total")), flt(row.get("gross_total") or 0)
+            amt = flt(row.get("total_booked_value") if row.get("status") != "Cancelled" else 0)
+            if amt == 0 and row.get("status") != "Cancelled":
+                 amt = flt(row.get("total_net_amount_(inr)") or 0)
+            
+            g_amt = flt(row.get("gross_total") or amt)
             try:
                 d = frappe.utils.getdate(row.get("so_date"))
                 m_key, m_sort = d.strftime("%b %Y"), d.strftime("%Y%m")
@@ -637,11 +600,6 @@ def export_to_excel(filters=None, export_type="all"):
         c_sep2.alignment = Alignment(horizontal="center")
         col_idx += 1
         
-        c_sep3 = ws_months.cell(row=row_idx, column=col_idx, value="-")
-        c_sep3.font, c_sep3.fill, c_sep3.border = header_font, header_fill, table_border
-        c_sep3.alignment = Alignment(horizontal="center")
-        col_idx += 1
-        
         c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
         c_gg.number_format = '"₹ "#,##0.00" M"'
         c_gg.font, c_gg.fill, c_gg.border = header_font, header_fill, table_border
@@ -657,17 +615,12 @@ def export_to_excel(filters=None, export_type="all"):
         row_idx_l += 2
 
         lifecycle_summary_data = {
-            "Total Order Value": {m: 0 for m in sorted_months},
+            "Total Booked Value": {m: 0 for m in sorted_months},
             "Delivered": {m: 0 for m in sorted_months},
-            "Returned": {m: 0 for m in sorted_months},
             "Pending": {m: 0 for m in sorted_months},
             "Overdue": {m: 0 for m in sorted_months},
         }
 
-        booked_raw = {m: 0 for m in sorted_months}
-        sc_raw = {m: 0 for m in sorted_months}
-
-        today = frappe.utils.getdate()
         for row in data:
             try:
                 m_key = frappe.utils.getdate(row.get("so_date")).strftime("%b %Y")
@@ -676,45 +629,16 @@ def export_to_excel(filters=None, export_type="all"):
             if m_key not in sorted_months:
                 continue
 
-            amt = flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
-            status = row.get("status")
+            # Use pre-calculated fields from get_dashboard_data for perfect consistency
+            tbv = flt(row.get("total_booked_value") or 0)
+            deliv = flt(row.get("delivered_net_total_inr") or 0)
+            pending = flt(row.get("pending_value") or 0)
+            overdue = flt(row.get("overdue_value") or 0)
 
-            if status not in ("Cancelled", "Draft"):
-                booked_raw[m_key] += amt
-            
-            sc_amt = flt(row.get("sc_value") or 0)
-            if sc_amt > 0 and status not in ("Cancelled", "Draft"):
-                sc_raw[m_key] += sc_amt
-
-            # Use the calculated delivered amount from the main loop logic
-            deliv_amt = flt(row.get("delivered_net_total_inr") or 0)
-            original_amt = flt(row.get("booked_net_total") or amt)
-            ret_amt = flt(row.get("returned_net_total") or 0)
-
-            if status not in ("Cancelled", "Draft"):
-                lifecycle_summary_data["Delivered"][m_key] += deliv_amt
-                lifecycle_summary_data["Returned"][m_key] += ret_amt
-
-            if status not in ("Cancelled", "Closed", "Completed", "Draft"):
-                delivery_date = row.get("delivery_date")
-                if delivery_date:
-                    delivery_date = frappe.utils.getdate(delivery_date)
-                    if delivery_date < today:
-                        # Use the same pending logic as main loop
-                        pending_row = flt(row.get("pending_value") or 0)
-                        lifecycle_summary_data["Overdue"][m_key] += pending_row
-
-        for m_key in sorted_months:
-            # Total Booked Value = Booked - Short Close
-            tbv = booked_raw[m_key] - sc_raw[m_key]
-            # Balance = Total Booked - Delivered
-            balance = tbv - lifecycle_summary_data["Delivered"][m_key]
-            
-            lifecycle_summary_data["Total Booked Value"] = lifecycle_summary_data.get("Total Booked Value", {})
-            lifecycle_summary_data["Total Booked Value"][m_key] = tbv
-            lifecycle_summary_data["Pending"][m_key] = balance
-            lifecycle_summary_data["Booked"] = booked_raw
-            lifecycle_summary_data["Short Close"] = sc_raw
+            lifecycle_summary_data["Total Booked Value"][m_key] += tbv
+            lifecycle_summary_data["Delivered"][m_key] += deliv
+            lifecycle_summary_data["Pending"][m_key] += pending
+            lifecycle_summary_data["Overdue"][m_key] += overdue
 
         headers_l = ["Category"] + sorted_months + ["Total"]
         for idx, h in enumerate(headers_l, start=1):
@@ -725,7 +649,7 @@ def export_to_excel(filters=None, export_type="all"):
                 Alignment(horizontal="center"),
                 table_border,
             )
-            ws_lifecycle.column_dimensions[get_column_letter(idx)].width = 20
+            ws_lifecycle.column_dimensions[get_column_letter(idx)].width = 25
         row_idx_l += 1
 
         categories = ["Total Booked Value", "Delivered", "Pending", "Overdue"]
@@ -758,32 +682,30 @@ def export_to_excel(filters=None, export_type="all"):
         ws_list.cell(row=row_idx, column=1, value="Detailed Sales Orders List (Million INR)").font = section_font
         row_idx += 2
         ui_columns = [
-            {"label": "S.No.", "fieldname": "sr_no_idx", "width": 8},
-            {"label": "Order ID", "fieldname": "so_no", "width": 18},
-            {"label": "Date", "fieldname": "so_date", "width": 14},
-            {"label": "Status", "fieldname": "status", "width": 14},
-            {"label": "Customer", "fieldname": "customer_name", "width": 25},
-            {"label": "Cust. PO No.", "fieldname": "po_no", "width": 18},
-            {"label": "Item", "fieldname": "item_code", "width": 20},
-            {"label": "Deliv. Date", "fieldname": "delivery_date", "width": 14},
-            {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
-            {"label": "Booked (M)", "fieldname": "total_net_amount_(inr)", "width": 16},
-            {"label": "Total Booked Value (M)", "fieldname": "total_booked_value", "width": 16},
-            {"label": "Returned (M)", "fieldname": "returned_val", "width": 16},
-            {"label": "Short Close (M)", "fieldname": "sc_value", "width": 16},
-            {"label": "Picked (M)", "fieldname": "picked_net_total_inr", "width": 16},
-            {"label": "Delivered (M)", "fieldname": "delivered_net_total_inr", "width": 16},
-            {"label": "Pending (M)", "fieldname": "pending_value", "width": 16},
-            {"label": "Overdue (M)", "fieldname": "overdue_value", "width": 16}
+            {"label": "S.No.", "fieldname": "sr_no_idx", "width": 6},
+            {"label": "Order ID", "fieldname": "so_no", "width": 14},
+            {"label": "Date", "fieldname": "so_date", "width": 12},
+            {"label": "Status", "fieldname": "status", "width": 12},
+            {"label": "Customer", "fieldname": "customer_name", "width": 22},
+            {"label": "Cust. PO No.", "fieldname": "po_no", "width": 16},
+            {"label": "Item", "fieldname": "item_code", "width": 18},
+            {"label": "Deliv. Date", "fieldname": "delivery_date", "width": 12},
+            {"label": "Sales Person", "fieldname": "sales_person", "width": 18},
+            {"label": "Booked (M)", "fieldname": "booked_net_total", "width": 13},
+            {"label": "Total Booked (M)", "fieldname": "total_booked_value", "width": 13},
+            {"label": "Short Close (M)", "fieldname": "sc_value", "width": 13},
+            {"label": "Picked (M)", "fieldname": "picked_net_total_inr", "width": 13},
+            {"label": "Delivered Amt (M)", "fieldname": "delivered_net_total_inr", "width": 13},
+            {"label": "Pending (M)", "fieldname": "pending_value", "width": 13},
+            {"label": "Overdue (M)", "fieldname": "overdue_value", "width": 13}
         ]
         for idx, col in enumerate(ui_columns, start=1):
             cell = ws_list.cell(row=row_idx, column=idx, value=col["label"])
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
-            ws_list.column_dimensions[get_column_letter(idx)].width = col["width"]
+            ws_list.column_dimensions[get_column_letter(idx)].width = col["width"] + 5
         row_idx += 1
         total_list_amt = 0
         total_list_actual = 0
-        total_list_returned = 0
         total_list_sc = 0
         total_list_picked = 0
         total_list_delivered = 0
@@ -795,38 +717,34 @@ def export_to_excel(filters=None, export_type="all"):
                 val = row.get(fname) if fname != "sr_no_idx" else r_idx + 1
                 if val is None:
                     if fname == "order_quantity": val = row.get("po_qty")
-                    if fname == "total_net_amount_(inr)": val = row.get("po_total")
+                    if fname == "booked_net_total": val = row.get("po_total")
                 cell = ws_list.cell(row=row_idx, column=idx)
                 cell.border = table_border
-                if isinstance(val, (int, float)):
-                    if fname in ["total_net_amount_(inr)", "total_booked_value", "returned_val", "sc_value", "picked_net_total_inr", "delivered_net_total_inr", "pending_value", "overdue_value"]:
-                        val /= 1000000
-                        cell.number_format = '"₹ "#,##0.00" M"'
-                        if fname == "total_net_amount_(inr)":
-                            if row.get("status") != "Cancelled":
-                                total_list_amt += flt(row.get("total_net_amount_(inr)") or row.get("po_total"))
-                        elif fname == "total_booked_value": total_list_actual += flt(row.get("total_booked_value") or 0)
-                        elif fname == "returned_val": total_list_returned += flt(row.get("returned_val") or 0)
-                        elif fname == "sc_value": total_list_sc += flt(row.get("sc_value") or 0)
-                        elif fname == "picked_net_total_inr": total_list_picked += flt(row.get("picked_net_total_inr") or 0)
-                        elif fname == "delivered_net_total_inr": total_list_delivered += flt(row.get("delivered_net_total_inr") or 0)
-                        elif fname == "pending_value": total_list_pending += flt(row.get("pending_value") or 0)
-                        elif fname == "overdue_value": total_list_overdue += flt(row.get("overdue_value") or 0)
-                    cell.value, cell.alignment = val, Alignment(horizontal="right")
+                if fname in ["booked_net_total", "total_booked_value", "sc_value", "picked_net_total_inr", "delivered_net_total_inr", "pending_value", "overdue_value"]:
+                    cell.value = flt(val) / 1000000
+                    cell.number_format = '"₹ "#,##0.00" M"'
+                    if fname == "booked_net_total": total_list_amt += flt(val)
+                    if fname == "total_booked_value": total_list_actual += flt(val)
+                    if fname == "sc_value": total_list_sc += flt(val)
+                    if fname == "picked_net_total_inr": total_list_picked += flt(val)
+                    if fname == "delivered_net_total_inr": total_list_delivered += flt(val)
+                    if fname == "pending_value": total_list_pending += flt(val)
+                    if fname == "overdue_value": total_list_overdue += flt(val)
+                    cell.alignment = Alignment(horizontal="right")
                 else:
                     cell.value, cell.alignment = str(val) if val else "", Alignment(horizontal="left")
             row_idx += 1
         
-        ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
+        ws_list.cell(row=row_idx, column=1, value="GRAND TOTAL").font = header_font
         ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=9)
         for c in range(1, 10): 
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
-        # Fill the rest of the columns in the footer
+        
+        # Fill the rest of the columns in the footer (Columns 10-16)
         total_list_values = [
             total_list_amt, 
             total_list_actual, 
-            total_list_returned, 
             total_list_sc, 
             total_list_picked, 
             total_list_delivered, 
@@ -836,7 +754,7 @@ def export_to_excel(filters=None, export_type="all"):
         
         for i, val in enumerate(total_list_values):
             col = 10 + i
-            c_f = ws_list.cell(row=row_idx, column=col, value=val / 1000000)
+            c_f = ws_list.cell(row=row_idx, column=col, value=flt(val) / 1000000)
             c_f.font = header_font
             c_f.fill = header_fill
             c_f.number_format = '"₹ "#,##0.00" M"'
@@ -849,11 +767,11 @@ def export_to_excel(filters=None, export_type="all"):
             wb.remove(wb[dummy_name])
 
     if "Dashboard Overview" in wb.sheetnames:
-        for i in range(1, 10):
-            wb["Dashboard Overview"].column_dimensions[get_column_letter(i)].width = 22
+        for i in range(1, 20):
+            wb["Dashboard Overview"].column_dimensions[get_column_letter(i)].width = 25
     if "Month-Wise Booking" in wb.sheetnames:
-        for i in range(1, 10):
-            wb["Month-Wise Booking"].column_dimensions[get_column_letter(i)].width = 22
+        for i in range(1, 30):
+            wb["Month-Wise Booking"].column_dimensions[get_column_letter(i)].width = 25
 
     output = BytesIO()
     wb.save(output)

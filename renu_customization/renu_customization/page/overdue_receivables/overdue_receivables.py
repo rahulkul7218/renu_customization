@@ -41,95 +41,147 @@ def prepare_filters(filters):
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
 
-    # Base query for overdue sales invoices
-    query_filters = {
-        "docstatus": 1,
-        "outstanding_amount": [">", 0],
-        "is_return": 0,
-        "due_date": ["<", nowdate()]
-    }
+    # Standard Accounts Receivable report filters
+    ar_filters = frappe._dict({
+        "company": filters.get("company"),
+        "report_date": filters.get("to_date") or nowdate(),
+        "customer": [filters.get("customer")] if filters.get("customer") else None,
+        "sales_person": filters.get("sales_person"),
+        "group_by_party": 0,
+        "based_on_payment_terms": 1,
+        "show_future_payments": 0,
+        "range_1": 30,
+        "range_2": 60,
+        "range_3": 90,
+        "range_4": 120
+    })
 
-    # Fiscal year handled in prepare_filters
 
-    # Apply Filters from JS
-    if filters.get("company"):
-        query_filters["company"] = filters.get("company")
+    from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
+    columns, report_data, *rest = execute(ar_filters)
 
-    if filters.get("customer"):
-        query_filters["customer"] = filters.get("customer")
-        
-    if filters.get("from_date"):
-        query_filters["posting_date"] = [">=", filters.get("from_date")]
-    
-    if filters.get("to_date"):
-        if "posting_date" in query_filters:
-            query_filters["posting_date"] = ["between", [filters.get("from_date"), filters.get("to_date")]]
-        else:
-            query_filters["posting_date"] = ["<=", filters.get("to_date")]
+    if not report_data:
+        report_data = []
 
-    invoices = frappe.get_all("Sales Invoice", 
-        filters=query_filters, 
-        fields=["name", "customer", "customer_name", "posting_date", "due_date", 
-                "outstanding_amount", "is_domestic", "is_export", "status"]
-    )
-
-    # Fetch Sales Team info
-    inv_names = [d.name for d in invoices]
-    sales_person_map = {}
-    if inv_names:
-        sales_team = frappe.get_all("Sales Team", 
-            filters={"parent": ["in", inv_names], "parenttype": "Sales Invoice"},
-            fields=["parent", "sales_person"]
+    # Fetch Sales Invoice details for classification (is_export, is_domestic)
+    voucher_nos = [d.get("voucher_no") for d in report_data if d.get("voucher_type") == "Sales Invoice"]
+    invoice_details = {}
+    if voucher_nos:
+        inv_data = frappe.get_all("Sales Invoice", 
+            filters={"name": ["in", voucher_nos]},
+            fields=["name", "is_domestic", "is_export", "customer_group"]
         )
-        for st in sales_team:
-            if st.parent not in sales_person_map:
-                sales_person_map[st.parent] = []
-            sales_person_map[st.parent].append(st.sales_person)
+        for d in inv_data:
+            invoice_details[d.name] = d
 
     data = []
-    today = getdate(nowdate())
+    report_date = getdate(ar_filters.report_date)
+    
+    # Ageing Totals
+    ageing_data = {
+        "0-30": 0,
+        "31-60": 0,
+        "61-90": 0,
+        "91-120": 0,
+        "121+": 0
+    }
 
-    for inv in invoices:
-        inv_sales_persons = sales_person_map.get(inv.name, [])
-        inv["sales_person"] = ", ".join(inv_sales_persons) if inv_sales_persons else ""
+    total_outstanding_cumulative = 0
+
+    for row in report_data:
+        # Skip summary rows or rows without a party
+        if not row.get("party") or row.get("party") in [_("Total"), "Total"]:
+            continue
+
+        outstanding = flt(row.get("outstanding_amount") or row.get("outstanding") or 0)
+        if abs(outstanding) < 0.01: continue
+
+        v_no = row.get("voucher_no")
+        v_type = row.get("voucher_type")
         
-        # Calculate Days Overdue
-        inv["days_overdue"] = date_diff(today, inv.due_date)
-        
-        # Determine classification - match table display logic
-        if inv.is_export:
-            inv["type"] = "Export"
+        # Existence check
+        if v_type == "Sales Invoice" and v_no not in invoice_details: continue
+
+        # Manual Customer Filter (Defensive check)
+        if filters.get("customer") and row.get("party") != filters.get("customer"):
+            continue
+            
+        # Manual Sales Person Filter (Defensive check)
+        if filters.get("sales_person"):
+            row_sp = row.get("sales_person")
+            if not row_sp or filters.get("sales_person") not in row_sp:
+                continue
+
+        # Posting Date Range Filter
+        posting_date = getdate(row.get("posting_date"))
+
+        if filters.get("from_date") and posting_date < getdate(filters.get("from_date")): continue
+        if filters.get("to_date") and posting_date > getdate(filters.get("to_date")): continue
+
+        # Classification for Type Filter
+        is_export = False
+        if v_type == "Sales Invoice":
+            is_export = invoice_details.get(v_no, {}).get("is_export")
         else:
-            inv["type"] = "Domestic"
+            cust_group = row.get("customer_group")
+            if cust_group and "Export" in cust_group: is_export = True
 
-        # Apply Sales Person Filter
-        if filters.get("sales_person") and filters.get("sales_person") not in inv_sales_persons:
+        type_label = "Export" if is_export else "Domestic"
+        if filters.get("type") and type_label != filters.get("type"): continue
+
+        # Sum to Total Outstanding (respecting dashboard filters)
+        total_outstanding_cumulative += outstanding
+
+        # Overdue Check & Min Days Filter
+        due_date = getdate(row.get("due_date"))
+        is_overdue = (due_date and due_date <= report_date) or outstanding < 0
+        days_overdue = date_diff(report_date, due_date) if due_date else 0
+        
+        if outstanding > 0 and filters.get("min_days") and int(days_overdue) < int(filters.get("min_days")):
             continue
+
+        # If it passes all filters, add to results and sum ageing buckets from report columns
+        if is_overdue:
+            inv = {
+                "name": v_no or _("On Account"),
+                "voucher_type": v_type,
+                "customer": row.get("party"),
+                "customer_name": row.get("customer_name") or row.get("party_name"),
+                "posting_date": row.get("posting_date"),
+                "due_date": row.get("due_date"),
+                "outstanding_amount": outstanding,
+                "days_overdue": days_overdue if outstanding > 0 else 0,
+                "type": type_label,
+                "sales_person": row.get("sales_person") or ""
+            }
+            data.append(inv)
             
-        # Apply Days Filter
-        if filters.get("min_days") and int(inv["days_overdue"]) < int(filters.get("min_days")):
-            continue
-            
-        # Apply Type Filter
-        if filters.get("type") and inv["type"] != filters.get("type"):
-            continue
+            # Manual Ageing Calculation (Net values)
+            if days_overdue <= 30: ageing_data["0-30"] += outstanding
+            elif days_overdue <= 60: ageing_data["31-60"] += outstanding
+            elif days_overdue <= 90: ageing_data["61-90"] += outstanding
+            elif days_overdue <= 120: ageing_data["91-120"] += outstanding
+            else: ageing_data["121+"] += outstanding
 
-        data.append(inv)
+    # Total Overdue: Sum of all overdue and unallocated items (Net)
+    # (Matches the sum of ageing columns in the AR report)
+    total_overdue = sum(flt(d["outstanding_amount"]) for d in data)
+    
+    export_overdue = sum(flt(d["outstanding_amount"]) for d in data if d["type"] == "Export")
+    domestic_overdue = sum(flt(d["outstanding_amount"]) for d in data if d["type"] == "Domestic")
 
-    # Calculate KPIs - round each value to 4 decimal places in M before summing
-    # so card totals match the sum of displayed row values
-    total_overdue = sum(round(flt(d.outstanding_amount) / 1000000, 4) for d in data) * 1000000
-    export_overdue = sum(round(flt(d.outstanding_amount) / 1000000, 4) for d in data if d.type == "Export") * 1000000
-    domestic_overdue = sum(round(flt(d.outstanding_amount) / 1000000, 4) for d in data if d.type == "Domestic") * 1000000
+
+
 
     summary = [
+        {"label": _("Total Outstanding"), "value": total_outstanding_cumulative, "indicator": "cyan", "fieldtype": "Currency"},
         {"label": _("Total Overdue"), "value": total_overdue, "indicator": "red", "fieldtype": "Currency"},
-        {"label": _("Export Overdue"), "value": export_overdue, "indicator": "orange", "fieldtype": "Currency"},
-        {"label": _("Domestic Overdue"), "value": domestic_overdue, "indicator": "blue", "fieldtype": "Currency"},
-        {"label": _("Total Count"), "value": len(data), "indicator": "green", "fieldtype": "Int"}
+        {"label": _("Export Overdue"), "value": export_overdue, "indicator": "green", "fieldtype": "Currency"},
+        {"label": _("Domestic Overdue"), "value": domestic_overdue, "indicator": "purple", "fieldtype": "Currency"},
     ]
 
-    # Charts: Export vs Domestic Breakdown
+
+    # Charts
     charts = {
         "overdue_breakdown": {
             "title": _("Overdue Breakdown (Export vs Domestic)"),
@@ -139,6 +191,17 @@ def get_dashboard_data(filters=None):
             },
             "type": "donut",
             "colors": ["#10b981", "#f59e0b"]
+        },
+        "ageing_breakdown": {
+            "title": _("Ageing Breakdown"),
+            "data": {
+                "labels": ["0-30", "31-60", "61-90", "91-120", "121+"],
+                "datasets": [{"name": _("Amount"), "values": [
+                    ageing_data["0-30"], ageing_data["31-60"], ageing_data["61-90"], ageing_data["91-120"], ageing_data["121+"]
+                ]}]
+            },
+            "type": "bar",
+            "colors": ["#3b82f6", "#06b6d4", "#f59e0b", "#ef4444", "#991b1b"]
         }
     }
 
@@ -147,6 +210,7 @@ def get_dashboard_data(filters=None):
         "charts": charts,
         "results": data
     }
+
 
 @frappe.whitelist()
 def export_to_excel(filters=None, export_type="all"):

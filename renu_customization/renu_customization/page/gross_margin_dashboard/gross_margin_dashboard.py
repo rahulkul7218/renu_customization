@@ -122,6 +122,13 @@ def get_dashboard_data(filters=None):
             row_cust_name = str(row.get("customer") or row.get("customer_name") or "").strip().lower()
             if f_cust != row_cust_id and f_cust != row_cust_name and f_cust not in row_cust_name:
                 keep = False
+
+        # 10. Customer Group
+        cg_filter = filters.get("customer_group")
+        if keep and cg_filter:
+            cust_info = customer_map.get(inv_cust_id)
+            if not cust_info or str(cust_info.customer_group) != str(cg_filter):
+                keep = False
             
         # 3. Product
         prod_filter = filters.get("item") or filters.get("item_code") or filters.get("product")

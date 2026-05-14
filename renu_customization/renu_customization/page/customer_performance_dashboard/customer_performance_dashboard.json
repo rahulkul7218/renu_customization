@@ -1,15 +1,15 @@
 {
     "content": null,
-    "creation": "2026-04-24 12:00:00.000000",
+    "creation": "2026-05-13 12:30:00.000000",
     "docstatus": 0,
     "doctype": "Page",
     "idx": 0,
-    "modified": "2026-04-24 12:00:00.000000",
+    "modified": "2026-05-13 12:30:00.000000",
     "modified_by": "Administrator",
     "module": "Renu Customization",
-    "name": "supplier_order_dashboard",
+    "name": "customer_performance_dashboard",
     "owner": "Administrator",
-    "page_name": "supplier_order_dashboard",
+    "page_name": "customer_performance_dashboard",
     "roles": [
         {
             "role": "System Manager"
@@ -18,5 +18,5 @@
     "standard": "Yes",
     "style": null,
     "system_page": 0,
-    "title": "Supplier Order Dashboard"
+    "title": "Customer Performance Dashboard"
 }
