@@ -73,6 +73,10 @@ def get_dashboard_data(filters=None):
         )
         for d in inv_data:
             invoice_details[d.name] = d
+    
+    # Also fetch classification for Payment Entries if they have it (custom field) or fallback to Customer Group
+    payment_nos = [d.get("voucher_no") for d in report_data if d.get("voucher_type") in ["Payment Entry", "Journal Entry"]]
+    # In this specific system, let's check if there are other classification methods needed
 
     data = []
     report_date = getdate(ar_filters.report_date)
@@ -110,12 +114,15 @@ def get_dashboard_data(filters=None):
             if cust_group and "Export" in cust_group:
                 is_export = True
 
-        # Overdue Check (Include invoices due today or before)
+        # Overdue Check
+        # 1. Any item with a negative outstanding (Advance/Credit) is included to show net balance
+        # 2. Any item with a positive outstanding is included if it is overdue (due_date <= report_date)
+        is_advance = outstanding < 0
         due_date = getdate(row.get("due_date"))
         is_overdue = due_date and due_date <= report_date
         
-        # Consider all overdue items AND all unallocated payments (advances)
-        if not is_overdue and outstanding >= 0:
+        # Skip if it's a future invoice (not overdue and not an advance)
+        if not is_advance and not is_overdue:
             continue
             
         type_label = "Export" if is_export else "Domestic"
