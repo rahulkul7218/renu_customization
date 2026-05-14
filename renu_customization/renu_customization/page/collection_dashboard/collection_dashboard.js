@@ -14,23 +14,60 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         .page-container { background-color: transparent !important; }
         .dashboard-content { padding: 20px; background: transparent !important; min-height: 100vh; font-family: 'Inter', sans-serif; color: #1e293b; width: 100% !important; }
         
-        /* Filter Area Styling */
-        .dashboard-filter-area { background: #fff; padding: 16px 24px; width: 100%; border-bottom: 1px solid #f1f5f9; }
-        .dashboard-filter-area .section-body { 
-            display: grid !important; 
-            grid-template-columns: repeat(6, 1fr) !important; 
-            gap: 12px 20px !important; 
-            align-items: flex-end !important; 
+        .dashboard-filter-area {
+            padding: 10px 10px 10px 10px !important;
+            background-color: #fff !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            margin-bottom: 0 !important;
         }
-        .dashboard-filter-area .form-column { 
-            width: 100% !important; 
-            padding: 0 !important; 
-            float: none !important; 
-            flex: none !important; 
-            max-width: none !important;
+        .dashboard-filter-area .form-section .section-body,
+        .dashboard-filter-area .section-body,
+        .dashboard-filter-area .form-column {
+            display: block !important;
+            width: 100% !important;
         }
-        .dashboard-filter-area .frappe-control { margin-bottom: 0 !important; }
-        .dashboard-filter-area .section-head { display: none !important; }
+        .dashboard-filter-area .form-column form {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 12px 12px !important;
+            align-items: flex-end !important;
+        }
+        .dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
+        .dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
+            display: none !important;
+        }
+        .dashboard-filter-area .frappe-control {
+            margin-bottom: 10px !important;
+            width: calc(25% - 12px) !important;
+        }
+        .dashboard-filter-area .frappe-control .form-group {
+            margin-bottom: 0 !important;
+            width: 100% !important;
+        }
+        .dashboard-filter-area .control-input,
+        .dashboard-filter-area .awesomplete,
+        .dashboard-filter-area input,
+        .dashboard-filter-area select {
+            width: 100% !important;
+            max-width: 100% !important;
+            height: 28px !important;
+            font-size: 13px !important;
+        }
+        .dashboard-filter-area label,
+        .dashboard-filter-area .control-label {
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            color: #475569 !important;
+            margin-bottom: 6px !important;
+            display: block !important;
+            white-space: nowrap !important;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+        .dashboard-filter-area .help-box,
+        .dashboard-filter-area .description {
+            display: none !important;
+        }
 
         /* Dashboard Cards */
         .summary-wrapper { 
@@ -215,9 +252,10 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 130px;">${__("Payment ID")}</th>
                                 <th style="min-width: 110px;">${__("Invoice ID")}</th>
                                 <th style="min-width: 100px;">${__("Date")}</th>
+                                <th style="min-width: 100px;">${__("Due Date")}</th>
+                                <th style="min-width: 80px; text-align: center;">${__("Due Days")}</th>
                                 <th style="min-width: 250px;">${__("Customer")}</th>
                                 <th style="min-width: 300px;">${__("Item")}</th>
-                                <th style="min-width: 180px;">${__("Sales Person")}</th>
                                 <th style="min-width: 130px; text-align: right;">${__("Amount")}</th>
                                 <th style="min-width: 90px; text-align: center;">${__("Type")}</th>
                             </tr>
@@ -239,6 +277,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                     <td style="white-space: nowrap;"><a href="/app/payment-entry/${row.payment_entry}" style="font-weight: 600; color: #4338ca;">${row.payment_entry}</a></td>
                     <td style="white-space: nowrap;"><a href="/app/sales-invoice/${row.name}" style="font-weight: 500; color: #64748b;">${row.name}</a></td>
                     <td style="white-space: nowrap;">${frappe.datetime.str_to_user(row.posting_date)}</td>
+                    <td style="white-space: nowrap; color: #64748b;">${frappe.datetime.str_to_user(row.due_date)}</td>
+                    <td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days}</span></td>
                     <td style="white-space: nowrap;">${row.customer}</td>
                     <td>
                         <div style="line-height: 1.4;">
@@ -246,7 +286,6 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                             <div style="font-weight: 600;">${row.item_name || "-"}</div>
                         </div>
                     </td>
-                    <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
                     <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_currency_short(row.allocated_amount)}</td>
                     <td style="text-align: center;"><span class="indicator-pill ${type_label}">${__(type_label)}</span></td>
                 </tr>
@@ -254,11 +293,17 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 		});
 
 		// Grand Total Footer
-		let total_display = "₹ " + total_amt.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + " M";
+		let total_display =
+			"₹ " +
+			total_amt.toLocaleString("en-US", {
+				minimumFractionDigits: 4,
+				maximumFractionDigits: 4,
+			}) +
+			" M";
 		$(`
 			<tfoot>
 				<tr class="sticky-total">
-					<td colspan="6" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
+					<td colspan="7" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
 					<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${total_display}</td>
 					<td></td>
 				</tr>
@@ -304,11 +349,11 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 		if (data.due_results && data.due_results.length > 0) {
 			let total_due_net = 0;
 			let total_due_outstanding = 0;
-			
+
 			data.due_results.forEach((row) => {
 				total_due_net += flt(row.base_net_total);
 				total_due_outstanding += flt(row.outstanding_amount);
-				
+
 				$(`
                     <tr>
                         <td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #c53030;">${row.name}</a></td>
@@ -316,7 +361,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                         <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
                         <td style="color: #e53e3e; font-weight: 600;">${frappe.datetime.str_to_user(row.due_date)}</td>
                         <td style="text-align: center;">
-                            <span class="indicator-pill ${row.due_days <= 3 ? 'Domestic' : 'Export'}" style="width: 100%; display: inline-block;">
+                            <span class="indicator-pill ${row.due_days <= 3 ? "Domestic" : "Export"}" style="width: 100%; display: inline-block;">
                                 ${row.due_days} ${__("Days")}
                             </span>
                         </td>
@@ -336,40 +381,87 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					</tr>
 				</tfoot>
 			`).appendTo(due_table_card.find(".dashboard-table"));
-
 		} else {
-			$(`<tr><td colspan="7" class="text-center text-muted" style="padding: 20px;">No upcoming payments due in next 15 days</td></tr>`).appendTo(due_tbody);
+			$(
+				`<tr><td colspan="7" class="text-center text-muted" style="padding: 20px;">No upcoming payments due in next 15 days</td></tr>`,
+			).appendTo(due_tbody);
 		}
 	}
 
 	// --- 3. INITIALIZE FILTERS AND ACTIONS ---
 	const filter_fields = [
-		{ fieldname: "fiscal_year", label: __("Fiscal Year"), fieldtype: "Link", options: "Fiscal Year", placeholder: __("Select Year") },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "from_date", label: __("From Date"), fieldtype: "Date", placeholder: __("Start Date") },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "to_date", label: __("To Date"), fieldtype: "Date", placeholder: __("End Date") },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer", placeholder: __("Select Customer") },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person", placeholder: __("Select Sales Person") },
-		{ fieldtype: "Column Break" },
-		{ fieldname: "dom_exp", label: __("Type"), fieldtype: "Select", options: ["", "Domestic", "Export"], placeholder: __("Select Type") },
-		{ fieldtype: "Column Break" },
-		{ fieldtype: "Column Break" },
-		{ fieldtype: "Column Break" },
-		{ fieldtype: "Column Break" },
+		{
+			fieldname: "fiscal_year",
+			label: __("Fiscal Year"),
+			fieldtype: "Link",
+			options: "Fiscal Year",
+			placeholder: __("Select Year"),
+		},
+		{
+			fieldname: "from_date",
+			label: __("From Date"),
+			fieldtype: "Date",
+			placeholder: __("Start Date"),
+		},
+		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+			placeholder: __("End Date"),
+		},
+		{
+			fieldname: "customer_group",
+			label: __("Customer Group"),
+			fieldtype: "Link",
+			options: "Customer Group",
+			placeholder: __("Select Group"),
+		},
+		{
+			fieldname: "customer",
+			label: __("Customer"),
+			fieldtype: "Link",
+			options: "Customer",
+			placeholder: __("Select Customer"),
+		},
+		{
+			fieldname: "item_group",
+			label: __("Product Group"),
+			fieldtype: "Link",
+			options: "Item Group",
+			placeholder: __("Select Product Group"),
+		},
+		{
+			fieldname: "item_code",
+			label: __("Product (Item)"),
+			fieldtype: "Link",
+			options: "Item",
+			placeholder: __("Select Product"),
+		},
+		{
+			fieldname: "sales_person",
+			label: __("Sales Person"),
+			fieldtype: "Link",
+			options: "Sales Person",
+			placeholder: __("Select Sales Person"),
+		},
+		{
+			fieldname: "dom_exp",
+			label: __("Domestic/Export"),
+			fieldtype: "Select",
+			options: ["", "Domestic", "Export"],
+			placeholder: __("Select"),
+		},
 	];
 
 	// Initialize filters
 	setTimeout(() => {
 		page.filter_group = new frappe.ui.FieldGroup({
 			parent: filter_parent,
-			fields: filter_fields
+			fields: filter_fields,
 		});
 		page.filter_group.make();
 		setup_filter_events();
-		
+
 		// Initial Load after filter group is ready
 		page.refresh();
 	}, 100);
@@ -377,42 +469,19 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 	function setup_filter_events() {
 		Object.keys(page.filter_group.fields_dict).forEach((key) => {
 			let field = page.filter_group.fields_dict[key];
-			
+
 			const trigger_refresh = () => {
-				if (key === "fiscal_year") {
-					const fy = field.get_value();
-					if (fy) {
-						frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
-							if (r && r.year_start_date && r.year_end_date) {
-								page.filter_group.set_values({
-									from_date: r.year_start_date,
-									to_date: r.year_end_date
-								});
-								page.refresh();
-							}
-						});
-					} else {
-						page.refresh();
-					}
-				} else {
-					page.refresh();
-				}
+				page.refresh();
 			};
 
-			// Use df.on_change for framework-level detection
+			// Comprehensive event binding
 			field.df.on_change = trigger_refresh;
+			field.on_change = trigger_refresh;
 
-			// Also attach to DOM events for "realtime" feel
 			if (field.$input) {
-				field.$input.on("change blur", () => {
-					// Small delay to allow the framework to update the internal value
-					setTimeout(() => trigger_refresh(), 50);
+				field.$input.on("change input blur", () => {
+					setTimeout(() => trigger_refresh(), 100);
 				});
-			}
-
-			// Extra safeguard for Select and Link fields
-			if (["Select", "Link"].includes(field.df.fieldtype)) {
-				field.on_change = trigger_refresh;
 			}
 		});
 	}
@@ -433,13 +502,19 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					const { filename, filecontent } = r.message;
 					const byteCharacters = atob(filecontent);
 					const byteNumbers = new Array(byteCharacters.length);
-					for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
-					const blob = new Blob([new Uint8Array(byteNumbers)], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+					for (let i = 0; i < byteCharacters.length; i++)
+						byteNumbers[i] = byteCharacters.charCodeAt(i);
+					const blob = new Blob([new Uint8Array(byteNumbers)], {
+						type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+					});
 					const link = document.createElement("a");
 					link.href = window.URL.createObjectURL(blob);
 					link.download = filename;
 					link.click();
-					frappe.show_alert({ message: __("Excel Report Downloaded"), indicator: "green" });
+					frappe.show_alert({
+						message: __("Excel Report Downloaded"),
+						indicator: "green",
+					});
 				}
 			},
 		});
@@ -448,176 +523,232 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 	const export_pdf = async () => {
 		if (!page.dashboard_data) return;
 		frappe.show_alert({ message: __("Preparing PDF..."), indicator: "blue" });
-		const get_chart_png = () => {
-			const svg_elem = document.querySelector(`#chart_wrapper svg`);
-			if (!svg_elem) return null;
 
-			const svg_clone = svg_elem.cloneNode(true);
-			const legends = svg_clone.querySelectorAll(".chart-legend, .legend-dataset-text");
-			legends.forEach(l => l.remove());
+		const data = page.dashboard_data;
+		const report_date = frappe.datetime.now_datetime();
+		const filters = page.filter_group.get_values();
+		let period = "All Time";
+		if (filters.from_date && filters.to_date) {
+			period = `${frappe.datetime.str_to_user(filters.from_date)} to ${frappe.datetime.str_to_user(filters.to_date)}`;
+		}
 
-			const canvas = document.createElement("canvas");
-			const context = canvas.getContext("2d");
-			const svg_data = new XMLSerializer().serializeToString(svg_clone);
-			const img = new Image();
+		// Standard Chart Capture Logic
+		const get_chart_image = (wrapper_id) => {
+			const chart_svg = document.querySelector(`#${wrapper_id} svg`);
+			if (!chart_svg) return null;
+
+			const clone = chart_svg.cloneNode(true);
+			const internal_legend = clone.querySelector(
+				".chart-legend, .legend, .frappe-chart-legend",
+			);
+			if (internal_legend) internal_legend.style.display = "none";
+
 			return new Promise((resolve) => {
+				const canvas = document.createElement("canvas");
+				const svg_data = new XMLSerializer().serializeToString(clone);
+				const img = new Image();
+
 				img.onload = () => {
-					canvas.width = img.width * 2; canvas.height = img.height * 2;
-					context.fillStyle = "white"; context.fillRect(0, 0, canvas.width, canvas.height);
-					context.drawImage(img, 0, 0, canvas.width, canvas.height);
+					canvas.width = img.width * 2;
+					canvas.height = img.height * 2;
+					const ctx = canvas.getContext("2d");
+					ctx.fillStyle = "white";
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
+					ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 					resolve(canvas.toDataURL("image/png"));
 				};
-				img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
+				img.src =
+					"data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
 			});
 		};
 
-		const chart_png = await get_chart_png();
-		const data = page.dashboard_data;
-		const total_val = data.chart.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-		const period = (page.filter_group.get_values().from_date) ? `${page.filter_group.get_values().from_date} to ${page.filter_group.get_values().to_date}` : "Current Selection";
+		// Helper for Chart Legend in PDF
+		const chart_l = (chart_obj) => {
+			if (!chart_obj || !chart_obj.data.labels.length) return "";
+			const total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
 
-		let html = `<html><head><style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-            body { font-family: 'Inter', sans-serif; font-size: 10px; color: #1e293b; margin: 0; padding: 20px; }
-            .report-header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #4f46e5; padding-bottom: 15px; }
-            .report-header h1 { margin: 0; color: #0f172a; font-size: 24px; }
-            .report-header p { margin: 5px 0 0; color: #64748b; font-size: 12px; font-weight: 500; }
-            
-            .kpi-container { width: 100%; margin-bottom: 30px; overflow: hidden; }
-            .kpi-card { width: 23.5%; float: left; margin-right: 2%; background: #f8fafc; border-top: 4px solid #cbd5e1; padding: 12px 5px; text-align: center; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); box-sizing: border-box; }
-            .kpi-card:last-child { margin-right: 0 !important; }
-            .kpi-card.blue { border-top-color: #3b82f6; background: #eff6ff; }
-            .kpi-card.green { border-top-color: #10b981; background: #ecfdf5; }
-            .kpi-card.orange { border-top-color: #f59e0b; background: #fff7ed; }
-            .kpi-card.red { border-top-color: #ef4444; background: #fef2f2; }
-            
-            .kpi-label { font-size: 9px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 5px; }
-            .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
-            
-            .chart-section { text-align: center; margin-bottom: 40px; page-break-inside: avoid; background: #fff; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; }
-            .chart-title { font-weight: 700; color: #334155; margin-bottom: 15px; font-size: 14px; }
-            .pdf-legend { width: 80%; margin: 20px auto 0; padding: 12px; background: #f1f5f9; border-radius: 6px; overflow: hidden; }
-            .legend-item { width: 45%; float: left; margin: 0 2.5%; display: block; text-align: center; }
-            .dot { width: 10px; height: 10px; border-radius: 2px; display: inline-block; margin-right: 5px; vertical-align: middle; }
-            
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; background: #fff; border: 1px solid #e2e8f0; }
-            th { background: #f1f5f9; color: #475569; font-weight: 700; padding: 10px 8px; text-align: left; border: 1px solid #e2e8f0; text-transform: uppercase; font-size: 9px; }
-            td { padding: 8px; border: 1px solid #e2e8f0; vertical-align: top; font-size: 9px; }
-            tr:nth-child(even) { background: #fafafa; }
-            .text-right { text-align: right; }
-            .text-center { text-align: center; }
-            .bold { font-weight: 700; }
-            .status-pill { padding: 2px 6px; border-radius: 10px; font-size: 8px; font-weight: 700; }
-            
-            .footer { margin-top: 40px; font-size: 8px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 10px; }
-            .section-title { color: #0f172a; margin: 25px 0 10px; font-size: 14px; border-left: 4px solid #4f46e5; padding-left: 10px; }
-        </style></head><body>
-            <div class="report-header">
-                <h1>Collection Dashboard</h1>
-                <p>Period: ${period}</p>
-            </div>
+			let legend_html = '<div class="pdf-legend">';
+			chart_obj.data.labels.forEach((l, i) => {
+				const val = chart_obj.data.datasets[0].values[i];
+				const color = chart_obj.colors[i % chart_obj.colors.length];
+				const share = ((val / total_val) * 100).toFixed(1);
+				legend_html += `
+					<div class="pdf-legend-item">
+						<span class="pdf-dot" style="background: ${color}"></span>
+						<div class="pdf-legend-info">
+							<div class="pdf-legend-label">${l}</div>
+							<div class="pdf-legend-val">${format_currency_short(val)} (${share}%)</div>
+						</div>
+					</div>
+				`;
+			});
+			legend_html += "</div>";
+			return legend_html;
+		};
 
-            <div class="kpi-container">
-                ${data.summary.map(m => {
-                    let cls = (m.indicator || "blue").toLowerCase();
-                    return `
-                        <div class="kpi-card ${cls}">
-                            <div class="kpi-label">${m.label}</div>
-                            <div class="kpi-value">${format_currency_short(m.value)}</div>
-                        </div>
-                    `;
-                }).join("")}
-            </div>
-            
-            <div class="chart-section">
-                <div class="chart-title">Collection Breakdown</div>
-                <img src="${chart_png}" style="max-width:380px;">
-                <div class="pdf-legend">
-                    ${data.chart.data.labels.map((label, idx) => {
-                        let val = data.chart.data.datasets[0].values[idx];
-                        let color = data.chart.colors[idx % data.chart.colors.length];
-                        let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
-                        return `
-                            <div class="legend-item">
-                                <span class="dot" style="background: ${color}"></span>
-                                <span style="font-weight:700; white-space: nowrap;">${label}: ${format_currency_short(val)} (${share})</span>
-                            </div>
-                        `;
-                    }).join("")}
-                </div>
-            </div>
+		const chart_png = await get_chart_image("chart_wrapper");
 
-            <div class="section-title">Detailed Collection List</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th width="15%">Payment ID</th>
-                        <th width="12%">Invoice ID</th>
-                        <th width="10%">Date</th>
-                        <th width="33%">Customer</th>
-                        <th width="20%" class="text-right">Allocated Amount</th>
-                        <th width="10%" class="text-center">Type</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.results.map(row => `
-                        <tr>
-                            <td class="bold">${row.payment_entry}</td>
-                            <td style="color: #64748b;">${row.name}</td>
-                            <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
-                            <td>${row.customer}</td>
-                            <td class="text-right bold">${format_currency_short(row.allocated_amount)}</td>
-                            <td class="text-center">${row.is_export ? "Export" : "Domestic"}</td>
-                        </tr>
-                    `).join("")}
-                </tbody>
-                <tfoot>
-                    <tr style="background: #f1f5f9; font-weight: bold; border-top: 2px solid #e2e8f0;">
-                        <td colspan="4" class="text-right">GRAND TOTAL</td>
-                        <td class="text-right">${format_currency_short(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
+		const html = `
+			<html>
+			<head>
+				<style>
+					body { font-family: 'Inter', sans-serif; padding: 15px; color: #1e293b; background: #fff; line-height: 1.4; font-size: 10px; }
+					@page { size: landscape; margin: 8mm; }
+					
+					.report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
+					.header-title { margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase; letter-spacing: 1px; }
+					
+					.kpi-wrapper { width: 100%; clear: both; margin-bottom: 20px; display: block; overflow: hidden; }
+					.kpi-card { float: left; width: 23.5%; border: 1px solid #e2e8f0; padding: 12px 6px; margin: 0.5%; border-radius: 8px; background: #f8fafc; text-align: center; border-left: 4px solid #3b82f6; box-sizing: border-box; }
+					.kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
+					.kpi-value { font-size: 14px; font-weight: 800; color: #0f172a; }
+					
+					.pdf-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }
+					.card-title { margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+					
+					.chart-content { text-align: center; }
+					.chart-img { width: 60%; max-height: 280px; object-fit: contain; margin-bottom: 15px; }
+					
+					.pdf-legend { display: block; text-align: left; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; margin-top: 10px; overflow: hidden; }
+					.pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 8px; vertical-align: top; margin-right: 2%; }
+					.pdf-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+					.pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 20px); }
+					.pdf-legend-label { font-size: 9px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+					.pdf-legend-val { font-size: 8px; color: #64748b; }
 
-            <div class="section-title">Upcoming Payments Due (Next 15 Days)</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th width="15%">Invoice ID</th>
-                        <th width="35%">Customer</th>
-                        <th width="12%">Posting Date</th>
-                        <th width="12%">Due Date</th>
-                        <th width="8%" class="text-center">Days</th>
-                        <th width="18%" class="text-right">Outstanding</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${(data.due_results && data.due_results.length > 0) ? data.due_results.map(row => `
-                        <tr>
-                            <td class="bold">${row.name}</td>
-                            <td>${row.customer}</td>
-                            <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
-                            <td style="color: #e53e3e; font-weight: bold;">${frappe.datetime.str_to_user(row.due_date)}</td>
-                            <td class="text-center">${row.due_days}</td>
-                            <td class="text-right bold" style="color: #c53030;">${format_currency_short(row.outstanding_amount)}</td>
-                        </tr>
-                    `).join("") : '<tr><td colspan="6" class="text-center">No upcoming payments due</td></tr>'}
-                </tbody>
-                <tfoot>
-                    <tr style="background: #fef2f2; font-weight: bold; border-top: 2px solid #e2e8f0; color: #c53030;">
-                        <td colspan="5" class="text-right">TOTAL OUTSTANDING</td>
-                        <td class="text-right">${format_currency_short(data.due_results.reduce((a, b) => a + flt(b.outstanding_amount), 0))}</td>
-                    </tr>
-                </tfoot>
-            </table>
-            
-            <div class="footer">
-                Printed on: ${frappe.datetime.now_datetime()} | renu_customization - Collection Analysis Report
-            </div>
-        </body></html>`;
+					table { width: 100%; border-collapse: collapse; font-size: 9px; border: 1px solid #e2e8f0; }
+					th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; }
+					thead th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
+					.text-right { text-align: right; }
+					.text-center { text-align: center; }
+					.bold { font-weight: 700; }
+					
+					.section-title { font-size: 13px; font-weight: 700; color: #3b82f6; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; text-transform: uppercase; }
+					.page-break { page-break-after: always; }
+				</style>
+			</head>
+			<body>
+				<div class="report-header">
+					<h1 class="header-title">Collection Dashboard</h1>
+					<p style="font-size: 11px; color: #64748b; margin: 4px 0;">Period: ${period}</p>
+					<p style="font-size: 9px; color: #94a3b8; margin: 0;">Generated: ${report_date}</p>
+				</div>
 
-		const $form = $(`<form action="/api/method/renu_customization.renu_customization.page.collection_dashboard.collection_dashboard.export_to_pdf" method="POST" target="_blank" style="display:none;"><input type="hidden" name="html" value=""><input type="hidden" name="csrf_token" value="${frappe.csrf_token}"></form>`).appendTo("body");
+				<div class="kpi-wrapper">
+					${data.summary
+						.map(
+							(m) => `
+						<div class="kpi-card" style="border-left-color: ${m.indicator === "green" ? "#10b981" : m.indicator === "orange" ? "#f59e0b" : "#3b82f6"}">
+							<div class="kpi-label">${m.label}</div>
+							<div class="kpi-value">${format_currency_short(m.value)}</div>
+						</div>
+					`,
+						)
+						.join("")}
+				</div>
+
+				<div class="pdf-card chart-section">
+					<h4 class="card-title">Collection Breakdown</h4>
+					<div class="chart-content">
+						<img src="${chart_png}" class="chart-img">
+						${chart_l(data.chart)}
+					</div>
+				</div>
+
+				<div class="page-break"></div>
+				<h3 class="section-title">Detailed Collection List</h3>
+				<table>
+					<thead>
+						<tr>
+							<th width="12%">Payment ID</th>
+							<th width="12%">Invoice ID</th>
+							<th width="10%">Date</th>
+							<th width="10%">Due Date</th>
+							<th width="8%" class="text-center">Days</th>
+							<th width="20%">Customer</th>
+							<th width="18%" class="text-right">Amount (M)</th>
+							<th width="10%" class="text-center">Type</th>
+						</tr>
+					</thead>
+					<tbody>
+						${data.results
+							.map(
+								(row) => `
+							<tr>
+								<td class="bold">${row.payment_entry}</td>
+								<td style="color: #64748b;">${row.name}</td>
+								<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
+								<td>${frappe.datetime.str_to_user(row.due_date)}</td>
+								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days}</td>
+								<td>${row.customer}</td>
+								<td class="text-right bold">${format_currency_short(row.allocated_amount)}</td>
+								<td class="text-center">${row.is_export ? "Export" : "Domestic"}</td>
+							</tr>
+						`,
+							)
+							.join("")}
+					</tbody>
+					<tfoot>
+						<tr style="background: #f8fafc; font-weight: bold;">
+							<td colspan="6" class="text-right">GRAND TOTAL</td>
+							<td class="text-right">${format_currency_short(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
+							<td></td>
+						</tr>
+					</tfoot>
+				</table>
+
+				${
+					data.due_results && data.due_results.length > 0
+						? `
+					<div class="page-break"></div>
+					<h3 class="section-title" style="color: #ef4444; border-bottom-color: #ef4444;">Upcoming Payments Due (Next 15 Days)</h3>
+					<table>
+						<thead>
+							<tr>
+								<th width="15%">Invoice ID</th>
+								<th width="35%">Customer</th>
+								<th width="12%">Posting Date</th>
+								<th width="12%">Due Date</th>
+								<th width="8%" class="text-center">Days</th>
+								<th width="18%" class="text-right">Outstanding (M)</th>
+							</tr>
+						</thead>
+						<tbody>
+							${data.due_results
+								.map(
+									(row) => `
+								<tr>
+									<td class="bold">${row.name}</td>
+									<td>${row.customer}</td>
+									<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
+									<td style="color: #ef4444; font-weight: bold;">${frappe.datetime.str_to_user(row.due_date)}</td>
+									<td class="text-center">${row.due_days}</td>
+									<td class="text-right bold" style="color: #ef4444;">${format_currency_short(row.outstanding_amount)}</td>
+								</tr>
+							`,
+								)
+								.join("")}
+						</tbody>
+						<tfoot>
+							<tr style="background: #fef2f2; font-weight: bold; color: #ef4444;">
+								<td colspan="5" class="text-right">TOTAL OUTSTANDING</td>
+								<td class="text-right">${format_currency_short(data.due_results.reduce((a, b) => a + flt(b.outstanding_amount), 0))}</td>
+							</tr>
+						</tfoot>
+					</table>
+				`
+						: ""
+				}
+				
+				<div style="margin-top: 30px; font-size: 8px; color: #94a3b8; text-align: center;">
+					Printed on: ${frappe.datetime.now_datetime()} | renu_customization - Collection Analysis Report
+				</div>
+			</body></html>
+		`;
+
+		const $form = $(
+			`<form action="/api/method/renu_customization.renu_customization.page.collection_dashboard.collection_dashboard.export_to_pdf" method="POST" target="_blank" style="display:none;"><input type="hidden" name="html" value=""><input type="hidden" name="csrf_token" value="${frappe.csrf_token}"></form>`,
+		).appendTo("body");
 		$form.find('input[name="html"]').val(html);
 		$form.submit();
 		$form.remove();
