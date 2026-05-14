@@ -10,7 +10,7 @@ import base64
 
 @frappe.whitelist()
 def export_to_pdf(html):
-    frappe.response.filename = "supplier_order_dashboard.pdf"
+    frappe.response.filename = "supplier_performance_dashboard.pdf"
     frappe.response.type = "binary"
     frappe.response.filecontent = frappe.utils.pdf.get_pdf(html, {"orientation": "Landscape"})
 
@@ -500,7 +500,7 @@ def export_to_excel(filters=None, export_type="all"):
     wb.save(output)
     output.seek(0)
     
-    filename = f"Supplier_Order_Dashboard_{nowdate()}.xlsx"
+    filename = f"Supplier_Performance_Dashboard_{nowdate()}.xlsx"
     if export_type == "summary":
         filename = f"Supplier_Consolidated_Booking_{nowdate()}.xlsx"
     elif export_type == "detail":
