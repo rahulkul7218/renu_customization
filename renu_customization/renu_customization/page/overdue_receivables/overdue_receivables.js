@@ -44,15 +44,23 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		if (!page.dashboard_data) return;
 
 		const report_date = moment().format("YYYY-MM-DD HH:mm");
-		const filters = page.filter_group.get_values();
+		const data = page.dashboard_data;
 
-		const get_chart_png = () => {
-			const svg = document.querySelector(`#overdue-chart svg`);
+		// Function to convert SVG chart to PNG Base64
+		const get_chart_png = (selector) => {
+			const container = document.querySelector(selector);
+			const svg = container ? container.querySelector("svg") : null;
 			if (!svg) return null;
+
+			// Temporarily hide the internal chart legend for a cleaner PDF
+			const legend = container.querySelector(".chart-legend, .graph-legend-active");
+			if (legend) legend.style.display = "none";
+
 			const canvas = document.createElement("canvas");
 			const context = canvas.getContext("2d");
 			const svg_data = new XMLSerializer().serializeToString(svg);
 			const img = new Image();
+
 			return new Promise((resolve) => {
 				img.onload = () => {
 					canvas.width = img.width * 2;
@@ -60,38 +68,39 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 					context.fillStyle = "white";
 					context.fillRect(0, 0, canvas.width, canvas.height);
 					context.drawImage(img, 0, 0, canvas.width, canvas.height);
+					
+					// Restore legend on screen
+					if (legend) legend.style.display = "";
+					
 					resolve(canvas.toDataURL("image/png"));
 				};
-				img.src =
-					"data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
+				img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svg_data)));
 			});
 		};
 
-		const chart_png = await get_chart_png();
-		const data = page.dashboard_data;
-		const total_val =
-			data.charts.overdue_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-
-		// Generate Legend Box HTML for PDF
-		const legend_box_html = data.charts.overdue_breakdown.data.labels
-			.map((label, i) => {
-				const val = data.charts.overdue_breakdown.data.datasets[0].values[i];
-				const color =
-					data.charts.overdue_breakdown.colors[
-						i % data.charts.overdue_breakdown.colors.length
-					];
+		// Helper to generate legend HTML
+		const get_legend_html = (chart_key) => {
+			const chart = data.charts[chart_key];
+			const total_val = chart.data.datasets[0].values.reduce((a, b) => a + (b || 0), 0) || 1;
+			
+			return chart.data.labels.map((label, i) => {
+				const val = chart.data.datasets[0].values[i] || 0;
+				const color = chart.colors[i % chart.colors.length];
 				const share = ((val / total_val) * 100).toFixed(1) + "%";
 				return `
-                <div style="display: inline-block; width: 45%; margin: 5px 2%; vertical-align: top; text-align: left;">
-                    <span style="display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: ${color}; margin-right: 8px;"></span>
-                    <div style="display: inline-block; vertical-align: top;">
-                        <div style="font-size: 10px; font-weight: 600; color: #475569;">${label}</div>
-                        <div style="font-size: 9px; color: #94a3b8;">${format_currency(val)} (${share})</div>
-                    </div>
-                </div>
-            `;
-			})
-			.join("");
+					<div style="display: inline-block; width: 45%; margin: 5px 2%; vertical-align: top; text-align: left;">
+						<span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: ${color}; margin-right: 5px;"></span>
+						<div style="display: inline-block; vertical-align: top;">
+							<div style="font-size: 9px; font-weight: 600; color: #475569;">${label}</div>
+							<div style="font-size: 8px; color: #94a3b8;">${format_currency(val)} (${share})</div>
+						</div>
+					</div>
+				`;
+			}).join("");
+		};
+
+		const overdue_png = await get_chart_png("#overdue-chart");
+		const ageing_png = await get_chart_png("#ageing-chart");
 
 		let html = `
             <html>
@@ -104,26 +113,18 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                     .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; text-align: center; background: #f8fafc; vertical-align: top; }
                     .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
                     .kpi-value { font-size: 16px; font-weight: 800; }
-                    .chart-container { text-align: center; margin-bottom: 30px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: #fff; page-break-inside: avoid; }
-                    .chart-img { max-width: 450px; height: auto; margin-bottom: 15px; }
-                    .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 12px; border: 1px solid #f1f5f9; margin-top: 15px; text-align: left; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 15px; page-break-inside: auto !important; table-layout: auto; }
-                    tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-                    th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
+                    .charts-row { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 30px; }
+                    .chart-col { display: table-cell; width: 50%; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; background: #fff; vertical-align: top; page-break-inside: avoid; }
+                    .chart-img { width: 100%; height: auto; max-height: 250px; margin-bottom: 10px; object-fit: contain; }
+                    .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #f1f5f9; margin-top: 10px; }
+                    
+                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 15px; page-break-inside: auto !important; }
+                    th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; }
                     thead { display: table-header-group; }
-                    tfoot { display: table-row-group; }
-                    th { background: #f1f5f9; text-align: left; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; font-weight: 700; }
+                    th { background: #f1f5f9; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; font-weight: 700; }
                     .text-right { text-align: right; }
                     .text-center { text-align: center; }
-
-                    /* Column Widths */
-                    .col-sno { width: 40px; text-align: center; }
-                    .col-customer, .col-supplier { width: 180px; }
-                    .col-sp { width: 120px; }
-                    .col-prod { width: 150px; }
-                    .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
-                    .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
                 </style>
             </head>
             <body>
@@ -131,24 +132,34 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                     <h1 style="margin:0;">Overdue Receivables Report (Million INR)</h1>
                     <p style="font-size:10px; color:#999;">Generated: ${report_date}</p>
                 </div>
+                
                 <div class="kpi-wrapper">
-                    ${data.summary
-						.map(
-							(m) => `
+                    ${data.summary.map(m => `
                         <div class="kpi-card">
                             <div class="kpi-label">${m.label}</div>
                             <div class="kpi-value">${m.fieldtype === "Currency" ? format_currency(m.value) : m.value}</div>
                         </div>
-                    `,
-						)
-						.join("")}
+                    `).join("")}
                 </div>
                 
-                <div class="chart-container">
-                    <h3 style="color:#334155; text-transform:uppercase; font-size:14px; margin-top:0;">${data.charts.overdue_breakdown.title}</h3>
-                    <img src="${chart_png}" class="chart-img">
-                    <div class="pdf-legend-box">
-                        ${legend_box_html}
+                <div class="charts-row">
+                    <div class="chart-col">
+                        <h4 style="color:#334155; text-transform:uppercase; font-size:12px; margin: 0 0 10px 0; text-align: center;">${data.charts.overdue_breakdown.title}</h4>
+                        <div style="text-align: center;">
+                            <img src="${overdue_png}" class="chart-img">
+                        </div>
+                        <div class="pdf-legend-box">
+                            ${get_legend_html('overdue_breakdown')}
+                        </div>
+                    </div>
+                    <div class="chart-col">
+                        <h4 style="color:#334155; text-transform:uppercase; font-size:12px; margin: 0 0 10px 0; text-align: center;">${data.charts.ageing_breakdown.title}</h4>
+                        <div style="text-align: center;">
+                            <img src="${ageing_png}" class="chart-img">
+                        </div>
+                        <div class="pdf-legend-box">
+                            ${get_legend_html('ageing_breakdown')}
+                        </div>
                     </div>
                 </div>
 
@@ -167,9 +178,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.results
-							.map(
-								(row) => `
+                        ${data.results.map(row => `
                             <tr>
                                 <td>${row.name}</td>
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
@@ -177,12 +186,10 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                                 <td>${row.sales_person || "-"}</td>
                                 <td class="text-center">${row.type}</td>
                                 <td class="text-right">${format_currency(row.outstanding_amount)}</td>
-                                <td class="text-right">${frappe.datetime.str_to_user(row.due_date)}</td>
+                                <td class="text-right">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
                                 <td class="text-right">${row.days_overdue}</td>
                             </tr>
-                        `,
-							)
-							.join("")}
+                        `).join("")}
                     </tbody>
                     <tfoot>
                         <tr style="background: #f8fafc; font-weight: bold;">
@@ -458,13 +465,21 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                 .bg-purple { background-color: #8b5cf6; }
                 .bg-red { background-color: #ef4444; }
 
+                .charts-wrapper {
+                    display: grid !important;
+                    grid-template-columns: 1fr 1fr !important;
+                    gap: 20px;
+                    margin-bottom: 24px;
+                }
+                @media (max-width: 1200px) {
+                    .charts-wrapper { grid-template-columns: 1fr !important; }
+                }
 				.chart-card { 
                     background: #fff; 
                     border-radius: 12px; 
                     padding: 24px; 
                     box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
                     border: 1px solid #e2e8f0; 
-                    margin-bottom: 24px;
                 }
                 .chart-card .title { 
                     font-size: 13px; 
@@ -587,41 +602,72 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 			`).appendTo(summary_row);
 		});
 
-		let chart_card = $(`
+		let charts_row = $('<div class="charts-wrapper"></div>').appendTo(page.container);
+
+		let breakdown_card = $(`
             <div class="chart-card">
                 <div class="title">${data.charts.overdue_breakdown.title}</div>
-                <div id="overdue-chart" style="height: 350px;"></div>
+                <div id="overdue-chart" style="height: 300px;"></div>
                 <div id="overdue-legend" class="custom-legend"></div>
             </div>
-        `).appendTo(page.container);
+        `).appendTo(charts_row);
+
+		let ageing_card = $(`
+            <div class="chart-card">
+                <div class="title">${data.charts.ageing_breakdown.title}</div>
+                <div id="ageing-chart" style="height: 300px;"></div>
+                <div id="ageing-legend" class="custom-legend"></div>
+            </div>
+        `).appendTo(charts_row);
 
 		setTimeout(() => {
-			let chart = new frappe.Chart("#overdue-chart", {
+			// Donut Chart: Export vs Domestic
+			new frappe.Chart("#overdue-chart", {
 				data: data.charts.overdue_breakdown.data,
 				type: "donut",
-				height: 350,
+				height: 300,
 				colors: data.charts.overdue_breakdown.colors,
 				legend: 0,
 				show_legend: 0,
-				legendOptions: { showLegend: false },
 			});
 
-			// Render Custom Legend
-			let legend_container = chart_card.find("#overdue-legend");
-			let total_val = data.charts.overdue_breakdown.data.datasets[0].values.reduce(
-				(a, b) => a + b,
-				0,
-			);
-
+			// Render Custom Legend for Breakdown
+			let breakdown_legend = breakdown_card.find("#overdue-legend");
+			let b_total = data.charts.overdue_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
 			data.charts.overdue_breakdown.data.labels.forEach((label, idx) => {
 				let val = data.charts.overdue_breakdown.data.datasets[0].values[idx];
-				let color =
-					data.charts.overdue_breakdown.colors[
-						idx % data.charts.overdue_breakdown.colors.length
-					];
-				let share = total_val > 0 ? ((val / total_val) * 100).toFixed(1) + "%" : "0%";
+				let color = data.charts.overdue_breakdown.colors[idx % data.charts.overdue_breakdown.colors.length];
+				let share = b_total > 0 ? ((val / b_total) * 100).toFixed(1) + "%" : "0%";
+				breakdown_legend.append(`
+                    <div class="legend-item">
+                        <span class="dot" style="background: ${color}"></span>
+                        <div class="info">
+                            <span class="label">${label}</span>
+                            <span class="val-pct">(${share})</span>
+                            <span class="val-amount">${format_currency(val)}</span>
+                        </div>
+                    </div>
+                `);
+			});
 
-				legend_container.append(`
+			// Bar Chart: Ageing
+			new frappe.Chart("#ageing-chart", {
+				data: data.charts.ageing_breakdown.data,
+				type: "bar",
+				height: 300,
+				colors: data.charts.ageing_breakdown.colors,
+				legend: 0,
+				show_legend: 0,
+			});
+
+			// Render Custom Legend for Ageing
+			let ageing_legend = ageing_card.find("#ageing-legend");
+			let a_total = data.charts.ageing_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
+			data.charts.ageing_breakdown.data.labels.forEach((label, idx) => {
+				let val = data.charts.ageing_breakdown.data.datasets[0].values[idx];
+				let color = data.charts.ageing_breakdown.colors[idx % data.charts.ageing_breakdown.colors.length];
+				let share = a_total > 0 ? ((val / a_total) * 100).toFixed(1) + "%" : "0%";
+				ageing_legend.append(`
                     <div class="legend-item">
                         <span class="dot" style="background: ${color}"></span>
                         <div class="info">
@@ -664,14 +710,21 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
         `).appendTo(page.container);
 
 		let tbody = table_card.find("tbody");
-		let total_outstanding = 0;
+		let total_outstanding_raw = 0;
 		data.results.forEach((row) => {
-			// Round to 4 decimal places in M (same as display) before summing
-			let display_val = Math.round(flt(row.outstanding_amount) / 1000000 * 10000) / 10000;
-			total_outstanding += display_val;
+			total_outstanding_raw += flt(row.outstanding_amount);
+			
+			let display_name = row.name;
+			let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
+			
+			if (row.outstanding_amount < 0 && row.name === __("On Account")) {
+				display_name = __("On Account Advance");
+				link_url = "#";
+			}
+
 			$(`
 				<tr>
-					<td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
+					<td class="invoice-col"><a href="${link_url}" style="font-weight: 600; color: #4338ca;">${display_name}</a></td>
 					<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
 					<td class="customer-col" style="font-weight: 500;">${row.customer_name || row.customer}</td>
 					<td class="sp-col">${row.sales_person || "-"}</td>
@@ -679,14 +732,14 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                         <span class="indicator-pill ${row.type}">${__(row.type)}</span>
                     </td>
 					<td class="amount-col" style="font-weight: 700; color: #0f172a;">${format_currency(row.outstanding_amount)}</td>
-					<td class="date-col text-right">${frappe.datetime.str_to_user(row.due_date)}</td>
-					<td class="overdue-col overdue-days">${row.days_overdue}</td>
+					<td class="date-col text-right">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+					<td class="overdue-col overdue-days">${row.days_overdue || 0}</td>
 				</tr>
 			`).appendTo(tbody);
 		});
 
-		// Total is already in M and rounded, format directly
-		let total_display = "₹ " + total_outstanding.toLocaleString("en-US", { minimumFractionDigits: 4, maximumFractionDigits: 4 }) + " M";
+		// Format the total from the raw sum
+		let total_display = format_currency(total_outstanding_raw);
 
 		let tfoot = table_card.find("tfoot");
 		$(`
