@@ -772,7 +772,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th class="col-sp">Sales Person</th>
                                 <th class="col-amt">Booked (M)</th>
                                 <th class="col-amt">Total Booked (M)</th>
-                                <th class="col-amt">Returned (M)</th>
                                 <th class="col-amt">Short Close (M)</th>
                                 <th class="col-amt">Picked (M)</th>
                                 <th class="col-amt">Delivered (M)</th>
@@ -809,85 +808,31 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 			const today_moment = moment().startOf("day");
 
+			// Initialize buckets for the 4 display categories
+			const display_categories = ["Total Booked Value", "Delivered", "Pending", "Overdue"];
+			display_categories.forEach(cat => {
+				lifecycle_buckets[cat] = { color: "#10b981", data: {} };
+			});
+			lifecycle_buckets["Delivered"].color = "#06b6d4";
+			lifecycle_buckets["Pending"].color = "#f59e0b";
+			lifecycle_buckets["Overdue"].color = "#8b5cf6";
+
 			filtered_data.forEach((row) => {
 				let m_key = moment(row.so_date).format("MMM YYYY");
-				// amt is the Net Amount after Short Close (from report SQL total_net_amount_(inr))
-				let amt = flt(row["total_net_amount_(inr)"] || row.po_total);
-				// original_amt is the full order value before any subtractions
-				let original_amt = flt(row.booked_net_total || amt);
-				let status = row.status;
+				
+				// Use pre-calculated fields from Python get_dashboard_data
+				let tbv = flt(row.total_booked_value || 0);
+				let deliv = flt(row.delivered_net_total_inr || row.dashboard_net_delivered || 0);
+				let pending = flt(row.pending_value || 0);
+				let overdue = flt(row.overdue_value || 0);
 
-				if (status !== "Cancelled" && status !== "Draft") {
-					lifecycle_buckets["Booked"].data[m_key] =
-						(lifecycle_buckets["Booked"].data[m_key] || 0) + original_amt;
-				}
-
-				if (status === "Cancelled") {
-					lifecycle_buckets["Cancelled"].data[m_key] =
-						(lifecycle_buckets["Cancelled"].data[m_key] || 0) + original_amt;
-				}
-
-				let sc_qty = flt(row.short_close_qty || 0);
-				let sc_amt = sc_qty * flt(row.base_rate || row.item_rate || 0);
-				if (sc_amt > 0 && status !== "Cancelled" && status !== "Draft") {
-					lifecycle_buckets["Short Close"].data[m_key] =
-						(lifecycle_buckets["Short Close"].data[m_key] || 0) + sc_amt;
-				}
-
-				let picked_amt = flt(row.picked_net_total_inr || 0);
-				if (status !== "Cancelled" && status !== "Draft") {
-					lifecycle_buckets["Picked"].data[m_key] =
-						(lifecycle_buckets["Picked"].data[m_key] || 0) + picked_amt;
-				}
-
-				// Use returned_net_total from backend if available
-				let ret_amt = flt(row.returned_net_total || row.returned_val || 0);
-				if (ret_amt > 0 && status !== "Cancelled" && status !== "Draft") {
-					lifecycle_buckets["Returned"].data[m_key] =
-						(lifecycle_buckets["Returned"].data[m_key] || 0) + ret_amt;
-				}
-
-				// Use net_delivered_net_total from backend if available
-				let deliv_amt = flt(row.net_delivered_net_total || row.delivered_net_total_inr || 0);
-				if (status !== "Cancelled" && status !== "Draft") {
-					lifecycle_buckets["Delivered"].data[m_key] =
-						(lifecycle_buckets["Delivered"].data[m_key] || 0) + deliv_amt;
-				}
-
-				if (
-					status !== "Cancelled" &&
-					status !== "Closed" &&
-					status !== "Completed" &&
-					status !== "Draft"
-				) {
-					if (row.delivery_date && moment(row.delivery_date).isBefore(today_moment)) {
-						let balance = flt(row.balance_net_total_inr);
-						if (!row.hasOwnProperty("balance_net_total_inr")) {
-							balance = amt - deliv_amt - sc_amt;
-						}
-						lifecycle_buckets["Overdue"].data[m_key] =
-							(lifecycle_buckets["Overdue"].data[m_key] || 0) + balance;
-					}
-				}
+				lifecycle_buckets["Total Booked Value"].data[m_key] = (lifecycle_buckets["Total Booked Value"].data[m_key] || 0) + tbv;
+				lifecycle_buckets["Delivered"].data[m_key] = (lifecycle_buckets["Delivered"].data[m_key] || 0) + deliv;
+				lifecycle_buckets["Pending"].data[m_key] = (lifecycle_buckets["Pending"].data[m_key] || 0) + pending;
+				lifecycle_buckets["Overdue"].data[m_key] = (lifecycle_buckets["Overdue"].data[m_key] || 0) + overdue;
 			});
 
-			// Calculate Actual and Pending
-			lifecycle_buckets["Pending"] = { color: "#f59e0b", data: {} };
-			months.forEach((m) => {
-				let booked = lifecycle_buckets["Booked"].data[m.key] || 0;
-				let sc = lifecycle_buckets["Short Close"].data[m.key] || 0;
-				let ret = lifecycle_buckets["Returned"].data[m.key] || 0;
-				let deliv = lifecycle_buckets["Delivered"].data[m.key] || 0;
 
-				// Balance (Pending) = Booked - Short Close - Delivered
-				let pending = booked - sc - deliv;
-				// Total Booked Value = Booked - Short Close (Matches Report)
-				let tbv = booked - sc;
-				lifecycle_buckets["Total Booked Value"].data[m.key] = tbv;
-				lifecycle_buckets["Pending"].data[m.key] = pending;
-			});
-
-			const display_categories = ["Total Booked Value", "Delivered", "Pending", "Overdue"];
 			display_categories.forEach((cat) => {
 				let row_data = lifecycle_buckets[cat];
 				if (!row_data) return;
@@ -924,7 +869,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let cust = row.customer_name || "-";
 				let item_code = row.item_code || "-";
 				let item_name = row.item_name || "-";
-				let amt = flt(row.total_booked_value || row["total_net_amount_(inr)"] || row.po_total);
+				let amt = row.hasOwnProperty("total_booked_value") ? flt(row.total_booked_value) : flt(row["total_net_amount_(inr)"] || 0);
 				let g_amt = flt(row.gross_total || amt);
 				let m_key = moment(row.so_date).format("MMM YYYY");
 				let key = sp + "|" + cust + "|" + item_code;
@@ -1034,7 +979,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 			if (filtered_data.length === 0) {
 				tbody_list.append(
-					`<tr><td colspan="15" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="16" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				filtered_data.forEach((row, idx) => {
@@ -1045,9 +990,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						status_color = "orange";
 					if (["Cancelled"].includes(row.status)) status_color = "red";
 
-					let amt = flt(
-						row.total_net_amount_inr || row["total_net_amount_(inr)"] || row.po_total,
-					);
+					let amt = row.hasOwnProperty("total_booked_value")
+						? flt(row.total_booked_value)
+						: flt(row["total_net_amount_(inr)"] || 0);
 					let deliv_total = flt(row.delivered_net_total_inr || 0);
 					let sc_value = flt(row.sc_value || 0);
 					let ret_val = flt(row.returned_val || 0);
@@ -1086,9 +1031,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             </td>
                             <td class="col-deliv-date" style="color: #475569; font-size: 11px; white-space: nowrap;">${deliv_date_str}</td>
                             <td class="col-sp">${row.sales_person || "-"}</td>
-                            <td class="col-amt" style="font-weight: 700; color: #0f172a;">${format_currency_short(original_amt)}</td>
+                            <td class="col-amt" style="font-weight: 700; color: #1e293b;">${format_currency_short(original_amt)}</td>
                             <td class="col-amt" style="font-weight: 700; color: #059669;">${format_currency_short(actual_val)}</td>
-                            <td class="col-amt" style="color: #f43f5e;">${format_currency_short(ret_val)}</td>
                             <td class="col-amt" style="color: #f59e0b;">${format_currency_short(sc_value)}</td>
                             <td class="col-amt" style="color: #0f172a;">${format_currency_short(row.picked_net_total_inr || 0)}</td>
                             <td class="col-amt" style="color: #06b6d4;">${format_currency_short(deliv_total)}</td>
@@ -1111,7 +1055,6 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-sp" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_amt)}</td>
                         <td class="col-amt" style="font-weight: 800; color: #059669; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_actual)}</td>
-                        <td class="col-amt" style="color: #f43f5e; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_returned)}</td>
                         <td class="col-amt" style="color: #f59e0b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_sc)}</td>
                         <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_picked)}</td>
                         <td class="col-amt" style="color: #06b6d4; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_deliv)}</td>
@@ -1251,14 +1194,14 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         .col-id { width: 70px; }
                         .col-date { width: 60px; }
                         .col-status { width: 70px; text-align: center; }
-                        .col-customer, .col-supplier { width: 120px; }
-                        .col-sp { width: 90px; }
-                        .col-prod { width: 130px; }
-                        .col-amt { width: 55px; text-align: right; }
-                        .col-po { width: 80px; }
-                        .col-deliv-date { width: 65px; }
-                        .col-category { width: 110px; font-weight: 700; background: #f8fafc !important; }
-                        .total-net-col, .grand-total-col, .lifecycle-total-col { width: 70px; text-align: right; font-weight: 700; }
+                        .col-customer, .col-supplier { width: 110px; }
+                        .col-sp { width: 85px; }
+                        .col-prod { width: 120px; }
+                        .col-amt { width: 65px; text-align: right; white-space: nowrap !important; }
+                        .col-po { width: 75px; }
+                        .col-deliv-date { width: 60px; }
+                        .col-category { width: 95px; font-weight: 700; background: #f8fafc !important; }
+                        .total-net-col, .grand-total-col, .lifecycle-total-col { width: 75px; text-align: right; font-weight: 700; white-space: nowrap !important; }
 
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
                         .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }

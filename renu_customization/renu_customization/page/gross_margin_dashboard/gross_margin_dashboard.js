@@ -61,6 +61,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			default: frappe.defaults.get_user_default("Company"),
 		},
 		{
+			fieldname: "customer_group",
+			label: __("Customer Group"),
+			fieldtype: "Link",
+			options: "Customer Group",
+			placeholder: __("Select Customer Group"),
+		},
+		{
 			fieldname: "customer",
 			label: __("Customer"),
 			fieldtype: "Link",

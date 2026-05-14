@@ -40,18 +40,21 @@ def prepare_filters(filters):
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
 
-    conditions = ["si.docstatus < 2", "si.status NOT IN ('Cancelled', 'Draft', 'Return')", "si.is_return = 0"]
-    
-    # Fiscal year handled in prepare_filters
+    conditions = [
+        "pe.docstatus = 1",
+        "pe.payment_type = 'Receive'",
+        "pe.party_type = 'Customer'",
+        "per.reference_doctype = 'Sales Invoice'"
+    ]
     
     if filters.get("customer"):
-        conditions.append(f"si.customer = {frappe.db.escape(filters.get('customer'))}")
+        conditions.append(f"si.customer = {frappe.db.escape(str(filters.get('customer')))}")
     
     if filters.get("from_date"):
-        conditions.append(f"si.posting_date >= {frappe.db.escape(filters.get('from_date'))}")
+        conditions.append(f"pe.posting_date >= {frappe.db.escape(str(filters.get('from_date')))}")
     
     if filters.get("to_date"):
-        conditions.append(f"si.posting_date <= {frappe.db.escape(filters.get('to_date'))}")
+        conditions.append(f"pe.posting_date <= {frappe.db.escape(str(filters.get('to_date')))}")
  
     if filters.get("dom_exp"):
         if filters.get("dom_exp") == "Domestic":
@@ -61,12 +64,42 @@ def get_dashboard_data(filters=None):
  
     where_clause = " AND ".join(conditions)
     
+    # Calculate On Account Total (Unallocated amounts)
+    pe_conditions = [
+        "pe.docstatus = 1",
+        "pe.payment_type = 'Receive'",
+        "pe.party_type = 'Customer'"
+    ]
+    if filters.get("customer"):
+        pe_conditions.append(f"pe.party = {frappe.db.escape(str(filters.get('customer')))}")
+    if filters.get("from_date"):
+        pe_conditions.append(f"pe.posting_date >= {frappe.db.escape(str(filters.get('from_date')))}")
+    if filters.get("to_date"):
+        pe_conditions.append(f"pe.posting_date <= {frappe.db.escape(str(filters.get('to_date')))}")
+    
+    pe_where = " AND ".join(pe_conditions)
+    
+    # Calculate On Account Total (Sum of paid_amount where NO Sales Invoice reference exists)
+    on_account_query = f"""
+        SELECT SUM(pe.paid_amount) 
+        FROM `tabPayment Entry` pe 
+        WHERE {pe_where}
+          AND NOT EXISTS (
+              SELECT 1 
+              FROM `tabPayment Entry Reference` per 
+              WHERE per.parent = pe.name 
+                AND per.reference_doctype = 'Sales Invoice'
+          )
+    """
+    on_account_total = flt(frappe.db.sql(on_account_query)[0][0])
+
     query = f"""
         SELECT 
-            si.name, 
-            si.customer, 
-            si.posting_date, 
-            si.base_grand_total, 
+            pe.name as payment_entry,
+            pe.posting_date,
+            pe.party as customer,
+            per.reference_name as name,
+            per.allocated_amount,
             si.is_export, 
             si.is_domestic,
             si.status,
@@ -74,10 +107,12 @@ def get_dashboard_data(filters=None):
             sii.item_name,
             sii.base_amount as item_amount,
             si.base_net_total
-        FROM `tabSales Invoice` si
+        FROM `tabPayment Entry` pe
+        JOIN `tabPayment Entry Reference` per ON per.parent = pe.name
+        JOIN `tabSales Invoice` si ON si.name = per.reference_name
         JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
         WHERE {where_clause}
-        ORDER BY si.posting_date DESC, si.name DESC
+        ORDER BY pe.posting_date DESC, pe.name DESC
     """
     
     data = frappe.db.sql(query, as_dict=True)
@@ -99,8 +134,8 @@ def get_dashboard_data(filters=None):
     final_data = []
     sp_filter = filters.get("sales_person")
     
-    # Track unique invoices for KPI calculations to avoid double counting
-    unique_invoices = {}
+    # Track unique allocations for KPI calculations to avoid double counting due to item join
+    unique_allocations = {}
     
     for d in data:
         d.sales_person = ", ".join(sales_map.get(d.name, []))
@@ -108,34 +143,37 @@ def get_dashboard_data(filters=None):
         if sp_filter and sp_filter not in (d.sales_person or ""):
             continue
         
-        # Format Item (Brackets removed for UI stack)
+        # Format Item
         d.item = f"{d.item_code} {d.item_name}" if d.item_code else (d.item_name or "")
         
-        # Calculate item's share of grand total (Pro-rata allocation of taxes/discounts)
-        # item_share = (item_net_amount / invoice_net_total) * invoice_grand_total
+        # Calculate item's share of the allocated payment (Pro-rata allocation)
         if flt(d.base_net_total) > 0:
-            d.allocated_amount = (flt(d.item_amount) / flt(d.base_net_total)) * flt(d.base_grand_total)
+            d.allocated_amount = (flt(d.item_amount) / flt(d.base_net_total)) * flt(d.allocated_amount)
         else:
             d.allocated_amount = flt(d.item_amount)
             
         final_data.append(d)
         
-        # For KPIs, we sum unique invoice grand totals
-        if d.name not in unique_invoices:
-            unique_invoices[d.name] = {
-                "amount": flt(d.base_grand_total),
+        # For KPIs, we sum unique payment-to-invoice allocations
+        alloc_key = f"{d.payment_entry}-{d.name}"
+        if alloc_key not in unique_allocations:
+            unique_allocations[alloc_key] = {
+                "amount": flt(d.allocated_amount),
                 "is_export": d.is_export,
                 "is_domestic": d.is_domestic
             }
  
-    # Calculate KPIs from unique invoices - round each value to 4 decimal places in M
-    # before summing so card totals match the sum of displayed row values
-    total_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values()) * 1000000
-    export_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values() if v["is_export"]) * 1000000
-    domestic_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_invoices.values() if not v["is_export"]) * 1000000
+    # Calculate KPIs from unique allocations - round each value to 4 decimal places in M
+    allocated_total = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values()) * 1000000
+    export_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values() if v["is_export"]) * 1000000
+    domestic_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values() if not v["is_export"]) * 1000000
     
+    # TOTAL Collection = Allocated + On Account
+    total_collection = allocated_total + on_account_total
+
     summary = [
         {"label": _("TOTAL Collection"), "value": total_collection, "indicator": "Blue"},
+        {"label": _("On Account"), "value": on_account_total, "indicator": "Purple"},
         {"label": _("Export Collection"), "value": export_collection, "indicator": "Green"},
         {"label": _("Domestic Collection"), "value": domestic_collection, "indicator": "Orange"}
     ]
@@ -224,7 +262,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_list.cell(row=row_idx, column=1, value="Detailed Collection List").font = section_font
         row_idx += 2
         
-        headers = ["S.No.", "Invoice ID", "Date", "Customer", "Item", "Sales Person", "Amount (M)", "Type", "Status"]
+        headers = ["S.No.", "Payment ID", "Invoice ID", "Date", "Customer", "Item", "Sales Person", "Amount (M)", "Type", "Status"]
         for idx, h in enumerate(headers, start=1):
             cell = ws_list.cell(row=row_idx, column=idx, value=h)
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
@@ -232,38 +270,39 @@ def export_to_excel(filters=None, export_type="all"):
         
         for r_idx, row in enumerate(data):
             ws_list.cell(row=row_idx, column=1, value=r_idx + 1).border = table_border
-            ws_list.cell(row=row_idx, column=2, value=row['name']).border = table_border
-            ws_list.cell(row=row_idx, column=3, value=row['posting_date']).border = table_border
-            ws_list.cell(row=row_idx, column=4, value=row['customer']).border = table_border
-            ws_list.cell(row=row_idx, column=5, value=row['item']).border = table_border
-            ws_list.cell(row=row_idx, column=6, value=row['sales_person']).border = table_border
+            ws_list.cell(row=row_idx, column=2, value=row['payment_entry']).border = table_border
+            ws_list.cell(row=row_idx, column=3, value=row['name']).border = table_border
+            ws_list.cell(row=row_idx, column=4, value=row['posting_date']).border = table_border
+            ws_list.cell(row=row_idx, column=5, value=row['customer']).border = table_border
+            ws_list.cell(row=row_idx, column=6, value=row['item']).border = table_border
+            ws_list.cell(row=row_idx, column=7, value=row['sales_person']).border = table_border
             
-            amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['allocated_amount']) / 1000000)
+            amt_cell = ws_list.cell(row=row_idx, column=8, value=flt(row['allocated_amount']) / 1000000)
             amt_cell.number_format, amt_cell.border = '"₹ "#,##0.0000" M"', table_border
             
-            ws_list.cell(row=row_idx, column=8, value="Export" if row['is_export'] else "Domestic").border = table_border
-            ws_list.cell(row=row_idx, column=9, value=row['status']).border = table_border
+            ws_list.cell(row=row_idx, column=9, value="Export" if row['is_export'] else "Domestic").border = table_border
+            ws_list.cell(row=row_idx, column=10, value=row['status']).border = table_border
             row_idx += 1
     
         # Add Total Row
         ws_list.cell(row=row_idx, column=1, value="Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
-        for c in range(1, 7):
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
+        for c in range(1, 8):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
             if c == 1:
                 ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
                 
         total_amt = sum(flt(r['allocated_amount']) for r in data) / 1000000
-        total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
+        total_cell = ws_list.cell(row=row_idx, column=8, value=total_amt)
         total_cell.font = header_font
         total_cell.fill = header_fill
         total_cell.number_format, total_cell.border = '"₹ "#,##0.0000" M"', table_border
         
-        ws_list.cell(row=row_idx, column=8, value="").fill = header_fill
-        ws_list.cell(row=row_idx, column=8, value="").border = table_border
         ws_list.cell(row=row_idx, column=9, value="").fill = header_fill
         ws_list.cell(row=row_idx, column=9, value="").border = table_border
+        ws_list.cell(row=row_idx, column=10, value="").fill = header_fill
+        ws_list.cell(row=row_idx, column=10, value="").border = table_border
         row_idx += 1
 
     # Remove dummy if detail only
