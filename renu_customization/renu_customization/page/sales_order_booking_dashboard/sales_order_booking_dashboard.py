@@ -118,7 +118,7 @@ def get_dashboard_data(filters=None):
             soi.item_name AS item_name,
             REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
             soi.qty AS order_quantity,
-            soi.delivered_qty AS delivered_qty,
+            soi.delivered_qty AS delivered_qty, soi.returned_qty AS returned_qty,
             soi.total_short_close_qty AS short_close_qty,
             soi.rate AS item_rate,
             soi.base_rate AS base_rate,
@@ -136,7 +136,7 @@ def get_dashboard_data(filters=None):
             
             -- Calculated values to match report logic
             ((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) AS `total_net_amount_(inr)`,
-            ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate) AS net_delivered_net_total,
+            (soi.delivered_qty * soi.rate * so.conversion_rate) AS delivery_amount,
             (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate)) AS balance_net_total,
             
             -- Enrichment fields
@@ -176,8 +176,9 @@ def get_dashboard_data(filters=None):
         {"label": "Item Name", "fieldname": "item_name", "fieldtype": "Data", "width": 180},
         {"label": "Order Quantity", "fieldname": "order_quantity", "fieldtype": "Float", "width": 130},
         {"label": "Delivered Qty", "fieldname": "delivered_qty", "fieldtype": "Float", "width": 120},
+        {"label": "Returned Qty", "fieldname": "returned_qty", "fieldtype": "Float", "width": 120},
         {"label": "Total Net Amount (INR)", "fieldname": "total_net_amount_(inr)", "fieldtype": "Float", "width": 180},
-        {"label": "Net Delivered Net Total", "fieldname": "net_delivered_net_total", "fieldtype": "Float", "width": 180},
+        {"label": "Delivery Amount", "fieldname": "delivery_amount", "fieldtype": "Float", "width": 180},
         {"label": "Balance Net Total", "fieldname": "balance_net_total", "fieldtype": "Float", "width": 170},
         {"label": "Delivery Date", "fieldname": "delivery_date", "fieldtype": "Date", "width": 120},
         {"label": "Sales Person", "fieldname": "sales_person", "fieldtype": "Data", "width": 150},
@@ -212,7 +213,7 @@ def get_dashboard_data(filters=None):
         row["booked_net_total"] = gross_booked # For "Booked" column (Gross)
         row["total_booked_value"] = net_booked # For "Total Booked Value" column (Net)
         row["returned_val"] = flt(row.get("returned_qty", 0)) * flt(row.get("base_rate", 0))
-        row["delivered_net_total_inr"] = flt(row.get("net_delivered_net_total", 0))
+        row["delivered_net_total_inr"] = flt(row.get("delivery_amount", 0))
         row["picked_net_total_inr"] = flt(row.get("picked_qty_val", 0)) * flt(row.get("base_rate", 0))
         row["pending_value"] = max(0, net_booked - row["delivered_net_total_inr"] - row["returned_val"])
         
@@ -694,7 +695,7 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Total Booked (M)", "fieldname": "total_booked_value", "width": 13},
             {"label": "Short Close (M)", "fieldname": "sc_value", "width": 13},
             {"label": "Picked (M)", "fieldname": "picked_net_total_inr", "width": 13},
-            {"label": "Delivered (M)", "fieldname": "delivered_net_total_inr", "width": 13},
+            {"label": "Delivered Amt (M)", "fieldname": "delivered_net_total_inr", "width": 13},
             {"label": "Pending (M)", "fieldname": "pending_value", "width": 13},
             {"label": "Overdue (M)", "fieldname": "overdue_value", "width": 13}
         ]

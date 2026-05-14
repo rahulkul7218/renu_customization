@@ -351,7 +351,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .lifecycle-total-col {
             position: sticky !important; 
             right: 0; 
-            z-index: 25; 
+            position: sticky; top: 0; z-index: 2; 
             background: #f8fafc !important; 
             font-weight: 800; 
             color: #0f172a !important;
@@ -361,7 +361,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             min-width: 150px !important;
             white-space: nowrap !important;
         }
-        th.lifecycle-total-col { z-index: 60 !important; background: #f1f5f9 !important; }
+        th.lifecycle-total-col { z-index: 2 !important; background: #f1f5f9 !important; }
         .summary-card:hover { 
             transform: translateY(-4px); 
             box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
@@ -480,7 +480,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .dashboard-table th { 
             background: #f8fafc; padding: 12px 16px; text-align: left; 
             font-size: 11px; font-weight: 700; color: #64748b; 
-            position: sticky; top: 0; z-index: 50; 
+            position: sticky; top: 0; z-index: 2; 
             border-bottom: 1px solid #e2e8f0;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -508,41 +508,36 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .col-status { width: 120px !important; min-width: 120px !important; }
         
         /* Table Sticky Columns - Table 1 (Booking Breakdown) */
-        .month-table .col-sno { width: 50px !important; text-align: center !important; position: sticky; left: 0; z-index: 20; background: #f8fafc !important; }
-        .month-table .col-customer { position: sticky; left: 50px; z-index: 20; background: #fff !important; border-right: 1px solid #e2e8f0; width: 220px !important; min-width: 220px !important; }
-        
-        /* Sales Person and Product are no longer sticky in Table 1 */
-        .month-table .col-sp { position: relative; width: 150px !important; min-width: 150px !important; }
-        .month-table .col-prod { position: relative; width: 280px !important; min-width: 280px !important; }
+        .month-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 50px !important; text-align: center !important; background: #f8fafc !important; }
+        .month-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; width: 220px !important; min-width: 220px !important; }
         
         /* Table Sticky Columns - Table 2 (Detailed List) */
-        .detailed-list-table .col-sno { width: 50px !important; text-align: center !important; position: sticky; left: 0; z-index: 20; background: #f8fafc !important; }
-        .detailed-list-table .col-id { position: sticky; left: 50px; z-index: 20; background: #fff !important; border-right: 1px solid #e2e8f0; width: 140px !important; min-width: 140px !important; }
+        .detailed-list-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 50px !important; text-align: center !important; background: #f8fafc !important; }
+        .detailed-list-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; }
+        .detailed-list-table .col-id { position: relative; width: 140px !important; min-width: 140px !important; }
 
-        /* Ensure sticky columns stay on top in Header and Footer */
-        .dashboard-table th.col-sno, .dashboard-table th.col-customer, .dashboard-table th.col-id, .dashboard-table th.col-category { z-index: 100 !important; }
-        .dashboard-table tr.sticky-total td.col-sno, .dashboard-table tr.sticky-total td.col-customer, .dashboard-table tr.sticky-total td.col-id, .dashboard-table tr.sticky-total td.col-category { z-index: 90 !important; }
+
 
 
 
         .total-net-col { 
-            position: sticky !important; right: 150px; z-index: 25; 
+            position: relative !important; 
             background: #f1f5f9 !important; font-weight: 800; color: #0f172a !important; 
             text-align: right !important; border-left: 1px solid #cbd5e1;
             width: 150px !important; min-width: 150px !important;
         }
         .grand-total-col { 
-            position: sticky !important; right: 0; z-index: 25; 
+            position: relative !important; 
             background: #f0f4ff !important; font-weight: 800; color: #4338ca !important; 
             text-align: right !important; border-left: 2px solid #cbd5e1;
             width: 150px !important; min-width: 150px !important;
         }
-        th.total-net-col, th.grand-total-col { z-index: 60 !important; background: #f1f3f5 !important; }
+        th.total-net-col, th.grand-total-col { z-index: 2 !important; background: #f1f3f5 !important; }
 
         /* Sticky Footer */
         .dashboard-table tr.sticky-total td { 
             position: sticky !important; background: #f8fafc !important; 
-            border-top: 2px solid #cbd5e1 !important; z-index: 95 !important; font-weight: 700; color: #0f172a;
+            border-top: 2px solid #cbd5e1 !important; z-index: 2 !important; font-weight: 700; color: #0f172a;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
             height: 40px !important;
             padding: 8px 14px !important;
@@ -550,14 +545,19 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
         
         /* Stacked Sticky Footers (Table 1 has two) */
-        .dashboard-table tr.sticky-total:nth-last-child(2) td { bottom: 40px !important; z-index: 96 !important; }
-        .dashboard-table tr.sticky-total:nth-last-child(1) td { bottom: 0 !important; z-index: 97 !important; }
+        .dashboard-table tr.sticky-total:nth-last-child(2) td { bottom: 40px !important; z-index: 2 !important; }
+        .dashboard-table tr.sticky-total:nth-last-child(1) td { bottom: 0 !important; z-index: 2 !important; }
 
-        .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 95 !important; background: #f1f3f5 !important; }
+        .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 2 !important; background: #f1f3f5 !important; }
+
+        /* Ensure sticky columns stay on top in Header and Footer */
+        .dashboard-table th.col-sno, .dashboard-table th.col-customer, .dashboard-table th.col-category { z-index: 3 !important; }
+        .dashboard-table tr.sticky-total td.col-sno { z-index: 3 !important; left: 0 !important; background: #f8fafc !important; }
+        .dashboard-table tr.sticky-total td.col-customer { z-index: 3 !important; left: 50px !important; background: #f8fafc !important; }
 
         /* Lifecycle Table Category Sticky */
         .lifecycle-table .col-category {
-            position: sticky !important; left: 0; z-index: 20;
+            position: sticky !important; left: 0; z-index: 1 !important;
             background: #f8fafc !important; border-right: 1px solid #e2e8f0;
             width: 180px !important; min-width: 180px !important;
         }
@@ -1044,22 +1044,22 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 				tbody_list.append(`
                     <tr class="sticky-total">
-                        <td class="col-sno" style="position: sticky; left: 0; z-index: 100; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">-</td>
-                        <td class="col-id" style="position: sticky; left: 50px; z-index: 100; text-align: left; padding-left: 10px; color: #475569; font-size: 10px; font-weight: 800; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1; border-right: 1px solid #e2e8f0;">GRAND TOTAL</td>
+                        <td class="col-sno" style="background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">-</td>
+                        <td class="col-id" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-date" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-status" style="border-top: 2px solid #cbd5e1;"></td>
-                        <td class="col-customer" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-customer" style="text-align: right; padding-right: 20px; color: #1e293b; font-size: 11px; font-weight: 800; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">GRAND TOTAL</td>
                         <td class="col-po" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-prod" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-deliv-date" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-sp" style="border-top: 2px solid #cbd5e1;"></td>
-                        <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_amt)}</td>
-                        <td class="col-amt" style="font-weight: 800; color: #059669; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_actual)}</td>
-                        <td class="col-amt" style="color: #f59e0b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_sc)}</td>
-                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_picked)}</td>
-                        <td class="col-amt" style="color: #06b6d4; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_deliv)}</td>
-                        <td class="col-amt" style="font-weight: 800; color: #4338ca; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_pending)}</td>
-                        <td class="col-amt" style="font-weight: 800; color: #7c3aed; background: #f1f5f9 !important; z-index: 80; border-top: 2px solid #cbd5e1;">${format_currency_short(total_overdue)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_amt)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #059669; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_actual)}</td>
+                        <td class="col-amt" style="color: #f59e0b; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_sc)}</td>
+                        <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_picked)}</td>
+                        <td class="col-amt" style="color: #06b6d4; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_deliv)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #4338ca; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_pending)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #7c3aed; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_overdue)}</td>
                     </tr>
                 `);
 			}
