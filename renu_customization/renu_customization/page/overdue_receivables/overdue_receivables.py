@@ -53,7 +53,8 @@ def get_dashboard_data(filters=None):
         "range_1": 30,
         "range_2": 60,
         "range_3": 90,
-        "range_4": 120
+        "range_4": 120,
+        "range_5": 121 # For the 121-Above bucket
     })
 
     from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
@@ -117,15 +118,8 @@ def get_dashboard_data(filters=None):
         if not is_overdue and outstanding >= 0:
             continue
             
-        # Posting Date Range Filter (if provided)
-        posting_date = getdate(row.get("posting_date"))
-        if filters.get("from_date") and posting_date < getdate(filters.get("from_date")):
-            continue
-        if filters.get("to_date") and posting_date > getdate(filters.get("to_date")):
-            continue
-
         type_label = "Export" if is_export else "Domestic"
-        
+
         # Apply Type Filter
         if filters.get("type") and type_label != filters.get("type"):
             continue
@@ -151,12 +145,28 @@ def get_dashboard_data(filters=None):
         }
         data.append(inv)
         
-        # Ageing stats - using the same ranges as defined in ar_filters
-        if days_overdue <= 30: ageing_data["0-30"] += outstanding
-        elif days_overdue <= 60: ageing_data["31-60"] += outstanding
-        elif days_overdue <= 90: ageing_data["61-90"] += outstanding
-        elif days_overdue <= 120: ageing_data["91-120"] += outstanding
-        else: ageing_data["121+"] += outstanding
+        # Ageing stats - using the same ranges as defined in the AR report
+        # Prefer ranges from the report if available, otherwise fall back to manual calc
+        r1 = flt(row.get("range1") or row.get("range_1") or 0)
+        r2 = flt(row.get("range2") or row.get("range_2") or 0)
+        r3 = flt(row.get("range3") or row.get("range_3") or 0)
+        r4 = flt(row.get("range4") or row.get("range_4") or 0)
+        r5 = flt(row.get("range5") or row.get("range_5") or 0)
+
+        # If report ranges are all zero but we have an outstanding overdue amount, 
+        # it might be because the report didn't populate them for this row (e.g. advances)
+        if r1 == 0 and r2 == 0 and r3 == 0 and r4 == 0 and r5 == 0:
+            if days_overdue <= 30: ageing_data["0-30"] += outstanding
+            elif days_overdue <= 60: ageing_data["31-60"] += outstanding
+            elif days_overdue <= 90: ageing_data["61-90"] += outstanding
+            elif days_overdue <= 120: ageing_data["91-120"] += outstanding
+            else: ageing_data["121+"] += outstanding
+        else:
+            ageing_data["0-30"] += r1
+            ageing_data["31-60"] += r2
+            ageing_data["61-90"] += r3
+            ageing_data["91-120"] += r4
+            ageing_data["121+"] += r5
 
     # Calculate KPIs
     # Total Outstanding: Sum of all items in report_data that are not deleted/cancelled
