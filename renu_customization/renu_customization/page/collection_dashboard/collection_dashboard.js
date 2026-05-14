@@ -1,9 +1,9 @@
-/* Collection Report Dashboard - Version 3.4 */
-frappe.pages["collection_report"].on_page_load = function (wrapper) {
-	console.log("Collection Report Dashboard - Version 3.4 (Stable Load)");
+/* Collection Dashboard - Version 3.4 */
+frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
+	console.log("Collection Dashboard - Version 3.4 (Stable Load)");
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Collection Report"),
+		title: __("Collection Dashboard"),
 		single_column: true,
 	});
 
@@ -123,7 +123,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 		}
 
 		frappe.call({
-			method: "renu_customization.renu_customization.page.collection_report.collection_report.get_dashboard_data",
+			method: "renu_customization.renu_customization.page.collection_dashboard.collection_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
 				page.container.css("opacity", 1);
@@ -426,7 +426,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
 		const filters = page.filter_group.get_values();
 		frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 		frappe.call({
-			method: "renu_customization.renu_customization.page.collection_report.collection_report.export_to_excel",
+			method: "renu_customization.renu_customization.page.collection_dashboard.collection_dashboard.export_to_excel",
 			args: { filters: filters, export_type: export_type },
 			callback: function (r) {
 				if (r.message) {
@@ -513,7 +513,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
             .section-title { color: #0f172a; margin: 25px 0 10px; font-size: 14px; border-left: 4px solid #4f46e5; padding-left: 10px; }
         </style></head><body>
             <div class="report-header">
-                <h1>Collection Report</h1>
+                <h1>Collection Dashboard</h1>
                 <p>Period: ${period}</p>
             </div>
 
@@ -617,7 +617,7 @@ frappe.pages["collection_report"].on_page_load = function (wrapper) {
             </div>
         </body></html>`;
 
-		const $form = $(`<form action="/api/method/renu_customization.renu_customization.page.collection_report.collection_report.export_to_pdf" method="POST" target="_blank" style="display:none;"><input type="hidden" name="html" value=""><input type="hidden" name="csrf_token" value="${frappe.csrf_token}"></form>`).appendTo("body");
+		const $form = $(`<form action="/api/method/renu_customization.renu_customization.page.collection_dashboard.collection_dashboard.export_to_pdf" method="POST" target="_blank" style="display:none;"><input type="hidden" name="html" value=""><input type="hidden" name="csrf_token" value="${frappe.csrf_token}"></form>`).appendTo("body");
 		$form.find('input[name="html"]').val(html);
 		$form.submit();
 		$form.remove();

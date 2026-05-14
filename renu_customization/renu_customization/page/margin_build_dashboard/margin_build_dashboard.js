@@ -1,7 +1,7 @@
-frappe.pages["margin_build"].on_page_load = function (wrapper) {
+frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Margin Build"),
+		title: __("Margin Build Dashboard"),
 		single_column: true,
 	});
 
@@ -13,7 +13,7 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 		frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 		frappe.call({
-			method: "renu_customization.renu_customization.page.margin_build.margin_build.export_to_excel",
+			method: "renu_customization.renu_customization.page.margin_build_dashboard.margin_build_dashboard.export_to_excel",
 			args: { filters: filters, export_type: export_type },
 			callback: function (r) {
 				if (r.message) {
@@ -127,8 +127,8 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
             </head>
             <body>
                 <div class="header">
-                    <h1 style="margin:0;">Margin Build Report (Million INR)</h1>
-                    <p style="font-size:10px; color:#999;">Generated: ${report_date}</p>
+                    <h1 style="margin:0;">Margin Build Dashboard</h1>
+                    <p style="font-size:10px; color:#999;">Generated: ${report_date} | All figures in Million INR</p>
                 </div>
                 <div class="kpi-wrapper">
                     ${data.summary
@@ -192,7 +192,7 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
         `;
 
 		const method_url =
-			"/api/method/renu_customization.renu_customization.page.margin_build.margin_build.export_to_pdf";
+			"/api/method/renu_customization.renu_customization.page.margin_build_dashboard.margin_build_dashboard.export_to_pdf";
 		const $form =
 			$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
             <input type="hidden" name="html" value="">
@@ -311,7 +311,7 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 		let filters = page.filter_group.get_values();
 
 		frappe.call({
-			method: "renu_customization.renu_customization.page.margin_build.margin_build.get_dashboard_data",
+			method: "renu_customization.renu_customization.page.margin_build_dashboard.margin_build_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
 				if (r.message) {
@@ -521,7 +521,7 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 			let indicator = (s.indicator || "blue").toLowerCase();
 			$(`
 				<div class="summary-card ${indicator}">
-					<div class="label"><span class="indicator bg-${indicator}"></span>${s.label}</div>
+					<div class="label"><span class="indicator bg-${indicator}"></span>${s.label} (M)</div>
 					<div class="value">${s.fieldtype === "Currency" ? format_currency(s.value) : s.value}</div>
 				</div>
 			`).appendTo(summary_row);
@@ -648,15 +648,13 @@ frappe.pages["margin_build"].on_page_load = function (wrapper) {
 	}
 
 	function format_currency(v) {
-		if (!v && v !== 0) return "₹ 0.0000 M";
-
+		if (!v && v !== 0) return "₹ 0.00 M";
 		let value = flt(v) / 1000000;
-
 		return (
 			"₹ " +
 			value.toLocaleString("en-US", {
-				minimumFractionDigits: 4,
-				maximumFractionDigits: 4,
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
 			}) +
 			" M"
 		);

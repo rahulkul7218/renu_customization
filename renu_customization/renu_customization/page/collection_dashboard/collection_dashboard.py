@@ -318,7 +318,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_overview = wb.active
         ws_overview.title = "Dashboard Overview"
         
-        ws_overview.cell(row=1, column=1, value="Collection Report Dashboard (Million INR)").font = title_font
+        ws_overview.cell(row=1, column=1, value="Collection Dashboard (Million INR)").font = title_font
         ws_overview.cell(row=1, column=4, value="Generated On: " + now_datetime().strftime("%Y-%m-%d %H:%M"))
         ws_overview.cell(row=3, column=1, value="Collection Metrics Summary").font = section_font
         
