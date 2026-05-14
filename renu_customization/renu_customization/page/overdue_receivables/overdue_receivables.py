@@ -151,14 +151,15 @@ def get_dashboard_data(filters=None):
         }
         data.append(inv)
         
-        # Ageing stats
+        # Ageing stats - using the same ranges as defined in ar_filters
         if days_overdue <= 30: ageing_data["0-30"] += outstanding
         elif days_overdue <= 60: ageing_data["31-60"] += outstanding
         elif days_overdue <= 90: ageing_data["61-90"] += outstanding
         elif days_overdue <= 120: ageing_data["91-120"] += outstanding
         else: ageing_data["121+"] += outstanding
 
-    # Calculate KPIs - Sum raw values first for accuracy
+    # Calculate KPIs
+    # Total Outstanding: Sum of all items in report_data that are not deleted/cancelled
     total_outstanding_cumulative = 0
     for row in report_data:
         out_val = flt(row.get("outstanding_amount") or row.get("outstanding") or 0)
@@ -169,7 +170,9 @@ def get_dashboard_data(filters=None):
             continue
         total_outstanding_cumulative += out_val
 
-    total_overdue = sum(flt(d["outstanding_amount"]) for d in data)
+    # Total Overdue: Sum of all ageing ranges (as requested)
+    total_overdue = sum(ageing_data.values())
+    
     export_overdue = sum(flt(d["outstanding_amount"]) for d in data if d["type"] == "Export")
     domestic_overdue = sum(flt(d["outstanding_amount"]) for d in data if d["type"] == "Domestic")
 
