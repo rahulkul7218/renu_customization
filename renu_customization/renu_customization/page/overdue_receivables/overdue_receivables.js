@@ -412,7 +412,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 
 				.summary-wrapper { 
                     display: grid !important; 
-                    grid-template-columns: repeat(4, 1fr) !important; 
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; 
                     gap: 16px; 
                     margin-bottom: 24px; 
                     width: 100% !important; 
