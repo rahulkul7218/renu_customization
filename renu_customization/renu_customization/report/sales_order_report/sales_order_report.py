@@ -439,8 +439,8 @@ def get_data(filters):
             so.currency AS currency,
             so.conversion_rate AS exchange_rate,
             ((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) AS `total_net_amount_(inr)`,
-            ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate) AS net_delivered_net_total,
-            (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate)) AS balance_net_total,
+            (soi.delivered_qty * soi.rate * so.conversion_rate) AS net_delivered_net_total,
+            (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - (soi.delivered_qty * soi.rate * so.conversion_rate)) AS balance_net_total,
             soi.delivery_date AS delivery_date,
  
             (
