@@ -61,7 +61,15 @@ def get_dashboard_data(filters=None):
             conditions.append("si.is_domestic = 1")
         elif filters.get("dom_exp") == "Export":
             conditions.append("si.is_export = 1")
- 
+
+    if filters.get("sales_person"):
+        conditions.append(f"""EXISTS (
+            SELECT 1 FROM `tabSales Team` st 
+            WHERE st.parent = si.name 
+              AND st.parenttype = 'Sales Invoice' 
+              AND st.sales_person = {frappe.db.escape(str(filters.get('sales_person')))}
+        )""")
+
     where_clause = " AND ".join(conditions)
     
     # Calculate On Account Total (Unallocated amounts)
@@ -93,6 +101,23 @@ def get_dashboard_data(filters=None):
     """
     on_account_total = flt(frappe.db.sql(on_account_query)[0][0])
 
+    # 1. Fetch KPI totals accurately (Avoid item-multiplication effect)
+    kpi_query = f"""
+        SELECT 
+            SUM(per.allocated_amount) as allocated_total,
+            SUM(CASE WHEN si.is_export = 1 THEN per.allocated_amount ELSE 0 END) as export_total,
+            SUM(CASE WHEN si.is_domestic = 1 THEN per.allocated_amount ELSE 0 END) as domestic_total
+        FROM `tabPayment Entry` pe
+        JOIN `tabPayment Entry Reference` per ON per.parent = pe.name
+        JOIN `tabSales Invoice` si ON si.name = per.reference_name
+        WHERE {where_clause}
+    """
+    kpi_res = frappe.db.sql(kpi_query, as_dict=True)[0]
+    allocated_total = flt(kpi_res.allocated_total)
+    export_collection = flt(kpi_res.export_total)
+    domestic_collection = flt(kpi_res.domestic_total)
+
+    # 2. Fetch Detailed List (with items for breakdown)
     query = f"""
         SELECT 
             pe.name as payment_entry,
@@ -114,10 +139,9 @@ def get_dashboard_data(filters=None):
         WHERE {where_clause}
         ORDER BY pe.posting_date DESC, pe.name DESC
     """
-    
     data = frappe.db.sql(query, as_dict=True)
     
-    # Fetch Sales Person from Sales Team child table
+    # Fetch Sales Person mapping
     inv_names = list(set([d.name for d in data]))
     sales_map = {}
     if inv_names:
@@ -126,56 +150,127 @@ def get_dashboard_data(filters=None):
             fields=["parent", "sales_person"]
         )
         for st in sales_team:
-            if st.parent not in sales_map:
-                sales_map[st.parent] = []
+            if st.parent not in sales_map: sales_map[st.parent] = []
             sales_map[st.parent].append(st.sales_person)
     
-    # Process data and apply sales person filter
+    # Process data
     final_data = []
-    sp_filter = filters.get("sales_person")
-    
-    # Track unique allocations for KPI calculations to avoid double counting due to item join
-    unique_allocations = {}
-    
     for d in data:
         d.sales_person = ", ".join(sales_map.get(d.name, []))
-        
-        if sp_filter and sp_filter not in (d.sales_person or ""):
-            continue
-        
-        # Format Item
         d.item = f"{d.item_code} {d.item_name}" if d.item_code else (d.item_name or "")
         
-        # Calculate item's share of the allocated payment (Pro-rata allocation)
+        # Pro-rata allocation for items
         if flt(d.base_net_total) > 0:
             d.allocated_amount = (flt(d.item_amount) / flt(d.base_net_total)) * flt(d.allocated_amount)
         else:
-            d.allocated_amount = flt(d.item_amount)
-            
+            d.allocated_amount = flt(d.item_amount) if flt(d.item_amount) > 0 else 0
         final_data.append(d)
-        
-        # For KPIs, we sum unique payment-to-invoice allocations
-        alloc_key = f"{d.payment_entry}-{d.name}"
-        if alloc_key not in unique_allocations:
-            unique_allocations[alloc_key] = {
-                "amount": flt(d.allocated_amount),
-                "is_export": d.is_export,
-                "is_domestic": d.is_domestic
-            }
- 
-    # Calculate KPIs from unique allocations - round each value to 4 decimal places in M
-    allocated_total = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values()) * 1000000
-    export_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values() if v["is_export"]) * 1000000
-    domestic_collection = sum(round(v["amount"] / 1000000, 4) for v in unique_allocations.values() if not v["is_export"]) * 1000000
+
+    # 3. Add "On Account" payments to the detailed list for reconciliation
+    if on_account_total > 0 and not filters.get("dom_exp") and not filters.get("sales_person"):
+        oa_query = f"""
+            SELECT 
+                pe.name as payment_entry,
+                pe.posting_date,
+                pe.party as customer,
+                'On Account' as name,
+                pe.paid_amount as allocated_amount,
+                0 as is_export,
+                1 as is_domestic,
+                'Unallocated' as status,
+                '' as item_code,
+                'Unallocated Payment' as item_name,
+                pe.paid_amount as item_amount
+            FROM `tabPayment Entry` pe 
+            WHERE {pe_where}
+              AND NOT EXISTS (
+                  SELECT 1 FROM `tabPayment Entry Reference` per 
+                  WHERE per.parent = pe.name AND per.reference_doctype = 'Sales Invoice'
+              )
+        """
+        oa_data = frappe.db.sql(oa_query, as_dict=True)
+        for oa in oa_data:
+            oa.item = oa.item_name
+            oa.sales_person = "-"
+            final_data.append(oa)
+
+    # Calculate Total Paid Amount (including On Account and partially unallocated)
+    # This serves as our "Source of Truth" for Total Collection
+    total_paid_query = f"""
+        SELECT SUM(pe.paid_amount) 
+        FROM `tabPayment Entry` pe 
+        WHERE {pe_where}
+    """
+    total_collection = flt(frappe.db.sql(total_paid_query)[0][0])
+
+    # Final KPI Consolidations based on filters
+    if filters.get("sales_person"):
+        # Sales Person filter: Everything must be allocated to an invoice with that Sales Person
+        total_collection = allocated_total
+        export_collection = flt(kpi_res.export_total)
+        domestic_collection = flt(kpi_res.domestic_total)
+    elif filters.get("dom_exp") == "Export":
+        # Export filter: Only specifically allocated export amounts, no on-account
+        total_collection = export_collection
+        domestic_collection = 0
+    elif filters.get("dom_exp") == "Domestic":
+        # Domestic filter: Domestic allocated + all on-account payments
+        domestic_collection = flt(kpi_res.domestic_total) + on_account_total
+        total_collection = domestic_collection
+        export_collection = 0
+    else:
+        # "All" view: Source of Truth is total_collection from all payments
+        # Export is specific, Domestic is the remainder (including all unallocated/on-account)
+        export_collection = flt(kpi_res.export_total)
+        domestic_collection = total_collection - export_collection
+
+    # --- Due in next 15 days Logic (Upcoming from today) ---
+    due_conditions = [
+        "si.docstatus = 1",
+        "si.status NOT IN ('Paid', 'Cancelled', 'Draft')",
+        "si.due_date >= CURDATE()",
+        "si.due_date <= DATE_ADD(CURDATE(), INTERVAL 15 DAY)",
+        "si.outstanding_amount > 0.01"
+    ]
+    if filters.get("customer"): due_conditions.append(f"si.customer = {frappe.db.escape(str(filters.get('customer')))}")
+    if filters.get("dom_exp"):
+        if filters.get("dom_exp") == "Domestic":
+            due_conditions.append("si.is_domestic = 1")
+        elif filters.get("dom_exp") == "Export":
+            due_conditions.append("si.is_export = 1")
+    if filters.get("sales_person"):
+        due_conditions.append(f"""EXISTS (
+            SELECT 1 FROM `tabSales Team` st 
+            WHERE st.parent = si.name 
+              AND st.parenttype = 'Sales Invoice' 
+              AND st.sales_person = {frappe.db.escape(str(filters.get('sales_person')))}
+        )""")
     
-    # TOTAL Collection = Allocated + On Account
-    total_collection = allocated_total + on_account_total
+    due_where = " AND ".join(due_conditions)
+    
+    due_summary_query = f"SELECT SUM(si.outstanding_amount) FROM `tabSales Invoice` si WHERE {due_where}"
+    due_amount = flt(frappe.db.sql(due_summary_query)[0][0])
+    
+    due_list_query = f"""
+        SELECT 
+            si.name, 
+            si.customer, 
+            si.posting_date, 
+            si.due_date, 
+            si.outstanding_amount, 
+            si.base_net_total,
+            DATEDIFF(si.due_date, CURDATE()) as due_days
+        FROM `tabSales Invoice` si 
+        WHERE {due_where} 
+        ORDER BY si.due_date ASC
+    """
+    due_results = frappe.db.sql(due_list_query, as_dict=True)
 
     summary = [
-        {"label": _("TOTAL Collection"), "value": total_collection, "indicator": "Blue"},
-        {"label": _("On Account"), "value": on_account_total, "indicator": "Purple"},
+        {"label": _("TOTAL Collection"), "value": total_collection, "indicator": "Blue", "on_account": on_account_total},
         {"label": _("Export Collection"), "value": export_collection, "indicator": "Green"},
-        {"label": _("Domestic Collection"), "value": domestic_collection, "indicator": "Orange"}
+        {"label": _("Domestic Collection"), "value": domestic_collection, "indicator": "Orange"},
+        {"label": _("Due in 15 Days"), "value": due_amount, "indicator": "Red"}
     ]
     
     # Pie Chart Data
@@ -197,29 +292,18 @@ def get_dashboard_data(filters=None):
     return {
         "summary": summary,
         "chart": chart,
-        "results": final_data
+        "results": final_data,
+        "due_results": due_results
     }
 
 @frappe.whitelist()
 def export_to_excel(filters=None, export_type="all"):
     dashboard_data = get_dashboard_data(filters)
-    data = dashboard_data.get("results")
+    results = dashboard_data.get("results")
+    due_results = dashboard_data.get("due_results")
     summary = dashboard_data.get("summary")
     
-    if not data:
-        return None
-
     wb = openpyxl.Workbook()
-    
-    # Based on export_type, we decide which sheets to keep
-    if export_type == "all":
-        ws_overview = wb.active
-        ws_overview.title = "Dashboard Overview"
-        ws_list = wb.create_sheet("Collection List")
-    elif export_type == "detail":
-        ws_list = wb.active
-        ws_list.title = "Collection List"
-        ws_overview = wb.create_sheet("Dummy") # Will be removed
     
     # Styling
     header_fill = PatternFill(start_color="2c3e50", fill_type="solid")
@@ -228,36 +312,34 @@ def export_to_excel(filters=None, export_type="all"):
     section_font = Font(bold=True, size=12)
     thin_side = Side(style='thin')
     table_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
-    
+    num_format = '"₹ "#,##0.00" M"'
+
     if export_type == "all":
-        # 1. Overview Sheet
+        ws_overview = wb.active
+        ws_overview.title = "Dashboard Overview"
+        
         ws_overview.cell(row=1, column=1, value="Collection Report Dashboard (Million INR)").font = title_font
         ws_overview.cell(row=1, column=4, value="Generated On: " + now_datetime().strftime("%Y-%m-%d %H:%M"))
-        
         ws_overview.cell(row=3, column=1, value="Collection Metrics Summary").font = section_font
         
-        colors = {"blue": "3b82f6", "green": "10b981", "orange": "f59e0b"}
-        
+        colors = {"blue": "3b82f6", "green": "10b981", "orange": "f59e0b", "red": "ef4444"}
         for i, s in enumerate(summary):
-            r = 5 + (i // 3) * 3
-            c = 1 + (i % 3) * 2
+            r = 5 + (i // 2) * 3
+            c = 1 + (i % 2) * 3
             bg_color = colors.get(s.get('indicator', 'blue').lower(), "3b82f6")
             
             cell_l = ws_overview.cell(row=r, column=c, value=s.get('label'))
-            cell_l.font = Font(bold=True, color="FFFFFF")
-            cell_l.fill = PatternFill(start_color=bg_color, fill_type="solid")
-            cell_l.alignment = Alignment(horizontal="center")
+            cell_l.font, cell_l.fill, cell_l.alignment = Font(bold=True, color="FFFFFF"), PatternFill(start_color=bg_color, fill_type="solid"), Alignment(horizontal="center")
             ws_overview.merge_cells(start_row=r, start_column=c, end_row=r, end_column=c+1)
             
             cell_v = ws_overview.cell(row=r+1, column=c, value=flt(s.get('value')) / 1000000)
-            cell_v.font = Font(bold=True, size=11)
-            cell_v.number_format = '"₹ "#,##0.0000" M"'
-            cell_v.alignment = Alignment(horizontal="center")
+            cell_v.font, cell_v.number_format, cell_v.alignment = Font(bold=True, size=11), num_format, Alignment(horizontal="center")
             cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
 
     if export_type in ["all", "detail"]:
-        # 2. Collection List Sheet
+        ws_list = wb.active if export_type == "detail" else wb.create_sheet("Collection List")
+        ws_list.title = "Collection List"
         row_idx = 1
         ws_list.cell(row=row_idx, column=1, value="Detailed Collection List").font = section_font
         row_idx += 2
@@ -268,7 +350,7 @@ def export_to_excel(filters=None, export_type="all"):
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
         row_idx += 1
         
-        for r_idx, row in enumerate(data):
+        for r_idx, row in enumerate(results):
             ws_list.cell(row=row_idx, column=1, value=r_idx + 1).border = table_border
             ws_list.cell(row=row_idx, column=2, value=row['payment_entry']).border = table_border
             ws_list.cell(row=row_idx, column=3, value=row['name']).border = table_border
@@ -278,51 +360,75 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=7, value=row['sales_person']).border = table_border
             
             amt_cell = ws_list.cell(row=row_idx, column=8, value=flt(row['allocated_amount']) / 1000000)
-            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.0000" M"', table_border
+            amt_cell.number_format, amt_cell.border = num_format, table_border
             
             ws_list.cell(row=row_idx, column=9, value="Export" if row['is_export'] else "Domestic").border = table_border
             ws_list.cell(row=row_idx, column=10, value=row['status']).border = table_border
             row_idx += 1
     
-        # Add Total Row
+        total_amt = sum(flt(r['allocated_amount']) for r in results) / 1000000
         ws_list.cell(row=row_idx, column=1, value="Total").font = header_font
         ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
-        for c in range(1, 8):
+        for c in range(1, 11):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
-            if c == 1:
-                ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
-                
-        total_amt = sum(flt(r['allocated_amount']) for r in data) / 1000000
         total_cell = ws_list.cell(row=row_idx, column=8, value=total_amt)
-        total_cell.font = header_font
-        total_cell.fill = header_fill
-        total_cell.number_format, total_cell.border = '"₹ "#,##0.0000" M"', table_border
-        
-        ws_list.cell(row=row_idx, column=9, value="").fill = header_fill
-        ws_list.cell(row=row_idx, column=9, value="").border = table_border
-        ws_list.cell(row=row_idx, column=10, value="").fill = header_fill
-        ws_list.cell(row=row_idx, column=10, value="").border = table_border
-        row_idx += 1
+        total_cell.font, total_cell.number_format = header_font, num_format
 
-    # Remove dummy if detail only
-    if export_type == "detail" and "Dummy" in wb.sheetnames:
-        wb.remove(wb["Dummy"])
+    if export_type in ["all", "due"]:
+        ws_due = wb.active if export_type == "due" else wb.create_sheet("Upcoming Payments")
+        ws_due.title = "Upcoming Payments"
+        row_idx = 1
+        ws_due.cell(row=row_idx, column=1, value="Payment Due in Next 15 Days").font = section_font
+        row_idx += 2
+        
+        headers = ["S.No.", "Invoice ID", "Customer", "Posting Date", "Due Date", "Due Days", "Net Total (M)", "Outstanding (M)"]
+        for idx, h in enumerate(headers, start=1):
+            cell = ws_due.cell(row=row_idx, column=idx, value=h)
+            cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
+        row_idx += 1
+        
+        for r_idx, row in enumerate(due_results):
+            ws_due.cell(row=row_idx, column=1, value=r_idx + 1).border = table_border
+            ws_due.cell(row=row_idx, column=2, value=row['name']).border = table_border
+            ws_due.cell(row=row_idx, column=3, value=row['customer']).border = table_border
+            ws_due.cell(row=row_idx, column=4, value=row['posting_date']).border = table_border
+            ws_due.cell(row=row_idx, column=5, value=row['due_date']).border = table_border
+            ws_due.cell(row=row_idx, column=6, value=row['due_days']).border = table_border
+            
+            net_cell = ws_due.cell(row=row_idx, column=7, value=flt(row['base_net_total']) / 1000000)
+            net_cell.number_format, net_cell.border = num_format, table_border
+            
+            out_cell = ws_due.cell(row=row_idx, column=8, value=flt(row['outstanding_amount']) / 1000000)
+            out_cell.number_format, out_cell.border = num_format, table_border
+            row_idx += 1
+        
+        # Add Total Row for Due
+        total_due_net = sum(flt(r['base_net_total']) for r in due_results) / 1000000
+        total_due_out = sum(flt(r['outstanding_amount']) for r in due_results) / 1000000
+        ws_due.cell(row=row_idx, column=1, value="Total").font = header_font
+        ws_due.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+        for c in range(1, 9):
+            ws_due.cell(row=row_idx, column=c).fill = header_fill
+            ws_due.cell(row=row_idx, column=c).border = table_border
+        
+        ws_due.cell(row=row_idx, column=7, value=total_due_net).font = header_font
+        ws_due.cell(row=row_idx, column=7).number_format = num_format
+        ws_due.cell(row=row_idx, column=8, value=total_due_out).font = header_font
+        ws_due.cell(row=row_idx, column=8).number_format = num_format
 
     # Column Widths
     for ws in wb.worksheets:
-        for i in range(1, 10):
-            ws.column_dimensions[get_column_letter(i)].width = 20
+        for i in range(1, 11):
+            ws.column_dimensions[get_column_letter(i)].width = 22
 
     output = BytesIO()
     wb.save(output)
     output.seek(0)
     
-    filename = f"Collection_Report_{nowdate()}.xlsx"
-    if export_type == "detail":
-        filename = f"Detailed_Collection_List_{nowdate()}.xlsx"
+    filenames = {"all": f"Collection_Report_{nowdate()}.xlsx", "detail": f"Detailed_Collection_List_{nowdate()}.xlsx", "due": f"Upcoming_Payments_Due_{nowdate()}.xlsx"}
     
     return {
-        "filename": filename,
+        "filename": filenames.get(export_type, f"Collection_Export_{nowdate()}.xlsx"),
         "filecontent": base64.b64encode(output.read()).decode()
     }
