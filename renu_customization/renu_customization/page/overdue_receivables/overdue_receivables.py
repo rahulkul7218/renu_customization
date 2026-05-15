@@ -59,6 +59,17 @@ def get_dashboard_data(filters=None):
 
     from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
     columns, report_data, *rest = execute(ar_filters)
+    
+    # Dynamically map range columns based on report output
+    range_map = {}
+    for col in columns:
+        lbl = col.get("label")
+        fname = col.get("fieldname")
+        if lbl == "0-30": range_map["0-30"] = fname
+        elif lbl == "31-60": range_map["31-60"] = fname
+        elif lbl == "61-90": range_map["61-90"] = fname
+        elif lbl == "91-120": range_map["91-120"] = fname
+        elif lbl in ["121-Above", "121+"]: range_map["121+"] = fname
 
     if not report_data:
         report_data = []
@@ -157,7 +168,13 @@ def get_dashboard_data(filters=None):
         if days_overdue is None:
             days_overdue = row.get("age")
         
-        # Range Filter for Overdue Days
+        # Sum ageing buckets using the dynamic map detected from report columns
+        # (This is done before the Days range filter to ensure the chart matches the report totals)
+        for label, fname in range_map.items():
+            if fname in row:
+                ageing_data[label] += flt(row.get(fname))
+
+        # Range Filter for Overdue Days (affects only the detailed list and summary cards)
         from_days = filters.get("from_days")
         to_days = filters.get("to_days")
         days_val = int(days_overdue or 0)
@@ -169,13 +186,6 @@ def get_dashboard_data(filters=None):
             continue
         if to_days is not None and to_days != "" and days_val > int(to_days):
             continue
-
-        # Sum ageing buckets for the chart (includes all items for full breakdown)
-        ageing_data["0-30"] += flt(row.get("range_1"))
-        ageing_data["31-60"] += flt(row.get("range_2"))
-        ageing_data["61-90"] += flt(row.get("range_3"))
-        ageing_data["91-120"] += flt(row.get("range_4"))
-        ageing_data["121+"] += flt(row.get("range_5"))
 
         # Add to results list and calculate totals
         inv = {
@@ -215,7 +225,7 @@ def get_dashboard_data(filters=None):
             "title": _("Overdue Breakdown (Export vs Domestic)"),
             "data": {
                 "labels": [_("Export Overdue"), _("Domestic Overdue")],
-                "datasets": [{"name": _("Overdue"), "values": [flt(export_overdue) / 1000000, flt(domestic_overdue) / 1000000]}]
+                "datasets": [{"name": _("Overdue"), "values": [flt(flt(export_overdue) / 1000000, 2), flt(flt(domestic_overdue) / 1000000, 2)]}]
             },
             "type": "donut",
             "colors": ["#10b981", "#f59e0b"]
@@ -225,11 +235,11 @@ def get_dashboard_data(filters=None):
             "data": {
                 "labels": ["0-30", "31-60", "61-90", "91-120", "121+"],
                 "datasets": [{"name": _("Amount"), "values": [
-                    flt(ageing_data["0-30"]) / 1000000, 
-                    flt(ageing_data["31-60"]) / 1000000, 
-                    flt(ageing_data["61-90"]) / 1000000, 
-                    flt(ageing_data["91-120"]) / 1000000, 
-                    flt(ageing_data["121+"]) / 1000000
+                    flt(flt(ageing_data["0-30"]) / 1000000, 2), 
+                    flt(flt(ageing_data["31-60"]) / 1000000, 2), 
+                    flt(flt(ageing_data["61-90"]) / 1000000, 2), 
+                    flt(flt(ageing_data["91-120"]) / 1000000, 2), 
+                    flt(flt(ageing_data["121+"]) / 1000000, 2)
                 ]}]
             },
             "type": "bar",
