@@ -119,11 +119,19 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                     .chart-img { width: 100%; height: auto; max-height: 250px; margin-bottom: 10px; object-fit: contain; }
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #f1f5f9; margin-top: 10px; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 15px; page-break-inside: auto !important; }
-                    th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; }
+                    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 10px; margin-top: 15px; page-break-inside: auto; }
                     thead { display: table-header-group; }
+                    tbody { display: table-row-group; }
+                    tr { page-break-inside: avoid !important; page-break-after: auto; }
+                    th, td { 
+                        padding: 8px; 
+                        border: 1px solid #e2e8f0; 
+                        text-align: left; 
+                        vertical-align: top; 
+                        page-break-inside: avoid !important; 
+                        word-wrap: break-word;
+                    }
                     th { background: #f1f5f9; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; font-weight: 700; }
-                    tr { page-break-inside: avoid !important; }
                     .text-right { text-align: right; }
                     .text-center { text-align: center; }
                 </style>
@@ -200,11 +208,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                         <tr style="background: #f8fafc; font-weight: bold;">
                             <td colspan="5" class="text-left" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">Grand Total</td>
                             <td class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">${format_currency(
-															data.results
-																.reduce((sum, r) => {
-																	let val_in_m = flt(r.outstanding_amount) / 1000000;
-																	return sum + flt(val_in_m.toFixed(2)) * 1000000;
-																}, 0),
+															data.results.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0)
 														)}</td>
                             <td colspan="2" style="border-top: 2px solid #e2e8f0;"></td>
                         </tr>
@@ -730,8 +734,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let tbody = table_card.find("tbody");
 		let total_outstanding_raw = 0;
 		data.results.forEach((row) => {
-			let val_in_m = flt(row.outstanding_amount) / 1000000;
-			total_outstanding_raw += flt(val_in_m.toFixed(2)) * 1000000;
+			total_outstanding_raw += flt(row.outstanding_amount);
 
 			let display_name = row.name;
 			let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
