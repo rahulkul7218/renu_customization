@@ -457,7 +457,7 @@ doc_events = {
 }
 
 app_include_js = [
-    "/assets/renu_customization/js/uat_banner.js",
+    #"/assets/renu_customization/js/uat_banner.js",
     # "/assets/renu_customization/js/serial_no_track_on_packing_slip.js"
 ]
 

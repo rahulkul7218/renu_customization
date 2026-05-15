@@ -141,12 +141,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 	}
 
 	function format_currency_short(num) {
-		if (!num && num !== 0) return "₹ 0.00";
-		let val = flt(num);
-		if (Math.abs(val) >= 1000000) {
-			return format_million(val);
-		}
-		return frappe.format(val, { fieldtype: "Currency" }).replace("₹", "₹ ");
+		if (!num && num !== 0) return "₹ 0.00 M";
+		return format_million(num);
 	}
 
 	page.refresh = function () {
@@ -221,6 +217,11 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				legend: false, // Strictly disable default legend
 				tooltipOptions: { formatTooltipY: (d) => format_currency_short(d) },
 			});
+
+			// Force redraw after a short delay to fix potential dimension issues on first load
+			setTimeout(() => {
+				if (page.chart) page.chart.draw(true);
+			}, 250);
 
 			let legend_container = chart_card.find("#chart_legend");
 			legend_container.empty();
@@ -522,7 +523,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 		setup_filter_events();
 
 		// Initial Load after filter group is ready
-		page.refresh();
+		setTimeout(() => page.refresh(), 300);
 	}, 100);
 
 	function setup_filter_events() {
@@ -702,7 +703,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 							(m) => `
 						<div class="kpi-card" style="border-left-color: ${m.indicator === "green" ? "#10b981" : m.indicator === "orange" ? "#f59e0b" : m.indicator === "red" ? "#ef4444" : m.indicator === "purple" ? "#8b5cf6" : m.indicator === "grey" ? "#94a3b8" : m.indicator === "cyan" ? "#06b6d4" : "#3b82f6"}">
 							<div class="kpi-label">${m.label}</div>
-							<div class="kpi-value">${format_currency_short(m.value)}</div>
+							<div class="kpi-value">${format_million(m.value)}</div>
 						</div>
 					`,
 						)
@@ -716,6 +717,47 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						${chart_l(data.chart)}
 					</div>
 				</div>
+
+				<div class="page-break"></div>
+				<h3 class="section-title">Customer Summary (Trial Balance)</h3>
+				<table>
+					<thead>
+						<tr>
+							<th width="35%">Customer</th>
+							<th width="13%" class="text-right">Opening (Dr)</th>
+							<th width="13%" class="text-right">Opening (Cr)</th>
+							<th width="13%" class="text-right">Credit (Col.)</th>
+							<th width="13%" class="text-right">Closing (Dr)</th>
+							<th width="13%" class="text-right">Closing (Cr)</th>
+						</tr>
+					</thead>
+					<tbody>
+						${(data.customer_summary || [])
+							.map(
+								(row) => `
+							<tr>
+								<td class="bold">${row.customer}</td>
+								<td class="text-right">${format_million(row.opening_dr)}</td>
+								<td class="text-right">${format_million(row.opening_cr)}</td>
+								<td class="text-right" style="color: #10b981;">${format_million(row.credit)}</td>
+								<td class="text-right bold">${format_million(row.closing_dr)}</td>
+								<td class="text-right bold">${format_million(row.closing_cr)}</td>
+							</tr>
+						`,
+							)
+							.join("")}
+					</tbody>
+					<tfoot>
+						<tr style="background: #f8fafc; font-weight: bold;">
+							<td class="text-right">TOTALS</td>
+							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.opening_dr), 0))}</td>
+							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.opening_cr), 0))}</td>
+							<td class="text-right" style="color: #10b981;">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.credit), 0))}</td>
+							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.closing_dr), 0))}</td>
+							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.closing_cr), 0))}</td>
+						</tr>
+					</tfoot>
+				</table>
 
 				<div class="page-break"></div>
 				<h3 class="section-title">Detailed Collection List</h3>
@@ -744,7 +786,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days || 0}</td>
 								<td>${row.customer}</td>
 								<td>${row.sales_person || "-"}</td>
-								<td class="text-right bold">${format_currency_short(row.allocated_amount)}</td>
+								<td class="text-right bold">${format_million(row.allocated_amount)}</td>
 							</tr>
 						`,
 							)
@@ -753,7 +795,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					<tfoot>
 						<tr style="background: #f8fafc; font-weight: bold;">
 							<td colspan="7" class="text-right">GRAND TOTAL</td>
-							<td class="text-right">${format_currency_short(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
+							<td class="text-right">${format_million(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
 						</tr>
 					</tfoot>
 				</table>
@@ -786,7 +828,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 									<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
 									<td style="color: #ef4444; font-weight: bold;">${frappe.datetime.str_to_user(row.due_date)}</td>
 									<td class="text-center">${row.due_days}</td>
-									<td class="text-right bold" style="color: #ef4444;">${format_currency_short(row.outstanding_amount)}</td>
+									<td class="text-right bold" style="color: #ef4444;">${format_million(row.outstanding_amount)}</td>
 								</tr>
 							`,
 								)
@@ -795,7 +837,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						<tfoot>
 							<tr style="background: #fef2f2; font-weight: bold; color: #ef4444;">
 								<td colspan="6" class="text-right">TOTAL OUTSTANDING</td>
-								<td class="text-right">${format_currency_short(data.due_results.reduce((a, b) => a + flt(b.outstanding_amount), 0))}</td>
+								<td class="text-right">${format_million(data.due_results.reduce((a, b) => a + flt(b.outstanding_amount), 0))}</td>
 							</tr>
 						</tfoot>
 					</table>

@@ -254,6 +254,7 @@ def export_to_excel(filters=None, export_type="all"):
     results = dashboard_data.get("results")
     due_results = dashboard_data.get("due_results")
     summary = dashboard_data.get("summary")
+    customer_summary = dashboard_data.get("customer_summary") or []
     
     wb = openpyxl.Workbook()
     
@@ -321,6 +322,24 @@ def export_to_excel(filters=None, export_type="all"):
                     c.number_format = num_format
                     c.alignment = Alignment(horizontal="right")
             row_idx += 1
+
+        # Add Total Row for Summary
+        total_open_dr = sum(flt(r.get('opening_dr')) for r in customer_summary) / 1000000
+        total_open_cr = sum(flt(r.get('opening_cr')) for r in customer_summary) / 1000000
+        total_credit = sum(flt(r.get('credit')) for r in customer_summary) / 1000000
+        total_close_dr = sum(flt(r.get('closing_dr')) for r in customer_summary) / 1000000
+        total_close_cr = sum(flt(r.get('closing_cr')) for r in customer_summary) / 1000000
+
+        ws_sum.cell(row=row_idx, column=1, value="Grand Total").font = header_font
+        ws_sum.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=2)
+        for c in range(1, 8):
+            ws_sum.cell(row=row_idx, column=c).fill = header_fill
+            ws_sum.cell(row=row_idx, column=c).border = table_border
+        
+        summary_totals = [total_open_dr, total_open_cr, total_credit, total_close_dr, total_close_cr]
+        for idx, val in enumerate(summary_totals, start=3):
+            cell = ws_sum.cell(row=row_idx, column=idx, value=val)
+            cell.font, cell.number_format, cell.alignment = header_font, num_format, Alignment(horizontal="right")
 
     if export_type in ["all", "detail"]:
         ws_list = wb.active if export_type == "detail" else wb.create_sheet("Collection List")

@@ -20,13 +20,21 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
 	function perform_refresh() {
 		let filters = page.filter_group.get_values();
-		if (page.container) page.container.css("opacity", "0.6");
+		
+		// Show loading indicator
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Supplier Performance Data...</div></div>'
+			);
+		} else {
+			page.container.css("opacity", "0.6");
+		}
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
-				if (page.container) page.container.css("opacity", "1");
+				page.container.css("opacity", "1");
 				if (r.message) {
 					page.dashboard_data = r.message;
 					render_dashboard(r.message);
@@ -441,7 +449,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 						}));
 					}
 
-					new frappe.Chart(`#wrapper_${chart_id}`, {
+					const chart = new frappe.Chart(`#wrapper_${chart_id}`, {
 						data: c_data,
 						type: chart_obj.type || "donut",
 						height: 350,
@@ -463,6 +471,9 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 									: d,
 						},
 					});
+
+					// Force redraw after a short delay to fix potential dimension issues on first load
+					setTimeout(() => chart.draw(true), 250);
 
 					let legend_container = page.container.find(`#legend_${chart_id}`);
 					let total_val =
@@ -938,14 +949,14 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		method: "frappe.client.get_value",
 		args: {
 			doctype: "Fiscal Year",
-			filters: { year_start_date: ["<=", frappe.datetime.nowdate()], year_end_date: [">=", frappe.datetime.nowdate()] },
+			filters: { year_start_date: ["<=", frappe.datetime.get_today()], year_end_date: [">=", frappe.datetime.get_today()] },
 			fieldname: "name"
 		},
 		callback: function (r) {
-			if (r.message) {
-				page.filter_group.set_value("fiscal_year", r.message.name);
-			}
-			page.refresh();
+			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
+		},
+		always: function() { 
+			setTimeout(() => page.refresh(), 300);
 		}
 	});
 };

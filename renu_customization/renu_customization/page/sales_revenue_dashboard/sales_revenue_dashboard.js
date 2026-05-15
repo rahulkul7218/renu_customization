@@ -23,7 +23,11 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		let filters = page.filter_group.get_values();
 
 		// Show loading state
-		if (page.container) {
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Sales Revenue Data...</div></div>'
+			);
+		} else {
 			page.container.css("opacity", "0.6");
 		}
 
@@ -31,7 +35,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			method: "renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
-				if (page.container) page.container.css("opacity", "1");
+				page.container.css("opacity", "1");
 				if (r.message) {
 					render_dashboard(r.message);
 				}
@@ -1060,7 +1064,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			page.chart_instances = page.chart_instances || {};
 			setTimeout(() => {
 				try {
-					page.chart_instances[chart_id] = new frappe.Chart(`#wrapper_${chart_id}`, {
+					const chart = new frappe.Chart(`#wrapper_${chart_id}`, {
 						data: chart_obj.data,
 						type: chart_obj.type || "donut",
 						height: 350,
@@ -1080,6 +1084,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 							formatTooltipY: (d) => format_currency_short(d),
 						},
 					});
+					page.chart_instances[chart_id] = chart;
+
+					// Force redraw after a short delay to fix potential dimension issues on first load
+					setTimeout(() => chart.draw(true), 250);
 
 					// Render Custom Legend
 					let legend_container = page.container.find(`#legend_${chart_id}`);
@@ -1603,5 +1611,5 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 	// Trigger initial load automatically
 	setTimeout(() => {
 		page.refresh();
-	}, 100);
+	}, 300);
 };
