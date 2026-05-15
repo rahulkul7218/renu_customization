@@ -20,13 +20,21 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
 	function perform_refresh() {
 		let filters = page.filter_group.get_values();
-		if (page.container) page.container.css("opacity", "0.6");
+		
+		// Show loading indicator
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Supplier Performance Data...</div></div>'
+			);
+		} else {
+			page.container.css("opacity", "0.6");
+		}
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
-				if (page.container) page.container.css("opacity", "1");
+				page.container.css("opacity", "1");
 				if (r.message) {
 					page.dashboard_data = r.message;
 					render_dashboard(r.message);
@@ -370,6 +378,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
         .col-supplier { width: 280px !important; min-width: 280px !important; white-space: normal !important; word-wrap: break-word; }
         .col-po { width: 160px !important; min-width: 160px !important; }
         .col-date { width: 130px !important; min-width: 130px !important; }
+        .col-days { width: 100px !important; min-width: 100px !important; text-align: center !important; }
         .col-status { width: 140px !important; min-width: 140px !important; }
         .col-amt { width: 140px !important; min-width: 140px !important; text-align: right !important; }
 
@@ -440,7 +449,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 						}));
 					}
 
-					new frappe.Chart(`#wrapper_${chart_id}`, {
+					const chart = new frappe.Chart(`#wrapper_${chart_id}`, {
 						data: c_data,
 						type: chart_obj.type || "donut",
 						height: 350,
@@ -462,6 +471,9 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 									: d,
 						},
 					});
+
+					// Force redraw after a short delay to fix potential dimension issues on first load
+					setTimeout(() => chart.draw(true), 250);
 
 					let legend_container = page.container.find(`#legend_${chart_id}`);
 					let total_val =
@@ -591,6 +603,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                                 <th class="col-date">PO Date</th>
                                 <th class="col-date">Expected Del.</th>
                                 <th class="col-date">Actual Delivery</th>
+                                <th class="col-days">Due Days</th>
                                 <th class="col-status">Status</th>
                                 <th class="col-amt">Net Total</th>
                             </tr>
@@ -689,6 +702,9 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                     <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
                     <td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
                     <td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
+                    <td class="col-days">
+                        ${row.due_days !== "-" ? `<span class="indicator-pill ${row.due_days > 0 ? "red" : "gray"}">${row.due_days} Days</span>` : "-"}
+                    </td>
                     <td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
                     <td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
                 </tr>
@@ -700,7 +716,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		);
 		tfoot_list.append(`
             <tr class="sticky-total">
-                <td colspan="7" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
+                <td colspan="8" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
                 <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid var(--border-color);">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
             </tr>
         `);
@@ -933,14 +949,14 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		method: "frappe.client.get_value",
 		args: {
 			doctype: "Fiscal Year",
-			filters: { year_start_date: ["<=", frappe.datetime.nowdate()], year_end_date: [">=", frappe.datetime.nowdate()] },
+			filters: { year_start_date: ["<=", frappe.datetime.get_today()], year_end_date: [">=", frappe.datetime.get_today()] },
 			fieldname: "name"
 		},
 		callback: function (r) {
-			if (r.message) {
-				page.filter_group.set_value("fiscal_year", r.message.name);
-			}
-			page.refresh();
+			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
+		},
+		always: function() { 
+			setTimeout(() => page.refresh(), 300);
 		}
 	});
 };

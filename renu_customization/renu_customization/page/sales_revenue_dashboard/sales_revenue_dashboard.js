@@ -23,7 +23,11 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		let filters = page.filter_group.get_values();
 
 		// Show loading state
-		if (page.container) {
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Sales Revenue Data...</div></div>'
+			);
+		} else {
 			page.container.css("opacity", "0.6");
 		}
 
@@ -31,7 +35,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			method: "renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
-				if (page.container) page.container.css("opacity", "1");
+				page.container.css("opacity", "1");
 				if (r.message) {
 					render_dashboard(r.message);
 				}
@@ -536,7 +540,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             align-items: center; 
             background: #fff;
             flex-shrink: 0;
-            z-index: 10;
+            z-index: 4;
         }
         .table-container { 
             overflow: auto !important; 
@@ -564,7 +568,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             color: #555 !important; /* Darken header text */
             position: sticky; 
             top: 0; 
-            z-index: 5; 
+            z-index: 2; 
             border-bottom: 1px solid #dee2e6; 
             font-weight: 600;
         }
@@ -585,11 +589,11 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             background: #fff !important; 
             position: sticky; 
             right: 0; 
-            z-index: 2; 
+            z-index: 1; 
             border-left: 1px solid #dee2e6; 
         }
         .dashboard-table th.total-col { 
-            z-index: 6; 
+            z-index: 3; 
             color: #333 !important;
             background: #f1f3f5 !important;
         }
@@ -613,31 +617,31 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             border-top: 1.5px solid #cbd5e1; 
             color: #1e293b;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
-            z-index: 20;
+            z-index: 2;
         }
 
         /* Logic for stacking multiple sticky footer rows (e.g. Month-Wise Revenue table) */
         /* Row 3 from bottom */
         tr.sticky-total:nth-last-child(3) td { 
             bottom: 74px; 
-            z-index: 21;
+            z-index: 2;
         }
         
         /* Row 2 from bottom */
         tr.sticky-total:nth-last-child(2) td { 
             bottom: 37px; 
-            z-index: 22;
+            z-index: 2;
         }
         
         /* The very last row */
         tr.sticky-total:last-child td { 
             bottom: 0; 
-            z-index: 23;
+            z-index: 2;
         }
 
         /* Ensure right-sticky total columns maintain their horizontal position while being vertically sticky */
         tr.sticky-total td.total-col { 
-            z-index: 25 !important; 
+            z-index: 3 !important; 
         }
         
         /* Fixed Column Offsets for the two total columns */
@@ -648,17 +652,17 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             position: sticky !important; 
             right: 0; 
             background: #f1f3f5 !important; 
-            z-index: 6 !important; 
+            z-index: 3 !important; 
             border-left: 1px solid #dee2e6; 
             color: #333 !important;
         }
         
         
         /* Sticky Primary Columns for Consolidated Table */
-        #consolidated_table th:nth-child(1), #consolidated_table td:nth-child(1) { position: sticky; left: 0; z-index: 3; background: #fff !important; }
-        #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { position: sticky; left: 40px; z-index: 3; background: #fff !important; }
+        #consolidated_table th:nth-child(1), #consolidated_table td:nth-child(1) { position: sticky; left: 0; z-index: 1; background: #fff !important; }
+        #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { position: sticky; left: 40px; z-index: 1; background: #fff !important; }
         
-        #consolidated_table th:nth-child(1), #consolidated_table th:nth-child(2) { z-index: 6; background: #f1f3f5 !important; }
+        #consolidated_table th:nth-child(1), #consolidated_table th:nth-child(2) { z-index: 3; background: #f1f3f5 !important; }
         #consolidated_table td:nth-child(1), #consolidated_table td:nth-child(2) { border-right: 1px solid #eee; }
         #consolidated_table tr:hover td:nth-child(1), #consolidated_table tr:hover td:nth-child(2) { background: #f8faff !important; }
 
@@ -1060,7 +1064,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			page.chart_instances = page.chart_instances || {};
 			setTimeout(() => {
 				try {
-					page.chart_instances[chart_id] = new frappe.Chart(`#wrapper_${chart_id}`, {
+					const chart = new frappe.Chart(`#wrapper_${chart_id}`, {
 						data: chart_obj.data,
 						type: chart_obj.type || "donut",
 						height: 350,
@@ -1080,6 +1084,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 							formatTooltipY: (d) => format_currency_short(d),
 						},
 					});
+					page.chart_instances[chart_id] = chart;
+
+					// Force redraw after a short delay to fix potential dimension issues on first load
+					setTimeout(() => chart.draw(true), 250);
 
 					// Render Custom Legend
 					let legend_container = page.container.find(`#legend_${chart_id}`);
@@ -1603,5 +1611,5 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 	// Trigger initial load automatically
 	setTimeout(() => {
 		page.refresh();
-	}, 100);
+	}, 300);
 };

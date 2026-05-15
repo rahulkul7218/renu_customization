@@ -49,9 +49,13 @@ def get_dashboard_data(filters=None):
     
     if filters.get("from_date"):
         report_filters["from_date"] = filters.get("from_date")
+    else:
+        report_filters["from_date"] = "1970-01-01"
     
     if filters.get("to_date"):
         report_filters["to_date"] = filters.get("to_date")
+    else:
+        report_filters["to_date"] = "2099-12-31"
         
     if filters.get("purchase_order"):
         report_filters["name"] = [filters.get("purchase_order")]
@@ -135,12 +139,16 @@ def get_dashboard_data(filters=None):
         is_overdue = False
         due_next_week_flag = False
         
-        if row.get("schedule_date") and row.get("status") not in ["Completed", "Closed", "Cancelled"]:
+        row["due_days"] = 0
+        if row.get("schedule_date") and row.get("status") not in ["Completed", "Closed", "Cancelled", "Closed - Billed"]:
             po_date = getdate(row.get("schedule_date"))
+            row["due_days"] = (today - po_date).days
             if po_date < today:
                 is_overdue = True
             elif today <= po_date <= next_week:
                 due_next_week_flag = True
+        else:
+            row["due_days"] = "-"
                 
         row["is_overdue"] = is_overdue
         
@@ -443,6 +451,7 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "PO Date", "fieldname": "transaction_date", "width": 14},
             {"label": "Expected Del.", "fieldname": "schedule_date", "width": 14},
             {"label": "Actual Delivery", "fieldname": "actual_delivery_time", "width": 14},
+            {"label": "Due Days", "fieldname": "due_days", "width": 12},
             {"label": "Status", "fieldname": "status", "width": 18},
             {"label": "Net Total (M)", "fieldname": "net_total", "width": 18},
         ]
@@ -479,15 +488,15 @@ def export_to_excel(filters=None, export_type="all"):
         # Add Total Row
         c_tot_label = ws.cell(row=row_idx, column=1, value="GRAND TOTAL")
         c_tot_label.font = Font(bold=True)
-        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
-        for c in range(1, 8):
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=8)
+        for c in range(1, 9):
             ws.cell(row=row_idx, column=c).fill = header_fill
             ws.cell(row=row_idx, column=c).font = header_font
             ws.cell(row=row_idx, column=c).border = table_border
             if c == 1:
                 ws.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right", vertical="center")
     
-        c_tot_amt = ws.cell(row=row_idx, column=8, value=total_amt / 1000000)
+        c_tot_amt = ws.cell(row=row_idx, column=9, value=total_amt / 1000000)
         c_tot_amt.font = header_font; c_tot_amt.fill = header_fill; c_tot_amt.border = table_border; c_tot_amt.alignment = Alignment(horizontal="right")
         c_tot_amt.number_format = '[$₹-en-IN] #,##0.0000 "M"'
 

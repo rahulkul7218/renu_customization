@@ -21,13 +21,21 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	function perform_refresh() {
 		let filters = page.filter_group.get_values();
-		if (page.container) page.container.css("opacity", "0.6");
+		
+		// Show loading indicator
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Sales Order Booking Data...</div></div>'
+			);
+		} else {
+			page.container.css("opacity", "0.6");
+		}
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
-				if (page.container) page.container.css("opacity", "1");
+				page.container.css("opacity", "1");
 				if (r.message) {
 					page.dashboard_data = r.message;
 					render_dashboard(r.message);
@@ -498,7 +506,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .col-sp { width: 180px !important; min-width: 180px !important; }
         .col-prod { width: 350px !important; min-width: 350px !important; }
         .col-amt { 
-            width: 110px !important; min-width: 110px !important; 
+            width: 130px !important; min-width: 130px !important; 
             text-align: right !important; 
             white-space: nowrap !important;
         }
@@ -551,15 +559,17 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .dashboard-table tr.sticky-total td.total-net-col, .dashboard-table tr.sticky-total td.grand-total-col { z-index: 2 !important; background: #f1f3f5 !important; }
 
         /* Ensure sticky columns stay on top in Header and Footer */
-        .dashboard-table th.col-sno, .dashboard-table th.col-customer, .dashboard-table th.col-category { z-index: 3 !important; }
-        .dashboard-table tr.sticky-total td.col-sno { z-index: 3 !important; left: 0 !important; background: #f8fafc !important; }
-        .dashboard-table tr.sticky-total td.col-customer { z-index: 3 !important; left: 50px !important; background: #f8fafc !important; }
+        .dashboard-table th.col-sno, .dashboard-table th.col-customer, .dashboard-table th.col-category { z-index: 10 !important; }
+        .dashboard-table tr.sticky-total td.col-sno { z-index: 10 !important; left: 0 !important; background: #f8fafc !important; }
+        .dashboard-table tr.sticky-total td.col-customer { z-index: 10 !important; left: 50px !important; background: #f8fafc !important; }
+        .dashboard-table tr.sticky-total td.col-category { z-index: 10 !important; left: 0 !important; background: #f8fafc !important; }
 
         /* Lifecycle Table Category Sticky */
         .lifecycle-table .col-category {
-            position: sticky !important; left: 0; z-index: 1 !important;
+            position: sticky !important; left: 0; z-index: 5 !important;
             background: #f8fafc !important; border-right: 1px solid #e2e8f0;
-            width: 180px !important; min-width: 180px !important;
+            width: 220px !important; min-width: 220px !important;
+            white-space: nowrap !important;
         }
 
         .indicator-pill { 
@@ -635,7 +645,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             `).appendTo(charts_row);
 
 			setTimeout(() => {
-				new frappe.Chart(`#wrapper_${chart_id}`, {
+				const chart = new frappe.Chart(`#wrapper_${chart_id}`, {
 					data: chart_obj.data,
 					type: "donut",
 					height: 350,
@@ -647,6 +657,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					legendOptions: { showLegend: false },
 					tooltipOptions: { formatTooltipY: (d) => format_currency_short(d) },
 				});
+
+				// Force redraw after a short delay to fix potential dimension issues on first load
+				setTimeout(() => chart.draw(true), 250);
 
 				// Render Custom Legend
 				let legend_container = page.container.find(`#legend_${chart_id}`);
@@ -1407,7 +1420,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		});
 	};
 
-	setTimeout(() => page.refresh(), 100);
+	setTimeout(() => page.refresh(), 300);
 };
 
 function format_currency_short(num) {

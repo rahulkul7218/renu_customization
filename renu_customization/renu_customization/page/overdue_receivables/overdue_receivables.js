@@ -92,7 +92,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 						<span style="display: inline-block; width: 8px; height: 8px; border-radius: 2px; background: ${color}; margin-right: 5px;"></span>
 						<div style="display: inline-block; vertical-align: top;">
 							<div style="font-size: 9px; font-weight: 600; color: #475569;">${label}</div>
-							<div style="font-size: 8px; color: #94a3b8;">${format_currency(val)} (${share})</div>
+							<div style="font-size: 8px; color: #94a3b8;">${format_currency(val, true)} (${share})</div>
 						</div>
 					</div>
 				`;
@@ -119,9 +119,18 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                     .chart-img { width: 100%; height: auto; max-height: 250px; margin-bottom: 10px; object-fit: contain; }
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #f1f5f9; margin-top: 10px; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 15px; page-break-inside: auto !important; }
-                    th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; }
+                    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 10px; margin-top: 15px; page-break-inside: auto; }
                     thead { display: table-header-group; }
+                    tbody { display: table-row-group; }
+                    tr { page-break-inside: avoid !important; page-break-after: auto; }
+                    th, td { 
+                        padding: 8px; 
+                        border: 1px solid #e2e8f0; 
+                        text-align: left; 
+                        vertical-align: top; 
+                        page-break-inside: avoid !important; 
+                        word-wrap: break-word;
+                    }
                     th { background: #f1f5f9; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; font-weight: 700; }
                     .text-right { text-align: right; }
                     .text-center { text-align: center; }
@@ -178,7 +187,9 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.results.map(row => `
+                        ${data.results
+							.map(
+								(row) => `
                             <tr>
                                 <td>${row.name}</td>
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
@@ -186,18 +197,22 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                                 <td>${row.sales_person || "-"}</td>
                                 <td class="text-center">${row.type}</td>
                                 <td class="text-right">${format_currency(row.outstanding_amount)}</td>
-                                <td class="text-right">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+                                <td class="text-right">${
+																	row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"
+																}</td>
                                 <td class="text-right">${row.days_overdue}</td>
                             </tr>
-                        `).join("")}
-                    </tbody>
-                    <tfoot>
+                        `,
+							)
+							.join("")}
                         <tr style="background: #f8fafc; font-weight: bold;">
-                            <td colspan="5" class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">Total</td>
-                            <td class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">${format_currency(data.results.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0))}</td>
+                            <td colspan="5" class="text-left" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">Grand Total</td>
+                            <td class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">${format_currency(
+															data.results.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0)
+														)}</td>
                             <td colspan="2" style="border-top: 2px solid #e2e8f0;"></td>
                         </tr>
-                    </tfoot>
+                    </tbody>
                 </table>
             </body>
             </html>
@@ -264,16 +279,23 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 			placeholder: __("Select Sales Person"),
 		},
 		{
-			fieldname: "min_days",
-			label: __("Min Days Overdue"),
+			fieldname: "from_days",
+			label: __("From Overdue Days"),
 			fieldtype: "Int",
-			placeholder: __("Enter Days"),
+			placeholder: __("Min Days"),
+		},
+		{
+			fieldname: "to_days",
+			label: __("To Overdue Days"),
+			fieldtype: "Int",
+			placeholder: __("Max Days"),
 		},
 		{
 			fieldname: "type",
-			label: __("Type"),
+			label: __("Domestic/Export"),
 			fieldtype: "Select",
-			options: ["", "Domestic", "Export"],
+			options: ["All", "Domestic", "Export"],
+			default: "All",
 			placeholder: __("Select Type"),
 		},
 	];
@@ -644,7 +666,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                         <div class="info">
                             <span class="label">${label}</span>
                             <span class="val-pct">(${share})</span>
-                            <span class="val-amount">${format_currency(val)}</span>
+                            <span class="val-amount">${format_currency(val, true)}</span>
                         </div>
                     </div>
                 `);
@@ -673,7 +695,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                         <div class="info">
                             <span class="label">${label}</span>
                             <span class="val-pct">(${share})</span>
-                            <span class="val-amount">${format_currency(val)}</span>
+                            <span class="val-amount">${format_currency(val, true)}</span>
                         </div>
                     </div>
                 `);
@@ -717,9 +739,11 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 			let display_name = row.name;
 			let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
 
-			if (row.outstanding_amount < 0 && row.name === __("On Account")) {
-				display_name = __("On Account Advance");
-				link_url = "#";
+			if (row.outstanding_amount < 0 && (row.name === __("On Account") || row.voucher_type === "Payment Entry")) {
+				display_name = row.name === __("On Account") ? __("On Account Advance") : row.name;
+				if (row.voucher_type === "Payment Entry") {
+					link_url = `/app/payment-entry/${row.name}`;
+				}
 			}
 
 			$(`
@@ -744,7 +768,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let tfoot = table_card.find("tfoot");
 		$(`
             <tr class="sticky-total">
-                <td colspan="5" class="text-right" style="padding-right: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
+                <td colspan="5" class="text-left" style="padding-left: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
                 <td class="amount-col" style="color: #0f172a; font-weight: 800;">${total_display}</td>
                 <td colspan="2"></td>
             </tr>
@@ -753,17 +777,17 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
 	}
 
-	function format_currency(v) {
-		if (!v && v !== 0) return "₹ 0.0000 M";
+	function format_currency(v, already_divided = false) {
+		if (!v && v !== 0) return "₹ 0.00 M";
 
-		// Convert to Million INR
-		let value = flt(v) / 1000000;
+		// Convert to Million INR if not already divided
+		let value = already_divided ? flt(v) : flt(v) / 1000000;
 
 		return (
 			"₹ " +
 			value.toLocaleString("en-US", {
-				minimumFractionDigits: 4,
-				maximumFractionDigits: 4,
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
 			}) +
 			" M"
 		);

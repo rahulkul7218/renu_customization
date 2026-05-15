@@ -34,13 +34,21 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 
 	function perform_refresh() {
 		let filters = page.filter_group.get_values();
-		if (page.container) page.container.css("opacity", "0.6");
+		
+		// Show loading indicator
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Customer Performance Data...</div></div>'
+			);
+		} else {
+			page.container.css("opacity", "0.6");
+		}
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
-				if (page.container) page.container.css("opacity", "1");
+				page.container.css("opacity", "1");
 				if (r.message) {
 					page.dashboard_data = r.message;
 					render_dashboard(r.message);
@@ -202,6 +210,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					},
 				});
                 page.chart_instances[chart_id] = chart;
+
+				// Force redraw after a short delay to fix potential dimension issues on first load
+				setTimeout(() => chart.draw(true), 250);
 
 				if (chart_obj.type === "donut" || !chart_obj.type) {
 					let total = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
@@ -679,6 +690,11 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		callback: function (r) {
 			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
 		},
-        always: function() { page.refresh(); }
+		always: function() { 
+			setTimeout(() => {
+				page.refresh();
+				setTimeout(() => page.refresh(), 500);
+			}, 300);
+		}
 	});
 };
