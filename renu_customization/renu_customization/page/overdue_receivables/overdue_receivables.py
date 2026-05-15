@@ -69,7 +69,7 @@ def get_dashboard_data(filters=None):
         elif lbl == "31-60": range_map["31-60"] = fname
         elif lbl == "61-90": range_map["61-90"] = fname
         elif lbl == "91-120": range_map["91-120"] = fname
-        elif lbl in ["121-Above", "121+"]: range_map["121+"] = fname
+        elif lbl in ["121-Above", "121+"]: range_map["121-Above"] = fname
 
     if not report_data:
         report_data = []
@@ -105,7 +105,7 @@ def get_dashboard_data(filters=None):
         "31-60": 0,
         "61-90": 0,
         "91-120": 0,
-        "121+": 0
+        "121-Above": 0
     }
 
     total_outstanding_cumulative = 0
@@ -168,11 +168,6 @@ def get_dashboard_data(filters=None):
         if days_overdue is None:
             days_overdue = row.get("age")
         
-        # Sum ageing buckets using the dynamic map detected from report columns
-        # (This is done before the Days range filter to ensure the chart matches the report totals)
-        for label, fname in range_map.items():
-            if fname in row:
-                ageing_data[label] += flt(row.get(fname))
 
         # Range Filter for Overdue Days (affects only the detailed list and summary cards)
         from_days = filters.get("from_days")
@@ -188,6 +183,10 @@ def get_dashboard_data(filters=None):
             continue
 
         # Add to results list and calculate totals
+        for label, fname in range_map.items():
+            if fname in row:
+                ageing_data[label] += flt(row.get(fname))
+
         inv = {
             "name": v_no or _("On Account"),
             "voucher_type": v_type,
@@ -233,13 +232,13 @@ def get_dashboard_data(filters=None):
         "ageing_breakdown": {
             "title": _("Ageing Breakdown"),
             "data": {
-                "labels": ["0-30", "31-60", "61-90", "91-120", "121+"],
+                "labels": ["0-30", "31-60", "61-90", "91-120", "121-Above"],
                 "datasets": [{"name": _("Amount"), "values": [
                     flt(flt(ageing_data["0-30"]) / 1000000, 2), 
                     flt(flt(ageing_data["31-60"]) / 1000000, 2), 
                     flt(flt(ageing_data["61-90"]) / 1000000, 2), 
                     flt(flt(ageing_data["91-120"]) / 1000000, 2), 
-                    flt(flt(ageing_data["121+"]) / 1000000, 2)
+                    flt(flt(ageing_data["121-Above"]) / 1000000, 2)
                 ]}]
             },
             "type": "bar",
