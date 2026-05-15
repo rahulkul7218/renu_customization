@@ -59,6 +59,17 @@ def get_dashboard_data(filters=None):
 
     from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
     columns, report_data, *rest = execute(ar_filters)
+    
+    # Dynamically map range columns based on report output
+    range_map = {}
+    for col in columns:
+        lbl = col.get("label")
+        fname = col.get("fieldname")
+        if lbl == "0-30": range_map["0-30"] = fname
+        elif lbl == "31-60": range_map["31-60"] = fname
+        elif lbl == "61-90": range_map["61-90"] = fname
+        elif lbl == "91-120": range_map["91-120"] = fname
+        elif lbl in ["121-Above", "121+"]: range_map["121+"] = fname
 
     if not report_data:
         report_data = []
@@ -170,12 +181,10 @@ def get_dashboard_data(filters=None):
         if to_days is not None and to_days != "" and days_val > int(to_days):
             continue
 
-        # Sum ageing buckets for the chart (checks multiple possible fieldnames for compatibility)
-        ageing_data["0-30"] += flt(row.get("range1") or row.get("range_1") or row.get("0-30") or 0)
-        ageing_data["31-60"] += flt(row.get("range2") or row.get("range_2") or row.get("31-60") or 0)
-        ageing_data["61-90"] += flt(row.get("range3") or row.get("range_3") or row.get("61-90") or 0)
-        ageing_data["91-120"] += flt(row.get("range4") or row.get("range_4") or row.get("91-120") or 0)
-        ageing_data["121+"] += flt(row.get("range5") or row.get("range_5") or row.get("121-Above") or row.get("121+") or 0)
+        # Sum ageing buckets using the dynamic map detected from report columns
+        for label, fname in range_map.items():
+            if fname in row:
+                ageing_data[label] += flt(row.get(fname))
 
         # Add to results list and calculate totals
         inv = {
