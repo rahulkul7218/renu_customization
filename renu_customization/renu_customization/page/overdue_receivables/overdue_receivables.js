@@ -180,7 +180,6 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                     </thead>
                     <tbody>
                         ${data.results
-							.filter((r) => flt(r.outstanding_amount) > 0)
 							.map(
 								(row) => `
                             <tr>
@@ -202,7 +201,6 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                             <td colspan="5" class="text-left" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">Grand Total</td>
                             <td class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">${format_currency(
 															data.results
-																.filter((r) => flt(r.outstanding_amount) > 0)
 																.reduce((sum, r) => {
 																	let val_in_m = flt(r.outstanding_amount) / 1000000;
 																	return sum + flt(val_in_m.toFixed(2)) * 1000000;
@@ -732,13 +730,18 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let tbody = table_card.find("tbody");
 		let total_outstanding_raw = 0;
 		data.results.forEach((row) => {
-			if (flt(row.outstanding_amount) <= 0) return;
-
 			let val_in_m = flt(row.outstanding_amount) / 1000000;
 			total_outstanding_raw += flt(val_in_m.toFixed(2)) * 1000000;
 
 			let display_name = row.name;
 			let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
+
+			if (row.outstanding_amount < 0 && (row.name === __("On Account") || row.voucher_type === "Payment Entry")) {
+				display_name = row.name === __("On Account") ? __("On Account Advance") : row.name;
+				if (row.voucher_type === "Payment Entry") {
+					link_url = `/app/payment-entry/${row.name}`;
+				}
+			}
 
 			$(`
 				<tr>

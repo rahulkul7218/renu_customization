@@ -152,12 +152,10 @@ def get_dashboard_data(filters=None):
         due_date = getdate(row.get("due_date"))
         is_overdue = (due_date and due_date <= report_date) or outstanding < 0
         
-        # Use aging fields from the report data if available, otherwise calculate it
+        # Get Age (Days) directly from the report data
         days_overdue = row.get("age_days")
         if days_overdue is None:
             days_overdue = row.get("age")
-        if days_overdue is None:
-            days_overdue = date_diff(report_date, due_date) if due_date else 0
         
         # Range Filter for Overdue Days
         from_days = filters.get("from_days")
@@ -195,12 +193,10 @@ def get_dashboard_data(filters=None):
             elif days_overdue <= 120: ageing_data["91-120"] += outstanding
             else: ageing_data["121+"] += outstanding
 
-    # Total Overdue: Sum of all overdue and unallocated items (Net)
-    # (Matches the sum of ageing columns in the AR report)
-    total_overdue = sum(flt(d["outstanding_amount"]) for d in data)
-    
-    export_overdue = sum(flt(d["outstanding_amount"]) for d in data if d["type"] == "Export")
-    domestic_overdue = sum(flt(d["outstanding_amount"]) for d in data if d["type"] == "Domestic")
+    # Calculate totals by summing rounded million values (to match visual table total)
+    total_overdue = sum(flt(flt(d["outstanding_amount"]) / 1000000, 2) for d in data) * 1000000
+    export_overdue = sum(flt(flt(d["outstanding_amount"]) / 1000000, 2) for d in data if d["type"] == "Export") * 1000000
+    domestic_overdue = sum(flt(flt(d["outstanding_amount"]) / 1000000, 2) for d in data if d["type"] == "Domestic") * 1000000
 
 
 
@@ -255,10 +251,6 @@ def export_to_excel(filters=None, export_type="all"):
     data = dashboard_data.get("results")
     summary = dashboard_data.get("summary")
     
-    # Filter out negative outstanding amounts for the list view
-    if data:
-        data = [d for d in data if flt(d.get("outstanding_amount")) > 0]
-
     if not data:
         return None
 
