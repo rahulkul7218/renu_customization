@@ -164,6 +164,9 @@ def get_dashboard_data(filters=None):
         to_days = filters.get("to_days")
         days_val = int(days_overdue or 0)
 
+        if days_val < 0:
+            continue
+
         if from_days is not None and from_days != "" and days_val < int(from_days):
             continue
         if to_days is not None and to_days != "" and days_val > int(to_days):
