@@ -296,7 +296,7 @@ def export_to_excel(filters=None, export_type="all"):
             
             val = s.get('value')
             if s.get('fieldtype') == 'Currency':
-                cell_v = ws_overview.cell(row=r+1, column=c, value=flt(val) / 1000000)
+                cell_v = ws_overview.cell(row=r+1, column=c, value=flt(flt(val) / 1000000, 2))
                 cell_v.number_format = '"₹ "#,##0.00" M"'
             else:
                 cell_v = ws_overview.cell(row=r+1, column=c, value=val)
@@ -324,8 +324,8 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=4, value=row['customer_name'] or row['customer']).border = table_border
             ws_list.cell(row=row_idx, column=5, value=row['sales_person']).border = table_border
             ws_list.cell(row=row_idx, column=6, value=row['type']).border = table_border
-            
-            amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['outstanding_amount']) / 1000000)
+            amt_val = flt(flt(row['outstanding_amount']) / 1000000, 2)
+            amt_cell = ws_list.cell(row=row_idx, column=7, value=amt_val)
             amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00" M"', table_border
             
             ws_list.cell(row=row_idx, column=8, value=row['due_date']).border = table_border
