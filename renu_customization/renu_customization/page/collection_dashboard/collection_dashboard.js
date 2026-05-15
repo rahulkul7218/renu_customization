@@ -72,7 +72,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         /* Dashboard Cards */
         .summary-wrapper { 
             display: grid !important; 
-            grid-template-columns: repeat(4, 1fr) !important; 
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important; 
             gap: 16px; 
             margin-bottom: 24px; 
             width: 100% !important; 
@@ -84,6 +84,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         .summary-card.orange { border-left-color: #f59e0b; }
         .summary-card.purple { border-left-color: #8b5cf6; }
         .summary-card.red { border-left-color: #ef4444; }
+        .summary-card.grey { border-left-color: #94a3b8; }
+        .summary-card.cyan { border-left-color: #06b6d4; }
 
         .summary-card .label { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         .summary-card .value { font-size: 20px; font-weight: 800; color: #0f172a; }
@@ -93,6 +95,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         .bg-orange { background-color: #f59e0b; }
         .bg-purple { background-color: #8b5cf6; }
         .bg-red { background-color: #ef4444; }
+        .bg-grey { background-color: #94a3b8; }
+        .bg-cyan { background-color: #06b6d4; }
 
         /* Charts & Tables */
         .charts-row { display: grid; grid-template-columns: 1fr; gap: 24px; margin-bottom: 24px; width: 100%; }
@@ -130,14 +134,15 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
 	// --- 2. DEFINE LOGIC FUNCTIONS ---
+	function format_million(num) {
+		if (!num && num !== 0) return "₹ 0.00 M";
+		let val = flt(num) / 1000000;
+		return "₹ " + val.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M";
+	}
+
 	function format_currency_short(num) {
 		if (!num && num !== 0) return "₹ 0.00 M";
-		let value = flt(num) / 1000000;
-		return (
-			"₹ " +
-			value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
-			" M"
-		);
+		return format_million(num);
 	}
 
 	page.refresh = function () {
@@ -174,12 +179,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 
 	function render_dashboard(data) {
 		page.container.empty();
-		if (!data.results || data.results.length === 0) {
-			$(
-				`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found for selected criteria")}</div></div>`,
-			).appendTo(page.container);
-			return;
-		}
+		
+        const get_slug = (dt) => (dt || "").toLowerCase().replace(/ /g, "-");
 
 		// KPI Cards
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
@@ -188,7 +189,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			$(`
                 <div class="summary-card ${indicator}">
                     <div class="label"><span class="indicator bg-${indicator}"></span>${metric.label}</div>
-                    <div class="value">${format_currency_short(metric.value)}</div>
+                    <div class="value">${format_million(metric.value)}</div>
+                    ${metric.ledger_val ? `<div style="font-size: 10px; color: #94a3b8; margin-top: 4px;">Ledger: ${format_currency_short(metric.ledger_val)}</div>` : ""}
                 </div>
             `).appendTo(summary_row);
 		});
@@ -216,6 +218,11 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				tooltipOptions: { formatTooltipY: (d) => format_currency_short(d) },
 			});
 
+			// Force redraw after a short delay to fix potential dimension issues on first load
+			setTimeout(() => {
+				if (page.chart) page.chart.draw(true);
+			}, 250);
+
 			let legend_container = chart_card.find("#chart_legend");
 			legend_container.empty();
 			let total_val = data.chart.data.datasets[0].values.reduce((a, b) => a + b, 0);
@@ -236,29 +243,161 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			});
 		}, 50);
 
-		// Detailed Table
+		// 1. Upcoming Payments Due Table (PRIORITY)
+		let due_table_card = $(`
+            <div class="table-card" style="margin-bottom: 40px;">
+                <div class="header">
+                    <span>${__("Payment Due in Next 15 Days (Invoices & Orders)")}</span>
+                    <div class="export-btn" id="export_due_excel_btn">
+                        <i class="fa fa-file-excel-o"></i> Export Due
+                    </div>
+                </div>
+                <div style="overflow: auto; width: 100%; max-height: 500px;">
+                    <table class="dashboard-table">
+                        <thead>
+                            <tr>
+                                <th style="min-width: 150px;">${__("Document ID")}</th>
+                                <th style="min-width: 120px;">${__("Date")}</th>
+                                <th style="min-width: 120px;">${__("Due Date")}</th>
+                                <th style="min-width: 100px; text-align: center;">${__("Days Left")}</th>
+                                <th style="min-width: 350px;">${__("Customer")}</th>
+                                <th style="min-width: 200px;">${__("Sales Person")}</th>
+                                <th style="min-width: 150px; text-align: right;">${__("Outstanding")}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="due_table_body"></tbody>
+                    </table>
+                </div>
+            </div>
+        `).appendTo(page.container);
+
+		let due_tbody = due_table_card.find("#due_table_body");
+		let total_due_amt = 0;
+
+		(data.due_results || []).forEach((row) => {
+			total_due_amt += flt(row.outstanding_amount);
+			let link = `/app/${get_slug(row.doctype)}/${row.name}`;
+			$(`
+                <tr>
+                    <td style="white-space: nowrap;"><a href="${link}" style="font-weight: 600; color: #4338ca;">${row.name}</a> <div style="font-size: 10px; color: #94a3b8;">${row.doctype}</div></td>
+                    <td style="white-space: nowrap;">${row.posting_date ? frappe.datetime.str_to_user(row.posting_date) : "-"}</td>
+                    <td style="white-space: nowrap;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+                    <td style="text-align: center;"><span class="indicator-pill ${row.due_days <= 3 ? "Export" : "Domestic"}">${row.due_days || 0}</span></td>
+                    <td style="white-space: normal;">${row.customer || "-"}</td>
+                    <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
+                    <td style="text-align: right; font-weight: 700;">${format_million(row.outstanding_amount)}</td>
+                </tr>
+            `).appendTo(due_tbody);
+		});
+
+		if (!data.due_results || data.due_results.length === 0) {
+			$(
+				`<tr><td colspan="7" class="text-center text-muted" style="padding: 20px;">No upcoming payments due in next 15 days</td></tr>`,
+			).appendTo(due_tbody);
+		}
+
+		// Add Total Footer for Due Table
+		$(`
+			<tfoot>
+				<tr class="sticky-total">
+					<td colspan="6" style="text-align: right; padding-right: 20px;">TOTAL DUE</td>
+					<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_due_amt)}</td>
+				</tr>
+			</tfoot>
+		`).appendTo(due_table_card.find(".dashboard-table"));
+
+		// 2. Customer Summary Table (Trial Balance Style)
+		let summary_table_card = $(`
+            <div class="table-card" style="margin-bottom: 40px;">
+                <div class="header">
+                    <span>${__("Customer Summary (Trial Balance Style)")}</span>
+                    <div class="export-btn" id="export_summary_excel_btn">
+                        <i class="fa fa-file-excel-o"></i> Export Summary
+                    </div>
+                </div>
+                <div style="overflow: auto; width: 100%; max-height: 500px;">
+                    <table class="dashboard-table">
+                        <thead>
+                            <tr>
+                                <th style="min-width: 350px;">${__("Customer")}</th>
+                                <th style="min-width: 150px; text-align: right;">${__("Opening (Dr)")}</th>
+                                <th style="min-width: 150px; text-align: right;">${__("Opening (Cr)")}</th>
+                                <th style="min-width: 150px; text-align: right;">${__("Credit (Collection)")}</th>
+                                <th style="min-width: 150px; text-align: right;">${__("Closing (Dr)")}</th>
+                                <th style="min-width: 150px; text-align: right;">${__("Closing (Cr)")}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary_table_body"></tbody>
+                    </table>
+                </div>
+            </div>
+        `).appendTo(page.container);
+
+		let summary_tbody = summary_table_card.find("#summary_table_body");
+		let s_op_dr = 0, s_op_cr = 0, s_dr = 0, s_cr = 0, s_cl_dr = 0, s_cl_cr = 0;
+
+		(data.customer_summary || []).forEach((row) => {
+			s_op_dr += flt(row.opening_dr);
+			s_op_cr += flt(row.opening_cr);
+			s_dr += flt(row.debit);
+			s_cr += flt(row.credit);
+			s_cl_dr += flt(row.closing_dr);
+			s_cl_cr += flt(row.closing_cr);
+
+			$(`
+                <tr>
+                    <td style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${row.customer}</td>
+                    <td style="text-align: right; white-space: nowrap;">${format_million(row.opening_dr)}</td>
+                    <td style="text-align: right; white-space: nowrap;">${format_million(row.opening_cr)}</td>
+                    <td style="text-align: right; color: #10b981; white-space: nowrap;">${format_million(row.credit)}</td>
+                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.closing_dr)}</td>
+                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.closing_cr)}</td>
+                </tr>
+            `).appendTo(summary_tbody);
+		});
+
+		// Add Total Row to Summary Table
+		$(`
+			<tfoot>
+				<tr class="sticky-total">
+					<td style="text-align: right; padding-right: 20px; font-weight: 800; white-space: nowrap;">TOTALS</td>
+					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_op_dr)}</td>
+					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_op_cr)}</td>
+					<td style="text-align: right; font-weight: 800; color: #10b981; white-space: nowrap;">${format_million(s_cr)}</td>
+					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_cl_dr)}</td>
+					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_cl_cr)}</td>
+				</tr>
+			</tfoot>
+		`).appendTo(summary_table_card.find(".dashboard-table"));
+
+		if (!data.customer_summary || data.customer_summary.length === 0) {
+			$(
+				`<tr><td colspan="5" class="text-center text-muted" style="padding: 20px;">No summary data available</td></tr>`,
+			).appendTo(summary_tbody);
+		}
+
+		// 3. Detailed Collection Table
 		let table_card = $(`
-            <div class="table-card">
+            <div class="table-card" style="margin-bottom: 40px;">
                 <div class="header">
                     <span>${__("Detailed Collection List")}</span>
                     <div class="export-btn" id="export_excel_btn">
-                        <i class="fa fa-file-excel-o"></i> Export to Excel
+                        <i class="fa fa-file-excel-o"></i> Export Details
                     </div>
                 </div>
                 <div style="overflow: auto; width: 100%; max-height: 800px;">
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th style="min-width: 130px;">${__("Payment ID")}</th>
-                                <th style="min-width: 110px;">${__("Invoice ID")}</th>
-                                <th style="min-width: 100px;">${__("Date")}</th>
-                                <th style="min-width: 100px;">${__("Due Date")}</th>
-                                <th style="min-width: 80px; text-align: center;">${__("Due Days")}</th>
-                                <th style="min-width: 250px;">${__("Customer")}</th>
-                                <th style="min-width: 150px;">${__("Sales Person")}</th>
-                                <th style="min-width: 300px;">${__("Item")}</th>
-                                <th style="min-width: 130px; text-align: right;">${__("Amount")}</th>
-                                <th style="min-width: 90px; text-align: center;">${__("Type")}</th>
+                                <th style="min-width: 150px;">${__("Payment ID")}</th>
+                                <th style="min-width: 150px;">${__("Voucher")}</th>
+                                <th style="min-width: 120px;">${__("Date")}</th>
+                                <th style="min-width: 120px;">${__("Due Date")}</th>
+                                <th style="min-width: 100px; text-align: center;">${__("Days Diff")}</th>
+                                <th style="min-width: 350px;">${__("Customer")}</th>
+                                <th style="min-width: 200px;">${__("Sales Person")}</th>
+                                <th style="min-width: 150px; text-align: right;">${__("Amount")}</th>
+                                <th style="min-width: 120px; text-align: center;">${__("Type")}</th>
                             </tr>
                         </thead>
                         <tbody id="collection_table_body"></tbody>
@@ -269,127 +408,48 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 
 		let tbody = table_card.find("#collection_table_body");
 		let total_amt = 0;
+
 		data.results.forEach((row) => {
 			let type_label = row.is_export ? "Export" : "Domestic";
-			let display_val = Math.round((flt(row.allocated_amount) / 1000000) * 10000) / 10000;
-			total_amt += display_val;
+			total_amt += flt(row.allocated_amount);
+			
+			let voucher_link = `/app/${get_slug(row.voucher_type)}/${row.payment_entry}`;
+			let ref_link = row.name ? `/app/sales-invoice/${row.name}` : "#";
+			if (row.name && row.name.startsWith("SO")) ref_link = `/app/sales-order/${row.name}`;
+
 			$(`
                 <tr>
-                    <td style="white-space: nowrap;"><a href="/app/payment-entry/${row.payment_entry}" style="font-weight: 600; color: #4338ca;">${row.payment_entry}</a></td>
-                    <td style="white-space: nowrap;"><a href="/app/sales-invoice/${row.name}" style="font-weight: 500; color: #64748b;">${row.name}</a></td>
-                    <td style="white-space: nowrap;">${frappe.datetime.str_to_user(row.posting_date)}</td>
-                    <td style="white-space: nowrap; color: #64748b;">${frappe.datetime.str_to_user(row.due_date)}</td>
-                    <td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days}</span></td>
-                    <td style="white-space: nowrap;">${row.customer}</td>
-                    <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
-                    <td>
-                        <div style="line-height: 1.4;">
-                            <div style="font-size: 11px; color: #64748b;">${row.item_code || "-"}</div>
-                            <div style="font-weight: 600;">${row.item_name || "-"}</div>
-                        </div>
+                    <td style="white-space: nowrap;"><a href="${voucher_link}" style="font-weight: 600; color: #4338ca;">${row.payment_entry}</a> <div style="font-size: 10px; color: #94a3b8;">${row.voucher_type}</div></td>
+                    <td style="white-space: nowrap;">
+                        ${row.name 
+                            ? `<a href="${ref_link}" style="font-weight: 500; color: #64748b;">${row.name}</a>` 
+                            : `<span class="text-muted">-</span>`}
                     </td>
-                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_currency_short(row.allocated_amount)}</td>
+                    <td style="white-space: nowrap;">${row.posting_date ? frappe.datetime.str_to_user(row.posting_date) : "-"}</td>
+                    <td style="white-space: nowrap; color: #64748b;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+                    <td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days || 0}</span></td>
+                    <td style="white-space: normal; min-width: 250px;">${row.customer || "-"}</td>
+                    <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
+                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.allocated_amount)}</td>
                     <td style="text-align: center;"><span class="indicator-pill ${type_label}">${__(type_label)}</span></td>
                 </tr>
             `).appendTo(tbody);
 		});
 
 		// Grand Total Footer
-		let total_display =
-			"₹ " +
-			total_amt.toLocaleString("en-US", {
-				minimumFractionDigits: 4,
-				maximumFractionDigits: 4,
-			}) +
-			" M";
 		$(`
 			<tfoot>
 				<tr class="sticky-total">
-					<td colspan="8" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
-					<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${total_display}</td>
+					<td colspan="7" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
+					<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_amt)}</td>
 					<td></td>
 				</tr>
 			</tfoot>
 		`).appendTo(table_card.find(".dashboard-table"));
 
 		table_card.find("#export_excel_btn").click(() => export_to_excel("detail"));
-
-		// Due Payments Table
-		let due_table_card = $(`
-            <div class="table-card" style="margin-top: 30px;">
-                <div class="header" style="background: #fff5f5; border-bottom: 1px solid #fed7d7;">
-                    <span style="color: #c53030;"><i class="fa fa-clock-o"></i> ${__("Payment Due in Next 15 Days")}</span>
-                </div>
-                <div style="overflow: auto; width: 100%; max-height: 500px;">
-                    <table class="dashboard-table">
-                        <thead>
-                            <tr>
-                                <th style="min-width: 110px;">${__("Invoice ID")}</th>
-                                <th style="min-width: 250px;">${__("Customer")}</th>
-                                <th style="min-width: 150px;">${__("Sales Person")}</th>
-                                <th style="min-width: 120px;">${__("Posting Date")}</th>
-                                <th style="min-width: 120px;">${__("Due Date")}</th>
-                                <th style="min-width: 100px; text-align: center;">${__("Due Days")}</th>
-                                <th style="min-width: 140px; text-align: right;">${__("Net Total")}</th>
-                                <th style="min-width: 140px; text-align: right;">${__("Outstanding")}</th>
-                            </tr>
-                        </thead>
-                        <tbody id="due_table_body"></tbody>
-                    </table>
-                </div>
-            </div>
-        `).appendTo(page.container);
-
-		due_table_card.find(".header").append(`
-            <div class="export-btn" id="export_due_excel_btn" style="background: #fff; border-color: #fed7d7;">
-                <i class="fa fa-file-excel-o"></i> Export
-            </div>
-        `);
-
 		due_table_card.find("#export_due_excel_btn").click(() => export_to_excel("due"));
-
-		let due_tbody = due_table_card.find("#due_table_body");
-		if (data.due_results && data.due_results.length > 0) {
-			let total_due_net = 0;
-			let total_due_outstanding = 0;
-
-			data.due_results.forEach((row) => {
-				total_due_net += flt(row.base_net_total);
-				total_due_outstanding += flt(row.outstanding_amount);
-
-				$(`
-                    <tr>
-                        <td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #c53030; white-space: nowrap;">${row.name}</a></td>
-                        <td>${row.customer}</td>
-                        <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
-                        <td style="white-space: nowrap;">${frappe.datetime.str_to_user(row.posting_date)}</td>
-                        <td style="color: #e53e3e; font-weight: 600; white-space: nowrap;">${frappe.datetime.str_to_user(row.due_date)}</td>
-                        <td style="text-align: center; white-space: nowrap;">
-                            <span class="indicator-pill ${row.due_days <= 3 ? "Domestic" : "Export"}" style="width: 100%; display: inline-block;">
-                                ${row.due_days} ${__("Days")}
-                            </span>
-                        </td>
-                        <td style="text-align: right; white-space: nowrap;">${format_currency_short(row.base_net_total)}</td>
-                        <td style="text-align: right; font-weight: 700; color: #c53030; white-space: nowrap;">${format_currency_short(row.outstanding_amount)}</td>
-                    </tr>
-                `).appendTo(due_tbody);
-			});
-
-			// Add Total Footer for Due Table
-			$(`
-				<tfoot>
-					<tr class="sticky-total">
-						<td colspan="6" style="text-align: right; padding-right: 20px;">TOTAL DUE</td>
-						<td style="text-align: right; font-weight: 700; border-left: 1px solid #e2e8f0; background: #fdf2f2;">${format_currency_short(total_due_net)}</td>
-						<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #fdf2f2; color: #c53030;">${format_currency_short(total_due_outstanding)}</td>
-					</tr>
-				</tfoot>
-			`).appendTo(due_table_card.find(".dashboard-table"));
-		} else {
-			$(
-				`<tr><td colspan="8" class="text-center text-muted" style="padding: 20px;">No upcoming payments due in next 15 days</td></tr>`,
-			).appendTo(due_tbody);
-		}
+		summary_table_card.find("#export_summary_excel_btn").click(() => export_to_excel("summary"));
 	}
 
 	// --- 3. INITIALIZE FILTERS AND ACTIONS ---
@@ -438,7 +498,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			fieldname: "dom_exp",
 			label: __("Domestic/Export"),
 			fieldtype: "Select",
-			options: ["", "Domestic", "Export"],
+			options: ["", "All", "Domestic", "Export"],
+			default: "All",
 			placeholder: __("Select"),
 		},
 	];
@@ -450,10 +511,19 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			fields: filter_fields,
 		});
 		page.filter_group.make();
+
+		// Dependent Filter: Customer Group -> Customer
+		page.filter_group.fields_dict.customer.get_query = function() {
+			let group = page.filter_group.get_values().customer_group;
+			if (group) {
+				return { filters: { customer_group: group } };
+			}
+		};
+
 		setup_filter_events();
 
 		// Initial Load after filter group is ready
-		page.refresh();
+		setTimeout(() => page.refresh(), 300);
 	}, 100);
 
 	function setup_filter_events() {
@@ -461,6 +531,9 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			let field = page.filter_group.fields_dict[key];
 
 			const trigger_refresh = () => {
+				if (key === "customer_group") {
+					page.filter_group.set_value("customer", "");
+				}
 				page.refresh();
 			};
 
@@ -628,9 +701,9 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					${data.summary
 						.map(
 							(m) => `
-						<div class="kpi-card" style="border-left-color: ${m.indicator === "green" ? "#10b981" : m.indicator === "orange" ? "#f59e0b" : "#3b82f6"}">
+						<div class="kpi-card" style="border-left-color: ${m.indicator === "green" ? "#10b981" : m.indicator === "orange" ? "#f59e0b" : m.indicator === "red" ? "#ef4444" : m.indicator === "purple" ? "#8b5cf6" : m.indicator === "grey" ? "#94a3b8" : m.indicator === "cyan" ? "#06b6d4" : "#3b82f6"}">
 							<div class="kpi-label">${m.label}</div>
-							<div class="kpi-value">${format_currency_short(m.value)}</div>
+							<div class="kpi-value">${format_million(m.value)}</div>
 						</div>
 					`,
 						)
@@ -646,19 +719,59 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				</div>
 
 				<div class="page-break"></div>
+				<h3 class="section-title">Customer Summary (Trial Balance)</h3>
+				<table>
+					<thead>
+						<tr>
+							<th width="35%">Customer</th>
+							<th width="13%" class="text-right">Opening (Dr)</th>
+							<th width="13%" class="text-right">Opening (Cr)</th>
+							<th width="13%" class="text-right">Credit (Col.)</th>
+							<th width="13%" class="text-right">Closing (Dr)</th>
+							<th width="13%" class="text-right">Closing (Cr)</th>
+						</tr>
+					</thead>
+					<tbody>
+						${(data.customer_summary || [])
+							.map(
+								(row) => `
+							<tr>
+								<td class="bold">${row.customer}</td>
+								<td class="text-right">${format_million(row.opening_dr)}</td>
+								<td class="text-right">${format_million(row.opening_cr)}</td>
+								<td class="text-right" style="color: #10b981;">${format_million(row.credit)}</td>
+								<td class="text-right bold">${format_million(row.closing_dr)}</td>
+								<td class="text-right bold">${format_million(row.closing_cr)}</td>
+							</tr>
+						`,
+							)
+							.join("")}
+					</tbody>
+					<tfoot>
+						<tr style="background: #f8fafc; font-weight: bold;">
+							<td class="text-right">TOTALS</td>
+							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.opening_dr), 0))}</td>
+							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.opening_cr), 0))}</td>
+							<td class="text-right" style="color: #10b981;">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.credit), 0))}</td>
+							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.closing_dr), 0))}</td>
+							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.closing_cr), 0))}</td>
+						</tr>
+					</tfoot>
+				</table>
+
+				<div class="page-break"></div>
 				<h3 class="section-title">Detailed Collection List</h3>
 				<table>
 					<thead>
 						<tr>
-							<th width="12%">Payment ID</th>
-							<th width="12%">Invoice ID</th>
-							<th width="9%">Date</th>
-							<th width="9%">Due Date</th>
-							<th width="6%" class="text-center">Days</th>
-							<th width="15%">Customer</th>
+							<th width="15%">Payment ID</th>
+							<th width="15%">Voucher</th>
+							<th width="10%">Date</th>
+							<th width="10%">Due Date</th>
+							<th width="8%" class="text-center">Diff</th>
+							<th width="18%">Customer</th>
 							<th width="12%">Sales Person</th>
-							<th width="15%" class="text-right">Amount (M)</th>
-							<th width="10%" class="text-center">Type</th>
+							<th width="12%" class="text-right">Amount (M)</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -669,12 +782,11 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 								<td class="bold">${row.payment_entry}</td>
 								<td style="color: #64748b;">${row.name}</td>
 								<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
-								<td>${frappe.datetime.str_to_user(row.due_date)}</td>
-								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days}</td>
+								<td>${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days || 0}</td>
 								<td>${row.customer}</td>
 								<td>${row.sales_person || "-"}</td>
-								<td class="text-right bold">${format_currency_short(row.allocated_amount)}</td>
-								<td class="text-center">${row.is_export ? "Export" : "Domestic"}</td>
+								<td class="text-right bold">${format_million(row.allocated_amount)}</td>
 							</tr>
 						`,
 							)
@@ -683,8 +795,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					<tfoot>
 						<tr style="background: #f8fafc; font-weight: bold;">
 							<td colspan="7" class="text-right">GRAND TOTAL</td>
-							<td class="text-right">${format_currency_short(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
-							<td></td>
+							<td class="text-right">${format_million(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
 						</tr>
 					</tfoot>
 				</table>
@@ -717,7 +828,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 									<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
 									<td style="color: #ef4444; font-weight: bold;">${frappe.datetime.str_to_user(row.due_date)}</td>
 									<td class="text-center">${row.due_days}</td>
-									<td class="text-right bold" style="color: #ef4444;">${format_currency_short(row.outstanding_amount)}</td>
+									<td class="text-right bold" style="color: #ef4444;">${format_million(row.outstanding_amount)}</td>
 								</tr>
 							`,
 								)
@@ -726,7 +837,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						<tfoot>
 							<tr style="background: #fef2f2; font-weight: bold; color: #ef4444;">
 								<td colspan="6" class="text-right">TOTAL OUTSTANDING</td>
-								<td class="text-right">${format_currency_short(data.due_results.reduce((a, b) => a + flt(b.outstanding_amount), 0))}</td>
+								<td class="text-right">${format_million(data.due_results.reduce((a, b) => a + flt(b.outstanding_amount), 0))}</td>
 							</tr>
 						</tfoot>
 					</table>

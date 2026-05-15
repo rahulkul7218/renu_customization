@@ -19,13 +19,21 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 
 	function perform_refresh() {
 		let filters = page.filter_group.get_values();
-		if (page.container) page.container.css("opacity", "0.6");
+		
+		// Show loading indicator
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Purchase Invoice Data...</div></div>'
+			);
+		} else {
+			page.container.css("opacity", "0.6");
+		}
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.purchase_invoice_dashboard.purchase_invoice_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
-				if (page.container) page.container.css("opacity", "1");
+				page.container.css("opacity", "1");
 				if (r.message) {
 					render_dashboard(r.message);
 				}
@@ -355,7 +363,7 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
             `).appendTo(charts_row);
 
 			setTimeout(() => {
-				new frappe.Chart(`#wrapper_${chart_id}`, {
+				const chart = new frappe.Chart(`#wrapper_${chart_id}`, {
 					data: chart_obj.data,
 					type: "donut",
 					height: 350,
@@ -366,6 +374,9 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 					valuesOverPoints: 1,
 					tooltipOptions: { formatTooltipY: (d) => format_currency_short(d) },
 				});
+
+				// Force redraw after a short delay to fix potential dimension issues on first load
+				setTimeout(() => chart.draw(true), 250);
 
 				// Render Custom Legend
 				let legend_container = page.container.find(`#legend_${chart_id}`);
@@ -812,5 +823,5 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		page.add_menu_item(__("Export to PDF"), () => export_pdf());
 	}
 
-	setTimeout(() => page.refresh(), 100);
+	setTimeout(() => page.refresh(), 300);
 };

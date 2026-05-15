@@ -23,13 +23,21 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
 	function perform_refresh() {
 		const filters = page.filter_group.get_values();
-		if (page.container) page.container.css("opacity", "0.6");
+		
+		// Show loading indicator
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Gross Margin Data...</div></div>'
+			);
+		} else {
+			page.container.css("opacity", "0.6");
+		}
 
 		frappe.call({
 			method: "renu_customization.renu_customization.page.gross_margin_dashboard.gross_margin_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: (r) => {
-				if (page.container) page.container.css("opacity", "1");
+				page.container.css("opacity", "1");
 				if (r.message) render_dashboard(r.message);
 			},
 		});
@@ -429,6 +437,9 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						}
 					},
 				});
+
+				// Force redraw after a short delay to fix potential dimension issues on first load
+				setTimeout(() => chart.draw(true), 250);
 
 				if (!is_full) {
 					let legend_container = wrapper.find(`.custom-legend`);
@@ -890,5 +901,5 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 		return new Blob(byteArrays, { type: contentType });
 	}
 
-	page.refresh();
+	setTimeout(() => page.refresh(), 300);
 };

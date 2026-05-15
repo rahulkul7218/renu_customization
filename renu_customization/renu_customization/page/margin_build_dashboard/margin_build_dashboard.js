@@ -310,10 +310,20 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 	page.refresh = function () {
 		let filters = page.filter_group.get_values();
 
+		// Show loading indicator
+		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
+			page.container.html(
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Margin Build Data...</div></div>'
+			);
+		} else {
+			page.container.css("opacity", "0.6");
+		}
+
 		frappe.call({
 			method: "renu_customization.renu_customization.page.margin_build_dashboard.margin_build_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
+				page.container.css("opacity", "1");
 				if (r.message) {
 					page.dashboard_data = r.message;
 					render_dashboard(r.message);
@@ -536,7 +546,7 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
         `).appendTo(page.container);
 
 		setTimeout(() => {
-			let chart = new frappe.Chart("#margin-chart", {
+			const chart = new frappe.Chart("#margin-chart", {
 				data: data.charts.margin_breakdown.data,
 				type: "donut",
 				height: 350,
@@ -545,6 +555,11 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 				show_legend: 0,
 				legendOptions: { showLegend: false },
 			});
+
+			// Force redraw after a short delay to fix potential dimension issues on first load
+			setTimeout(() => {
+				if (chart) chart.draw(true);
+			}, 250);
 
 			// Render Custom Legend
 			let legend_container = chart_card.find("#margin-legend");
@@ -660,5 +675,18 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 		);
 	}
 
-	page.refresh();
+	frappe.call({
+		method: "frappe.client.get_value",
+		args: {
+			doctype: "Fiscal Year",
+			filters: { year_start_date: ["<=", frappe.datetime.get_today()], year_end_date: [">=", frappe.datetime.get_today()] },
+			fieldname: "name"
+		},
+		callback: function (r) {
+			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
+		},
+		always: function() { 
+			setTimeout(() => page.refresh(), 300);
+		}
+	});
 };
