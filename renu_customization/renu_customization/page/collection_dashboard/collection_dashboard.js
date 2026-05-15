@@ -107,7 +107,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         .table-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 24px; overflow: hidden; border: 1px solid #e2e8f0; width: 100%; }
         .table-card .header { padding: 15px 24px; background: #fff; border-bottom: 1px solid #f1f5f9; font-weight: 700; color: #0f172a; display: flex; justify-content: space-between; align-items: center; }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        .dashboard-table th { background: #f8fafc; padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #64748b; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; }
+        .dashboard-table th { background: #f8fafc; padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #64748b; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; white-space: nowrap; }
         .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
         .dashboard-table tr:hover td { background: #f8fafc; }
         
@@ -255,6 +255,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 100px;">${__("Due Date")}</th>
                                 <th style="min-width: 80px; text-align: center;">${__("Due Days")}</th>
                                 <th style="min-width: 250px;">${__("Customer")}</th>
+                                <th style="min-width: 150px;">${__("Sales Person")}</th>
                                 <th style="min-width: 300px;">${__("Item")}</th>
                                 <th style="min-width: 130px; text-align: right;">${__("Amount")}</th>
                                 <th style="min-width: 90px; text-align: center;">${__("Type")}</th>
@@ -280,6 +281,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                     <td style="white-space: nowrap; color: #64748b;">${frappe.datetime.str_to_user(row.due_date)}</td>
                     <td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days}</span></td>
                     <td style="white-space: nowrap;">${row.customer}</td>
+                    <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
                     <td>
                         <div style="line-height: 1.4;">
                             <div style="font-size: 11px; color: #64748b;">${row.item_code || "-"}</div>
@@ -303,7 +305,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 		$(`
 			<tfoot>
 				<tr class="sticky-total">
-					<td colspan="7" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
+					<td colspan="8" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
 					<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${total_display}</td>
 					<td></td>
 				</tr>
@@ -324,11 +326,12 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                             <tr>
                                 <th style="min-width: 110px;">${__("Invoice ID")}</th>
                                 <th style="min-width: 250px;">${__("Customer")}</th>
-                                <th style="min-width: 100px;">${__("Posting Date")}</th>
-                                <th style="min-width: 100px;">${__("Due Date")}</th>
-                                <th style="min-width: 90px; text-align: center;">${__("Due Days")}</th>
-                                <th style="min-width: 130px; text-align: right;">${__("Net Total")}</th>
-                                <th style="min-width: 130px; text-align: right;">${__("Outstanding")}</th>
+                                <th style="min-width: 150px;">${__("Sales Person")}</th>
+                                <th style="min-width: 120px;">${__("Posting Date")}</th>
+                                <th style="min-width: 120px;">${__("Due Date")}</th>
+                                <th style="min-width: 100px; text-align: center;">${__("Due Days")}</th>
+                                <th style="min-width: 140px; text-align: right;">${__("Net Total")}</th>
+                                <th style="min-width: 140px; text-align: right;">${__("Outstanding")}</th>
                             </tr>
                         </thead>
                         <tbody id="due_table_body"></tbody>
@@ -356,17 +359,18 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 
 				$(`
                     <tr>
-                        <td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #c53030;">${row.name}</a></td>
+                        <td><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #c53030; white-space: nowrap;">${row.name}</a></td>
                         <td>${row.customer}</td>
-                        <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
-                        <td style="color: #e53e3e; font-weight: 600;">${frappe.datetime.str_to_user(row.due_date)}</td>
-                        <td style="text-align: center;">
+                        <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
+                        <td style="white-space: nowrap;">${frappe.datetime.str_to_user(row.posting_date)}</td>
+                        <td style="color: #e53e3e; font-weight: 600; white-space: nowrap;">${frappe.datetime.str_to_user(row.due_date)}</td>
+                        <td style="text-align: center; white-space: nowrap;">
                             <span class="indicator-pill ${row.due_days <= 3 ? "Domestic" : "Export"}" style="width: 100%; display: inline-block;">
                                 ${row.due_days} ${__("Days")}
                             </span>
                         </td>
-                        <td style="text-align: right;">${format_currency_short(row.base_net_total)}</td>
-                        <td style="text-align: right; font-weight: 700; color: #c53030;">${format_currency_short(row.outstanding_amount)}</td>
+                        <td style="text-align: right; white-space: nowrap;">${format_currency_short(row.base_net_total)}</td>
+                        <td style="text-align: right; font-weight: 700; color: #c53030; white-space: nowrap;">${format_currency_short(row.outstanding_amount)}</td>
                     </tr>
                 `).appendTo(due_tbody);
 			});
@@ -375,7 +379,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			$(`
 				<tfoot>
 					<tr class="sticky-total">
-						<td colspan="5" style="text-align: right; padding-right: 20px;">TOTAL DUE</td>
+						<td colspan="6" style="text-align: right; padding-right: 20px;">TOTAL DUE</td>
 						<td style="text-align: right; font-weight: 700; border-left: 1px solid #e2e8f0; background: #fdf2f2;">${format_currency_short(total_due_net)}</td>
 						<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #fdf2f2; color: #c53030;">${format_currency_short(total_due_outstanding)}</td>
 					</tr>
@@ -383,7 +387,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			`).appendTo(due_table_card.find(".dashboard-table"));
 		} else {
 			$(
-				`<tr><td colspan="7" class="text-center text-muted" style="padding: 20px;">No upcoming payments due in next 15 days</td></tr>`,
+				`<tr><td colspan="8" class="text-center text-muted" style="padding: 20px;">No upcoming payments due in next 15 days</td></tr>`,
 			).appendTo(due_tbody);
 		}
 	}
@@ -422,20 +426,6 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Link",
 			options: "Customer",
 			placeholder: __("Select Customer"),
-		},
-		{
-			fieldname: "item_group",
-			label: __("Product Group"),
-			fieldtype: "Link",
-			options: "Item Group",
-			placeholder: __("Select Product Group"),
-		},
-		{
-			fieldname: "item_code",
-			label: __("Product (Item)"),
-			fieldtype: "Link",
-			options: "Item",
-			placeholder: __("Select Product"),
 		},
 		{
 			fieldname: "sales_person",
@@ -662,11 +652,12 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						<tr>
 							<th width="12%">Payment ID</th>
 							<th width="12%">Invoice ID</th>
-							<th width="10%">Date</th>
-							<th width="10%">Due Date</th>
-							<th width="8%" class="text-center">Days</th>
-							<th width="20%">Customer</th>
-							<th width="18%" class="text-right">Amount (M)</th>
+							<th width="9%">Date</th>
+							<th width="9%">Due Date</th>
+							<th width="6%" class="text-center">Days</th>
+							<th width="15%">Customer</th>
+							<th width="12%">Sales Person</th>
+							<th width="15%" class="text-right">Amount (M)</th>
 							<th width="10%" class="text-center">Type</th>
 						</tr>
 					</thead>
@@ -681,6 +672,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 								<td>${frappe.datetime.str_to_user(row.due_date)}</td>
 								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days}</td>
 								<td>${row.customer}</td>
+								<td>${row.sales_person || "-"}</td>
 								<td class="text-right bold">${format_currency_short(row.allocated_amount)}</td>
 								<td class="text-center">${row.is_export ? "Export" : "Domestic"}</td>
 							</tr>
@@ -690,7 +682,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					</tbody>
 					<tfoot>
 						<tr style="background: #f8fafc; font-weight: bold;">
-							<td colspan="6" class="text-right">GRAND TOTAL</td>
+							<td colspan="7" class="text-right">GRAND TOTAL</td>
 							<td class="text-right">${format_currency_short(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
 							<td></td>
 						</tr>
@@ -706,11 +698,12 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						<thead>
 							<tr>
 								<th width="15%">Invoice ID</th>
-								<th width="35%">Customer</th>
+								<th width="25%">Customer</th>
+								<th width="15%">Sales Person</th>
 								<th width="12%">Posting Date</th>
 								<th width="12%">Due Date</th>
 								<th width="8%" class="text-center">Days</th>
-								<th width="18%" class="text-right">Outstanding (M)</th>
+								<th width="13%" class="text-right">Outstanding (M)</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -720,6 +713,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 								<tr>
 									<td class="bold">${row.name}</td>
 									<td>${row.customer}</td>
+									<td>${row.sales_person || "-"}</td>
 									<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
 									<td style="color: #ef4444; font-weight: bold;">${frappe.datetime.str_to_user(row.due_date)}</td>
 									<td class="text-center">${row.due_days}</td>
@@ -731,7 +725,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						</tbody>
 						<tfoot>
 							<tr style="background: #fef2f2; font-weight: bold; color: #ef4444;">
-								<td colspan="5" class="text-right">TOTAL OUTSTANDING</td>
+								<td colspan="6" class="text-right">TOTAL OUTSTANDING</td>
 								<td class="text-right">${format_currency_short(data.due_results.reduce((a, b) => a + flt(b.outstanding_amount), 0))}</td>
 							</tr>
 						</tfoot>
