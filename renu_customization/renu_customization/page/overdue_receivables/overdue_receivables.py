@@ -170,28 +170,27 @@ def get_dashboard_data(filters=None):
         if to_days is not None and to_days != "" and days_val > int(to_days):
             continue
 
-        # If it passes all filters, add to results and sum ageing buckets from report columns
-        if is_overdue:
-            inv = {
-                "name": v_no or _("On Account"),
-                "voucher_type": v_type,
-                "customer": row.get("party"),
-                "customer_name": row.get("customer_name") or row.get("party_name"),
-                "posting_date": row.get("posting_date"),
-                "due_date": row.get("due_date"),
-                "outstanding_amount": outstanding,
-                "days_overdue": days_overdue or 0,
-                "type": type_label,
-                "sales_person": row_sp_str
-            }
-            data.append(inv)
-            
-            # Manual Ageing Calculation (Net values)
-            if days_overdue <= 30: ageing_data["0-30"] += outstanding
-            elif days_overdue <= 60: ageing_data["31-60"] += outstanding
-            elif days_overdue <= 90: ageing_data["61-90"] += outstanding
-            elif days_overdue <= 120: ageing_data["91-120"] += outstanding
-            else: ageing_data["121+"] += outstanding
+        # Sum ageing buckets for the chart (includes all items for full breakdown)
+        ageing_data["0-30"] += flt(row.get("range_1"))
+        ageing_data["31-60"] += flt(row.get("range_2"))
+        ageing_data["61-90"] += flt(row.get("range_3"))
+        ageing_data["91-120"] += flt(row.get("range_4"))
+        ageing_data["121+"] += flt(row.get("range_5"))
+
+        # Add to results list and calculate totals
+        inv = {
+            "name": v_no or _("On Account"),
+            "voucher_type": v_type,
+            "customer": row.get("party"),
+            "customer_name": row.get("customer_name") or row.get("party_name"),
+            "posting_date": row.get("posting_date"),
+            "due_date": row.get("due_date"),
+            "outstanding_amount": outstanding,
+            "days_overdue": int(days_overdue or 0),
+            "type": type_label,
+            "sales_person": row_sp_str
+        }
+        data.append(inv)
 
     # Total Overdue: Sum of all overdue and unallocated items (Net)
     total_overdue = sum(flt(d["outstanding_amount"]) for d in data)
