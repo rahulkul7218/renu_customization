@@ -119,11 +119,19 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                     .chart-img { width: 100%; height: auto; max-height: 250px; margin-bottom: 10px; object-fit: contain; }
                     .pdf-legend-box { background: #fafafa; border-radius: 8px; padding: 10px; border: 1px solid #f1f5f9; margin-top: 10px; }
                     
-                    table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 15px; page-break-inside: auto !important; }
-                    th, td { border: 1px solid #e2e8f0; padding: 8px; text-align: left; vertical-align: top; }
+                    table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 10px; margin-top: 15px; page-break-inside: auto; }
                     thead { display: table-header-group; }
+                    tbody { display: table-row-group; }
+                    tr { page-break-inside: avoid !important; page-break-after: auto; }
+                    th, td { 
+                        padding: 8px; 
+                        border: 1px solid #e2e8f0; 
+                        text-align: left; 
+                        vertical-align: top; 
+                        page-break-inside: avoid !important; 
+                        word-wrap: break-word;
+                    }
                     th { background: #f1f5f9; border-bottom: 2px solid #ef4444; color: #64748b; text-transform: uppercase; font-weight: 700; }
-                    tr { page-break-inside: avoid !important; }
                     .text-right { text-align: right; }
                     .text-center { text-align: center; }
                 </style>
