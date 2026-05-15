@@ -1,4 +1,4 @@
-frappe.ready(function () {
+$(function () {
     // Avoid duplicate banners
     if (document.querySelector("#uat-banner")) return;
 
