@@ -66,6 +66,7 @@ def get_dashboard_data(filters=None):
     # Fetch Sales Invoice details for classification (is_export, is_domestic)
     voucher_nos = [d.get("voucher_no") for d in report_data if d.get("voucher_type") == "Sales Invoice"]
     invoice_details = {}
+    sales_persons_map = {}
     if voucher_nos:
         inv_data = frappe.get_all("Sales Invoice", 
             filters={"name": ["in", voucher_nos]},
@@ -73,6 +74,16 @@ def get_dashboard_data(filters=None):
         )
         for d in inv_data:
             invoice_details[d.name] = d
+        
+        # Fetch Sales Persons from Sales Team child table
+        sp_data = frappe.get_all("Sales Team",
+            filters={"parent": ["in", voucher_nos], "parenttype": "Sales Invoice"},
+            fields=["parent", "sales_person"]
+        )
+        for d in sp_data:
+            if d.parent not in sales_persons_map:
+                sales_persons_map[d.parent] = []
+            sales_persons_map[d.parent].append(d.sales_person)
 
     data = []
     report_date = getdate(ar_filters.report_date)
@@ -106,10 +117,14 @@ def get_dashboard_data(filters=None):
         if filters.get("customer") and row.get("party") != filters.get("customer"):
             continue
             
+        # Get Sales Person string
+        row_sp_list = sales_persons_map.get(v_no, [])
+        row_sp_str = ", ".join(row_sp_list) if row_sp_list else (row.get("sales_person") or "")
+
         # Manual Sales Person Filter (Defensive check)
         if filters.get("sales_person"):
-            row_sp = row.get("sales_person")
-            if not row_sp or filters.get("sales_person") not in row_sp:
+            selected_sp = filters.get("sales_person")
+            if selected_sp not in row_sp_list and selected_sp not in (row.get("sales_person") or ""):
                 continue
 
         # Posting Date Range Filter
@@ -127,7 +142,8 @@ def get_dashboard_data(filters=None):
             if cust_group and "Export" in cust_group: is_export = True
 
         type_label = "Export" if is_export else "Domestic"
-        if filters.get("type") and type_label != filters.get("type"): continue
+        if filters.get("type") and filters.get("type") != "All" and type_label != filters.get("type"):
+            continue
 
         # Sum to Total Outstanding (respecting dashboard filters)
         total_outstanding_cumulative += outstanding
@@ -135,9 +151,22 @@ def get_dashboard_data(filters=None):
         # Overdue Check & Min Days Filter
         due_date = getdate(row.get("due_date"))
         is_overdue = (due_date and due_date <= report_date) or outstanding < 0
-        days_overdue = date_diff(report_date, due_date) if due_date else 0
         
-        if outstanding > 0 and filters.get("min_days") and int(days_overdue) < int(filters.get("min_days")):
+        # Use aging fields from the report data if available, otherwise calculate it
+        days_overdue = row.get("age_days")
+        if days_overdue is None:
+            days_overdue = row.get("age")
+        if days_overdue is None:
+            days_overdue = date_diff(report_date, due_date) if due_date else 0
+        
+        # Range Filter for Overdue Days
+        from_days = filters.get("from_days")
+        to_days = filters.get("to_days")
+        days_val = int(days_overdue or 0)
+
+        if from_days is not None and from_days != "" and days_val < int(from_days):
+            continue
+        if to_days is not None and to_days != "" and days_val > int(to_days):
             continue
 
         # If it passes all filters, add to results and sum ageing buckets from report columns
@@ -150,9 +179,9 @@ def get_dashboard_data(filters=None):
                 "posting_date": row.get("posting_date"),
                 "due_date": row.get("due_date"),
                 "outstanding_amount": outstanding,
-                "days_overdue": days_overdue if outstanding > 0 else 0,
+                "days_overdue": days_overdue or 0,
                 "type": type_label,
-                "sales_person": row.get("sales_person") or ""
+                "sales_person": row_sp_str
             }
             data.append(inv)
             
@@ -182,12 +211,13 @@ def get_dashboard_data(filters=None):
 
 
     # Charts
+    # Charts (Divided by 1,000,000 for Millions display)
     charts = {
         "overdue_breakdown": {
             "title": _("Overdue Breakdown (Export vs Domestic)"),
             "data": {
                 "labels": [_("Export Overdue"), _("Domestic Overdue")],
-                "datasets": [{"name": _("Overdue"), "values": [export_overdue, domestic_overdue]}]
+                "datasets": [{"name": _("Overdue"), "values": [flt(export_overdue) / 1000000, flt(domestic_overdue) / 1000000]}]
             },
             "type": "donut",
             "colors": ["#10b981", "#f59e0b"]
@@ -197,7 +227,11 @@ def get_dashboard_data(filters=None):
             "data": {
                 "labels": ["0-30", "31-60", "61-90", "91-120", "121+"],
                 "datasets": [{"name": _("Amount"), "values": [
-                    ageing_data["0-30"], ageing_data["31-60"], ageing_data["61-90"], ageing_data["91-120"], ageing_data["121+"]
+                    flt(ageing_data["0-30"]) / 1000000, 
+                    flt(ageing_data["31-60"]) / 1000000, 
+                    flt(ageing_data["61-90"]) / 1000000, 
+                    flt(ageing_data["91-120"]) / 1000000, 
+                    flt(ageing_data["121+"]) / 1000000
                 ]}]
             },
             "type": "bar",
@@ -264,7 +298,7 @@ def export_to_excel(filters=None, export_type="all"):
             val = s.get('value')
             if s.get('fieldtype') == 'Currency':
                 cell_v = ws_overview.cell(row=r+1, column=c, value=flt(val) / 1000000)
-                cell_v.number_format = '"₹ "#,##0.0000" M"'
+                cell_v.number_format = '"₹ "#,##0.00" M"'
             else:
                 cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
@@ -293,26 +327,26 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=6, value=row['type']).border = table_border
             
             amt_cell = ws_list.cell(row=row_idx, column=7, value=flt(row['outstanding_amount']) / 1000000)
-            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.0000" M"', table_border
+            amt_cell.number_format, amt_cell.border = '"₹ "#,##0.00" M"', table_border
             
             ws_list.cell(row=row_idx, column=8, value=row['due_date']).border = table_border
             ws_list.cell(row=row_idx, column=9, value=row['days_overdue']).border = table_border
             row_idx += 1
     
         # Add Total Row
-        ws_list.cell(row=row_idx, column=1, value="Total").font = header_font
+        ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
         ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
         for c in range(1, 7):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
             if c == 1:
-                ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
+                ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="left")
                 
         total_amt = sum(flt(r['outstanding_amount']) for r in data) / 1000000
         total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
         total_cell.font = header_font
         total_cell.fill = header_fill
-        total_cell.number_format, total_cell.border = '"₹ "#,##0.0000" M"', table_border
+        total_cell.number_format, total_cell.border = '"₹ "#,##0.00" M"', table_border
         
         ws_list.cell(row=row_idx, column=8, value="").fill = header_fill
         ws_list.cell(row=row_idx, column=8, value="").border = table_border
