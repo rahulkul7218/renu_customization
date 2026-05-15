@@ -168,7 +168,13 @@ def get_dashboard_data(filters=None):
         if days_overdue is None:
             days_overdue = row.get("age")
         
-        # Range Filter for Overdue Days
+        # Sum ageing buckets using the dynamic map detected from report columns
+        # (This is done before the Days range filter to ensure the chart matches the report totals)
+        for label, fname in range_map.items():
+            if fname in row:
+                ageing_data[label] += flt(row.get(fname))
+
+        # Range Filter for Overdue Days (affects only the detailed list and summary cards)
         from_days = filters.get("from_days")
         to_days = filters.get("to_days")
         days_val = int(days_overdue or 0)
@@ -180,11 +186,6 @@ def get_dashboard_data(filters=None):
             continue
         if to_days is not None and to_days != "" and days_val > int(to_days):
             continue
-
-        # Sum ageing buckets using the dynamic map detected from report columns
-        for label, fname in range_map.items():
-            if fname in row:
-                ageing_data[label] += flt(row.get(fname))
 
         # Add to results list and calculate totals
         inv = {
