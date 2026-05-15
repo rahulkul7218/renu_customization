@@ -170,12 +170,12 @@ def get_dashboard_data(filters=None):
         if to_days is not None and to_days != "" and days_val > int(to_days):
             continue
 
-        # Sum ageing buckets for the chart (includes all items for full breakdown)
-        ageing_data["0-30"] += flt(row.get("range_1"))
-        ageing_data["31-60"] += flt(row.get("range_2"))
-        ageing_data["61-90"] += flt(row.get("range_3"))
-        ageing_data["91-120"] += flt(row.get("range_4"))
-        ageing_data["121+"] += flt(row.get("range_5"))
+        # Sum ageing buckets for the chart (checks multiple possible fieldnames for compatibility)
+        ageing_data["0-30"] += flt(row.get("range1") or row.get("range_1") or row.get("0-30") or 0)
+        ageing_data["31-60"] += flt(row.get("range2") or row.get("range_2") or row.get("31-60") or 0)
+        ageing_data["61-90"] += flt(row.get("range3") or row.get("range_3") or row.get("61-90") or 0)
+        ageing_data["91-120"] += flt(row.get("range4") or row.get("range_4") or row.get("91-120") or 0)
+        ageing_data["121+"] += flt(row.get("range5") or row.get("range_5") or row.get("121-Above") or row.get("121+") or 0)
 
         # Add to results list and calculate totals
         inv = {
@@ -215,7 +215,7 @@ def get_dashboard_data(filters=None):
             "title": _("Overdue Breakdown (Export vs Domestic)"),
             "data": {
                 "labels": [_("Export Overdue"), _("Domestic Overdue")],
-                "datasets": [{"name": _("Overdue"), "values": [flt(export_overdue) / 1000000, flt(domestic_overdue) / 1000000]}]
+                "datasets": [{"name": _("Overdue"), "values": [flt(flt(export_overdue) / 1000000, 2), flt(flt(domestic_overdue) / 1000000, 2)]}]
             },
             "type": "donut",
             "colors": ["#10b981", "#f59e0b"]
@@ -225,11 +225,11 @@ def get_dashboard_data(filters=None):
             "data": {
                 "labels": ["0-30", "31-60", "61-90", "91-120", "121+"],
                 "datasets": [{"name": _("Amount"), "values": [
-                    flt(ageing_data["0-30"]) / 1000000, 
-                    flt(ageing_data["31-60"]) / 1000000, 
-                    flt(ageing_data["61-90"]) / 1000000, 
-                    flt(ageing_data["91-120"]) / 1000000, 
-                    flt(ageing_data["121+"]) / 1000000
+                    flt(flt(ageing_data["0-30"]) / 1000000, 2), 
+                    flt(flt(ageing_data["31-60"]) / 1000000, 2), 
+                    flt(flt(ageing_data["61-90"]) / 1000000, 2), 
+                    flt(flt(ageing_data["91-120"]) / 1000000, 2), 
+                    flt(flt(ageing_data["121+"]) / 1000000, 2)
                 ]}]
             },
             "type": "bar",
