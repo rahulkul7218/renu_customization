@@ -179,7 +179,10 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.results.map(row => `
+                        ${data.results
+							.filter((r) => flt(r.outstanding_amount) > 0)
+							.map(
+								(row) => `
                             <tr>
                                 <td>${row.name}</td>
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
@@ -187,13 +190,24 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
                                 <td>${row.sales_person || "-"}</td>
                                 <td class="text-center">${row.type}</td>
                                 <td class="text-right">${format_currency(row.outstanding_amount)}</td>
-                                <td class="text-right">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+                                <td class="text-right">${
+																	row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"
+																}</td>
                                 <td class="text-right">${row.days_overdue}</td>
                             </tr>
-                        `).join("")}
+                        `,
+							)
+							.join("")}
                         <tr style="background: #f8fafc; font-weight: bold;">
                             <td colspan="5" class="text-left" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">Grand Total</td>
-                            <td class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">${format_currency(data.results.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0))}</td>
+                            <td class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">${format_currency(
+															data.results
+																.filter((r) => flt(r.outstanding_amount) > 0)
+																.reduce((sum, r) => {
+																	let val_in_m = flt(r.outstanding_amount) / 1000000;
+																	return sum + flt(val_in_m.toFixed(2)) * 1000000;
+																}, 0),
+														)}</td>
                             <td colspan="2" style="border-top: 2px solid #e2e8f0;"></td>
                         </tr>
                     </tbody>
@@ -718,15 +732,13 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let tbody = table_card.find("tbody");
 		let total_outstanding_raw = 0;
 		data.results.forEach((row) => {
-			total_outstanding_raw += flt(row.outstanding_amount);
+			if (flt(row.outstanding_amount) <= 0) return;
+
+			let val_in_m = flt(row.outstanding_amount) / 1000000;
+			total_outstanding_raw += flt(val_in_m.toFixed(2)) * 1000000;
 
 			let display_name = row.name;
 			let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
-
-			if (row.outstanding_amount < 0 && row.name === __("On Account")) {
-				display_name = __("On Account Advance");
-				link_url = "#";
-			}
 
 			$(`
 				<tr>

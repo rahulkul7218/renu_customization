@@ -255,6 +255,10 @@ def export_to_excel(filters=None, export_type="all"):
     data = dashboard_data.get("results")
     summary = dashboard_data.get("summary")
     
+    # Filter out negative outstanding amounts for the list view
+    if data:
+        data = [d for d in data if flt(d.get("outstanding_amount")) > 0]
+
     if not data:
         return None
 
@@ -345,7 +349,7 @@ def export_to_excel(filters=None, export_type="all"):
             if c == 1:
                 ws_list.cell(row=row_idx, column=c).alignment = Alignment(horizontal="left")
                 
-        total_amt = sum(flt(r['outstanding_amount']) for r in data) / 1000000
+        total_amt = sum(flt(flt(r['outstanding_amount']) / 1000000, 2) for r in data)
         total_cell = ws_list.cell(row=row_idx, column=7, value=total_amt)
         total_cell.font = header_font
         total_cell.fill = header_fill
