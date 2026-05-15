@@ -760,7 +760,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 	}
 
 	function format_currency(v, already_divided = false) {
-		if (!v && v !== 0) return "₹ 0.0000 M";
+		if (!v && v !== 0) return "₹ 0.00 M";
 
 		// Convert to Million INR if not already divided
 		let value = already_divided ? flt(v) : flt(v) / 1000000;
@@ -768,8 +768,8 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		return (
 			"₹ " +
 			value.toLocaleString("en-US", {
-				minimumFractionDigits: 4,
-				maximumFractionDigits: 4,
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
 			}) +
 			" M"
 		);
