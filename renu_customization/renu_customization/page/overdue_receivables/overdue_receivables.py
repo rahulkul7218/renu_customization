@@ -49,6 +49,7 @@ def get_dashboard_data(filters=None):
         "sales_person": filters.get("sales_person"),
         "group_by_party": 0,
         "based_on_payment_terms": 1,
+        "ageing_based_on": "Due Date",
         "show_future_payments": 0,
         "range_1": 30,
         "range_2": 60,
@@ -161,30 +162,34 @@ def get_dashboard_data(filters=None):
 
         # Overdue Check & Min Days Filter
         due_date = getdate(row.get("due_date"))
-        is_overdue = (due_date and due_date <= report_date) or outstanding < 0
-        
-        # Get Age (Days) directly from the report data
-        days_overdue = row.get("age_days")
-        if days_overdue is None:
-            days_overdue = row.get("age")
-        
+        # Calculate Age (Days) based on Due Date
+        if due_date:
+            days_overdue = date_diff(report_date, due_date)
+        else:
+            # Fallback to report's age if due_date is missing (e.g., On Account)
+            days_overdue = row.get("age_days")
+            if days_overdue is None:
+                days_overdue = row.get("age")
+
+        days_val = int(flt(days_overdue or 0))
+
         # Sum ageing buckets using the dynamic map detected from report columns
         # (This is done before the Days range filter to ensure the chart matches the report totals)
         for label, fname in range_map.items():
             if fname in row:
                 ageing_data[label] += flt(row.get(fname))
 
-        # Range Filter for Overdue Days (affects only the detailed list and summary cards)
-        from_days = filters.get("from_days")
-        to_days = filters.get("to_days")
-        days_val = int(days_overdue or 0)
-
+        # Skip non-overdue records (negative days) for the detailed list and overdue totals
         if days_val < 0:
             continue
 
-        if from_days is not None and from_days != "" and days_val < int(from_days):
+        # Range Filter for Overdue Days (affects only the detailed list and summary cards)
+        from_days = filters.get("from_days")
+        to_days = filters.get("to_days")
+
+        if from_days is not None and from_days != "" and days_val < int(flt(from_days)):
             continue
-        if to_days is not None and to_days != "" and days_val > int(to_days):
+        if to_days is not None and to_days != "" and days_val > int(flt(to_days)):
             continue
 
         # Add to results list and calculate totals
