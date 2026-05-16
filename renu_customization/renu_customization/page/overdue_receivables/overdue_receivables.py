@@ -49,6 +49,7 @@ def get_dashboard_data(filters=None):
         "sales_person": filters.get("sales_person"),
         "group_by_party": 0,
         "based_on_payment_terms": 1,
+        "ageing_based_on": "Due Date",
         "show_future_payments": 0,
         "range_1": 30,
         "range_2": 60,
@@ -69,7 +70,7 @@ def get_dashboard_data(filters=None):
         elif lbl == "31-60": range_map["31-60"] = fname
         elif lbl == "61-90": range_map["61-90"] = fname
         elif lbl == "91-120": range_map["91-120"] = fname
-        elif lbl in ["121-Above", "121+"]: range_map["121-Above"] = fname
+        elif lbl in ["121-Above", "121+"]: range_map["121+"] = fname
 
     if not report_data:
         report_data = []
@@ -105,13 +106,9 @@ def get_dashboard_data(filters=None):
         "31-60": 0,
         "61-90": 0,
         "91-120": 0,
-        "121-Above": 0
+        "121+": 0
     }
-    
-    # Global Totals (to match AR report)
-    total_overdue_cumulative = 0
-    export_overdue_cumulative = 0
-    domestic_overdue_cumulative = 0
+
     total_outstanding_cumulative = 0
 
     for row in report_data:
@@ -128,6 +125,26 @@ def get_dashboard_data(filters=None):
         # Existence check
         if v_type == "Sales Invoice" and v_no not in invoice_details: continue
 
+        # Manual Customer Filter (Defensive check)
+        if filters.get("customer") and row.get("party") != filters.get("customer"):
+            continue
+            
+        # Get Sales Person string
+        row_sp_list = sales_persons_map.get(v_no, [])
+        row_sp_str = ", ".join(row_sp_list) if row_sp_list else (row.get("sales_person") or "")
+
+        # Manual Sales Person Filter (Defensive check)
+        if filters.get("sales_person"):
+            selected_sp = filters.get("sales_person")
+            if selected_sp not in row_sp_list and selected_sp not in (row.get("sales_person") or ""):
+                continue
+
+        # Posting Date Range Filter
+        posting_date = getdate(row.get("posting_date"))
+
+        if filters.get("from_date") and posting_date < getdate(filters.get("from_date")): continue
+        if filters.get("to_date") and posting_date > getdate(filters.get("to_date")): continue
+
         # Classification for Type Filter
         is_export = False
         if v_type == "Sales Invoice":
@@ -140,47 +157,43 @@ def get_dashboard_data(filters=None):
         if filters.get("type") and filters.get("type") != "All" and type_label != filters.get("type"):
             continue
 
-        # Total Outstanding (Sum of everything as of report_date, matching AR Report dashboard)
+        # Sum to Total Outstanding (respecting dashboard filters)
         total_outstanding_cumulative += outstanding
 
-        # Get Age (Days) directly from the report data
-        days_overdue = row.get("age_days")
-        if days_overdue is None:
-            days_overdue = row.get("age")
+        # Overdue Check & Min Days Filter
+        due_date = getdate(row.get("due_date"))
+        is_overdue = (due_date and due_date <= report_date) or outstanding < 0
         
-        days_val = int(days_overdue or 0)
-        is_overdue = days_val >= 0
+        # Calculate Age (Days) based on Due Date
+        if due_date:
+            days_overdue = date_diff(report_date, due_date)
+        else:
+            # Fallback to report's age if due_date is missing (e.g., On Account)
+            days_overdue = row.get("age_days")
+            if days_overdue is None:
+                days_overdue = row.get("age")
 
-        # Update Global Overdue Totals and Ageing Breakdown (matching AR Report dashboard)
-        if is_overdue:
-            total_overdue_cumulative += outstanding
-            if type_label == "Export":
-                export_overdue_cumulative += outstanding
-            else:
-                domestic_overdue_cumulative += outstanding
+        
+        # Sum ageing buckets using the dynamic map detected from report columns
+        # (This is done before the Days range filter to ensure the chart matches the report totals)
+        for label, fname in range_map.items():
+            if fname in row:
+                ageing_data[label] += flt(row.get(fname))
 
-            # Sum ageing buckets using the dynamic map detected from report columns
-            for label, fname in range_map.items():
-                if fname in row:
-                    ageing_data[label] += flt(row.get(fname))
-
-        # --- Table Filters (from_date and day ranges) ---
-        posting_date = getdate(row.get("posting_date"))
-        if filters.get("from_date") and posting_date < getdate(filters.get("from_date")): continue
-        if filters.get("to_date") and posting_date > getdate(filters.get("to_date")): continue
-
-        if not is_overdue:
-            continue
-
+        # Range Filter for Overdue Days (affects only the detailed list and summary cards)
         from_days = filters.get("from_days")
         to_days = filters.get("to_days")
+        days_val = int(days_overdue or 0)
+
+        if days_val < 0:
+            continue
 
         if from_days is not None and from_days != "" and days_val < int(from_days):
             continue
         if to_days is not None and to_days != "" and days_val > int(to_days):
             continue
 
-        # Add to results list
+        # Add to results list and calculate totals
         inv = {
             "name": v_no or _("On Account"),
             "voucher_type": v_type,
@@ -189,26 +202,36 @@ def get_dashboard_data(filters=None):
             "posting_date": row.get("posting_date"),
             "due_date": row.get("due_date"),
             "outstanding_amount": outstanding,
-            "days_overdue": days_val,
+            "days_overdue": int(days_overdue or 0),
             "type": type_label,
-            "sales_person": ", ".join(sales_persons_map.get(v_no, [])) if sales_persons_map.get(v_no) else (row.get("sales_person") or "")
+            "sales_person": row_sp_str
         }
         data.append(inv)
 
+    # Total Overdue: Sum of all overdue and unallocated items (Net)
+    total_overdue = sum(flt(d["outstanding_amount"]) for d in data)
+    export_overdue = sum(flt(d["outstanding_amount"]) for d in data if d["type"] == "Export")
+    domestic_overdue = sum(flt(d["outstanding_amount"]) for d in data if d["type"] == "Domestic")
+
+
+
+
     summary = [
         {"label": _("Total Outstanding"), "value": total_outstanding_cumulative, "indicator": "cyan", "fieldtype": "Currency"},
-        {"label": _("Total Overdue"), "value": total_overdue_cumulative, "indicator": "red", "fieldtype": "Currency"},
-        {"label": _("Export Overdue"), "value": export_overdue_cumulative, "indicator": "green", "fieldtype": "Currency"},
-        {"label": _("Domestic Overdue"), "value": domestic_overdue_cumulative, "indicator": "purple", "fieldtype": "Currency"},
+        {"label": _("Total Overdue"), "value": total_overdue, "indicator": "red", "fieldtype": "Currency"},
+        {"label": _("Export Overdue"), "value": export_overdue, "indicator": "green", "fieldtype": "Currency"},
+        {"label": _("Domestic Overdue"), "value": domestic_overdue, "indicator": "purple", "fieldtype": "Currency"},
     ]
 
+
+    # Charts
     # Charts (Divided by 1,000,000 for Millions display)
     charts = {
         "overdue_breakdown": {
             "title": _("Overdue Breakdown (Export vs Domestic)"),
             "data": {
                 "labels": [_("Export Overdue"), _("Domestic Overdue")],
-                "datasets": [{"name": _("Overdue"), "values": [flt(flt(export_overdue_cumulative) / 1000000, 2), flt(flt(domestic_overdue_cumulative) / 1000000, 2)]}]
+                "datasets": [{"name": _("Overdue"), "values": [flt(flt(export_overdue) / 1000000, 2), flt(flt(domestic_overdue) / 1000000, 2)]}]
             },
             "type": "donut",
             "colors": ["#10b981", "#f59e0b"]
@@ -216,13 +239,13 @@ def get_dashboard_data(filters=None):
         "ageing_breakdown": {
             "title": _("Ageing Breakdown"),
             "data": {
-                "labels": ["0-30", "31-60", "61-90", "91-120", "121-Above"],
+                "labels": ["0-30", "31-60", "61-90", "91-120", "121+"],
                 "datasets": [{"name": _("Amount"), "values": [
                     flt(flt(ageing_data["0-30"]) / 1000000, 2), 
                     flt(flt(ageing_data["31-60"]) / 1000000, 2), 
                     flt(flt(ageing_data["61-90"]) / 1000000, 2), 
                     flt(flt(ageing_data["91-120"]) / 1000000, 2), 
-                    flt(flt(ageing_data["121-Above"]) / 1000000, 2)
+                    flt(flt(ageing_data["121+"]) / 1000000, 2)
                 ]}]
             },
             "type": "bar",
