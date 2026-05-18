@@ -247,7 +247,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 		let due_table_card = $(`
             <div class="table-card" style="margin-bottom: 40px;">
                 <div class="header">
-                    <span>${__("Payment Due in Next 15 Days (Invoices & Orders)")}</span>
+                    <span>${__("Payment Due in Next 15 Days (Invoices)")}</span>
                     <div class="export-btn" id="export_due_excel_btn">
                         <i class="fa fa-file-excel-o"></i> Export Due
                     </div>
@@ -306,75 +306,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			</tfoot>
 		`).appendTo(due_table_card.find(".dashboard-table"));
 
-		// 2. Customer Summary Table (Trial Balance Style)
-		let summary_table_card = $(`
-            <div class="table-card" style="margin-bottom: 40px;">
-                <div class="header">
-                    <span>${__("Customer Summary (Trial Balance Style)")}</span>
-                    <div class="export-btn" id="export_summary_excel_btn">
-                        <i class="fa fa-file-excel-o"></i> Export Summary
-                    </div>
-                </div>
-                <div style="overflow: auto; width: 100%; max-height: 500px;">
-                    <table class="dashboard-table">
-                        <thead>
-                            <tr>
-                                <th style="min-width: 350px;">${__("Customer")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Opening (Dr)")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Opening (Cr)")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Credit (Collection)")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Closing (Dr)")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Closing (Cr)")}</th>
-                            </tr>
-                        </thead>
-                        <tbody id="summary_table_body"></tbody>
-                    </table>
-                </div>
-            </div>
-        `).appendTo(page.container);
-
-		let summary_tbody = summary_table_card.find("#summary_table_body");
-		let s_op_dr = 0, s_op_cr = 0, s_dr = 0, s_cr = 0, s_cl_dr = 0, s_cl_cr = 0;
-
-		(data.customer_summary || []).forEach((row) => {
-			s_op_dr += flt(row.opening_dr);
-			s_op_cr += flt(row.opening_cr);
-			s_dr += flt(row.debit);
-			s_cr += flt(row.credit);
-			s_cl_dr += flt(row.closing_dr);
-			s_cl_cr += flt(row.closing_cr);
-
-			$(`
-                <tr>
-                    <td style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${row.customer}</td>
-                    <td style="text-align: right; white-space: nowrap;">${format_million(row.opening_dr)}</td>
-                    <td style="text-align: right; white-space: nowrap;">${format_million(row.opening_cr)}</td>
-                    <td style="text-align: right; color: #10b981; white-space: nowrap;">${format_million(row.credit)}</td>
-                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.closing_dr)}</td>
-                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.closing_cr)}</td>
-                </tr>
-            `).appendTo(summary_tbody);
-		});
-
-		// Add Total Row to Summary Table
-		$(`
-			<tfoot>
-				<tr class="sticky-total">
-					<td style="text-align: right; padding-right: 20px; font-weight: 800; white-space: nowrap;">TOTALS</td>
-					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_op_dr)}</td>
-					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_op_cr)}</td>
-					<td style="text-align: right; font-weight: 800; color: #10b981; white-space: nowrap;">${format_million(s_cr)}</td>
-					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_cl_dr)}</td>
-					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_cl_cr)}</td>
-				</tr>
-			</tfoot>
-		`).appendTo(summary_table_card.find(".dashboard-table"));
-
-		if (!data.customer_summary || data.customer_summary.length === 0) {
-			$(
-				`<tr><td colspan="5" class="text-center text-muted" style="padding: 20px;">No summary data available</td></tr>`,
-			).appendTo(summary_tbody);
-		}
+		// 2. Customer Summary Table (Removed as requested)
 
 		// 3. Detailed Collection Table
 		let table_card = $(`
@@ -449,7 +381,6 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 
 		table_card.find("#export_excel_btn").click(() => export_to_excel("detail"));
 		due_table_card.find("#export_due_excel_btn").click(() => export_to_excel("due"));
-		summary_table_card.find("#export_summary_excel_btn").click(() => export_to_excel("summary"));
 	}
 
 	// --- 3. INITIALIZE FILTERS AND ACTIONS ---
@@ -718,46 +649,6 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					</div>
 				</div>
 
-				<div class="page-break"></div>
-				<h3 class="section-title">Customer Summary (Trial Balance)</h3>
-				<table>
-					<thead>
-						<tr>
-							<th width="35%">Customer</th>
-							<th width="13%" class="text-right">Opening (Dr)</th>
-							<th width="13%" class="text-right">Opening (Cr)</th>
-							<th width="13%" class="text-right">Credit (Col.)</th>
-							<th width="13%" class="text-right">Closing (Dr)</th>
-							<th width="13%" class="text-right">Closing (Cr)</th>
-						</tr>
-					</thead>
-					<tbody>
-						${(data.customer_summary || [])
-							.map(
-								(row) => `
-							<tr>
-								<td class="bold">${row.customer}</td>
-								<td class="text-right">${format_million(row.opening_dr)}</td>
-								<td class="text-right">${format_million(row.opening_cr)}</td>
-								<td class="text-right" style="color: #10b981;">${format_million(row.credit)}</td>
-								<td class="text-right bold">${format_million(row.closing_dr)}</td>
-								<td class="text-right bold">${format_million(row.closing_cr)}</td>
-							</tr>
-						`,
-							)
-							.join("")}
-					</tbody>
-					<tfoot>
-						<tr style="background: #f8fafc; font-weight: bold;">
-							<td class="text-right">TOTALS</td>
-							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.opening_dr), 0))}</td>
-							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.opening_cr), 0))}</td>
-							<td class="text-right" style="color: #10b981;">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.credit), 0))}</td>
-							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.closing_dr), 0))}</td>
-							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.closing_cr), 0))}</td>
-						</tr>
-					</tfoot>
-				</table>
 
 				<div class="page-break"></div>
 				<h3 class="section-title">Detailed Collection List</h3>
