@@ -472,53 +472,87 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table" id="consolidated_table">
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 220px;">Supplier</th>
-                                <th style="min-width: 250px;">Product</th>
-                                ${months.map((m) => `<th class="month-col">${m.label}</th>`).join("")}
-                                <th class="total-col sticky-total-header">Total (M)</th>
+                                <th class="sortable-header" data-table="month" data-field="supplier" style="min-width: 220px; cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="month" data-field="product" style="min-width: 250px; cursor: pointer; user-select: none;">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${months.map((m) => `<th class="month-col sortable-header" data-table="month" data-field="${m.label}" style="cursor: pointer; user-select: none;">${m.label} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="total-col sticky-total-header sortable-header" data-table="month" data-field="total" style="cursor: pointer; user-select: none;">Total (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
-                        <tbody>
-                            ${Object.values(consolidated_data)
-								.sort((a, b) => b.total - a.total)
-								.map(
-									(row, idx) => `
-                                <tr>
-                                    <td style="text-align: center;">${idx + 1}</td>
-                                    <td>${row.supplier}</td>
-                                    <td><span class="text-muted">${row.item_code}</span><br>${row.product}</td>
-                                    ${months
-										.map((m) => {
-											let val = row.months[m.label] || 0;
-											return `<td class="month-col">${format_currency_short(val)}</td>`;
-										})
-										.join("")}
-                                    <td class="total-col sticky-total-cell">${format_currency_short(row.total)}</td>
-                                </tr>
-                            `,
-								)
-								.join("")}
-                        </tbody>
-                        <tfoot>
-                            <tr class="grand-total-row">
-                                <td colspan="3" style="text-align: right; padding-right: 20px;">Grand Total</td>
-                                ${months
-									.map((m) => {
-										let val = grand_total_months[m.label] || 0;
-										return `<td class="month-col">${format_currency_short(val)}</td>`;
-									})
-									.join("")}
-                                <td class="total-col sticky-total-cell">${format_currency_short(grand_total_all)}</td>
-                            </tr>
-                        </tfoot>
+                        <tbody id="consolidated_table_body"></tbody>
+                        <tfoot></tfoot>
                     </table>
                 </div>
             </div>
         `).appendTo(page.container);
+
+		let month_sort = { field: "total", asc: false };
+		let detail_sort = { field: "invoice_date", asc: false };
+
+		const render_month_table = () => {
+			let sorted_data = Object.values(consolidated_data);
+			sorted_data.sort((a, b) => {
+				let val_a, val_b;
+				if (month_sort.field === "supplier") {
+					val_a = a.supplier || "";
+					val_b = b.supplier || "";
+					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (month_sort.field === "product") {
+					val_a = a.product || "";
+					val_b = b.product || "";
+					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (month_sort.field === "total") {
+					val_a = flt(a.total);
+					val_b = flt(b.total);
+				} else {
+					val_a = flt(a.months[month_sort.field]);
+					val_b = flt(b.months[month_sort.field]);
+				}
+				return month_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			let tbody_month = month_table_card.find("#consolidated_table_body");
+			tbody_month.empty();
+
+			sorted_data.forEach((row, idx) => {
+				let cells = months
+					.map((m) => {
+						let val = row.months[m.label] || 0;
+						return `<td class="month-col">${format_currency_short(val)}</td>`;
+					})
+					.join("");
+				tbody_month.append(`
+					<tr>
+						<td style="text-align: center;">${idx + 1}</td>
+						<td>${row.supplier}</td>
+						<td><span class="text-muted">${row.item_code}</span><br>${row.product}</td>
+						${cells}
+						<td class="total-col sticky-total-cell">${format_currency_short(row.total)}</td>
+					</tr>
+				`);
+			});
+
+			let tfoot_month = month_table_card.find("tfoot");
+			tfoot_month.empty();
+			let grand_cells = months
+				.map((m) => {
+					let val = grand_total_months[m.label] || 0;
+					return `<td class="month-col">${format_currency_short(val)}</td>`;
+				})
+				.join("");
+			tfoot_month.append(`
+				<tr class="grand-total-row">
+					<td colspan="3" style="text-align: right; padding-right: 20px;">Grand Total</td>
+					${grand_cells}
+					<td class="total-col sticky-total-cell">${format_currency_short(grand_total_all)}</td>
+				</tr>
+			`);
+		};
+
+		render_month_table();
 
 		// 4. Detailed Invoice List
 		let table_card = $(`
@@ -535,17 +569,17 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table" id="detail_table">
                         <thead>
                             <tr>
                                 <th style="width: 50px; text-align: center;">S.No.</th>
-                                <th style="min-width: 150px;">Invoice ID</th>
-                                <th style="min-width: 110px;">Date</th>
-                                <th style="min-width: 110px;">Status</th>
-                                <th style="min-width: 220px;">Supplier</th>
-                                <th style="min-width: 300px;">Item</th>
-                                <th style="width: 80px; text-align: right;">Qty</th>
-                                <th style="min-width: 150px; text-align: right;">Amount (M)</th>
+                                <th class="sortable-header" data-table="detail" data-field="invoice_id" style="min-width: 150px; cursor: pointer; user-select: none;">Invoice ID <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="invoice_date" style="min-width: 110px; cursor: pointer; user-select: none;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="status" style="min-width: 110px; cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="supplier_name" style="min-width: 220px; cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="item_name" style="min-width: 300px; cursor: pointer; user-select: none;">Item <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="qty" style="width: 80px; text-align: right; cursor: pointer; user-select: none;">Qty <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="base_amount" style="min-width: 150px; text-align: right; cursor: pointer; user-select: none;">Amount (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="invoice_table_body"></tbody>
@@ -555,40 +589,116 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
             </div>
         `).appendTo(page.container);
 
-		let total_qty = 0;
-		let total_amt_detailed = 0;
+		const render_detail_table = () => {
+			let sorted_data = [...(data.results || [])];
+			sorted_data.sort((a, b) => {
+				let val_a, val_b;
+				if (detail_sort.field === "invoice_id" || detail_sort.field === "status" || detail_sort.field === "supplier_name" || detail_sort.field === "item_name") {
+					val_a = a[detail_sort.field] || "";
+					val_b = b[detail_sort.field] || "";
+					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detail_sort.field === "invoice_date") {
+					val_a = a.invoice_date ? new Date(a.invoice_date) : new Date(0);
+					val_b = b.invoice_date ? new Date(b.invoice_date) : new Date(0);
+				} else {
+					// Handles qty, base_amount
+					let amt_a = flt(a[detail_sort.field]);
+					if (a.is_return && detail_sort.field === "base_amount") amt_a = -amt_a;
+					let amt_b = flt(b[detail_sort.field]);
+					if (b.is_return && detail_sort.field === "base_amount") amt_b = -amt_b;
+					val_a = amt_a;
+					val_b = amt_b;
+				}
+				return detail_sort.asc ? val_a - val_b : val_b - val_a;
+			});
 
-		let tbody = table_card.find("#invoice_table_body");
-		data.results.forEach((row, idx) => {
-			let status_color =
-				row.status === "Completed" ? "green" : row.status === "Cancelled" ? "red" : "blue";
-			let amt = flt(row.base_amount);
-			if (row.is_return) amt = -amt;
+			let tbody = table_card.find("#invoice_table_body");
+			tbody.empty();
 
-			total_qty += flt(row.qty);
-			total_amt_detailed += amt;
+			let total_qty = 0;
+			let total_amt_detailed = 0;
 
-			tbody.append(`
-                <tr>
-                    <td style="text-align: center;">${idx + 1}</td>
-                    <td><a href="/app/purchase-invoice/${row.invoice_id}">${row.invoice_id}</a></td>
-                    <td>${frappe.datetime.str_to_user(row.invoice_date)}</td>
-                    <td><span class="indicator-pill ${status_color}">${row.status}</span></td>
-                    <td>${row.supplier_name}</td>
-                    <td><span class="text-muted">${row.item_code}</span><br>${row.item_name}</td>
-                    <td style="text-align: right;">${flt(row.qty)}</td>
-                    <td style="text-align: right; font-weight: 600;">${format_currency_short(amt)}</td>
-                </tr>
-            `);
+			sorted_data.forEach((row, idx) => {
+				let status_color =
+					row.status === "Completed" ? "green" : row.status === "Cancelled" ? "red" : "blue";
+				let amt = flt(row.base_amount);
+				if (row.is_return) amt = -amt;
+
+				total_qty += flt(row.qty);
+				total_amt_detailed += amt;
+
+				tbody.append(`
+					<tr>
+						<td style="text-align: center;">${idx + 1}</td>
+						<td><a href="/app/purchase-invoice/${row.invoice_id}">${row.invoice_id}</a></td>
+						<td>${frappe.datetime.str_to_user(row.invoice_date)}</td>
+						<td><span class="indicator-pill ${status_color}">${row.status}</span></td>
+						<td>${row.supplier_name}</td>
+						<td><span class="text-muted">${row.item_code}</span><br>${row.item_name}</td>
+						<td style="text-align: right;">${flt(row.qty)}</td>
+						<td style="text-align: right; font-weight: 600;">${format_currency_short(amt)}</td>
+					</tr>
+				`);
+			});
+
+			let tfoot = table_card.find("#invoice_table_foot");
+			tfoot.empty();
+			tfoot.append(`
+				<tr class="grand-total-row">
+					<td colspan="6" style="text-align: right; padding-right: 20px;">Total</td>
+					<td style="text-align: right; font-weight: 700;">${flt(total_qty)}</td>
+					<td style="text-align: right; font-weight: 700;">${format_currency_short(total_amt_detailed)}</td>
+				</tr>
+			`);
+		};
+
+		render_detail_table();
+
+		// Header clicks for real-time sort toggling
+		page.container.on("click", ".sortable-header", function () {
+			const table_type = $(this).data("table");
+			const field = $(this).data("field");
+
+			if (table_type === "month") {
+				if (month_sort.field === field) {
+					month_sort.asc = !month_sort.asc;
+				} else {
+					month_sort.field = field;
+					month_sort.asc = true;
+				}
+
+				// Reset icons
+				month_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+
+				// Update active icon
+				if (month_sort.asc) {
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+
+				render_month_table();
+			} else if (table_type === "detail") {
+				if (detail_sort.field === field) {
+					detail_sort.asc = !detail_sort.asc;
+				} else {
+					detail_sort.field = field;
+					detail_sort.asc = true;
+				}
+
+				// Reset icons
+				table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+
+				// Update active icon
+				if (detail_sort.asc) {
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+
+				render_detail_table();
+			}
 		});
-
-		table_card.find("#invoice_table_foot").append(`
-                        <tr class="grand-total-row">
-                <td colspan="6" style="text-align: right; padding-right: 20px;">Total</td>
-                <td style="text-align: right; font-weight: 700;">${flt(total_qty)}</td>
-                <td style="text-align: right; font-weight: 700;">${format_currency_short(total_amt_detailed)}</td>
-            </tr>
-        `);
 
 		const export_to_excel = (export_type = "all") => {
 			frappe.call({

@@ -246,23 +246,45 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 		// 1. Upcoming Payments Due Table (PRIORITY)
 		let due_table_card = $(`
             <div class="table-card" style="margin-bottom: 40px;">
-                <div class="header">
-                    <span>${__("Payment Due in Next 15 Days (Invoices & Orders)")}</span>
-                    <div class="export-btn" id="export_due_excel_btn">
-                        <i class="fa fa-file-excel-o"></i> Export Due
+                <div class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <span style="font-weight: 700; font-size: 14px;">${__("Payment Due in Next 15 Days (Invoices)")}</span>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <div class="search-container" style="position: relative; display: inline-block;">
+                            <input type="text" id="due_search" placeholder="${__("Search customer, sales person...")}" class="form-control" style="width: 220px; height: 30px; padding: 4px 10px 4px 28px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                            <i class="fa fa-search" style="position: absolute; left: 10px; top: 9px; color: #94a3b8; font-size: 12px;"></i>
+                        </div>
+                        <select id="due_sort" class="form-control" style="width: 170px; height: 30px; padding: 2px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #fff; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <option value="due_days_asc">${__("Days Left: Ascending")}</option>
+                            <option value="due_days_desc">${__("Days Left: Descending")}</option>
+                            <option value="amount_desc">${__("Amount: High to Low")}</option>
+                            <option value="amount_asc">${__("Amount: Low to High")}</option>
+                            <option value="name_asc">${__("Doc ID: A-Z")}</option>
+                            <option value="name_desc">${__("Doc ID: Z-A")}</option>
+                            <option value="posting_date_desc">${__("Date: Newest")}</option>
+                            <option value="posting_date_asc">${__("Date: Oldest")}</option>
+                            <option value="due_date_desc">${__("Due Date: Newest")}</option>
+                            <option value="due_date_asc">${__("Due Date: Oldest")}</option>
+                            <option value="customer_asc">${__("Customer: A-Z")}</option>
+                            <option value="customer_desc">${__("Customer: Z-A")}</option>
+                            <option value="sales_person_asc">${__("Sales Person: A-Z")}</option>
+                            <option value="sales_person_desc">${__("Sales Person: Z-A")}</option>
+                        </select>
+                        <div class="export-btn" id="export_due_excel_btn" style="height: 30px; display: inline-flex; align-items: center;">
+                            <i class="fa fa-file-excel-o"></i> Export Due
+                        </div>
                     </div>
                 </div>
                 <div style="overflow: auto; width: 100%; max-height: 500px;">
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th style="min-width: 150px;">${__("Document ID")}</th>
-                                <th style="min-width: 120px;">${__("Date")}</th>
-                                <th style="min-width: 120px;">${__("Due Date")}</th>
-                                <th style="min-width: 100px; text-align: center;">${__("Days Left")}</th>
-                                <th style="min-width: 350px;">${__("Customer")}</th>
-                                <th style="min-width: 200px;">${__("Sales Person")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Outstanding")}</th>
+                                <th style="min-width: 150px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="name">${__("Document ID")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="posting_date">${__("Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="due_date">${__("Due Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 100px; text-align: center; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="due_days">${__("Days Left")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 350px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="customer">${__("Customer")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 200px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="sales_person">${__("Sales Person")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 150px; text-align: right; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="outstanding_amount">${__("Outstanding")} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="due_table_body"></tbody>
@@ -272,132 +294,122 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         `).appendTo(page.container);
 
 		let due_tbody = due_table_card.find("#due_table_body");
-		let total_due_amt = 0;
 
-		(data.due_results || []).forEach((row) => {
-			total_due_amt += flt(row.outstanding_amount);
-			let link = `/app/${get_slug(row.doctype)}/${row.name}`;
+		const filter_and_render_due = () => {
+			const search_val = (page.container.find("#due_search").val() || "").toLowerCase().trim();
+			const sort_val = page.container.find("#due_sort").val();
+
+			// 1. Filter
+			let filtered = (data.due_results || []).filter(row => {
+				const customer = (row.customer || "").toLowerCase();
+				const sales_person = (row.sales_person || "").toLowerCase();
+				const doc_id = (row.name || "").toLowerCase();
+				return customer.includes(search_val) || sales_person.includes(search_val) || doc_id.includes(search_val);
+			});
+
+			// 2. Sort
+			filtered.sort((a, b) => {
+				if (sort_val === "due_days_asc") return flt(a.due_days) - flt(b.due_days);
+				if (sort_val === "due_days_desc") return flt(b.due_days) - flt(a.due_days);
+				if (sort_val === "amount_desc") return flt(b.outstanding_amount) - flt(a.outstanding_amount);
+				if (sort_val === "amount_asc") return flt(a.outstanding_amount) - flt(b.outstanding_amount);
+				if (sort_val === "customer_asc") return (a.customer || "").localeCompare(b.customer || "");
+				if (sort_val === "customer_desc") return (b.customer || "").localeCompare(a.customer || "");
+				if (sort_val === "sales_person_asc") return (a.sales_person || "").localeCompare(b.sales_person || "");
+				if (sort_val === "sales_person_desc") return (b.sales_person || "").localeCompare(a.sales_person || "");
+				if (sort_val === "name_asc") return (a.name || "").localeCompare(b.name || "");
+				if (sort_val === "name_desc") return (b.name || "").localeCompare(a.name || "");
+				if (sort_val === "posting_date_desc") return new Date(b.posting_date) - new Date(a.posting_date);
+				if (sort_val === "posting_date_asc") return new Date(a.posting_date) - new Date(b.posting_date);
+				if (sort_val === "due_date_desc") return new Date(b.due_date) - new Date(a.due_date);
+				if (sort_val === "due_date_asc") return new Date(a.due_date) - new Date(b.due_date);
+				return 0;
+			});
+
+			// 3. Render
+			due_tbody.empty();
+			let total_due_amt = 0;
+
+			filtered.forEach((row) => {
+				total_due_amt += flt(row.outstanding_amount);
+				let link = `/app/${get_slug(row.doctype)}/${row.name}`;
+				$(`
+					<tr>
+						<td style="white-space: nowrap;"><a href="${link}" style="font-weight: 600; color: #4338ca;">${row.name}</a> <div style="font-size: 10px; color: #94a3b8;">${row.doctype}</div></td>
+						<td style="white-space: nowrap;">${row.posting_date ? frappe.datetime.str_to_user(row.posting_date) : "-"}</td>
+						<td style="white-space: nowrap;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+						<td style="text-align: center;"><span class="indicator-pill ${row.due_days <= 3 ? "Export" : "Domestic"}">${row.due_days || 0}</span></td>
+						<td style="white-space: normal;">${row.customer || "-"}</td>
+						<td style="white-space: nowrap;">${row.sales_person || "-"}</td>
+						<td style="text-align: right; font-weight: 700;">${format_million(row.outstanding_amount)}</td>
+					</tr>
+				`).appendTo(due_tbody);
+			});
+
+			if (filtered.length === 0) {
+				$(`<tr><td colspan="7" class="text-center text-muted" style="padding: 20px;">No matching upcoming payments due</td></tr>`).appendTo(due_tbody);
+			}
+
+			// Add Total Footer for Due Table
+			due_table_card.find("tfoot").remove();
 			$(`
-                <tr>
-                    <td style="white-space: nowrap;"><a href="${link}" style="font-weight: 600; color: #4338ca;">${row.name}</a> <div style="font-size: 10px; color: #94a3b8;">${row.doctype}</div></td>
-                    <td style="white-space: nowrap;">${row.posting_date ? frappe.datetime.str_to_user(row.posting_date) : "-"}</td>
-                    <td style="white-space: nowrap;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
-                    <td style="text-align: center;"><span class="indicator-pill ${row.due_days <= 3 ? "Export" : "Domestic"}">${row.due_days || 0}</span></td>
-                    <td style="white-space: normal;">${row.customer || "-"}</td>
-                    <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
-                    <td style="text-align: right; font-weight: 700;">${format_million(row.outstanding_amount)}</td>
-                </tr>
-            `).appendTo(due_tbody);
-		});
+				<tfoot>
+					<tr class="sticky-total">
+						<td colspan="6" style="text-align: right; padding-right: 20px;">TOTAL DUE</td>
+						<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_due_amt)}</td>
+					</tr>
+				</tfoot>
+			`).appendTo(due_table_card.find(".dashboard-table"));
+		};
 
-		if (!data.due_results || data.due_results.length === 0) {
-			$(
-				`<tr><td colspan="7" class="text-center text-muted" style="padding: 20px;">No upcoming payments due in next 15 days</td></tr>`,
-			).appendTo(due_tbody);
-		}
-
-		// Add Total Footer for Due Table
-		$(`
-			<tfoot>
-				<tr class="sticky-total">
-					<td colspan="6" style="text-align: right; padding-right: 20px;">TOTAL DUE</td>
-					<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_due_amt)}</td>
-				</tr>
-			</tfoot>
-		`).appendTo(due_table_card.find(".dashboard-table"));
-
-		// 2. Customer Summary Table (Trial Balance Style)
-		let summary_table_card = $(`
-            <div class="table-card" style="margin-bottom: 40px;">
-                <div class="header">
-                    <span>${__("Customer Summary (Trial Balance Style)")}</span>
-                    <div class="export-btn" id="export_summary_excel_btn">
-                        <i class="fa fa-file-excel-o"></i> Export Summary
-                    </div>
-                </div>
-                <div style="overflow: auto; width: 100%; max-height: 500px;">
-                    <table class="dashboard-table">
-                        <thead>
-                            <tr>
-                                <th style="min-width: 350px;">${__("Customer")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Opening (Dr)")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Opening (Cr)")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Credit (Collection)")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Closing (Dr)")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Closing (Cr)")}</th>
-                            </tr>
-                        </thead>
-                        <tbody id="summary_table_body"></tbody>
-                    </table>
-                </div>
-            </div>
-        `).appendTo(page.container);
-
-		let summary_tbody = summary_table_card.find("#summary_table_body");
-		let s_op_dr = 0, s_op_cr = 0, s_dr = 0, s_cr = 0, s_cl_dr = 0, s_cl_cr = 0;
-
-		(data.customer_summary || []).forEach((row) => {
-			s_op_dr += flt(row.opening_dr);
-			s_op_cr += flt(row.opening_cr);
-			s_dr += flt(row.debit);
-			s_cr += flt(row.credit);
-			s_cl_dr += flt(row.closing_dr);
-			s_cl_cr += flt(row.closing_cr);
-
-			$(`
-                <tr>
-                    <td style="font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${row.customer}</td>
-                    <td style="text-align: right; white-space: nowrap;">${format_million(row.opening_dr)}</td>
-                    <td style="text-align: right; white-space: nowrap;">${format_million(row.opening_cr)}</td>
-                    <td style="text-align: right; color: #10b981; white-space: nowrap;">${format_million(row.credit)}</td>
-                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.closing_dr)}</td>
-                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.closing_cr)}</td>
-                </tr>
-            `).appendTo(summary_tbody);
-		});
-
-		// Add Total Row to Summary Table
-		$(`
-			<tfoot>
-				<tr class="sticky-total">
-					<td style="text-align: right; padding-right: 20px; font-weight: 800; white-space: nowrap;">TOTALS</td>
-					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_op_dr)}</td>
-					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_op_cr)}</td>
-					<td style="text-align: right; font-weight: 800; color: #10b981; white-space: nowrap;">${format_million(s_cr)}</td>
-					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_cl_dr)}</td>
-					<td style="text-align: right; font-weight: 800; white-space: nowrap;">${format_million(s_cl_cr)}</td>
-				</tr>
-			</tfoot>
-		`).appendTo(summary_table_card.find(".dashboard-table"));
-
-		if (!data.customer_summary || data.customer_summary.length === 0) {
-			$(
-				`<tr><td colspan="5" class="text-center text-muted" style="padding: 20px;">No summary data available</td></tr>`,
-			).appendTo(summary_tbody);
-		}
-
-		// 3. Detailed Collection Table
+		// 2. Detailed Collection Table
 		let table_card = $(`
             <div class="table-card" style="margin-bottom: 40px;">
-                <div class="header">
-                    <span>${__("Detailed Collection List")}</span>
-                    <div class="export-btn" id="export_excel_btn">
-                        <i class="fa fa-file-excel-o"></i> Export Details
+                <div class="header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <span style="font-weight: 700; font-size: 14px;">${__("Detailed Collection List")}</span>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <div class="search-container" style="position: relative; display: inline-block;">
+                            <input type="text" id="collection_search" placeholder="${__("Search customer, sales person...")}" class="form-control" style="width: 220px; height: 30px; padding: 4px 10px 4px 28px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.05);">
+                            <i class="fa fa-search" style="position: absolute; left: 10px; top: 9px; color: #94a3b8; font-size: 12px;"></i>
+                        </div>
+                        <select id="collection_sort" class="form-control" style="width: 170px; height: 30px; padding: 2px 8px; font-size: 12px; border: 1px solid #cbd5e1; border-radius: 6px; background-color: #fff; cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                            <option value="date_desc">${__("Date: Newest First")}</option>
+                            <option value="date_asc">${__("Date: Oldest First")}</option>
+                            <option value="due_date_desc">${__("Due Date: Newest")}</option>
+                            <option value="due_date_asc">${__("Due Date: Oldest")}</option>
+                            <option value="amount_desc">${__("Amount: High to Low")}</option>
+                            <option value="amount_asc">${__("Amount: Low to High")}</option>
+                            <option value="due_days_desc">${__("Days Diff: High to Low")}</option>
+                            <option value="due_days_asc">${__("Days Diff: Low to High")}</option>
+                            <option value="payment_entry_asc">${__("Payment ID: A-Z")}</option>
+                            <option value="payment_entry_desc">${__("Payment ID: Z-A")}</option>
+                            <option value="name_asc">${__("Voucher: A-Z")}</option>
+                            <option value="name_desc">${__("Voucher: Z-A")}</option>
+                            <option value="customer_asc">${__("Customer: A-Z")}</option>
+                            <option value="customer_desc">${__("Customer: Z-A")}</option>
+                            <option value="sales_person_asc">${__("Sales Person: A-Z")}</option>
+                            <option value="sales_person_desc">${__("Sales Person: Z-A")}</option>
+                            <option value="type_asc">${__("Type: A-Z")}</option>
+                            <option value="type_desc">${__("Type: Z-A")}</option>
+                        </select>
+                        <div class="export-btn" id="export_excel_btn" style="height: 30px; display: inline-flex; align-items: center;">
+                            <i class="fa fa-file-excel-o"></i> Export Details
+                        </div>
                     </div>
                 </div>
                 <div style="overflow: auto; width: 100%; max-height: 800px;">
                     <table class="dashboard-table">
                         <thead>
                             <tr>
-                                <th style="min-width: 150px;">${__("Payment ID")}</th>
-                                <th style="min-width: 150px;">${__("Voucher")}</th>
-                                <th style="min-width: 120px;">${__("Date")}</th>
-                                <th style="min-width: 120px;">${__("Due Date")}</th>
-                                <th style="min-width: 100px; text-align: center;">${__("Days Diff")}</th>
-                                <th style="min-width: 350px;">${__("Customer")}</th>
-                                <th style="min-width: 200px;">${__("Sales Person")}</th>
-                                <th style="min-width: 150px; text-align: right;">${__("Amount")}</th>
-                                <th style="min-width: 120px; text-align: center;">${__("Type")}</th>
+                                <th style="min-width: 150px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="payment_entry">${__("Payment ID")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 150px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="name">${__("Voucher")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="posting_date">${__("Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="due_date">${__("Due Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 100px; text-align: center; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="due_days">${__("Days Diff")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 350px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="customer">${__("Customer")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 200px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="sales_person">${__("Sales Person")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 150px; text-align: right; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="allocated_amount">${__("Amount")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 120px; text-align: center; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="type">${__("Type")} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="collection_table_body"></tbody>
@@ -407,49 +419,162 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         `).appendTo(page.container);
 
 		let tbody = table_card.find("#collection_table_body");
-		let total_amt = 0;
 
-		data.results.forEach((row) => {
-			let type_label = row.is_export ? "Export" : "Domestic";
-			total_amt += flt(row.allocated_amount);
-			
-			let voucher_link = `/app/${get_slug(row.voucher_type)}/${row.payment_entry}`;
-			let ref_link = row.name ? `/app/sales-invoice/${row.name}` : "#";
-			if (row.name && row.name.startsWith("SO")) ref_link = `/app/sales-order/${row.name}`;
+		const filter_and_render_collection = () => {
+			const search_val = (page.container.find("#collection_search").val() || "").toLowerCase().trim();
+			const sort_val = page.container.find("#collection_sort").val();
 
+			// 1. Filter
+			let filtered = (data.results || []).filter(row => {
+				const customer = (row.customer || "").toLowerCase();
+				const sales_person = (row.sales_person || "").toLowerCase();
+				const payment_id = (row.payment_entry || "").toLowerCase();
+				const voucher = (row.name || "").toLowerCase();
+				const type_label = (row.is_export ? "Export" : "Domestic").toLowerCase();
+				return customer.includes(search_val) || sales_person.includes(search_val) || payment_id.includes(search_val) || voucher.includes(search_val) || type_label.includes(search_val);
+			});
+
+			// 2. Sort
+			filtered.sort((a, b) => {
+				if (sort_val === "date_desc") return new Date(b.posting_date) - new Date(a.posting_date);
+				if (sort_val === "date_asc") return new Date(a.posting_date) - new Date(b.posting_date);
+				if (sort_val === "due_date_desc") return new Date(b.due_date) - new Date(a.due_date);
+				if (sort_val === "due_date_asc") return new Date(a.due_date) - new Date(b.due_date);
+				if (sort_val === "amount_desc") return flt(b.allocated_amount) - flt(a.allocated_amount);
+				if (sort_val === "amount_asc") return flt(a.allocated_amount) - flt(b.allocated_amount);
+				if (sort_val === "customer_asc") return (a.customer || "").localeCompare(b.customer || "");
+				if (sort_val === "customer_desc") return (b.customer || "").localeCompare(a.customer || "");
+				if (sort_val === "sales_person_asc") return (a.sales_person || "").localeCompare(b.sales_person || "");
+				if (sort_val === "sales_person_desc") return (b.sales_person || "").localeCompare(a.sales_person || "");
+				if (sort_val === "due_days_desc") return flt(b.due_days) - flt(a.due_days);
+				if (sort_val === "due_days_asc") return flt(a.due_days) - flt(b.due_days);
+				if (sort_val === "payment_entry_asc") return (a.payment_entry || "").localeCompare(b.payment_entry || "");
+				if (sort_val === "payment_entry_desc") return (b.payment_entry || "").localeCompare(a.payment_entry || "");
+				if (sort_val === "name_asc") return (a.name || "").localeCompare(b.name || "");
+				if (sort_val === "name_desc") return (b.name || "").localeCompare(a.name || "");
+				if (sort_val === "type_asc") {
+					let type_a = a.is_export ? "Export" : "Domestic";
+					let type_b = b.is_export ? "Export" : "Domestic";
+					return type_a.localeCompare(type_b);
+				}
+				if (sort_val === "type_desc") {
+					let type_a = a.is_export ? "Export" : "Domestic";
+					let type_b = b.is_export ? "Export" : "Domestic";
+					return type_b.localeCompare(type_a);
+				}
+				return 0;
+			});
+
+			// 3. Render
+			tbody.empty();
+			let total_amt = 0;
+
+			filtered.forEach((row) => {
+				let type_label = row.is_export ? "Export" : "Domestic";
+				total_amt += flt(row.allocated_amount);
+				
+				let voucher_link = `/app/${get_slug(row.voucher_type)}/${row.payment_entry}`;
+				let ref_link = row.name ? `/app/sales-invoice/${row.name}` : "#";
+				if (row.name && row.name.startsWith("SO")) ref_link = `/app/sales-order/${row.name}`;
+
+				$(`
+					<tr>
+						<td style="white-space: nowrap;"><a href="${voucher_link}" style="font-weight: 600; color: #4338ca;">${row.payment_entry}</a> <div style="font-size: 10px; color: #94a3b8;">${row.voucher_type}</div></td>
+						<td style="white-space: nowrap;">
+							${row.name 
+								? `<a href="${ref_link}" style="font-weight: 500; color: #64748b;">${row.name}</a>` 
+								: `<span class="text-muted">-</span>`}
+						</td>
+						<td style="white-space: nowrap;">${row.posting_date ? frappe.datetime.str_to_user(row.posting_date) : "-"}</td>
+						<td style="white-space: nowrap; color: #64748b;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+						<td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days || 0}</span></td>
+						<td style="white-space: normal; min-width: 250px;">${row.customer || "-"}</td>
+						<td style="white-space: nowrap;">${row.sales_person || "-"}</td>
+						<td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.allocated_amount)}</td>
+						<td style="text-align: center;"><span class="indicator-pill ${type_label}">${__(type_label)}</span></td>
+					</tr>
+				`).appendTo(tbody);
+			});
+
+			if (filtered.length === 0) {
+				$(`<tr><td colspan="9" class="text-center text-muted" style="padding: 20px;">No matching detailed collection entries</td></tr>`).appendTo(tbody);
+			}
+
+			// Grand Total Footer
+			table_card.find("tfoot").remove();
 			$(`
-                <tr>
-                    <td style="white-space: nowrap;"><a href="${voucher_link}" style="font-weight: 600; color: #4338ca;">${row.payment_entry}</a> <div style="font-size: 10px; color: #94a3b8;">${row.voucher_type}</div></td>
-                    <td style="white-space: nowrap;">
-                        ${row.name 
-                            ? `<a href="${ref_link}" style="font-weight: 500; color: #64748b;">${row.name}</a>` 
-                            : `<span class="text-muted">-</span>`}
-                    </td>
-                    <td style="white-space: nowrap;">${row.posting_date ? frappe.datetime.str_to_user(row.posting_date) : "-"}</td>
-                    <td style="white-space: nowrap; color: #64748b;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
-                    <td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days || 0}</span></td>
-                    <td style="white-space: normal; min-width: 250px;">${row.customer || "-"}</td>
-                    <td style="white-space: nowrap;">${row.sales_person || "-"}</td>
-                    <td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.allocated_amount)}</td>
-                    <td style="text-align: center;"><span class="indicator-pill ${type_label}">${__(type_label)}</span></td>
-                </tr>
-            `).appendTo(tbody);
+				<tfoot>
+					<tr class="sticky-total">
+						<td colspan="7" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
+						<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_amt)}</td>
+						<td></td>
+					</tr>
+				</tfoot>
+			`).appendTo(table_card.find(".dashboard-table"));
+		};
+
+		// 3. Event Listeners for search, sort and header clicks
+		page.container.find("#due_search").on("input", filter_and_render_due);
+		page.container.find("#due_sort").on("change", filter_and_render_due);
+
+		page.container.find("#collection_search").on("input", filter_and_render_collection);
+		page.container.find("#collection_sort").on("change", filter_and_render_collection);
+
+		// Header clicks for real-time sort toggling
+		page.container.on("click", ".sortable-header", function () {
+			const table_type = $(this).data("table");
+			const field = $(this).data("field");
+			const current_asc = $(this).hasClass("sorted-asc");
+			
+			// Reset other headers' sort classes and icons
+			page.container.find(`.sortable-header[data-table="${table_type}"]`).removeClass("sorted-asc sorted-desc");
+			page.container.find(`.sortable-header[data-table="${table_type}"] i`).removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+
+			let new_sort_val = "";
+			if (table_type === "due") {
+				if (field === "due_days") new_sort_val = current_asc ? "due_days_desc" : "due_days_asc";
+				else if (field === "outstanding_amount") new_sort_val = current_asc ? "amount_desc" : "amount_asc";
+				else if (field === "customer") new_sort_val = current_asc ? "customer_desc" : "customer_asc";
+				else if (field === "sales_person") new_sort_val = current_asc ? "sales_person_desc" : "sales_person_asc";
+				else if (field === "name") new_sort_val = current_asc ? "name_desc" : "name_asc";
+				else if (field === "posting_date") new_sort_val = current_asc ? "posting_date_desc" : "posting_date_asc";
+				else if (field === "due_date") new_sort_val = current_asc ? "due_date_desc" : "due_date_asc";
+				else new_sort_val = current_asc ? `${field}_desc` : `${field}_asc`;
+
+				page.container.find("#due_sort").val(new_sort_val);
+				filter_and_render_due();
+			} else {
+				if (field === "posting_date") new_sort_val = current_asc ? "date_desc" : "date_asc";
+				else if (field === "allocated_amount") new_sort_val = current_asc ? "amount_desc" : "amount_asc";
+				else if (field === "customer") new_sort_val = current_asc ? "customer_desc" : "customer_asc";
+				else if (field === "sales_person") new_sort_val = current_asc ? "sales_person_desc" : "sales_person_asc";
+				else if (field === "due_days") new_sort_val = current_asc ? "due_days_desc" : "due_days_asc";
+				else if (field === "due_date") new_sort_val = current_asc ? "due_date_desc" : "due_date_asc";
+				else if (field === "payment_entry") new_sort_val = current_asc ? "payment_entry_desc" : "payment_entry_asc";
+				else if (field === "name") new_sort_val = current_asc ? "name_desc" : "name_asc";
+				else if (field === "type") new_sort_val = current_asc ? "type_desc" : "type_asc";
+				else new_sort_val = current_asc ? `${field}_desc` : `${field}_asc`;
+
+				page.container.find("#collection_sort").val(new_sort_val);
+				filter_and_render_collection();
+			}
+
+			// Add active class and update icon
+			if (new_sort_val.endsWith("asc")) {
+				$(this).addClass("sorted-asc");
+				$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+			} else {
+				$(this).addClass("sorted-desc");
+				$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+			}
 		});
 
-		// Grand Total Footer
-		$(`
-			<tfoot>
-				<tr class="sticky-total">
-					<td colspan="7" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
-					<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_amt)}</td>
-					<td></td>
-				</tr>
-			</tfoot>
-		`).appendTo(table_card.find(".dashboard-table"));
+		// Initial Renders
+		filter_and_render_due();
+		filter_and_render_collection();
 
 		table_card.find("#export_excel_btn").click(() => export_to_excel("detail"));
 		due_table_card.find("#export_due_excel_btn").click(() => export_to_excel("due"));
-		summary_table_card.find("#export_summary_excel_btn").click(() => export_to_excel("summary"));
 	}
 
 	// --- 3. INITIALIZE FILTERS AND ACTIONS ---
@@ -718,87 +843,6 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					</div>
 				</div>
 
-				<div class="page-break"></div>
-				<h3 class="section-title">Customer Summary (Trial Balance)</h3>
-				<table>
-					<thead>
-						<tr>
-							<th width="35%">Customer</th>
-							<th width="13%" class="text-right">Opening (Dr)</th>
-							<th width="13%" class="text-right">Opening (Cr)</th>
-							<th width="13%" class="text-right">Credit (Col.)</th>
-							<th width="13%" class="text-right">Closing (Dr)</th>
-							<th width="13%" class="text-right">Closing (Cr)</th>
-						</tr>
-					</thead>
-					<tbody>
-						${(data.customer_summary || [])
-							.map(
-								(row) => `
-							<tr>
-								<td class="bold">${row.customer}</td>
-								<td class="text-right">${format_million(row.opening_dr)}</td>
-								<td class="text-right">${format_million(row.opening_cr)}</td>
-								<td class="text-right" style="color: #10b981;">${format_million(row.credit)}</td>
-								<td class="text-right bold">${format_million(row.closing_dr)}</td>
-								<td class="text-right bold">${format_million(row.closing_cr)}</td>
-							</tr>
-						`,
-							)
-							.join("")}
-					</tbody>
-					<tfoot>
-						<tr style="background: #f8fafc; font-weight: bold;">
-							<td class="text-right">TOTALS</td>
-							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.opening_dr), 0))}</td>
-							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.opening_cr), 0))}</td>
-							<td class="text-right" style="color: #10b981;">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.credit), 0))}</td>
-							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.closing_dr), 0))}</td>
-							<td class="text-right">${format_million(data.customer_summary.reduce((a, b) => a + flt(b.closing_cr), 0))}</td>
-						</tr>
-					</tfoot>
-				</table>
-
-				<div class="page-break"></div>
-				<h3 class="section-title">Detailed Collection List</h3>
-				<table>
-					<thead>
-						<tr>
-							<th width="15%">Payment ID</th>
-							<th width="15%">Voucher</th>
-							<th width="10%">Date</th>
-							<th width="10%">Due Date</th>
-							<th width="8%" class="text-center">Diff</th>
-							<th width="18%">Customer</th>
-							<th width="12%">Sales Person</th>
-							<th width="12%" class="text-right">Amount (M)</th>
-						</tr>
-					</thead>
-					<tbody>
-						${data.results
-							.map(
-								(row) => `
-							<tr>
-								<td class="bold">${row.payment_entry}</td>
-								<td style="color: #64748b;">${row.name}</td>
-								<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
-								<td>${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
-								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days || 0}</td>
-								<td>${row.customer}</td>
-								<td>${row.sales_person || "-"}</td>
-								<td class="text-right bold">${format_million(row.allocated_amount)}</td>
-							</tr>
-						`,
-							)
-							.join("")}
-					</tbody>
-					<tfoot>
-						<tr style="background: #f8fafc; font-weight: bold;">
-							<td colspan="7" class="text-right">GRAND TOTAL</td>
-							<td class="text-right">${format_million(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
-						</tr>
-					</tfoot>
-				</table>
 
 				${
 					data.due_results && data.due_results.length > 0
@@ -844,6 +888,47 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				`
 						: ""
 				}
+
+				<div class="page-break"></div>
+				<h3 class="section-title">Detailed Collection List</h3>
+				<table>
+					<thead>
+						<tr>
+							<th width="15%">Payment ID</th>
+							<th width="15%">Voucher</th>
+							<th width="10%">Date</th>
+							<th width="10%">Due Date</th>
+							<th width="8%" class="text-center">Diff</th>
+							<th width="18%">Customer</th>
+							<th width="12%">Sales Person</th>
+							<th width="12%" class="text-right">Amount (M)</th>
+						</tr>
+					</thead>
+					<tbody>
+						${data.results
+							.map(
+								(row) => `
+							<tr>
+								<td class="bold">${row.payment_entry}</td>
+								<td style="color: #64748b;">${row.name}</td>
+								<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
+								<td>${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days || 0}</td>
+								<td>${row.customer}</td>
+								<td>${row.sales_person || "-"}</td>
+								<td class="text-right bold">${format_million(row.allocated_amount)}</td>
+							</tr>
+						`,
+							)
+							.join("")}
+					</tbody>
+					<tfoot>
+						<tr style="background: #f8fafc; font-weight: bold;">
+							<td colspan="7" class="text-right">GRAND TOTAL</td>
+							<td class="text-right">${format_million(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
+						</tr>
+					</tfoot>
+				</table>
 				
 				<div style="margin-top: 30px; font-size: 8px; color: #94a3b8; text-align: center;">
 					Printed on: ${frappe.datetime.now_datetime()} | renu_customization - Collection Analysis Report

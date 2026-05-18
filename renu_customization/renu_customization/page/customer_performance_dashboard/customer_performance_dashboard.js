@@ -256,9 +256,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-customer" style="width: 250px;">Customer</th>
-                                ${months.map(m => `<th class="col-amt">${m.key}</th>`).join("")}
-                                <th class="col-amt" style="font-weight: 800;">Total (M)</th>
+                                <th class="col-customer sortable-header" data-table="month" data-field="customer" style="width: 250px; cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${months.map(m => `<th class="col-amt sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="col-amt sortable-header" data-table="month" data-field="total" style="font-weight: 800; cursor: pointer; user-select: none;">Total (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="month_wise_body"></tbody>
@@ -275,32 +275,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         `).appendTo(page.container);
 
 		let month_tbody = month_table_card.find("#month_wise_body");
-		let month_totals = {};
-		let grand_total_all = 0;
-
-		(data.month_wise_customer || []).forEach((row, idx) => {
-			let row_total = row.total || 0;
-			grand_total_all += row_total;
-			let row_html = `
-                <tr>
-                    <td class="col-sno">${idx + 1}</td>
-                    <td class="col-customer" title="${row.customer}">${row.customer}</td>
-                    ${months.map(m => {
-                        let val = row.months[m.key] || 0;
-                        month_totals[m.sort] = (month_totals[m.sort] || 0) + val;
-                        return `<td class="col-amt">₹ ${(val / 1000000).toFixed(2)} M</td>`;
-                    }).join("")}
-                    <td class="col-amt" style="font-weight: 700;">₹ ${(row_total / 1000000).toFixed(2)} M</td>
-                </tr>
-            `;
-			month_tbody.append(row_html);
-		});
-
-		months.forEach(m => {
-			month_table_card.find(`#total_${m.sort}`).text(`₹ ${( (month_totals[m.sort] || 0) / 1000000).toFixed(2)} M`);
-		});
-		month_table_card.find("#grand_total_all").text(`₹ ${(grand_total_all / 1000000).toFixed(2)} M`);
-
+		
 		// DUE IN NEXT 15 DAYS Table
 		let due_table_card = $(`
             <div class="table-card" style="margin-top: 24px;">
@@ -312,14 +287,14 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-id">SO No</th>
-                                <th class="col-customer">Customer</th>
-                                <th class="col-date">Order Date</th>
-                                <th class="col-date">Due Date</th>
-                                <th class="col-days">Days Left</th>
-                                <th class="col-status">Status</th>
-                                <th class="col-pct">% Del.</th>
-                                <th class="col-amt">Net Total</th>
+                                <th class="col-id sortable-header" data-table="due" data-field="name" style="cursor: pointer; user-select: none;">SO No <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer sortable-header" data-table="due" data-field="customer" style="cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="transaction_date" style="cursor: pointer; user-select: none;">Order Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="schedule_date" style="cursor: pointer; user-select: none;">Due Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-days sortable-header" data-table="due" data-field="due_days" style="cursor: pointer; user-select: none;">Days Left <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="due" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="due" data-field="per_delivered" style="cursor: pointer; user-select: none;">% Del. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="due" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="due_body"></tbody>
@@ -335,29 +310,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         `).appendTo(page.container);
 
 		let due_tbody = due_table_card.find("#due_body");
-        let due_total_val = 0;
 		
-		(data.due_next_15_days || []).forEach((row, idx) => {
-            due_total_val += flt(row.net_total);
-            let days_class = row.due_days <= 3 ? "text-danger font-weight-bold" : (row.due_days <= 7 ? "text-warning" : "");
-            let del_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
-
-			due_tbody.append(`
-                <tr>
-                    <td class="col-sno">${idx + 1}</td>
-                    <td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
-                    <td class="col-customer" title="${row.customer}">${row.customer}</td>
-                    <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
-                    <td class="col-date" style="font-weight: 600;">${frappe.datetime.str_to_user(row.schedule_date)}</td>
-                    <td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
-                    <td class="col-status"><span class="indicator-pill ${row.status.toLowerCase().replace(/ /g, '-')}">${row.status}</span></td>
-                    <td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
-                    <td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toFixed(2)} M</td>
-                </tr>
-            `);
-		});
-        due_table_card.find("#total_due_value").text(`₹ ${(due_total_val / 1000000).toFixed(2)} M`);
-
+		// Detailed Customer Orders List Table
 		let table_card = $(`
             <div class="table-card" style="margin-top: 24px;">
                 <div class="header">
@@ -376,14 +330,14 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-id">SO No</th>
-                                <th class="col-customer">Customer</th>
-                                <th class="col-date">Date</th>
-                                <th class="col-date">Expected Delivery</th>
-                                <th class="col-status">Status</th>
-                                <th class="col-pct">% Del.</th>
-                                <th class="col-pct">% Bill.</th>
-                                <th class="col-amt">Net Total</th>
+                                <th class="col-id sortable-header" data-table="detailed" data-field="name" style="cursor: pointer; user-select: none;">SO No <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer sortable-header" data-table="detailed" data-field="customer" style="cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="transaction_date" style="cursor: pointer; user-select: none;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Delivery <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="detailed" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_delivered" style="cursor: pointer; user-select: none;">% Del. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_billed" style="cursor: pointer; user-select: none;">% Bill. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="detailed" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="so_list_body"></tbody>
@@ -399,27 +353,225 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         `).appendTo(page.container);
 
 		let tbody = table_card.find("#so_list_body");
-		data.results.forEach((row, idx) => {
-            let del_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
-            let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
 
-			tbody.append(`
-                <tr>
-                    <td class="col-sno">${idx + 1}</td>
-                    <td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
-                    <td class="col-customer" title="${row.customer}">${row.customer}</td>
-                    <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
-                    <td class="col-date" style="font-weight: 600;">${frappe.datetime.str_to_user(row.schedule_date)}</td>
-                    <td class="col-status"><span class="indicator-pill ${row.status.toLowerCase().replace(/ /g, '-')}">${row.status}</span></td>
-                    <td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
-                    <td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
-                    <td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-                </tr>
-            `);
+		// State variables for sorting
+		let month_sort = { field: "customer", asc: true };
+		let due_sort = { field: "due_days", asc: true };
+		let detailed_sort = { field: "transaction_date", asc: false };
+
+		const render_month_table = () => {
+			let sorted_data = [...(data.month_wise_customer || [])];
+			sorted_data.sort((a, b) => {
+				let val_a, val_b;
+				if (month_sort.field === "customer") {
+					val_a = a.customer || "";
+					val_b = b.customer || "";
+					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (month_sort.field === "total") {
+					val_a = flt(a.total);
+					val_b = flt(b.total);
+				} else {
+					val_a = flt(a.months[month_sort.field]);
+					val_b = flt(b.months[month_sort.field]);
+				}
+				return month_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			month_tbody.empty();
+			let month_totals = {};
+			let grand_total_all = 0;
+
+			sorted_data.forEach((row, idx) => {
+				let row_total = row.total || 0;
+				grand_total_all += row_total;
+				let row_html = `
+					<tr>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-customer" title="${row.customer}">${row.customer}</td>
+						${months.map(m => {
+							let val = row.months[m.key] || 0;
+							month_totals[m.sort] = (month_totals[m.sort] || 0) + val;
+							return `<td class="col-amt">₹ ${(val / 1000000).toFixed(2)} M</td>`;
+						}).join("")}
+						<td class="col-amt" style="font-weight: 700;">₹ ${(row_total / 1000000).toFixed(2)} M</td>
+					</tr>
+				`;
+				month_tbody.append(row_html);
+			});
+
+			months.forEach(m => {
+				month_table_card.find(`#total_${m.sort}`).text(`₹ ${( (month_totals[m.sort] || 0) / 1000000).toFixed(2)} M`);
+			});
+			month_table_card.find("#grand_total_all").text(`₹ ${(grand_total_all / 1000000).toFixed(2)} M`);
+		};
+
+		const render_due_table = () => {
+			let sorted_data = [...(data.due_next_15_days || [])];
+			sorted_data.sort((a, b) => {
+				let val_a = a[due_sort.field];
+				let val_b = b[due_sort.field];
+				
+				if (due_sort.field === "name" || due_sort.field === "customer" || due_sort.field === "status") {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return due_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (due_sort.field === "transaction_date" || due_sort.field === "schedule_date") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return due_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			due_tbody.empty();
+			let due_total_val = 0;
+
+			sorted_data.forEach((row, idx) => {
+				due_total_val += flt(row.net_total);
+				let days_class = row.due_days <= 3 ? "text-danger font-weight-bold" : (row.due_days <= 7 ? "text-warning" : "");
+				let del_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+
+				due_tbody.append(`
+					<tr>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
+						<td class="col-customer" title="${row.customer}">${row.customer}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+						<td class="col-date" style="font-weight: 600;">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+						<td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
+						<td class="col-status"><span class="indicator-pill ${row.status.toLowerCase().replace(/ /g, '-')}">${row.status}</span></td>
+						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toFixed(2)} M</td>
+					</tr>
+				`);
+			});
+			due_table_card.find("#total_due_value").text(`₹ ${(due_total_val / 1000000).toFixed(2)} M`);
+		};
+
+		const render_detailed_table = () => {
+			let sorted_data = [...(data.results || [])];
+			sorted_data.sort((a, b) => {
+				let val_a = a[detailed_sort.field];
+				let val_b = b[detailed_sort.field];
+				
+				if (detailed_sort.field === "name" || detailed_sort.field === "customer" || detailed_sort.field === "status") {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return detailed_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detailed_sort.field === "transaction_date" || detailed_sort.field === "schedule_date") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return detailed_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			tbody.empty();
+			sorted_data.forEach((row, idx) => {
+				let del_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
+
+				tbody.append(`
+					<tr>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
+						<td class="col-customer" title="${row.customer}">${row.customer}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+						<td class="col-date" style="font-weight: 600;">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+						<td class="col-status"><span class="indicator-pill ${row.status.toLowerCase().replace(/ /g, '-')}">${row.status}</span></td>
+						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
+						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+					</tr>
+				`);
+			});
+
+			let total_val = sorted_data.reduce((acc, row) => acc + flt(row.net_total), 0);
+			table_card.find("#total_booked_value").text(`₹ ${(total_val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M`);
+		};
+
+		// Initial render of all tables
+		render_month_table();
+		render_due_table();
+		render_detailed_table();
+
+		// Header clicks for real-time sort toggling
+		page.container.on("click", ".sortable-header", function () {
+			const table_type = $(this).data("table");
+			const field = $(this).data("field");
+			
+			if (table_type === "month") {
+				if (month_sort.field === field) {
+					month_sort.asc = !month_sort.asc;
+				} else {
+					month_sort.field = field;
+					month_sort.asc = true;
+				}
+				
+				// Reset icons
+				month_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				month_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
+				
+				// Update active
+				if (month_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+				
+				render_month_table();
+			} else if (table_type === "due") {
+				if (due_sort.field === field) {
+					due_sort.asc = !due_sort.asc;
+				} else {
+					due_sort.field = field;
+					due_sort.asc = true;
+				}
+				
+				// Reset icons
+				due_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				due_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
+				
+				// Update active
+				if (due_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+				
+				render_due_table();
+			} else if (table_type === "detailed") {
+				if (detailed_sort.field === field) {
+					detailed_sort.asc = !detailed_sort.asc;
+				} else {
+					detailed_sort.field = field;
+					detailed_sort.asc = true;
+				}
+				
+				// Reset icons
+				table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
+				
+				// Update active
+				if (detailed_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+				
+				render_detailed_table();
+			}
 		});
-
-		let total_val = data.results.reduce((acc, row) => acc + flt(row.net_total), 0);
-		table_card.find("#total_booked_value").text(`₹ ${(total_val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M`);
 
 		month_table_card.find("#export_month_excel_btn").on("click", () => export_data_excel("summary"));
 		table_card.find("#export_excel_btn").on("click", () => export_data_excel("all"));

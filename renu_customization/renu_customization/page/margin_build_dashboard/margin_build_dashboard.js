@@ -589,6 +589,8 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 			});
 		}, 100);
 
+		let detail_sort = { field: "posting_date", asc: false };
+
 		let table_card = $(`
             <div class="table-card">
                 <div class="header">
@@ -598,66 +600,120 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table" id="detail_table">
                         <thead>
                             <tr>
-                                <th class="invoice-col">${__("Invoice ID")}</th>
-                                <th class="date-col">${__("Date")}</th>
-                                <th class="customer-col">${__("Customer")}</th>
-                                <th class="item-col">${__("Item")}</th>
-                                <th class="type-col">${__("Type")}</th>
-                                <th class="text-right currency-col">${__("Revenue (M)")}</th>
-                                <th class="text-right currency-col">${__("COGS (M)")}</th>
-                                <th class="text-right currency-col">${__("Margin (M)")}</th>
+                                <th class="invoice-col sortable-header" data-field="name" style="cursor: pointer; user-select: none;">${__("Invoice ID")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="date-col sortable-header" data-field="posting_date" style="cursor: pointer; user-select: none;">${__("Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="customer-col sortable-header" data-field="customer" style="cursor: pointer; user-select: none;">${__("Customer")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="item-col sortable-header" data-field="item_name" style="cursor: pointer; user-select: none;">${__("Item")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="type-col sortable-header" data-field="type" style="cursor: pointer; user-select: none;">${__("Type")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="text-right currency-col sortable-header" data-field="revenue" style="cursor: pointer; user-select: none;">${__("Revenue (M)")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="text-right currency-col sortable-header" data-field="cogs" style="cursor: pointer; user-select: none;">${__("COGS (M)")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="text-right currency-col sortable-header" data-field="margin" style="cursor: pointer; user-select: none;">${__("Margin (M)")} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody id="detail_table_body"></tbody>
+                        <tfoot></tfoot>
                     </table>
                 </div>
             </div>
         `).appendTo(page.container);
 
-		let tbody = table_card.find("tbody");
-		let total_rev = 0,
-			total_cogs = 0,
-			total_margin = 0;
+		const render_detail_table = () => {
+			let sorted_data = [...(data.results || [])];
+			sorted_data.sort((a, b) => {
+				let val_a, val_b;
+				if (detail_sort.field === "name" || detail_sort.field === "type") {
+					val_a = a[detail_sort.field] || "";
+					val_b = b[detail_sort.field] || "";
+					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detail_sort.field === "customer") {
+					val_a = a.customer_name || a.customer || "";
+					val_b = b.customer_name || b.customer || "";
+					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detail_sort.field === "item_name") {
+					val_a = a.item_name || a.item_code || "";
+					val_b = b.item_name || b.item_code || "";
+					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detail_sort.field === "posting_date") {
+					val_a = a.posting_date ? new Date(a.posting_date) : new Date(0);
+					val_b = b.posting_date ? new Date(b.posting_date) : new Date(0);
+				} else {
+					val_a = flt(a[detail_sort.field]);
+					val_b = flt(b[detail_sort.field]);
+				}
+				return detail_sort.asc ? val_a - val_b : val_b - val_a;
+			});
 
-		data.results.forEach((row) => {
-			total_rev += flt(row.revenue);
-			total_cogs += flt(row.cogs);
-			total_margin += flt(row.margin);
+			let tbody = table_card.find("#detail_table_body");
+			tbody.empty();
 
-			$(`
-				<tr>
-					<td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-					<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
-					<td class="customer-col">${row.customer_name || row.customer}</td>
-					<td class="item-col">
-                        <div style="line-height: 1.4;">
-                            <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code || "-"}</div>
-                            <div style="font-weight: 600; color: #1e293b;">${row.item_name || "-"}</div>
-                        </div>
-                    </td>
-                    <td class="type-col">
-                        <span class="indicator-pill ${row.type}">${__(row.type)}</span>
-                    </td>
-					<td class="text-right currency-col">${format_currency(row.revenue)}</td>
-					<td class="text-right currency-col">${format_currency(row.cogs)}</td>
-					<td class="text-right currency-col" style="font-weight: 700; color: ${row.margin < 0 ? "#ef4444" : "#10b981"};">${format_currency(row.margin)}</td>
+			let total_rev = 0,
+				total_cogs = 0,
+				total_margin = 0;
+
+			sorted_data.forEach((row) => {
+				total_rev += flt(row.revenue);
+				total_cogs += flt(row.cogs);
+				total_margin += flt(row.margin);
+
+				tbody.append(`
+					<tr>
+						<td class="invoice-col"><a href="/app/sales-invoice/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
+						<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
+						<td class="customer-col">${row.customer_name || row.customer}</td>
+						<td class="item-col">
+							<div style="line-height: 1.4;">
+								<div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code || "-"}</div>
+								<div style="font-weight: 600; color: #1e293b;">${row.item_name || "-"}</div>
+							</div>
+						</td>
+						<td class="type-col">
+							<span class="indicator-pill ${row.type}">${__(row.type)}</span>
+						</td>
+						<td class="text-right currency-col">${format_currency(row.revenue)}</td>
+						<td class="text-right currency-col">${format_currency(row.cogs)}</td>
+						<td class="text-right currency-col" style="font-weight: 700; color: ${row.margin < 0 ? "#ef4444" : "#10b981"};">${format_currency(row.margin)}</td>
+					</tr>
+				`);
+			});
+
+			let tfoot = table_card.find("tfoot");
+			tfoot.empty();
+			tfoot.append(`
+				<tr class="sticky-total">
+					<td colspan="5" class="text-right" style="padding-right: 20px; color: #64748b; font-size: 11px; font-weight: 600;">GRAND TOTAL</td>
+					<td class="text-right" style="color: #1e293b;">${format_currency(total_rev)}</td>
+					<td class="text-right" style="color: #1e293b;">${format_currency(total_cogs)}</td>
+					<td class="text-right" style="color: ${total_margin < 0 ? "#ef4444" : "#4338ca"}; font-weight: 800;">${format_currency(total_margin)}</td>
 				</tr>
-			`).appendTo(tbody);
-		});
+			`);
+		};
 
-		$(`
-            <tfoot>
-                <tr class="sticky-total">
-                    <td colspan="5" class="text-right" style="padding-right: 20px; color: #64748b; font-size: 11px; font-weight: 600;">GRAND TOTAL</td>
-                    <td class="text-right" style="color: #1e293b;">${format_currency(total_rev)}</td>
-                    <td class="text-right" style="color: #1e293b;">${format_currency(total_cogs)}</td>
-                    <td class="text-right" style="color: ${total_margin < 0 ? "#ef4444" : "#4338ca"}; font-weight: 800;">${format_currency(total_margin)}</td>
-                </tr>
-            </tfoot>
-        `).insertAfter(tbody);
+		render_detail_table();
+
+		table_card.find(".sortable-header").on("click", function () {
+			const field = $(this).data("field");
+			if (detail_sort.field === field) {
+				detail_sort.asc = !detail_sort.asc;
+			} else {
+				detail_sort.field = field;
+				detail_sort.asc = true;
+			}
+
+			// Reset icons
+			table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+
+			// Update active icon
+			if (detail_sort.asc) {
+				$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+			} else {
+				$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+			}
+
+			render_detail_table();
+		});
 
 		table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
 	}

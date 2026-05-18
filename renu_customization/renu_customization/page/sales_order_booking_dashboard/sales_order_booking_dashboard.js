@@ -315,6 +315,19 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
         .page-container { max-width: 100% !important; }
 
+        /* Sorting Styles */
+        .sortable-header {
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+        .sortable-header:hover {
+            background: #e2e8f0 !important;
+        }
+        .sortable-header i {
+            transition: transform 0.2s;
+        }
+
         /* KPI Cards Styling */
         .section-title {
             font-size: 14px;
@@ -729,12 +742,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-customer">Customer</th>
-                                <th class="col-sp">Sales Person</th>
-                                <th class="col-prod">Product</th>
-                                ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
-                                <th class="total-net-col">Total (Net) (M)</th>
-                                <th class="grand-total-col">Grand Total (Gross) (M)</th>
+                                <th class="col-customer sortable-header" data-field="cust">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-sp sortable-header" data-field="sp">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-prod sortable-header" data-field="item_code">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${months.map((m) => `<th class="col-amt sortable-header" data-field="${m.key}">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="total-net-col sortable-header" data-field="total">Total (Net) (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="grand-total-col sortable-header" data-field="total_gross">Grand Total (Gross) (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="booking_month_body"></tbody>
@@ -775,21 +788,21 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-id">Order ID</th>
-                                <th class="col-date" style="white-space: nowrap;">Date</th>
-                                <th class="col-status">Status</th>
-                                <th class="col-customer">Customer</th>
-                                <th class="col-po" style="width: 140px; white-space: nowrap;">Cust. PO No.</th>
-                                <th class="col-prod">Item</th>
-                                <th class="col-deliv-date" style="width: 110px; white-space: nowrap;">Deliv. Date</th>
-                                <th class="col-sp">Sales Person</th>
-                                <th class="col-amt">Booked (M)</th>
-                                <th class="col-amt">Total Booked (M)</th>
-                                <th class="col-amt">Short Close (M)</th>
-                                <th class="col-amt">Picked (M)</th>
-                                <th class="col-amt">Delivered (M)</th>
-                                <th class="col-amt">Pending (M)</th>
-                                <th class="col-amt">Overdue (M)</th>
+                                <th class="col-id sortable-header" data-field="name">Order ID <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-field="so_date" style="white-space: nowrap;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-field="status">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer sortable-header" data-field="customer_name">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-po sortable-header" data-field="customer_po_no" style="width: 140px; white-space: nowrap;">Cust. PO No. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-prod sortable-header" data-field="item_code">Item <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-deliv-date sortable-header" data-field="delivery_date" style="width: 110px; white-space: nowrap;">Deliv. Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-sp sortable-header" data-field="sales_person">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-field="total_booked_value">Booked (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-field="total_net_amount_inr">Total Booked (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-field="cancelled_val">Short Close (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-field="picked_value">Picked (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-field="dashboard_net_delivered">Delivered (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-field="pending_value">Pending (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-field="overdue_value">Overdue (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="so_list_body"></tbody>
@@ -799,6 +812,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         `).appendTo(tables_container);
 
 		const render_filtered_view = (filtered_data) => {
+			// Initialize page-level sorting states if not already present
+			page.summary_sort = page.summary_sort || { field: "total", asc: false };
+			page.detail_sort = page.detail_sort || { field: "total_booked_value", asc: false };
+
 			let tbody_month = tables_container.find("#booking_month_body");
 			let tbody_lifecycle = tables_container.find("#lifecycle_summary_body");
 			let tbody_list = tables_container.find("#so_list_body");
@@ -905,7 +922,26 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				merged_data[key].total_cancelled += flt(row.cancelled_val || 0);
 			});
 
-			let summary_list = Object.values(merged_data).sort((a, b) => b.total - a.total);
+			let summary_list = Object.values(merged_data);
+			summary_list.sort((a, b) => {
+				let val_a, val_b;
+				let field = page.summary_sort.field;
+				let asc = page.summary_sort.asc;
+
+				if (field === "cust" || field === "sp" || field === "item_code") {
+					val_a = a[field] || "";
+					val_b = b[field] || "";
+					return asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (field === "total" || field === "total_gross") {
+					val_a = flt(a[field]);
+					val_b = flt(b[field]);
+					return asc ? val_a - val_b : val_b - val_a;
+				} else {
+					val_a = flt(a.months[field] || 0);
+					val_b = flt(b.months[field] || 0);
+					return asc ? val_a - val_b : val_b - val_a;
+				}
+			});
 			let total_month_amts = {};
 			let total_month_gross_amts = {};
 			let g_total_net = 0;
@@ -980,6 +1016,24 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			}
 
 			// 3.2 Detailed Sales Orders List
+			let detailed_list = [...filtered_data];
+			detailed_list.sort((a, b) => {
+				let val_a, val_b;
+				let field = page.detail_sort.field;
+				let asc = page.detail_sort.asc;
+                
+                let num_fields = ["total_booked_value", "total_net_amount_inr", "cancelled_val", "picked_value", "dashboard_net_delivered", "pending_value", "overdue_value"];
+				if (num_fields.includes(field)) {
+					val_a = flt(a[field] || (field === 'dashboard_net_delivered' ? a.delivered_net_total_inr : 0) || (field === 'total_booked_value' ? a['total_net_amount_(inr)'] : 0));
+					val_b = flt(b[field] || (field === 'dashboard_net_delivered' ? b.delivered_net_total_inr : 0) || (field === 'total_booked_value' ? b['total_net_amount_(inr)'] : 0));
+					return asc ? val_a - val_b : val_b - val_a;
+				} else {
+					val_a = a[field] || "";
+					val_b = b[field] || "";
+					return asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				}
+			});
+
 			tables_container.find("#so_count").text(`Showing ${filtered_data.length} orders`);
 			let total_amt = 0,
 				total_actual = 0,
@@ -995,7 +1049,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					`<tr><td colspan="16" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
 				);
 			} else {
-				filtered_data.forEach((row, idx) => {
+				detailed_list.forEach((row, idx) => {
 					let status_color = "gray";
 					if (["Completed", "Closed"].includes(row.status)) status_color = "green";
 					if (["Draft"].includes(row.status)) status_color = "blue";
@@ -1013,7 +1067,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					let pending_val = flt(row.pending_value || 0);
 					let overdue_val = flt(row.overdue_value || 0);
 
-					let cust_po = row.po_no || "-";
+					let cust_po = row.customer_po_no || row.po_no || "-";
 					let deliv_date_str = row.delivery_date
 						? frappe.datetime.str_to_user(row.delivery_date)
 						: "-";
@@ -1075,6 +1129,30 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-amt" style="font-weight: 800; color: #7c3aed; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_overdue)}</td>
                     </tr>
                 `);
+			}
+			
+			// Restore/Update active sort icon in DOM
+			if (page.summary_sort) {
+				let th = tables_container.find(`.month-table .sortable-header[data-field="${page.summary_sort.field}"]`);
+				if (th.length) {
+					tables_container.find(".month-table .sortable-header i")
+						.removeClass("fa-sort-asc fa-sort-desc")
+						.addClass("fa-sort text-muted");
+					th.find("i")
+						.removeClass("fa-sort text-muted")
+						.addClass(page.summary_sort.asc ? "fa-sort-asc" : "fa-sort-desc");
+				}
+			}
+			if (page.detail_sort) {
+				let th = tables_container.find(`.detailed-list-table .sortable-header[data-field="${page.detail_sort.field}"]`);
+				if (th.length) {
+					tables_container.find(".detailed-list-table .sortable-header i")
+						.removeClass("fa-sort-asc fa-sort-desc")
+						.addClass("fa-sort text-muted");
+					th.find("i")
+						.removeClass("fa-sort text-muted")
+						.addClass(page.detail_sort.asc ? "fa-sort-asc" : "fa-sort-desc");
+				}
 			}
 		};
 
@@ -1393,6 +1471,30 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		tables_container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		tables_container.on("click", "#pdf_month_table", () => export_pdf());
 		tables_container.on("click", "#export_list_table", () => export_to_excel("detail"));
+
+		tables_container.off("click", ".month-table .sortable-header");
+		tables_container.on("click", ".month-table .sortable-header", function () {
+			let field = $(this).attr("data-field");
+			if (page.summary_sort.field === field) {
+				page.summary_sort.asc = !page.summary_sort.asc;
+			} else {
+				page.summary_sort.field = field;
+				page.summary_sort.asc = false;
+			}
+			apply_local_filters();
+		});
+
+		tables_container.off("click", ".detailed-list-table .sortable-header");
+		tables_container.on("click", ".detailed-list-table .sortable-header", function () {
+			let field = $(this).attr("data-field");
+			if (page.detail_sort.field === field) {
+				page.detail_sort.asc = !page.detail_sort.asc;
+			} else {
+				page.detail_sort.field = field;
+				page.detail_sort.asc = false;
+			}
+			apply_local_filters();
+		});
 
 		// Initial table render
 		render_filtered_view(data.results);

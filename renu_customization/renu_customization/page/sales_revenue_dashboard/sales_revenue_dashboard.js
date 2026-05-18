@@ -572,6 +572,17 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             border-bottom: 1px solid #dee2e6; 
             font-weight: 600;
         }
+        .sortable-header {
+            cursor: pointer !important;
+            user-select: none !important;
+        }
+        .sortable-header:hover {
+            background-color: #e9ecef !important;
+            color: #1e293b !important;
+        }
+        .sortable-header i {
+            transition: color 0.2s ease;
+        }
         .dashboard-table td { 
             padding: 10px 12px; 
             border-top: 1px solid var(--border-color); 
@@ -585,15 +596,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .total-col { 
             text-align: right !important; 
             font-weight: 700; 
-            min-width: 150px; 
+            min-width: 130px; 
             background: #fff !important; 
-            position: sticky; 
-            right: 0; 
-            z-index: 1; 
-            border-left: 1px solid #dee2e6; 
         }
         .dashboard-table th.total-col { 
-            z-index: 3; 
             color: #333 !important;
             background: #f1f3f5 !important;
         }
@@ -639,32 +645,19 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             z-index: 2;
         }
 
-        /* Ensure right-sticky total columns maintain their horizontal position while being vertically sticky */
-        tr.sticky-total td.total-col { 
-            z-index: 3 !important; 
-        }
-        
-        /* Fixed Column Offsets for the two total columns */
-        .net-total-col { right: 130px !important; }
-        .gross-total-col { right: 0 !important; }
-        
-        .sticky-total-header { 
-            position: sticky !important; 
-            right: 0; 
-            background: #f1f3f5 !important; 
-            z-index: 3 !important; 
-            border-left: 1px solid #dee2e6; 
-            color: #333 !important;
-        }
-        
-        
-        /* Sticky Primary Columns for Consolidated Table */
+        /* Sticky Left Primary & Total Columns for Consolidated Table */
         #consolidated_table th:nth-child(1), #consolidated_table td:nth-child(1) { position: sticky; left: 0; z-index: 1; background: #fff !important; }
-        #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { position: sticky; left: 40px; z-index: 1; background: #fff !important; }
+        #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { position: sticky; left: 40px; z-index: 1; background: #fff !important; width: 200px !important; min-width: 200px !important; }
+
         
         #consolidated_table th:nth-child(1), #consolidated_table th:nth-child(2) { z-index: 3; background: #f1f3f5 !important; }
-        #consolidated_table td:nth-child(1), #consolidated_table td:nth-child(2) { border-right: 1px solid #eee; }
+        #consolidated_table td:nth-child(1) { border-right: 1px solid #eee; }
+        #consolidated_table td:nth-child(2), #consolidated_table th:nth-child(2) { border-right: 2px solid #cbd5e1; } /* Solid divider separating sticky columns from scrolling columns */
         #consolidated_table tr:hover td:nth-child(1), #consolidated_table tr:hover td:nth-child(2) { background: #f8faff !important; }
+
+        /* Maintain correct styling on the sticky footer row cells */
+        #consolidated_table tr.sticky-total td:nth-child(1),
+        #consolidated_table tr.sticky-total td:nth-child(2) { z-index: 4; background: #f8fafc !important; }
 
         .table-filters .link-field-btn { display: none !important; }
         .awesomplete { z-index: 1000 !important; }
@@ -1170,12 +1163,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
-                                <th class="customer-col">Customer</th>
-                                <th class="sp-col">Sales Person</th>
-                                <th class="item-col">Product</th>
-                                ${months.map((m) => `<th class="month-col">${m.key}</th>`).join("")}
-                                <th class="total-col sticky-total-header net-total-col">Total (Net)</th>
-                                <th class="total-col sticky-total-header gross-total-col gross-col">Grand Total (Gross)</th>
+                                <th class="customer-col sortable-header" data-field="cust">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sp-col sortable-header" data-field="sp">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="item-col sortable-header" data-field="item_name">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${months.map((m) => `<th class="month-col sortable-header" data-field="${m.key}">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="total-col sticky-total-header net-total-col sortable-header" data-field="total">Total (Net) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="total-col sticky-total-header gross-total-col gross-col sortable-header" data-field="total_gross">Grand Total (Gross) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="consolidated_table_body"></tbody>
@@ -1199,16 +1192,16 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
-                                <th class="invoice-id-col">Invoice ID</th>
-                                <th class="date-col">Date</th>
-                                <th class="type-col">Type</th>
-                                <th class="invoice-type-col">Invoice Type</th>
-                                <th class="status-col">Status</th>
-                                <th class="customer-col">Customer</th>
-                                <th class="item-col">Item</th>
-                                <th class="sp-col">Sales Person</th>
-                                <th class="qty-col">Qty</th>
-                                <th class="amount-col">Amount (Net)</th>
+                                <th class="invoice-id-col sortable-header" data-field="invoice_id">Invoice ID <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="date-col sortable-header" data-field="invoice_date">Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="type-col sortable-header" data-field="dom_exp">Type <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="invoice-type-col sortable-header" data-field="invoice_type">Invoice Type <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="status-col sortable-header" data-field="status">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="customer-col sortable-header" data-field="customer_name">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="item-col sortable-header" data-field="item_name">Item <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sp-col sortable-header" data-field="sales_person">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="qty-col sortable-header" data-field="qty">Qty <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="amount-col sortable-header" data-field="amt_allocated">Amount (Net) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="invoice_table_body"></tbody>
@@ -1248,6 +1241,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			tbody_summary.empty();
 			tbody_detail.empty();
 
+			// Initialize page-level sorting states if not already present
+			page.summary_sort = page.summary_sort || { field: "total", asc: false };
+			page.detail_sort = page.detail_sort || { field: "invoice_date", asc: false };
+
 			// 1. Group & Render Summary Table
 			let merged_data = {};
 			results.forEach((row) => {
@@ -1279,7 +1276,28 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				merged_data[row_key].total_gross += gross_amt;
 			});
 
-			let summary_list = Object.values(merged_data).sort((a, b) => b.total - a.total);
+			let summary_list = Object.values(merged_data);
+			summary_list.sort((a, b) => {
+				let val_a, val_b;
+				let field = page.summary_sort.field;
+				let asc = page.summary_sort.asc;
+
+				if (field === "cust" || field === "sp" || field === "item_name") {
+					val_a = a[field] || "";
+					val_b = b[field] || "";
+					return asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (field === "total" || field === "total_gross") {
+					val_a = flt(a[field]);
+					val_b = flt(b[field]);
+					return asc ? val_a - val_b : val_b - val_a;
+				} else {
+					// Month columns
+					val_a = flt(a.months[field] || 0);
+					val_b = flt(b.months[field] || 0);
+					return asc ? val_a - val_b : val_b - val_a;
+				}
+			});
+
 			let total_month_amts = {};
 			let total_month_gross_amts = {};
 			let total_month_returned_amts = {};
@@ -1370,13 +1388,19 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 				tbody_summary.append(`
                     <tr class="sticky-total">
-                        <td colspan="4" style="text-align: right; font-weight: 700;">Grand Total (Net)</td>
+                        <td style="background: #f8fafc !important;"></td>
+                        <td style="text-align: right; font-weight: 700; background: #f8fafc !important;">Grand Total (Net)</td>
+                        <td style="background: #f8fafc !important;"></td>
+                        <td style="background: #f8fafc !important;"></td>
                         ${footer_cells_net}
                         <td class="total-col net-total-col">${format_currency_short(grand_total_net)}</td>
                         <td class="total-col gross-total-col gross-col" style="background: #e9ecef !important; opacity: 0.5;">-</td>
                     </tr>
                     <tr class="sticky-total">
-                        <td colspan="4" style="text-align: right; font-weight: 800;">Grand Total (Gross)</td>
+                        <td style="background: #f8fafc !important;"></td>
+                        <td style="text-align: right; font-weight: 800; background: #f8fafc !important;">Grand Total (Gross)</td>
+                        <td style="background: #f8fafc !important;"></td>
+                        <td style="background: #f8fafc !important;"></td>
                         ${footer_cells_gross}
                         <td class="total-col net-total-col" style="background: #e9ecef !important; opacity: 0.5;">-</td>
                         <td class="total-col gross-total-col gross-col" style="font-weight: 800;">${format_currency_short(grand_total_gross)}</td>
@@ -1394,7 +1418,29 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					`<tr><td colspan="11" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
-				results.forEach((row, idx) => {
+				let detailed_list = [...results];
+				detailed_list.sort((a, b) => {
+					let val_a, val_b;
+					let field = page.detail_sort.field;
+					let asc = page.detail_sort.asc;
+
+					if (["invoice_id", "dom_exp", "invoice_type", "status", "customer_name", "item_name", "sales_person"].includes(field)) {
+						val_a = a[field] || "";
+						val_b = b[field] || "";
+						return asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+					} else if (field === "invoice_date") {
+						val_a = a.delivery_date || a.invoice_date || "";
+						val_b = b.delivery_date || b.invoice_date || "";
+						return asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+					} else {
+						// Qty or Amount
+						val_a = flt(a[field]);
+						val_b = flt(b[field]);
+						return asc ? val_a - val_b : val_b - val_a;
+					}
+				});
+
+				detailed_list.forEach((row, idx) => {
 					let row_amt = flt(row.amt_allocated || 0);
 					total_qty += flt(row.qty);
 					total_amt += row_amt;
@@ -1448,6 +1494,32 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <td class="amount-col" style="font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
                     </tr>
                 `);
+			}
+
+			// Restore/Update Month Table active sort icon in DOM
+			if (page.summary_sort) {
+				let th = card.find(`#consolidated_table .sortable-header[data-field="${page.summary_sort.field}"]`);
+				if (th.length > 0) {
+					card.find("#consolidated_table .sortable-header i")
+						.removeClass("fa-sort-asc fa-sort-desc")
+						.addClass("fa-sort text-muted");
+					th.find("i")
+						.removeClass("fa-sort text-muted")
+						.addClass(page.summary_sort.asc ? "fa-sort-asc" : "fa-sort-desc");
+				}
+			}
+
+			// Restore/Update Detailed Invoice Table active sort icon in DOM
+			if (page.detail_sort) {
+				let th = card.find(`#invoice_list_table .sortable-header[data-field="${page.detail_sort.field}"]`);
+				if (th.length > 0) {
+					card.find("#invoice_list_table .sortable-header i")
+						.removeClass("fa-sort-asc fa-sort-desc")
+						.addClass("fa-sort text-muted");
+					th.find("i")
+						.removeClass("fa-sort text-muted")
+						.addClass(page.detail_sort.asc ? "fa-sort-asc" : "fa-sort-desc");
+				}
 			}
 		};
 
@@ -1599,6 +1671,33 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		// Attach handlers to the localized buttons in table headers
 		page.container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		page.container.on("click", "#export_invoice_table", () => export_to_excel("detail"));
+
+		// Attach sorting event listeners using event delegation
+		page.container.off("click", "#consolidated_table .sortable-header");
+		page.container.on("click", "#consolidated_table .sortable-header", function () {
+			const field = $(this).data("field");
+			page.summary_sort = page.summary_sort || { field: "total", asc: false };
+			if (page.summary_sort.field === field) {
+				page.summary_sort.asc = !page.summary_sort.asc;
+			} else {
+				page.summary_sort.field = field;
+				page.summary_sort.asc = true;
+			}
+			apply_local_filters();
+		});
+
+		page.container.off("click", "#invoice_list_table .sortable-header");
+		page.container.on("click", "#invoice_list_table .sortable-header", function () {
+			const field = $(this).data("field");
+			page.detail_sort = page.detail_sort || { field: "invoice_date", asc: false };
+			if (page.detail_sort.field === field) {
+				page.detail_sort.asc = !page.detail_sort.asc;
+			} else {
+				page.detail_sort.field = field;
+				page.detail_sort.asc = true;
+			}
+			apply_local_filters();
+		});
 
 
 		// 3. Force-remove default duplicates (be specific to avoid hiding our own menu)
