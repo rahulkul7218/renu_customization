@@ -1,7 +1,7 @@
 frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Supplier Performance Dashboard "),
+		title: __("Supplier Performance Dashboard"),
 		single_column: true,
 	});
 

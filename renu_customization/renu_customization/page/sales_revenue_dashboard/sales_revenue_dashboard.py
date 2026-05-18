@@ -493,6 +493,7 @@ def export_to_excel(filters=None, export_type="all"):
         for c in range(1, 5):
             ws_months.cell(row=row_idx, column=c).fill = header_fill
             ws_months.cell(row=row_idx, column=c).border = table_border
+        ws_months.cell(row=row_idx, column=1).alignment = Alignment(horizontal="right")
         
         col_idx = 5
         m_totals_net = {}
@@ -557,6 +558,7 @@ def export_to_excel(filters=None, export_type="all"):
         for c in range(1, 5):
             ws_months.cell(row=row_idx, column=c).fill = header_fill
             ws_months.cell(row=row_idx, column=c).border = table_border
+        ws_months.cell(row=row_idx, column=1).alignment = Alignment(horizontal="right")
             
         col_idx = 5
         for m_key in sorted_months:
