@@ -650,47 +650,6 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				</div>
 
 
-				<div class="page-break"></div>
-				<h3 class="section-title">Detailed Collection List</h3>
-				<table>
-					<thead>
-						<tr>
-							<th width="15%">Payment ID</th>
-							<th width="15%">Voucher</th>
-							<th width="10%">Date</th>
-							<th width="10%">Due Date</th>
-							<th width="8%" class="text-center">Diff</th>
-							<th width="18%">Customer</th>
-							<th width="12%">Sales Person</th>
-							<th width="12%" class="text-right">Amount (M)</th>
-						</tr>
-					</thead>
-					<tbody>
-						${data.results
-							.map(
-								(row) => `
-							<tr>
-								<td class="bold">${row.payment_entry}</td>
-								<td style="color: #64748b;">${row.name}</td>
-								<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
-								<td>${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
-								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days || 0}</td>
-								<td>${row.customer}</td>
-								<td>${row.sales_person || "-"}</td>
-								<td class="text-right bold">${format_million(row.allocated_amount)}</td>
-							</tr>
-						`,
-							)
-							.join("")}
-					</tbody>
-					<tfoot>
-						<tr style="background: #f8fafc; font-weight: bold;">
-							<td colspan="7" class="text-right">GRAND TOTAL</td>
-							<td class="text-right">${format_million(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
-						</tr>
-					</tfoot>
-				</table>
-
 				${
 					data.due_results && data.due_results.length > 0
 						? `
@@ -735,6 +694,47 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				`
 						: ""
 				}
+
+				<div class="page-break"></div>
+				<h3 class="section-title">Detailed Collection List</h3>
+				<table>
+					<thead>
+						<tr>
+							<th width="15%">Payment ID</th>
+							<th width="15%">Voucher</th>
+							<th width="10%">Date</th>
+							<th width="10%">Due Date</th>
+							<th width="8%" class="text-center">Diff</th>
+							<th width="18%">Customer</th>
+							<th width="12%">Sales Person</th>
+							<th width="12%" class="text-right">Amount (M)</th>
+						</tr>
+					</thead>
+					<tbody>
+						${data.results
+							.map(
+								(row) => `
+							<tr>
+								<td class="bold">${row.payment_entry}</td>
+								<td style="color: #64748b;">${row.name}</td>
+								<td>${frappe.datetime.str_to_user(row.posting_date)}</td>
+								<td>${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+								<td class="text-center ${row.due_days > 0 ? "bold" : ""}" style="${row.due_days > 0 ? "color: #ef4444;" : ""}">${row.due_days || 0}</td>
+								<td>${row.customer}</td>
+								<td>${row.sales_person || "-"}</td>
+								<td class="text-right bold">${format_million(row.allocated_amount)}</td>
+							</tr>
+						`,
+							)
+							.join("")}
+					</tbody>
+					<tfoot>
+						<tr style="background: #f8fafc; font-weight: bold;">
+							<td colspan="7" class="text-right">GRAND TOTAL</td>
+							<td class="text-right">${format_million(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
+						</tr>
+					</tfoot>
+				</table>
 				
 				<div style="margin-top: 30px; font-size: 8px; color: #94a3b8; text-align: center;">
 					Printed on: ${frappe.datetime.now_datetime()} | renu_customization - Collection Analysis Report
