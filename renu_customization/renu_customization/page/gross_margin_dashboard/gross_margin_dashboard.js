@@ -499,16 +499,16 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table" id="consolidated_table">
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
-                                <th style="min-width: 180px;">Customer</th>
-                                <th style="min-width: 130px;">Sales Person</th>
-                                <th style="min-width: 200px;">Product</th>
-                                ${months.map((m) => `<th class="month-col">${m.key}</th>`).join("")}
-                                <th class="text-right sticky-right-2">Total Margin (M)</th>
-                                <th class="text-right sticky-right-1">Margin %</th>
+                                <th class="sortable-header" data-table="month" data-field="cust" style="min-width: 180px; cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="month" data-field="sp" style="min-width: 130px; cursor: pointer; user-select: none;">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="month" data-field="prod" style="min-width: 200px; cursor: pointer; user-select: none;">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${months.map((m) => `<th class="month-col sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="text-right sticky-right-2 sortable-header" data-table="month" data-field="total" style="cursor: pointer; user-select: none;">Total Margin (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="text-right sticky-right-1 sortable-header" data-table="month" data-field="pct" style="cursor: pointer; user-select: none;">Margin % <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="consolidated_table_body"></tbody>
@@ -517,40 +517,73 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
             </div>
         `).appendTo(tables_container);
 
-		const render_table = (results) => {
-			let tbody = card.find("#consolidated_table_body");
-			tbody.empty();
-			let merged = {};
-			results.forEach((r) => {
-				let key = (r.sales_person || "-") + "|" + (r.customer_name || "-") + "|" + r.item_code;
-				if (!merged[key])
-					merged[key] = {
-						sp: r.sales_person,
-						cust: r.customer_name,
-						prod_code: r.item_code,
-						prod_name: r.item_name,
-						months: {},
-						total: 0,
-						total_rev: 0,
-					};
-				let m_key = moment(r.invoice_date).format("MMM YYYY");
-				merged[key].months[m_key] = (merged[key].months[m_key] || 0) + flt(r.margin);
-				merged[key].total += flt(r.margin);
-				merged[key].total_rev += flt(r.base_amount);
+		let merged = {};
+		data.results.forEach((r) => {
+			let key = (r.sales_person || "-") + "|" + (r.customer_name || "-") + "|" + r.item_code;
+			if (!merged[key])
+				merged[key] = {
+					sp: r.sales_person,
+					cust: r.customer_name,
+					prod_code: r.item_code,
+					prod_name: r.item_name,
+					months: {},
+					total: 0,
+					total_rev: 0,
+				};
+			let date = r.invoice_date || r.posting_date;
+			let m_key = moment(date).format("MMM YYYY");
+			merged[key].months[m_key] = (merged[key].months[m_key] || 0) + flt(r.margin);
+			merged[key].total += flt(r.margin);
+			merged[key].total_rev += flt(r.base_amount);
+		});
+
+		// State variables for sorting
+		let month_sort = { field: "total", asc: false };
+		let detail_sort = { field: "invoice_date", asc: false };
+
+		const render_table = () => {
+			let sorted_data = Object.values(merged);
+			sorted_data.sort((a, b) => {
+				let val_a, val_b;
+				if (month_sort.field === "cust") {
+					val_a = a.cust || "";
+					val_b = b.cust || "";
+					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (month_sort.field === "sp") {
+					val_a = a.sp || "";
+					val_b = b.sp || "";
+					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (month_sort.field === "prod") {
+					val_a = a.prod_code || "";
+					val_b = b.prod_code || "";
+					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (month_sort.field === "total") {
+					val_a = flt(a.total);
+					val_b = flt(b.total);
+				} else if (month_sort.field === "pct") {
+					let pct_a = (a.total / a.total_rev) * 100 || 0;
+					let pct_b = (b.total / b.total_rev) * 100 || 0;
+					val_a = pct_a;
+					val_b = pct_b;
+				} else {
+					val_a = flt(a.months[month_sort.field]);
+					val_b = flt(b.months[month_sort.field]);
+				}
+				return month_sort.asc ? val_a - val_b : val_b - val_a;
 			});
 
-			Object.values(merged)
-				.sort((a, b) => b.total - a.total)
-				.slice(0, 100)
-				.forEach((r, i) => {
-					let cells = months
-						.map(
-							(m) =>
-								`<td class="month-col">${format_currency_short(r.months[m.key] || 0)}</td>`,
-						)
-						.join("");
-					let pct = (r.total / r.total_rev) * 100 || 0;
-					tbody.append(`
+			let tbody = card.find("#consolidated_table_body");
+			tbody.empty();
+
+			sorted_data.slice(0, 100).forEach((r, i) => {
+				let cells = months
+					.map(
+						(m) =>
+							`<td class="month-col">${format_currency_short(r.months[m.key] || 0)}</td>`,
+					)
+					.join("");
+				let pct = (r.total / r.total_rev) * 100 || 0;
+				tbody.append(`
                     <tr>
                         <td class="text-center">${i + 1}</td><td class="customer-col">${r.cust || "-"}</td><td>${r.sp || "-"}</td><td class="item-col">
                             <div style="line-height: 1.4;">
@@ -563,8 +596,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         <td class="text-right sticky-right-1"><span class="indicator-pill ${pct > 20 ? "green" : pct < 5 ? "red" : ""}">${pct.toFixed(2)}%</span></td>
                     </tr>
                 `);
-				});
+			});
 
+			// Remove any previous grand total row before adding
+			tbody.find(".sticky-total").remove();
 			let grand_total_row = `<tr class="sticky-total">
                 <td colspan="4" class="text-right">GRAND TOTAL</td>
                 ${months.map((m) => `<td class="month-col">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
@@ -574,7 +609,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			tbody.append(grand_total_row);
 		};
 
-		render_table(data.results);
+		render_table();
 
 		// Detailed List Table
 		let detail_card = $(`
@@ -586,60 +621,142 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table" id="detail_table">
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
-                                <th style="min-width: 120px;">Invoice ID</th>
-                                <th style="min-width: 110px;">Date</th>
-                                <th style="min-width: 180px;">Customer</th>
-                                <th style="min-width: 150px;">Product</th>
-                                <th class="text-right" style="min-width: 80px;">Qty</th>
-                                <th class="data-col">Revenue (M)</th>
-                                <th class="data-col">Cost of Goods (M)</th>
-                                <th class="data-col">Margin (M)</th>
-                                <th class="data-col" style="min-width: 100px;">Margin %</th>
+                                <th class="sortable-header" data-table="detail" data-field="invoice_id" style="min-width: 120px; cursor: pointer; user-select: none;">Invoice ID <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="invoice_date" style="min-width: 110px; cursor: pointer; user-select: none;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="customer_name" style="min-width: 180px; cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="item_code" style="min-width: 150px; cursor: pointer; user-select: none;">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="text-right sortable-header" data-table="detail" data-field="qty" style="min-width: 80px; cursor: pointer; user-select: none;">Qty <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="data-col sortable-header" data-table="detail" data-field="base_amount" style="cursor: pointer; user-select: none;">Revenue (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="data-col sortable-header" data-table="detail" data-field="cogs" style="cursor: pointer; user-select: none;">Cost of Goods (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="data-col sortable-header" data-table="detail" data-field="margin" style="cursor: pointer; user-select: none;">Margin (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="data-col sortable-header" data-table="detail" data-field="margin_pct" style="min-width: 100px; cursor: pointer; user-select: none;">Margin % <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
-                        <tbody id="detail_table_body">
-                            ${data.results
-								.map(
-									(r, i) => `
-                                <tr>
-                                    <td class="text-center">${i + 1}</td>
-                                    <td class="invoice-col">${r.invoice_id || "-"}</td>
-                                    <td class="date-col">${frappe.datetime.str_to_user(r.invoice_date) || "-"}</td>
-                                    <td class="customer-col">${r.customer_name || "-"}</td>
-                                    <td class="item-col">
-                                        <div style="line-height: 1.4;">
-                                            <div style="font-size: 11px; color: #64748b; font-weight: 500;">${r.item_code || "-"}</div>
-                                            <div style="font-weight: 600; color: #1e293b;">${r.item_name || "-"}</div>
-                                        </div>
-                                    </td>
-                                    <td class="text-right">${flt(r.qty).toFixed(2)}</td>
-                                    <td class="data-col">${format_currency_short(r.base_amount)}</td>
-                                    <td class="data-col">${format_currency_short(r.cogs)}</td>
-                                    <td class="data-col font-weight-bold">${format_currency_short(r.margin)}</td>
-                                    <td class="data-col">${flt(r.margin_pct).toFixed(2)}%</td>
-                                </tr>
-                            `,
-								)
-								.join("")}
-                        </tbody>
-                        <tfoot>
-                            <tr class="sticky-total">
-                                <td colspan="5" class="text-right">GRAND TOTAL</td>
-                                <td class="text-right">${data.results.reduce((sum, r) => sum + flt(r.qty), 0).toFixed(2)}</td>
-                                <td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
-                                <td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>
-                                <td class="data-col font-weight-bold">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.margin), 0))}</td>
-                                <td class="data-col">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0)) * 100 : 0).toFixed(2)}%</td>
-                            </tr>
-                        </tfoot>
+                        <tbody id="detail_table_body"></tbody>
+                        <tfoot></tfoot>
                     </table>
                 </div>
             </div>
         `).appendTo(page.container);
+
+		const render_detail_table = () => {
+			let sorted_data = [...(data.results || [])];
+			sorted_data.sort((a, b) => {
+				let val_a, val_b;
+				if (detail_sort.field === "invoice_id" || detail_sort.field === "customer_name") {
+					val_a = a[detail_sort.field] || "";
+					val_b = b[detail_sort.field] || "";
+					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detail_sort.field === "item_code") {
+					val_a = a.item_code || "";
+					val_b = b.item_code || "";
+					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detail_sort.field === "invoice_date") {
+					val_a = a.invoice_date ? new Date(a.invoice_date) : new Date(0);
+					val_b = b.invoice_date ? new Date(b.invoice_date) : new Date(0);
+				} else {
+					val_a = flt(a[detail_sort.field]);
+					val_b = flt(b[detail_sort.field]);
+				}
+				return detail_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			let tbody_detail = detail_card.find("#detail_table_body");
+			tbody_detail.empty();
+
+			sorted_data.forEach((r, i) => {
+				tbody_detail.append(`
+					<tr>
+						<td class="text-center">${i + 1}</td>
+						<td class="invoice-col">${r.invoice_id || "-"}</td>
+						<td class="date-col">${frappe.datetime.str_to_user(r.invoice_date) || "-"}</td>
+						<td class="customer-col">${r.customer_name || "-"}</td>
+						<td class="item-col">
+							<div style="line-height: 1.4;">
+								<div style="font-size: 11px; color: #64748b; font-weight: 500;">${r.item_code || "-"}</div>
+								<div style="font-weight: 600; color: #1e293b;">${r.item_name || "-"}</div>
+							</div>
+						</td>
+						<td class="text-right">${flt(r.qty).toFixed(2)}</td>
+						<td class="data-col">${format_currency_short(r.base_amount)}</td>
+						<td class="data-col">${format_currency_short(r.cogs)}</td>
+						<td class="data-col font-weight-bold">${format_currency_short(r.margin)}</td>
+						<td class="data-col">${flt(r.margin_pct).toFixed(2)}%</td>
+					</tr>
+				`);
+			});
+
+			let tfoot_detail = detail_card.find("tfoot");
+			tfoot_detail.empty();
+			tfoot_detail.append(`
+				<tr class="sticky-total">
+					<td colspan="5" class="text-right">GRAND TOTAL</td>
+					<td class="text-right">${data.results.reduce((sum, r) => sum + flt(r.qty), 0).toFixed(2)}</td>
+					<td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
+					<td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>
+					<td class="data-col font-weight-bold">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.margin), 0))}</td>
+					<td class="data-col">${(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0) ? (data.results.reduce((sum, r) => sum + flt(r.margin), 0) / data.results.reduce((sum, r) => sum + flt(r.base_amount), 0)) * 100 : 0).toFixed(2)}%</td>
+				</tr>
+			`);
+		};
+
+		render_detail_table();
+
+		// Header clicks for real-time sort toggling
+		page.container.on("click", ".sortable-header", function () {
+			const table_type = $(this).data("table");
+			const field = $(this).data("field");
+
+			if (table_type === "month") {
+				if (month_sort.field === field) {
+					month_sort.asc = !month_sort.asc;
+				} else {
+					month_sort.field = field;
+					month_sort.asc = true;
+				}
+
+				// Reset icons
+				card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
+
+				// Update active
+				if (month_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+
+				render_table();
+			} else if (table_type === "detail") {
+				if (detail_sort.field === field) {
+					detail_sort.asc = !detail_sort.asc;
+				} else {
+					detail_sort.field = field;
+					detail_sort.asc = true;
+				}
+
+				// Reset icons
+				detail_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				detail_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
+
+				// Update active
+				if (detail_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+
+				render_detail_table();
+			}
+		});
 
 		// Export handlers
 		const export_to_excel = (export_type = "all") => {

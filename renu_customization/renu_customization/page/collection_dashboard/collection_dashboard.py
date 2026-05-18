@@ -102,14 +102,13 @@ def get_dashboard_data(filters=None):
         SELECT 
             gle.name as gle_id, gle.voucher_no as payment_entry, gle.voucher_type, gle.posting_date, gle.party as customer,
             gle.credit as allocated_amount, gle.against_voucher as name,
-            COALESCE(si.is_export, so.is_export, 0) as is_export,
-            COALESCE(si.is_domestic, so.is_domestic, 1) as is_domestic,
-            COALESCE(si.status, so.status, 'Settled') as status,
-            COALESCE(si.due_date, so.delivery_date) as due_date,
-            DATEDIFF(gle.posting_date, COALESCE(si.due_date, so.delivery_date)) as due_days
+            COALESCE(si.is_export, 0) as is_export,
+            COALESCE(si.is_domestic, 1) as is_domestic,
+            COALESCE(si.status, 'Settled') as status,
+            si.due_date as due_date,
+            DATEDIFF(gle.posting_date, si.due_date) as due_days
         FROM `tabGL Entry` gle
         LEFT JOIN `tabSales Invoice` si ON si.name = gle.against_voucher
-        LEFT JOIN `tabSales Order` so ON so.name = gle.against_voucher
         WHERE {" AND ".join(period_conditions)} AND gle.credit > 0.01
     """
     
@@ -120,8 +119,8 @@ def get_dashboard_data(filters=None):
         )"""
     
     if filters.get("dom_exp"):
-        if filters.get("dom_exp") == "Domestic": results_query += " AND COALESCE(si.is_domestic, so.is_domestic, 1) = 1"
-        elif filters.get("dom_exp") == "Export": results_query += " AND COALESCE(si.is_export, so.is_export, 0) = 1"
+        if filters.get("dom_exp") == "Domestic": results_query += " AND COALESCE(si.is_domestic, 1) = 1"
+        elif filters.get("dom_exp") == "Export": results_query += " AND COALESCE(si.is_export, 0) = 1"
 
     results_query += " ORDER BY gle.posting_date DESC, gle.name DESC"
     data = frappe.db.sql(results_query, as_dict=True)
@@ -150,26 +149,20 @@ def get_dashboard_data(filters=None):
     domestic_collection = sum(flt(d.allocated_amount) for d in data if d.is_domestic)
     total_collection = sum(flt(d.allocated_amount) for d in data)
 
-    # 4. Due in 15 Days (Invoices + Orders with Balance)
+    # 4. Due in 15 Days (Invoices with Balance)
     # Sales Invoices
     due_si_cond = ["si.docstatus = 1", "si.status NOT IN ('Paid', 'Cancelled', 'Draft')", "si.due_date >= CURDATE()", "si.due_date <= DATE_ADD(CURDATE(), INTERVAL 15 DAY)", "si.outstanding_amount > 0.01"]
+    if filters.get("customer"):
+        due_si_cond.append(f"si.customer = {frappe.db.escape(str(filters.get('customer')))}")
+    if filters.get("sales_person"):
+        due_si_cond.append(f"EXISTS (SELECT 1 FROM `tabSales Team` st WHERE st.parent = si.name AND st.sales_person = {frappe.db.escape(str(filters.get('sales_person')))})")
     if filters.get("dom_exp"):
         if filters.get("dom_exp") == "Domestic": due_si_cond.append("si.is_domestic = 1")
         elif filters.get("dom_exp") == "Export": due_si_cond.append("si.is_export = 1")
     
     due_si = frappe.db.sql(f"SELECT 'Sales Invoice' as doctype, si.name, si.customer, si.posting_date, si.due_date, si.outstanding_amount, si.base_grand_total as base_net_total, DATEDIFF(si.due_date, CURDATE()) as due_days FROM `tabSales Invoice` si WHERE {' AND '.join(due_si_cond)}", as_dict=True)
     
-    # Sales Orders (Advance Due / Remaining)
-    due_so_cond = ["so.docstatus = 1", "so.status NOT IN ('Completed', 'Cancelled', 'Closed')", "so.delivery_date >= CURDATE()", "so.delivery_date <= DATE_ADD(CURDATE(), INTERVAL 15 DAY)", "(so.grand_total - so.advance_paid) > 0.01"]
-    if filters.get("customer"): due_so_cond.append(f"so.customer = {frappe.db.escape(str(filters.get('customer')))}")
-    if filters.get("sales_person"): due_so_cond.append(f"EXISTS (SELECT 1 FROM `tabSales Team` st WHERE st.parent = so.name AND st.sales_person = {frappe.db.escape(str(filters.get('sales_person')))})")
-    if filters.get("dom_exp"):
-        if filters.get("dom_exp") == "Domestic": due_so_cond.append("so.is_domestic = 1")
-        elif filters.get("dom_exp") == "Export": due_so_cond.append("so.is_export = 1")
-    
-    due_so = frappe.db.sql(f"SELECT 'Sales Order' as doctype, so.name, so.customer, so.transaction_date as posting_date, so.delivery_date as due_date, (so.grand_total - so.advance_paid) as outstanding_amount, so.base_grand_total as base_net_total, DATEDIFF(so.delivery_date, CURDATE()) as due_days FROM `tabSales Order` so WHERE {' AND '.join(due_so_cond)}", as_dict=True)
-    
-    due_results = due_si + due_so
+    due_results = due_si
     due_results.sort(key=lambda x: x['due_date'])
     due_amount = sum(flt(d.outstanding_amount) for d in due_results)
     
@@ -181,47 +174,8 @@ def get_dashboard_data(filters=None):
         for s in dst: dsm.setdefault(s.parent, []).append(s.sales_person)
         for d in due_results: d.sales_person = ", ".join(dsm.get(d.name, []))
 
-    # 5. Customer-wise Summary (Trial Balance Parity)
-    customer_summary_query = f"""
-        SELECT 
-            gle.party as customer,
-            SUM(CASE WHEN (gle.posting_date < {frappe.db.escape(filters.get("from_date") or '0000-00-00')} OR gle.is_opening = 1) THEN gle.debit ELSE 0 END) as opening_debit,
-            SUM(CASE WHEN (gle.posting_date < {frappe.db.escape(filters.get("from_date") or '0000-00-00')} OR gle.is_opening = 1) THEN gle.credit ELSE 0 END) as opening_credit,
-            SUM(CASE WHEN (gle.posting_date >= {frappe.db.escape(filters.get("from_date") or '0000-00-00')} AND gle.posting_date <= {frappe.db.escape(filters.get("to_date") or '9999-12-31')} AND gle.is_opening = 0) THEN gle.debit ELSE 0 END) as period_debit,
-            SUM(CASE WHEN (gle.posting_date >= {frappe.db.escape(filters.get("from_date") or '0000-00-00')} AND gle.posting_date <= {frappe.db.escape(filters.get("to_date") or '9999-12-31')} AND gle.is_opening = 0) THEN gle.credit ELSE 0 END) as period_credit
-        FROM `tabGL Entry` gle
-        WHERE {" AND ".join(gle_conditions)}
-        GROUP BY gle.party
-    """
-    customer_raw = frappe.db.sql(customer_summary_query, as_dict=True)
+    # 5. Customer-wise Summary (Removed as requested)
     customer_summary = []
-    for c in customer_raw:
-        op_dr = flt(c.opening_debit)
-        op_cr = flt(c.opening_credit)
-        
-        # Net Opening
-        net_op = op_dr - op_cr
-        opening_dr = net_op if net_op > 0 else 0
-        opening_cr = abs(net_op) if net_op < 0 else 0
-
-        debit = flt(c.period_debit)
-        credit = flt(c.period_credit)
-        
-        # Net Closing
-        net_cl = net_op + debit - credit
-        closing_dr = net_cl if net_cl > 0 else 0
-        closing_cr = abs(net_cl) if net_cl < 0 else 0
-        
-        if abs(net_op) > 0.01 or abs(debit) > 0.01 or abs(credit) > 0.01:
-            customer_summary.append({
-                "customer": c.customer,
-                "opening_dr": opening_dr,
-                "opening_cr": opening_cr,
-                "debit": debit,
-                "credit": credit,
-                "closing_dr": closing_dr,
-                "closing_cr": closing_cr
-            })
 
     summary = [
         {"label": _("TOTAL Collection"), "value": total_collection, "indicator": "Blue"},
@@ -291,55 +245,6 @@ def export_to_excel(filters=None, export_type="all"):
             cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
 
-    if export_type in ["all", "summary"]:
-        ws_sum = wb.active if export_type == "summary" else wb.create_sheet("Customer Summary")
-        ws_sum.title = "Customer Summary"
-        row_idx = 1
-        ws_sum.cell(row=row_idx, column=1, value="Customer Summary (Million INR)").font = section_font
-        row_idx += 2
-        
-        headers = ["S.No.", "Customer", "Opening (Dr)", "Opening (Cr)", "Credit (Collection)", "Closing (Dr)", "Closing (Cr)"]
-        for idx, h in enumerate(headers, start=1):
-            cell = ws_sum.cell(row=row_idx, column=idx, value=h)
-            cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
-        row_idx += 1
-        
-        for r_idx, row in enumerate(customer_summary):
-            row_f = zebra_fill if r_idx % 2 != 0 else None
-            cells = [
-                ws_sum.cell(row=row_idx, column=1, value=r_idx + 1),
-                ws_sum.cell(row=row_idx, column=2, value=row['customer']),
-                ws_sum.cell(row=row_idx, column=3, value=row['opening_dr'] / 1000000),
-                ws_sum.cell(row=row_idx, column=4, value=row['opening_cr'] / 1000000),
-                ws_sum.cell(row=row_idx, column=5, value=row['credit'] / 1000000),
-                ws_sum.cell(row=row_idx, column=6, value=row['closing_dr'] / 1000000),
-                ws_sum.cell(row=row_idx, column=7, value=row['closing_cr'] / 1000000)
-            ]
-            for c_idx, c in enumerate(cells, start=1):
-                c.border = table_border
-                if row_f: c.fill = row_f
-                if c_idx >= 3:
-                    c.number_format = num_format
-                    c.alignment = Alignment(horizontal="right")
-            row_idx += 1
-
-        # Add Total Row for Summary
-        total_open_dr = sum(flt(r.get('opening_dr')) for r in customer_summary) / 1000000
-        total_open_cr = sum(flt(r.get('opening_cr')) for r in customer_summary) / 1000000
-        total_credit = sum(flt(r.get('credit')) for r in customer_summary) / 1000000
-        total_close_dr = sum(flt(r.get('closing_dr')) for r in customer_summary) / 1000000
-        total_close_cr = sum(flt(r.get('closing_cr')) for r in customer_summary) / 1000000
-
-        ws_sum.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-        ws_sum.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=2)
-        for c in range(1, 8):
-            ws_sum.cell(row=row_idx, column=c).fill = header_fill
-            ws_sum.cell(row=row_idx, column=c).border = table_border
-        
-        summary_totals = [total_open_dr, total_open_cr, total_credit, total_close_dr, total_close_cr]
-        for idx, val in enumerate(summary_totals, start=3):
-            cell = ws_sum.cell(row=row_idx, column=idx, value=val)
-            cell.font, cell.number_format, cell.alignment = header_font, num_format, Alignment(horizontal="right")
 
     if export_type in ["all", "detail"]:
         ws_list = wb.active if export_type == "detail" else wb.create_sheet("Collection List")
