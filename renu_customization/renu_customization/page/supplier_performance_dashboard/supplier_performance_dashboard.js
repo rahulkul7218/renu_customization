@@ -571,13 +571,13 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table month-table">
+                    <table class="dashboard-table month-table" id="po_month_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-supplier">Supplier</th>
-                                ${months.map((m) => `<th class="col-amt">${m.key}</th>`).join("")}
-                                <th class="col-amt" style="position: sticky; right: 0; background: var(--bg-color); z-index: 60; text-align: right;">Total (Net)</th>
+                                <th class="col-supplier sortable-header" data-table="month" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${months.map((m) => `<th class="col-amt sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="col-amt sortable-header" data-table="month" data-field="total" style="position: sticky; right: 0; background: var(--bg-color); z-index: 60; text-align: right; cursor: pointer; user-select: none;">Total (Net) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="po_month_body"></tbody>
@@ -594,28 +594,29 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table" id="po_list_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-po">PO No</th>
-                                <th class="col-supplier">Supplier</th>
-                                <th class="col-date">PO Date</th>
-                                <th class="col-date">Expected Del.</th>
-                                <th class="col-date">Actual Delivery</th>
-                                <th class="col-days">Due Days</th>
-                                <th class="col-status">Status</th>
-                                <th class="col-amt">Net Total</th>
+                                <th class="col-po sortable-header" data-table="po" data-field="name" style="cursor: pointer; user-select: none;">PO No <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="po" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="po" data-field="transaction_date" style="cursor: pointer; user-select: none;">PO Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="po" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Del. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="po" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">Actual Delivery <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-days sortable-header" data-table="po" data-field="due_days" style="cursor: pointer; user-select: none;">Due Days <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="po" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="po" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="po_list_body"></tbody>
+                        <tfoot id="po_list_tfoot"></tfoot>
                     </table>
                 </div>
             </div>
         `).appendTo(tables_container);
 
 		let tbody_month = tables_container.find("#po_month_body");
-		tbody_month.empty();
+		let tbody_list = tables_container.find("#po_list_body");
 
 		let merged_data = {};
 		data.results.forEach((row) => {
@@ -632,94 +633,191 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 			merged_data[supp].total += amt;
 		});
 
-		let summary_list = Object.values(merged_data).sort((a, b) => b.total - a.total);
-		let total_month_amts = {};
-		let g_total_net = 0;
+		// State variables for sorting
+		let month_sort = { field: "total", asc: false };
+		let po_sort = { field: "transaction_date", asc: false };
 
-		if (summary_list.length === 0) {
-			tbody_month.append(
-				`<tr><td colspan="${3 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
-			);
-		} else {
-			summary_list.forEach((row, idx) => {
-				g_total_net += row.total;
-				let cells = months
-					.map((m) => {
-						let val = row.months[m.key] || 0;
-						total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
-						return `<td class="col-amt" style="text-align: right;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
-					})
-					.join("");
+		const render_month_table = () => {
+			let sorted_data = Object.values(merged_data);
+			sorted_data.sort((a, b) => {
+				let val_a, val_b;
+				if (month_sort.field === "supplier") {
+					val_a = a.supp || "";
+					val_b = b.supp || "";
+					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (month_sort.field === "total") {
+					val_a = flt(a.total);
+					val_b = flt(b.total);
+				} else {
+					val_a = flt(a.months[month_sort.field]);
+					val_b = flt(b.months[month_sort.field]);
+				}
+				return month_sort.asc ? val_a - val_b : val_b - val_a;
+			});
 
-				tbody_month.append(`
+			tbody_month.empty();
+			let total_month_amts = {};
+			let g_total_net = 0;
+
+			if (sorted_data.length === 0) {
+				tbody_month.append(
+					`<tr><td colspan="${3 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
+				);
+			} else {
+				sorted_data.forEach((row, idx) => {
+					g_total_net += row.total;
+					let cells = months
+						.map((m) => {
+							let val = row.months[m.key] || 0;
+							total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
+							return `<td class="col-amt" style="text-align: right;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
+						})
+						.join("");
+
+					tbody_month.append(`
+						<tr>
+							<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
+							<td class="col-supplier" style="font-weight: 600; color: #0f172a;">${row.supp}</td>
+							${cells}
+							<td class="col-amt" style="position: sticky; right: 0; background: var(--bg-color); font-weight: 700; color: var(--primary); text-align: right; border-left: 1px solid var(--border-color);">₹ ${(row.total / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+						</tr>
+					`);
+				});
+
+				let footer_month = tables_container.find("#po_month_tfoot");
+				footer_month.empty();
+				footer_month.append(`
+					<tr class="sticky-total">
+						<td class="col-sno" style="background: #f1f3f5 !important; border-top: 2px solid #ddd;">-</td>
+						<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px; background: #f1f3f5 !important; border-top: 2px solid #ddd;">GRAND TOTAL</td>
+						${months
+							.map((m) => {
+								let val = total_month_amts[m.key] || 0;
+								return `<td class="col-amt" style="text-align: right; background: #f1f3f5 !important; border-top: 2px solid #ddd;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
+							})
+							.join("")}
+						<td class="col-amt" style="position: sticky; right: 0; background: var(--control-bg) !important; z-index: 80; text-align: right; border-left: 1px solid var(--border-color); border-top: 2px solid var(--border-color); font-weight: 800;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+					</tr>
+				`);
+			}
+		};
+
+		const render_po_table = () => {
+			let sorted_data = [...(data.results || [])];
+			sorted_data.sort((a, b) => {
+				let val_a = a[po_sort.field];
+				let val_b = b[po_sort.field];
+				
+				if (po_sort.field === "name" || po_sort.field === "supplier" || po_sort.field === "status") {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return po_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (po_sort.field === "transaction_date" || po_sort.field === "schedule_date" || po_sort.field === "actual_delivery_time") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return po_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			tbody_list.empty();
+			let total_amt = 0;
+
+			sorted_data.forEach((row, idx) => {
+				let status_color = "gray";
+				if (["Completed", "Closed"].includes(row.status)) status_color = "green";
+				if (["Draft"].includes(row.status)) status_color = "blue";
+				if (["To Receive", "To Bill", "To Receive and Bill"].includes(row.status))
+					status_color = "orange";
+				if (["Cancelled"].includes(row.status)) status_color = "red";
+
+				let amt = flt(row.net_total);
+				total_amt += amt;
+
+				tbody_list.append(`
 					<tr>
 						<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
-						<td class="col-supplier" style="font-weight: 600; color: #0f172a;">${row.supp}</td>
-						${cells}
-						<td class="col-amt" style="position: sticky; right: 0; background: var(--bg-color); font-weight: 700; color: var(--primary); text-align: right; border-left: 1px solid var(--border-color);">₹ ${(row.total / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+						<td class="col-po"><a href="/app/purchase-order/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
+						<td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
+						<td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
+						<td class="col-days">
+							${row.due_days !== "-" ? `<span class="indicator-pill ${row.due_days > 0 ? "red" : "gray"}">${row.due_days} Days</span>` : "-"}
+						</td>
+						<td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
+						<td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
 					</tr>
 				`);
 			});
 
-			let footer_month = tables_container.find("#po_month_tfoot");
-			footer_month.empty();
-			footer_month.append(`
+			let tfoot_list = tables_container.find("#po_list_tfoot");
+			tfoot_list.empty();
+			tfoot_list.append(`
 				<tr class="sticky-total">
-					<td class="col-sno" style="background: #f1f3f5 !important; border-top: 2px solid #ddd;">-</td>
-					<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px; background: #f1f3f5 !important; border-top: 2px solid #ddd;">GRAND TOTAL</td>
-					${months
-						.map((m) => {
-							let val = total_month_amts[m.key] || 0;
-							return `<td class="col-amt" style="text-align: right; background: #f1f3f5 !important; border-top: 2px solid #ddd;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
-						})
-						.join("")}
-					<td class="col-amt" style="position: sticky; right: 0; background: var(--control-bg) !important; z-index: 80; text-align: right; border-left: 1px solid var(--border-color); border-top: 2px solid var(--border-color); font-weight: 800;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+					<td colspan="8" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
+					<td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid var(--border-color);">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
 				</tr>
 			`);
-		}
+		};
 
-		let tbody_list = tables_container.find("#po_list_body");
-		tbody_list.empty();
+		// Initial render of tables
+		render_month_table();
+		render_po_table();
 
-		let total_amt = 0;
-
-		data.results.forEach((row, idx) => {
-			let status_color = "gray";
-			if (["Completed", "Closed"].includes(row.status)) status_color = "green";
-			if (["Draft"].includes(row.status)) status_color = "blue";
-			if (["To Receive", "To Bill", "To Receive and Bill"].includes(row.status))
-				status_color = "orange";
-			if (["Cancelled"].includes(row.status)) status_color = "red";
-
-			let amt = flt(row.net_total);
-			total_amt += amt;
-
-			tbody_list.append(`
-                <tr>
-                    <td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
-                    <td class="col-po"><a href="/app/purchase-order/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-                    <td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
-                    <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
-                    <td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
-                    <td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
-                    <td class="col-days">
-                        ${row.due_days !== "-" ? `<span class="indicator-pill ${row.due_days > 0 ? "red" : "gray"}">${row.due_days} Days</span>` : "-"}
-                    </td>
-                    <td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
-                    <td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-                </tr>
-            `);
+		// Header clicks for real-time sort toggling
+		page.container.on("click", ".sortable-header", function () {
+			const table_type = $(this).data("table");
+			const field = $(this).data("field");
+			
+			if (table_type === "month") {
+				if (month_sort.field === field) {
+					month_sort.asc = !month_sort.asc;
+				} else {
+					month_sort.field = field;
+					month_sort.asc = true;
+				}
+				
+				// Reset icons
+				tables_container.find("#po_month_table .sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				tables_container.find("#po_month_table .sortable-header").removeClass("sorted-asc sorted-desc");
+				
+				// Update active
+				if (month_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+				
+				render_month_table();
+			} else if (table_type === "po") {
+				if (po_sort.field === field) {
+					po_sort.asc = !po_sort.asc;
+				} else {
+					po_sort.field = field;
+					po_sort.asc = true;
+				}
+				
+				// Reset icons
+				tables_container.find("#po_list_table .sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				tables_container.find("#po_list_table .sortable-header").removeClass("sorted-asc sorted-desc");
+				
+				// Update active
+				if (po_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+				
+				render_po_table();
+			}
 		});
-
-		let tfoot_list = $('<tfoot id="po_list_tfoot"></tfoot>').appendTo(
-			tables_html.find(".dashboard-table"),
-		);
-		tfoot_list.append(`
-            <tr class="sticky-total">
-                <td colspan="8" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
-                <td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid var(--border-color);">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-            </tr>
-        `);
 
 		const export_to_excel = (export_type = "all") => {
 			let filters = page.filter_group.get_values();

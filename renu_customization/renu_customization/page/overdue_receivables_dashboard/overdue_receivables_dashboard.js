@@ -702,6 +702,8 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
 			});
 		}, 100);
 
+		let detail_sort = { field: "days", asc: false };
+
 		let table_card = $(`
             <div class="table-card">
                 <div class="header">
@@ -711,68 +713,124 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
                     </div>
                 </div>
                 <div class="table-container">
-                    <table class="dashboard-table">
+                    <table class="dashboard-table" id="detail_table">
                         <thead>
                             <tr>
-                                <th class="invoice-col">${__("Invoice ID")}</th>
-                                <th class="date-col">${__("Date")}</th>
-                                <th class="customer-col">${__("Customer")}</th>
-                                <th class="sp-col">${__("Sales Person")}</th>
-                                <th class="type-col">${__("Type")}</th>
-                                <th class="amount-col">${__("Outstanding (M)")}</th>
-                                <th class="date-col text-right">${__("Due Date")}</th>
-                                <th class="overdue-col">${__("Days")}</th>
+                                <th class="invoice-col sortable-header" data-field="name" style="cursor: pointer; user-select: none;">${__("Invoice ID")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="date-col sortable-header" data-field="posting_date" style="cursor: pointer; user-select: none;">${__("Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="customer-col sortable-header" data-field="customer" style="cursor: pointer; user-select: none;">${__("Customer")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sp-col sortable-header" data-field="sales_person" style="cursor: pointer; user-select: none;">${__("Sales Person")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="type-col sortable-header" data-field="type" style="cursor: pointer; user-select: none;">${__("Type")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="amount-col sortable-header" data-field="outstanding" style="cursor: pointer; user-select: none;">${__("Outstanding (M)")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="date-col text-right sortable-header" data-field="due_date" style="cursor: pointer; user-select: none;">${__("Due Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="overdue-col sortable-header" data-field="days" style="cursor: pointer; user-select: none;">${__("Days")} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody id="detail_table_body"></tbody>
                         <tfoot></tfoot>
                     </table>
                 </div>
             </div>
         `).appendTo(page.container);
 
-		let tbody = table_card.find("tbody");
-		let total_outstanding_raw = 0;
-		data.results.forEach((row) => {
-			total_outstanding_raw += flt(row.outstanding_amount);
-
-			let display_name = row.name;
-			let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
-
-			if (row.outstanding_amount < 0 && (row.name === __("On Account") || row.voucher_type === "Payment Entry")) {
-				display_name = row.name === __("On Account") ? __("On Account Advance") : row.name;
-				if (row.voucher_type === "Payment Entry") {
-					link_url = `/app/payment-entry/${row.name}`;
+		const render_detail_table = () => {
+			let sorted_data = [...(data.results || [])];
+			sorted_data.sort((a, b) => {
+				let val_a, val_b;
+				if (detail_sort.field === "name" || detail_sort.field === "sales_person" || detail_sort.field === "type") {
+					val_a = a[detail_sort.field] || "";
+					val_b = b[detail_sort.field] || "";
+					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detail_sort.field === "customer") {
+					val_a = a.customer_name || a.customer || "";
+					val_b = b.customer_name || b.customer || "";
+					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detail_sort.field === "posting_date") {
+					val_a = a.posting_date ? new Date(a.posting_date) : new Date(0);
+					val_b = b.posting_date ? new Date(b.posting_date) : new Date(0);
+				} else if (detail_sort.field === "due_date") {
+					val_a = a.due_date ? new Date(a.due_date) : new Date(0);
+					val_b = b.due_date ? new Date(b.due_date) : new Date(0);
+				} else if (detail_sort.field === "outstanding") {
+					val_a = flt(a.outstanding_amount);
+					val_b = flt(b.outstanding_amount);
+				} else if (detail_sort.field === "days") {
+					val_a = flt(a.days_overdue);
+					val_b = flt(b.days_overdue);
 				}
+				return detail_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			let tbody = table_card.find("#detail_table_body");
+			tbody.empty();
+
+			let total_outstanding_raw = 0;
+			sorted_data.forEach((row) => {
+				total_outstanding_raw += flt(row.outstanding_amount);
+
+				let display_name = row.name;
+				let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
+
+				if (row.outstanding_amount < 0 && (row.name === __("On Account") || row.voucher_type === "Payment Entry")) {
+					display_name = row.name === __("On Account") ? __("On Account Advance") : row.name;
+					if (row.voucher_type === "Payment Entry") {
+						link_url = `/app/payment-entry/${row.name}`;
+					}
+				}
+
+				tbody.append(`
+					<tr>
+						<td class="invoice-col"><a href="${link_url}" style="font-weight: 600; color: #4338ca;">${display_name}</a></td>
+						<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
+						<td class="customer-col" style="font-weight: 500;">${row.customer_name || row.customer}</td>
+						<td class="sp-col">${row.sales_person || "-"}</td>
+						<td class="type-col">
+							<span class="indicator-pill ${row.type}">${__(row.type)}</span>
+						</td>
+						<td class="amount-col" style="font-weight: 700; color: #0f172a;">${format_currency(row.outstanding_amount)}</td>
+						<td class="date-col text-right">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+						<td class="overdue-col overdue-days">${row.days_overdue || 0}</td>
+					</tr>
+				`);
+			});
+
+			// Format the total from the raw sum
+			let total_display = format_currency(total_outstanding_raw);
+
+			let tfoot = table_card.find("tfoot");
+			tfoot.empty();
+			tfoot.append(`
+				<tr class="sticky-total">
+					<td colspan="5" class="text-left" style="padding-left: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
+					<td class="amount-col" style="color: #0f172a; font-weight: 800;">${total_display}</td>
+					<td colspan="2"></td>
+				</tr>
+			`);
+		};
+
+		render_detail_table();
+
+		table_card.find(".sortable-header").on("click", function () {
+			const field = $(this).data("field");
+			if (detail_sort.field === field) {
+				detail_sort.asc = !detail_sort.asc;
+			} else {
+				detail_sort.field = field;
+				detail_sort.asc = true;
 			}
 
-			$(`
-				<tr>
-					<td class="invoice-col"><a href="${link_url}" style="font-weight: 600; color: #4338ca;">${display_name}</a></td>
-					<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
-					<td class="customer-col" style="font-weight: 500;">${row.customer_name || row.customer}</td>
-					<td class="sp-col">${row.sales_person || "-"}</td>
-                    <td class="type-col">
-                        <span class="indicator-pill ${row.type}">${__(row.type)}</span>
-                    </td>
-					<td class="amount-col" style="font-weight: 700; color: #0f172a;">${format_currency(row.outstanding_amount)}</td>
-					<td class="date-col text-right">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
-					<td class="overdue-col overdue-days">${row.days_overdue || 0}</td>
-				</tr>
-			`).appendTo(tbody);
+			// Reset icons
+			table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+
+			// Update active icon
+			if (detail_sort.asc) {
+				$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+			} else {
+				$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+			}
+
+			render_detail_table();
 		});
-
-		// Format the total from the raw sum
-		let total_display = format_currency(total_outstanding_raw);
-
-		let tfoot = table_card.find("tfoot");
-		$(`
-            <tr class="sticky-total">
-                <td colspan="5" class="text-left" style="padding-left: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
-                <td class="amount-col" style="color: #0f172a; font-weight: 800;">${total_display}</td>
-                <td colspan="2"></td>
-            </tr>
-        `).appendTo(tfoot);
 
 		table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
 	}
