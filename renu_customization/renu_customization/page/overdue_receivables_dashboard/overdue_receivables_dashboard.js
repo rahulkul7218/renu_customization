@@ -1,7 +1,7 @@
-frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
+frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Overdue Receivables"),
+		title: __("Overdue Receivables Dashboard"),
 		single_column: true,
 	});
 
@@ -13,7 +13,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		frappe.show_alert({ message: __("Generating Excel Report..."), indicator: "blue" });
 
 		frappe.call({
-			method: "renu_customization.renu_customization.page.overdue_receivables.overdue_receivables.export_to_excel",
+			method: "renu_customization.renu_customization.page.overdue_receivables_dashboard.overdue_receivables_dashboard.export_to_excel",
 			args: { filters: filters, export_type: export_type },
 			callback: function (r) {
 				if (r.message) {
@@ -219,7 +219,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
         `;
 
 		const method_url =
-			"/api/method/renu_customization.renu_customization.page.overdue_receivables.overdue_receivables.export_to_pdf";
+			"/api/method/renu_customization.renu_customization.page.overdue_receivables_dashboard.overdue_receivables_dashboard.export_to_pdf";
 		const $form =
 			$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
             <input type="hidden" name="html" value="">
@@ -405,7 +405,7 @@ frappe.pages["overdue_receivables"].on_page_load = function (wrapper) {
 		let filters = page.filter_group.get_values();
 
 		frappe.call({
-			method: "renu_customization.renu_customization.page.overdue_receivables.overdue_receivables.get_dashboard_data",
+			method: "renu_customization.renu_customization.page.overdue_receivables_dashboard.overdue_receivables_dashboard.get_dashboard_data",
 			args: { filters: filters },
 			callback: function (r) {
 				if (r.message) {

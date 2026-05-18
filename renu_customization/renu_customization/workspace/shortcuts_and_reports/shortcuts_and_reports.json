@@ -50,7 +50,7 @@
    "color": "Grey",
    "doc_view": "List",
    "label": "Overdue Receivables Dashboard",
-   "link_to": "overdue_receivables",
+   "link_to": "overdue_receivables_dashboard",
    "type": "Page"
   },
   {
