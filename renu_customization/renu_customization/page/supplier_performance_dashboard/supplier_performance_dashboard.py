@@ -106,10 +106,10 @@ def get_dashboard_data(filters=None):
     total_pos = 0
     total_amount = 0
     total_overdue = 0
-    total_due_next_week = 0
+    total_due_next_15_days = 0
     
     today = getdate(nowdate())
-    next_week = add_days(today, 7)
+    next_15_days = add_days(today, 15)
     
     for row in report_data:
         po_name = row.get("purchase_order")
@@ -137,7 +137,7 @@ def get_dashboard_data(filters=None):
             continue
 
         is_overdue = False
-        due_next_week_flag = False
+        due_next_15_days_flag = False
         
         row["due_days"] = 0
         if row.get("schedule_date") and row.get("status") not in ["Completed", "Closed", "Cancelled", "Closed - Billed"]:
@@ -145,25 +145,26 @@ def get_dashboard_data(filters=None):
             row["due_days"] = (today - po_date).days
             if po_date < today:
                 is_overdue = True
-            elif today <= po_date <= next_week:
-                due_next_week_flag = True
+            elif today <= po_date <= next_15_days:
+                due_next_15_days_flag = True
         else:
             row["due_days"] = "-"
                 
         row["is_overdue"] = is_overdue
+        row["is_due_next_15_days"] = due_next_15_days_flag
         
         if filters.get("is_overdue") and not is_overdue:
             continue
             
-        if filters.get("due_next_week") and not due_next_week_flag:
+        if filters.get("due_next_15_days") and not due_next_15_days_flag:
             continue
             
         total_pos += 1
         total_amount += flt(row.get("net_total"))
         if is_overdue:
             total_overdue += flt(row.get("net_total"))
-        if due_next_week_flag:
-            total_due_next_week += flt(row.get("net_total"))
+        if due_next_15_days_flag:
+            total_due_next_15_days += flt(row.get("net_total"))
             
         results.append(row)
 
@@ -173,7 +174,7 @@ def get_dashboard_data(filters=None):
         {"label": _("Total Orders"), "value": total_pos, "indicator": "blue", "fieldtype": "Int"},
         {"label": _("Total Net Amount"), "value": total_amount, "indicator": "green", "fieldtype": "Currency"},
         {"label": _("Overdue Amount"), "value": total_overdue, "indicator": "red", "fieldtype": "Currency"},
-        {"label": _("Due Next Week"), "value": total_due_next_week, "indicator": "orange", "fieldtype": "Currency"}
+        {"label": _("Due Next 15 Days"), "value": total_due_next_15_days, "indicator": "orange", "fieldtype": "Currency"}
     ]
 
     supplier_totals = {}
