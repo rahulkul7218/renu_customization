@@ -231,7 +231,7 @@ def get_dashboard_data(filters=None):
         # 3. Aggregate KPI Values (Excludes Drafts usually, following existing pattern)
         d_e = row.get("dom_exp")
         cg = (row.get("customer_group") or "").lower()
-        is_cp = any(x in cg for x in ["system integrator", "distributor", "distributer"])
+        is_cp = any(x in cg for x in ["system integrator", "distributor", "partner", "reseller"])
         
         if status not in ("Cancelled", "Draft"):
             booked_rev += net_booked # Using Net for Booked Rev KPI
@@ -276,13 +276,18 @@ def get_dashboard_data(filters=None):
     pending_so_ids = set()
     delivered_so_ids = set()
     overdue_so_ids = set()
+    cp_so_ids = set()
 
     for row in data:
         status = row.get("status")
         so_id = row.get("so_no")
+        cg = (row.get("customer_group") or "").lower()
+        is_cp = any(x in cg for x in ["system integrator", "distributor", "partner", "reseller"])
         
         if status not in ("Cancelled", "Draft") and so_id:
             booked_so_ids.add(so_id)
+            if is_cp:
+                cp_so_ids.add(so_id)
             
             # Pending check
             balance = row.get("pending_value", 0)
@@ -307,6 +312,7 @@ def get_dashboard_data(filters=None):
         {"label": _("Total Delivered"), "value": delivered_rev, "count": len(delivered_so_ids), "indicator": "cyan", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Total Pending"), "value": balance_rev, "count": len(pending_so_ids), "indicator": "orange", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Total Overdue"), "value": overdue_rev, "count": len(overdue_so_ids), "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
+        {"label": _("Channel Partner"), "value": cp_active_rev, "count": len(cp_so_ids), "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
     ]
     
 
