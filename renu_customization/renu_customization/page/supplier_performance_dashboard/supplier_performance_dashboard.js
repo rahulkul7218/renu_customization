@@ -105,8 +105,8 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 			fieldtype: "Check",
 		},
 		{
-			fieldname: "due_next_week",
-			label: __("Due in Next Week"),
+			fieldname: "due_next_15_days",
+			label: __("Due in Next 15 Days"),
 			fieldtype: "Check",
 		},
 	];
@@ -588,6 +588,31 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
             <div class="table-card" style="margin-top: 32px;">
                 <div class="header">
+                    <span style="font-size: 15px;">${__("Due Next 15 Days")}</span>
+                </div>
+                <div class="table-container">
+                    <table class="dashboard-table" id="po_due_15_table">
+                        <thead>
+                            <tr>
+                                <th class="col-sno">S.No.</th>
+                                <th class="col-po sortable-header" data-table="due_15" data-field="name" style="cursor: pointer; user-select: none;">PO No <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="due_15" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due_15" data-field="transaction_date" style="cursor: pointer; user-select: none;">PO Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due_15" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Del. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due_15" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">Actual Delivery <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-days sortable-header" data-table="due_15" data-field="due_days" style="cursor: pointer; user-select: none;">Due Days <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="due_15" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="due_15" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="po_due_15_body"></tbody>
+                        <tfoot id="po_due_15_tfoot"></tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <div class="table-card" style="margin-top: 32px;">
+                <div class="header">
                     <span style="font-size: 15px;">${__("Supplier Orders")}</span>
                     <div class="table-actions">
                         <span class="export-btn" id="export_list_table"><i class="fa fa-file-excel-o"></i> Export to Excel</span>
@@ -617,6 +642,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
 		let tbody_month = tables_container.find("#po_month_body");
 		let tbody_list = tables_container.find("#po_list_body");
+		let tbody_due_15 = tables_container.find("#po_due_15_body");
 
 		let merged_data = {};
 		data.results.forEach((row) => {
@@ -636,6 +662,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		// State variables for sorting
 		let month_sort = { field: "total", asc: false };
 		let po_sort = { field: "transaction_date", asc: false };
+		let due_15_sort = { field: "transaction_date", asc: false };
 
 		const render_month_table = () => {
 			let sorted_data = Object.values(merged_data);
@@ -702,6 +729,70 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 			}
 		};
 
+		const render_due_15_table = () => {
+			let sorted_data = (data.results || []).filter(r => r.is_due_next_15_days);
+			sorted_data.sort((a, b) => {
+				let val_a = a[due_15_sort.field];
+				let val_b = b[due_15_sort.field];
+				
+				if (due_15_sort.field === "name" || due_15_sort.field === "supplier" || due_15_sort.field === "status") {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return due_15_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (due_15_sort.field === "transaction_date" || due_15_sort.field === "schedule_date" || due_15_sort.field === "actual_delivery_time") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return due_15_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			tbody_due_15.empty();
+			let total_amt = 0;
+
+			if (sorted_data.length === 0) {
+				tbody_due_15.append(`<tr><td colspan="9" class="text-center text-muted" style="padding: 40px;">No orders due in next 15 days</td></tr>`);
+			} else {
+				sorted_data.forEach((row, idx) => {
+					let status_color = "gray";
+					if (["Completed", "Closed"].includes(row.status)) status_color = "green";
+					if (["Draft"].includes(row.status)) status_color = "blue";
+					if (["To Receive", "To Bill", "To Receive and Bill"].includes(row.status)) status_color = "orange";
+					if (["Cancelled"].includes(row.status)) status_color = "red";
+
+					let amt = flt(row.net_total);
+					total_amt += amt;
+
+					tbody_due_15.append(`
+						<tr>
+							<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
+							<td class="col-po"><a href="/app/purchase-order/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
+							<td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
+							<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
+							<td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
+							<td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
+							<td class="col-days">
+								${row.due_days !== "-" ? `<span class="indicator-pill ${row.due_days > 0 ? "red" : "gray"}">${row.due_days} Days</span>` : "-"}
+							</td>
+							<td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
+							<td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+						</tr>
+					`);
+				});
+			}
+
+			let tfoot_due_15 = tables_container.find("#po_due_15_tfoot");
+			tfoot_due_15.empty();
+			tfoot_due_15.append(`
+				<tr class="sticky-total">
+					<td colspan="8" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
+					<td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid var(--border-color);">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+				</tr>
+			`);
+		};
+
 		const render_po_table = () => {
 			let sorted_data = [...(data.results || [])];
 			sorted_data.sort((a, b) => {
@@ -765,6 +856,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
 		// Initial render of tables
 		render_month_table();
+		render_due_15_table();
 		render_po_table();
 
 		// Header clicks for real-time sort toggling
@@ -794,6 +886,28 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				}
 				
 				render_month_table();
+			} else if (table_type === "due_15") {
+				if (due_15_sort.field === field) {
+					due_15_sort.asc = !due_15_sort.asc;
+				} else {
+					due_15_sort.field = field;
+					due_15_sort.asc = true;
+				}
+				
+				// Reset icons
+				tables_container.find("#po_due_15_table .sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				tables_container.find("#po_due_15_table .sortable-header").removeClass("sorted-asc sorted-desc");
+				
+				// Update active
+				if (due_15_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+				
+				render_due_15_table();
 			} else if (table_type === "po") {
 				if (po_sort.field === field) {
 					po_sort.asc = !po_sort.asc;
