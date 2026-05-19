@@ -336,22 +336,19 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .indicator-pill.green { background: #dcfce7; color: #166534; }
         .indicator-pill.red { background: #fee2e2; color: #991b1b; }
         
-        .sticky-right-1 { position: sticky; right: 0; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 100px; min-width: 100px; }
-        .sticky-right-2 { position: sticky; right: 100px; z-index: 5; background: #f8f9fa !important; border-left: 1px solid #ddd; width: 130px; min-width: 130px; }
         .month-col { min-width: 90px; width: 90px; white-space: nowrap !important; text-align: right !important; }
         .data-col { min-width: 120px; white-space: nowrap !important; text-align: right !important; }
         .date-col { min-width: 120px !important; width: 120px !important; white-space: nowrap !important; }
         .dashboard-table th.month-col, .dashboard-table th.data-col { background: #f8f9fa !important; }
-        
-        /* Sticky Primary Columns */
-        .dashboard-table th:nth-child(1), .dashboard-table td:nth-child(1) { position: sticky; left: 0; z-index: 3; background: #fff !important; }
-        .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { position: sticky; left: 40px; z-index: 3; background: #fff !important; }
-        
-        .dashboard-table th:nth-child(1), .dashboard-table th:nth-child(2) { z-index: 11; background: #f1f3f5 !important; }
-        .dashboard-table td:nth-child(1), .dashboard-table td:nth-child(2) { border-right: 1px solid #eee; }
-        
-        /* Sticky Total Footer */
-        tr.sticky-total td { 
+
+        /* Sticky Customer Column only */
+        .gm-s2 { position: sticky; left: 0; z-index: 4; background: var(--card-bg, #fff); box-shadow: 3px 0 6px rgba(0,0,0,0.07); }
+        th.gm-s2 { z-index: 11; background: #f1f3f5 !important; }
+        .sticky-total .gm-s2 { z-index: 12; background: #f1f3f5 !important; }
+
+        /* Sticky Total Footer - sticks to bottom of the scrollable table-container */
+        .table-container { overflow: auto; position: relative; }
+        tfoot tr.sticky-total td, tbody tr.sticky-total td { 
             position: sticky; 
             bottom: 0; 
             z-index: 9; 
@@ -521,12 +518,14 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
-                                <th class="sortable-header" data-table="month" data-field="cust" style="min-width: 180px; cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="gm-s2 sortable-header" data-table="month" data-field="cust" style="min-width: 180px; cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="month" data-field="cust_group" style="min-width: 150px; cursor: pointer; user-select: none;">Customer Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="sortable-header" data-table="month" data-field="sp" style="min-width: 130px; cursor: pointer; user-select: none;">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="sortable-header" data-table="month" data-field="prod" style="min-width: 200px; cursor: pointer; user-select: none;">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="month" data-field="item_group" style="min-width: 150px; cursor: pointer; user-select: none;">Item Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 ${months.map((m) => `<th class="month-col sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
-                                <th class="text-right sticky-right-2 sortable-header" data-table="month" data-field="total" style="cursor: pointer; user-select: none;">Total Margin (M) <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="text-right sticky-right-1 sortable-header" data-table="month" data-field="pct" style="cursor: pointer; user-select: none;">Margin % <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="text-right sortable-header" data-table="month" data-field="total" style="min-width: 130px; cursor: pointer; user-select: none;">Total Margin (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="text-right sortable-header" data-table="month" data-field="pct" style="min-width: 100px; cursor: pointer; user-select: none;">Margin % <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="consolidated_table_body"></tbody>
@@ -542,8 +541,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 				merged[key] = {
 					sp: r.sales_person,
 					cust: r.customer_name,
+					cust_group: r.customer_group || "-",
 					prod_code: r.item_code,
 					prod_name: r.item_name,
+					item_group: r.item_group || "-",
 					months: {},
 					total: 0,
 					total_rev: 0,
@@ -592,7 +593,6 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
 			let tbody = card.find("#consolidated_table_body");
 			tbody.empty();
-
 			sorted_data.slice(0, 100).forEach((r, i) => {
 				let cells = months
 					.map(
@@ -603,15 +603,20 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 				let pct = (r.total / r.total_rev) * 100 || 0;
 				tbody.append(`
                     <tr>
-                        <td class="text-center">${i + 1}</td><td class="customer-col">${r.cust || "-"}</td><td>${r.sp || "-"}</td><td class="item-col">
+                        <td class="text-center">${i + 1}</td>
+                        <td class="gm-s2 customer-col" style="font-weight: 500;">${r.cust || "-"}</td>
+                        <td class="customer-group-col" style="min-width: 150px;">${r.cust_group || "-"}</td>
+                        <td>${r.sp || "-"}</td>
+                        <td class="item-col">
                             <div style="line-height: 1.4;">
                                 <div style="font-size: 11px; color: #64748b; font-weight: 500;">${r.prod_code || "-"}</div>
                                 <div style="font-weight: 600; color: #1e293b;">${r.prod_name || "-"}</div>
                             </div>
                         </td>
+                        <td class="item-group-col" style="min-width: 150px;">${r.item_group || "-"}</td>
                         ${cells}
-                        <td class="text-right font-weight-bold sticky-right-2">${format_currency_short(r.total)}</td>
-                        <td class="text-right sticky-right-1"><span class="indicator-pill ${pct > 20 ? "green" : pct < 5 ? "red" : ""}">${pct.toFixed(2)}%</span></td>
+                        <td class="text-right font-weight-bold" style="min-width: 130px;">${format_currency_short(r.total)}</td>
+                        <td class="text-right" style="min-width: 100px;"><span class="indicator-pill ${pct > 20 ? "green" : pct < 5 ? "red" : ""}"> ${pct.toFixed(2)}%</span></td>
                     </tr>
                 `);
 			});
@@ -619,10 +624,15 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			// Remove any previous grand total row before adding
 			tbody.find(".sticky-total").remove();
 			let grand_total_row = `<tr class="sticky-total">
-                <td colspan="4" class="text-right">GRAND TOTAL</td>
+                <td></td>
+                <td class="gm-s2" style="text-align: left; padding-left: 10px; font-weight: 800;">GRAND TOTAL</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
                 ${months.map((m) => `<td class="month-col">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + (r.months[m.key] || 0), 0))}</td>`).join("")}
-                <td class="text-right sticky-right-2">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + r.total, 0))}</td>
-                <td class="text-right sticky-right-1"></td>
+                <td class="text-right font-weight-bold" style="min-width: 130px;">${format_currency_short(Object.values(merged).reduce((sum, r) => sum + r.total, 0))}</td>
+                <td class="text-right" style="min-width: 100px;"></td>
             </tr>`;
 			tbody.append(grand_total_row);
 		};
@@ -645,8 +655,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                                 <th style="width: 40px; text-align: center;">S.No.</th>
                                 <th class="sortable-header" data-table="detail" data-field="invoice_id" style="min-width: 120px; cursor: pointer; user-select: none;">Invoice ID <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="sortable-header" data-table="detail" data-field="invoice_date" style="min-width: 110px; cursor: pointer; user-select: none;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="sortable-header" data-table="detail" data-field="customer_name" style="min-width: 180px; cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="customer_name" style="min-width: 180px; cursor: pointer; user-select: none; position: sticky; left: 0; z-index: 3; background: var(--card-bg, #fff); box-shadow: 2px 0 5px rgba(0,0,0,0.06);">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="customer_group" style="min-width: 150px; cursor: pointer; user-select: none;">Customer Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="sortable-header" data-table="detail" data-field="item_code" style="min-width: 150px; cursor: pointer; user-select: none;">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="sortable-header" data-table="detail" data-field="item_group" style="min-width: 150px; cursor: pointer; user-select: none;">Item Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="text-right sortable-header" data-table="detail" data-field="qty" style="min-width: 80px; cursor: pointer; user-select: none;">Qty <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="data-col sortable-header" data-table="detail" data-field="base_amount" style="cursor: pointer; user-select: none;">Revenue (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="data-col sortable-header" data-table="detail" data-field="cogs" style="cursor: pointer; user-select: none;">Cost of Goods (M) <i class="fa fa-sort text-muted ml-1"></i></th>
@@ -692,13 +704,15 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						<td class="text-center">${i + 1}</td>
 						<td class="invoice-col">${r.invoice_id || "-"}</td>
 						<td class="date-col">${frappe.datetime.str_to_user(r.invoice_date) || "-"}</td>
-						<td class="customer-col">${r.customer_name || "-"}</td>
+						<td class="customer-col" style="position: sticky; left: 0; background: var(--card-bg, #fff); z-index: 2; box-shadow: 2px 0 5px rgba(0,0,0,0.06); font-weight: 500;">${r.customer_name || "-"}</td>
+						<td class="customer-group-col" style="min-width: 150px;">${r.customer_group || "-"}</td>
 						<td class="item-col">
 							<div style="line-height: 1.4;">
 								<div style="font-size: 11px; color: #64748b; font-weight: 500;">${r.item_code || "-"}</div>
 								<div style="font-weight: 600; color: #1e293b;">${r.item_name || "-"}</div>
 							</div>
 						</td>
+						<td class="item-group-col" style="min-width: 150px;">${r.item_group || "-"}</td>
 						<td class="text-right">${flt(r.qty).toFixed(2)}</td>
 						<td class="data-col">${format_currency_short(r.base_amount)}</td>
 						<td class="data-col">${format_currency_short(r.cogs)}</td>
@@ -712,7 +726,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			tfoot_detail.empty();
 			tfoot_detail.append(`
 				<tr class="sticky-total">
-					<td colspan="5" class="text-right">GRAND TOTAL</td>
+					<td></td>
+					<td></td>
+					<td></td>
+					<td class="gm-s2" style="font-weight: 800; text-align: left; padding-left: 10px;">GRAND TOTAL</td>
+					<td></td>
+					<td></td>
+					<td></td>
 					<td class="text-right">${data.results.reduce((sum, r) => sum + flt(r.qty), 0).toFixed(2)}</td>
 					<td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.base_amount), 0))}</td>
 					<td class="data-col">${format_currency_short(data.results.reduce((sum, r) => sum + flt(r.cogs), 0))}</td>

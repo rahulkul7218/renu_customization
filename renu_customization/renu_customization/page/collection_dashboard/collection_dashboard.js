@@ -266,6 +266,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                             <option value="due_date_asc">${__("Due Date: Oldest")}</option>
                             <option value="customer_asc">${__("Customer: A-Z")}</option>
                             <option value="customer_desc">${__("Customer: Z-A")}</option>
+                            <option value="customer_group_asc">${__("Customer Group: A-Z")}</option>
+                            <option value="customer_group_desc">${__("Customer Group: Z-A")}</option>
                             <option value="sales_person_asc">${__("Sales Person: A-Z")}</option>
                             <option value="sales_person_desc">${__("Sales Person: Z-A")}</option>
                         </select>
@@ -283,6 +285,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="due_date">${__("Due Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 100px; text-align: center; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="due_days">${__("Days Left")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 350px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="customer">${__("Customer")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 150px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="customer_group">${__("Customer Group")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 200px; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="sales_person">${__("Sales Person")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 150px; text-align: right; cursor: pointer; user-select: none;" class="sortable-header" data-table="due" data-field="outstanding_amount">${__("Outstanding")} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
@@ -302,9 +305,10 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			// 1. Filter
 			let filtered = (data.due_results || []).filter(row => {
 				const customer = (row.customer || "").toLowerCase();
+				const customer_group = (row.customer_group || "").toLowerCase();
 				const sales_person = (row.sales_person || "").toLowerCase();
 				const doc_id = (row.name || "").toLowerCase();
-				return customer.includes(search_val) || sales_person.includes(search_val) || doc_id.includes(search_val);
+				return customer.includes(search_val) || customer_group.includes(search_val) || sales_person.includes(search_val) || doc_id.includes(search_val);
 			});
 
 			// 2. Sort
@@ -315,6 +319,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				if (sort_val === "amount_asc") return flt(a.outstanding_amount) - flt(b.outstanding_amount);
 				if (sort_val === "customer_asc") return (a.customer || "").localeCompare(b.customer || "");
 				if (sort_val === "customer_desc") return (b.customer || "").localeCompare(a.customer || "");
+				if (sort_val === "customer_group_asc") return (a.customer_group || "").localeCompare(b.customer_group || "");
+				if (sort_val === "customer_group_desc") return (b.customer_group || "").localeCompare(a.customer_group || "");
 				if (sort_val === "sales_person_asc") return (a.sales_person || "").localeCompare(b.sales_person || "");
 				if (sort_val === "sales_person_desc") return (b.sales_person || "").localeCompare(a.sales_person || "");
 				if (sort_val === "name_asc") return (a.name || "").localeCompare(b.name || "");
@@ -340,6 +346,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						<td style="white-space: nowrap;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
 						<td style="text-align: center;"><span class="indicator-pill ${row.due_days <= 3 ? "Export" : "Domestic"}">${row.due_days || 0}</span></td>
 						<td style="white-space: normal;">${row.customer || "-"}</td>
+						<td style="white-space: normal;">${row.customer_group || "-"}</td>
 						<td style="white-space: nowrap;">${row.sales_person || "-"}</td>
 						<td style="text-align: right; font-weight: 700;">${format_million(row.outstanding_amount)}</td>
 					</tr>
@@ -347,7 +354,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			});
 
 			if (filtered.length === 0) {
-				$(`<tr><td colspan="7" class="text-center text-muted" style="padding: 20px;">No matching upcoming payments due</td></tr>`).appendTo(due_tbody);
+				$(`<tr><td colspan="8" class="text-center text-muted" style="padding: 20px;">No matching upcoming payments due</td></tr>`).appendTo(due_tbody);
 			}
 
 			// Add Total Footer for Due Table
@@ -355,7 +362,13 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			$(`
 				<tfoot>
 					<tr class="sticky-total">
-						<td colspan="6" style="text-align: right; padding-right: 20px;">TOTAL DUE</td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td style="font-weight: 800; text-align: left; padding-left: 10px; letter-spacing: 0.03em;">TOTAL DUE</td>
+						<td></td>
+						<td></td>
 						<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_due_amt)}</td>
 					</tr>
 				</tfoot>
@@ -407,6 +420,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="due_date">${__("Due Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 100px; text-align: center; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="due_days">${__("Days Diff")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 350px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="customer">${__("Customer")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 150px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="customer_group">${__("Customer Group")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 200px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="sales_person">${__("Sales Person")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 150px; text-align: right; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="allocated_amount">${__("Amount")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 120px; text-align: center; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="type">${__("Type")} <i class="fa fa-sort text-muted ml-1"></i></th>
@@ -427,11 +441,12 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			// 1. Filter
 			let filtered = (data.results || []).filter(row => {
 				const customer = (row.customer || "").toLowerCase();
+				const customer_group = (row.customer_group || "").toLowerCase();
 				const sales_person = (row.sales_person || "").toLowerCase();
 				const payment_id = (row.payment_entry || "").toLowerCase();
 				const voucher = (row.name || "").toLowerCase();
 				const type_label = (row.is_export ? "Export" : "Domestic").toLowerCase();
-				return customer.includes(search_val) || sales_person.includes(search_val) || payment_id.includes(search_val) || voucher.includes(search_val) || type_label.includes(search_val);
+				return customer.includes(search_val) || customer_group.includes(search_val) || sales_person.includes(search_val) || payment_id.includes(search_val) || voucher.includes(search_val) || type_label.includes(search_val);
 			});
 
 			// 2. Sort
@@ -489,6 +504,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						<td style="white-space: nowrap; color: #64748b;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
 						<td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days || 0}</span></td>
 						<td style="white-space: normal; min-width: 250px;">${row.customer || "-"}</td>
+						<td style="white-space: normal;">${row.customer_group || "-"}</td>
 						<td style="white-space: nowrap;">${row.sales_person || "-"}</td>
 						<td style="text-align: right; font-weight: 700; white-space: nowrap;">${format_million(row.allocated_amount)}</td>
 						<td style="text-align: center;"><span class="indicator-pill ${type_label}">${__(type_label)}</span></td>
@@ -497,7 +513,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			});
 
 			if (filtered.length === 0) {
-				$(`<tr><td colspan="9" class="text-center text-muted" style="padding: 20px;">No matching detailed collection entries</td></tr>`).appendTo(tbody);
+				$(`<tr><td colspan="10" class="text-center text-muted" style="padding: 20px;">No matching detailed collection entries</td></tr>`).appendTo(tbody);
 			}
 
 			// Grand Total Footer
@@ -505,7 +521,14 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			$(`
 				<tfoot>
 					<tr class="sticky-total">
-						<td colspan="7" style="text-align: right; padding-right: 20px;">GRAND TOTAL</td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td style="font-weight: 800; text-align: left; padding-left: 10px; letter-spacing: 0.03em;">GRAND TOTAL</td>
+						<td></td>
+						<td></td>
 						<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_amt)}</td>
 						<td></td>
 					</tr>
@@ -535,6 +558,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				if (field === "due_days") new_sort_val = current_asc ? "due_days_desc" : "due_days_asc";
 				else if (field === "outstanding_amount") new_sort_val = current_asc ? "amount_desc" : "amount_asc";
 				else if (field === "customer") new_sort_val = current_asc ? "customer_desc" : "customer_asc";
+				else if (field === "customer_group") new_sort_val = current_asc ? "customer_group_desc" : "customer_group_asc";
 				else if (field === "sales_person") new_sort_val = current_asc ? "sales_person_desc" : "sales_person_asc";
 				else if (field === "name") new_sort_val = current_asc ? "name_desc" : "name_asc";
 				else if (field === "posting_date") new_sort_val = current_asc ? "posting_date_desc" : "posting_date_asc";
@@ -547,6 +571,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				if (field === "posting_date") new_sort_val = current_asc ? "date_desc" : "date_asc";
 				else if (field === "allocated_amount") new_sort_val = current_asc ? "amount_desc" : "amount_asc";
 				else if (field === "customer") new_sort_val = current_asc ? "customer_desc" : "customer_asc";
+				else if (field === "customer_group") new_sort_val = current_asc ? "customer_group_desc" : "customer_group_asc";
 				else if (field === "sales_person") new_sort_val = current_asc ? "sales_person_desc" : "sales_person_asc";
 				else if (field === "due_days") new_sort_val = current_asc ? "due_days_desc" : "due_days_asc";
 				else if (field === "due_date") new_sort_val = current_asc ? "due_date_desc" : "due_date_asc";

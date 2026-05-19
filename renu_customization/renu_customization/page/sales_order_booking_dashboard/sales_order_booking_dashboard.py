@@ -73,9 +73,28 @@ def get_dashboard_data(filters=None):
     if filters.get("customer"):
         conditions += " AND so.customer = %(customer)s"
     if filters.get("customer_group"):
-        conditions += " AND c.customer_group = %(customer_group)s"
+        try:
+            lft, rgt = frappe.db.get_value("Customer Group", filters.customer_group, ["lft", "rgt"])
+            cg_list = frappe.db.sql_list("select name from `tabCustomer Group` where lft >= %s and rgt <= %s", (lft, rgt))
+            if cg_list:
+                conditions += " AND c.customer_group IN %(customer_group_list)s"
+                filters["customer_group_list"] = tuple(cg_list)
+            else:
+                conditions += " AND c.customer_group = %(customer_group)s"
+        except Exception:
+            conditions += " AND c.customer_group = %(customer_group)s"
+            
     if filters.get("item_group"):
-        conditions += " AND i.item_group = %(item_group)s"
+        try:
+            lft, rgt = frappe.db.get_value("Item Group", filters.item_group, ["lft", "rgt"])
+            ig_list = frappe.db.sql_list("select name from `tabItem Group` where lft >= %s and rgt <= %s", (lft, rgt))
+            if ig_list:
+                conditions += " AND i.item_group IN %(item_group_list)s"
+                filters["item_group_list"] = tuple(ig_list)
+            else:
+                conditions += " AND i.item_group = %(item_group)s"
+        except Exception:
+            conditions += " AND i.item_group = %(item_group)s"
     if filters.get("item_code"):
         conditions += " AND soi.item_code = %(item_code)s"
     if filters.get("sales_person"):
@@ -693,8 +712,10 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Date", "fieldname": "so_date", "width": 12},
             {"label": "Status", "fieldname": "status", "width": 12},
             {"label": "Customer", "fieldname": "customer_name", "width": 22},
+            {"label": "Customer Group", "fieldname": "customer_group", "width": 18},
             {"label": "Cust. PO No.", "fieldname": "po_no", "width": 16},
             {"label": "Item", "fieldname": "item_code", "width": 18},
+            {"label": "Item Group", "fieldname": "item_group", "width": 18},
             {"label": "Deliv. Date", "fieldname": "delivery_date", "width": 12},
             {"label": "Sales Person", "fieldname": "sales_person", "width": 18},
             {"label": "Booked (M)", "fieldname": "booked_net_total", "width": 13},
@@ -742,12 +763,12 @@ def export_to_excel(filters=None, export_type="all"):
             row_idx += 1
         
         ws_list.cell(row=row_idx, column=1, value="GRAND TOTAL").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=9)
-        for c in range(1, 10): 
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=11)
+        for c in range(1, 12): 
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
         
-        # Fill the rest of the columns in the footer (Columns 10-16)
+        # Fill the rest of the columns in the footer (Columns 12-18)
         total_list_values = [
             total_list_amt, 
             total_list_actual, 
@@ -759,7 +780,7 @@ def export_to_excel(filters=None, export_type="all"):
         ]
         
         for i, val in enumerate(total_list_values):
-            col = 10 + i
+            col = 12 + i
             c_f = ws_list.cell(row=row_idx, column=col, value=flt(val) / 1000000)
             c_f.font = header_font
             c_f.fill = header_fill
