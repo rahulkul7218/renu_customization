@@ -46,6 +46,7 @@ def get_dashboard_data(filters=None):
         "company": filters.get("company"),
         "report_date": filters.get("to_date") or nowdate(),
         "customer": [filters.get("customer")] if filters.get("customer") else None,
+        "customer_group": [filters.get("customer_group")] if filters.get("customer_group") else None,
         "sales_person": filters.get("sales_person"),
         "group_by_party": 0,
         "based_on_payment_terms": 1,

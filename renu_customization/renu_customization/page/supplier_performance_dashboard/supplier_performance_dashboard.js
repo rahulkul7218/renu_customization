@@ -76,6 +76,13 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 			placeholder: __("Select PO"),
 		},
 		{
+			fieldname: "supplier_group",
+			label: __("Supplier Group"),
+			fieldtype: "Link",
+			options: "Supplier Group",
+			placeholder: __("Select Supplier Group"),
+		},
+		{
 			fieldname: "supplier",
 			label: __("Supplier"),
 			fieldtype: "Link",
@@ -116,6 +123,17 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		fields: filter_fields,
 	});
 	page.filter_group.make();
+
+	page.filter_group.fields_dict.supplier.get_query = function() {
+		let supplier_group = page.filter_group.get_value("supplier_group");
+		if (supplier_group) {
+			return {
+				filters: {
+					"supplier_group": supplier_group
+				}
+			};
+		}
+	};
 
 	$("<style>")
 		.text(

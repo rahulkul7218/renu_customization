@@ -228,6 +228,24 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		}
 	});
 
+	if (page.filter_group.fields_dict.customer) {
+		page.filter_group.fields_dict.customer.get_query = function () {
+			let filters = {};
+			let customer_group = page.filter_group.get_value("customer_group");
+			if (customer_group) filters.customer_group = customer_group;
+			return { filters: filters };
+		};
+	}
+
+	if (page.filter_group.fields_dict.item_code) {
+		page.filter_group.fields_dict.item_code.get_query = function () {
+			let filters = {};
+			let item_group = page.filter_group.get_value("item_group");
+			if (item_group) filters.item_group = item_group;
+			return { filters: filters };
+		};
+	}
+
 	// --- FISCAL YEAR & DATE INTERACTION LOGIC ---
 	const fy_field = page.filter_group.fields_dict.fiscal_year;
 	const from_field = page.filter_group.fields_dict.from_date;
@@ -516,6 +534,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         /* Column Widths & Alignment */
         .col-sno { width: 60px !important; min-width: 60px !important; text-align: center !important; }
         .col-customer { width: 280px !important; min-width: 280px !important; }
+        .col-customer-group { width: 160px !important; min-width: 160px !important; }
+        .col-item-group { width: 160px !important; min-width: 160px !important; }
         .col-sp { width: 180px !important; min-width: 180px !important; }
         .col-prod { width: 350px !important; min-width: 350px !important; }
         .col-amt { 
@@ -743,8 +763,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <tr>
                                 <th class="col-sno">S.No.</th>
                                 <th class="col-customer sortable-header" data-field="cust">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer-group sortable-header" data-field="cust_group" style="min-width: 150px;">Customer Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-sp sortable-header" data-field="sp">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-prod sortable-header" data-field="item_code">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-group sortable-header" data-field="item_group" style="min-width: 150px;">Item Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 ${months.map((m) => `<th class="col-amt sortable-header" data-field="${m.key}">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
                                 <th class="total-net-col sortable-header" data-field="total">Total (Net) (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="grand-total-col sortable-header" data-field="total_gross">Grand Total (Gross) (M) <i class="fa fa-sort text-muted ml-1"></i></th>
@@ -792,8 +814,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <th class="col-date sortable-header" data-field="so_date" style="white-space: nowrap;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-status sortable-header" data-field="status">Status <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-customer sortable-header" data-field="customer_name">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer-group sortable-header" data-field="customer_group">Customer Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-po sortable-header" data-field="customer_po_no" style="width: 140px; white-space: nowrap;">Cust. PO No. <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-prod sortable-header" data-field="item_code">Item <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-group sortable-header" data-field="item_group">Item Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-deliv-date sortable-header" data-field="delivery_date" style="width: 110px; white-space: nowrap;">Deliv. Date <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-sp sortable-header" data-field="sales_person">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-amt sortable-header" data-field="total_booked_value">Booked (M) <i class="fa fa-sort text-muted ml-1"></i></th>
@@ -897,8 +921,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			filtered_data.forEach((row) => {
 				let sp = row.sales_person || "-";
 				let cust = row.customer_name || "-";
+				let cust_group = row.customer_group || "-";
 				let item_code = row.item_code || "-";
 				let item_name = row.item_name || "-";
+				let item_group = row.item_group || "-";
 				let amt = row.hasOwnProperty("total_booked_value") ? flt(row.total_booked_value) : flt(row["total_net_amount_(inr)"] || 0);
 				let g_amt = flt(row.gross_total || amt);
 				let m_key = moment(row.so_date).format("MMM YYYY");
@@ -907,8 +933,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					merged_data[key] = {
 						sp,
 						cust,
+						cust_group,
 						item_code,
 						item_name,
+						item_group,
 						months: {},
 						total: 0,
 						total_cancelled: 0,
@@ -950,7 +978,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 			if (summary_list.length === 0) {
 				tbody_month.append(
-					`<tr><td colspan="${6 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="${8 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				summary_list.forEach((row, idx) => {
@@ -969,6 +997,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <tr>
                             <td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
                             <td class="col-customer" style="font-weight: 600; color: #0f172a;">${row.cust}</td>
+                            <td class="col-customer-group" style="min-width: 150px;">${row.cust_group}</td>
                             <td class="col-sp">${row.sp}</td>
                             <td class="col-prod">
                                 <div style="line-height: 1.4;">
@@ -976,6 +1005,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                     <div style="font-weight: 600; color: #1e293b;">${row.item_name}</div>
                                 </div>
                             </td>
+                            <td class="col-item-group" style="min-width: 150px;">${row.item_group}</td>
                             ${cells}
                             <td class="total-net-col">${format_currency_short(row.total)}</td>
                             <td class="grand-total-col">${format_currency_short(row.total_gross)}</td>
@@ -997,8 +1027,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     <tr class="sticky-total">
                         <td class="col-sno">-</td>
                         <td class="col-customer" style="text-align: right; padding-right: 20px; color: #1e293b; font-size: 11px; font-weight: 700;">GRAND TOTAL (NET)</td>
+                        <td class="col-customer-group">-</td>
                         <td class="col-sp">-</td>
                         <td class="col-prod">-</td>
+                        <td class="col-item-group">-</td>
                         ${months.map((m) => `<td class="col-amt" style="color: #1e293b;">${format_currency_short(total_month_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col" style="color: #1e293b;">${format_currency_short(g_total_net)}</td>
                         <td class="grand-total-col">-</td>
@@ -1006,8 +1038,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     <tr class="sticky-total">
                         <td class="col-sno">-</td>
                         <td class="col-customer" style="text-align: right; padding-right: 20px; color: #1e293b; font-size: 11px; font-weight: 700;">GRAND TOTAL (GROSS)</td>
+                        <td class="col-customer-group">-</td>
                         <td class="col-sp">-</td>
                         <td class="col-prod">-</td>
+                        <td class="col-item-group">-</td>
                         ${months.map((m) => `<td class="col-amt" style="color: #1e293b;">${format_currency_short(total_month_gross_amts[m.key] || 0)}</td>`).join("")}
                         <td class="total-net-col">-</td>
                         <td class="grand-total-col" style="color: #1e293b;">${format_currency_short(g_total_gross)}</td>
@@ -1089,6 +1123,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <td class="col-date" style="white-space: nowrap;">${frappe.datetime.str_to_user(row.so_date)}</td>
                             <td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
                             <td class="col-customer" style="font-weight: 500;">${row.customer_name}</td>
+                            <td class="col-customer-group">${row.customer_group || "-"}</td>
                             <td class="col-po" style="color: #475569; font-size: 11px; font-weight: 500; white-space: nowrap;">${cust_po}</td>
                             <td class="col-prod">
                                 <div style="line-height: 1.4;">
@@ -1096,6 +1131,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                     <div style="font-weight: 600; color: #1e293b;">${row.item_name || "-"}</div>
                                 </div>
                             </td>
+                            <td class="col-item-group">${row.item_group || "-"}</td>
                             <td class="col-deliv-date" style="color: #475569; font-size: 11px; white-space: nowrap;">${deliv_date_str}</td>
                             <td class="col-sp">${row.sales_person || "-"}</td>
                             <td class="col-amt" style="font-weight: 700; color: #1e293b;">${format_currency_short(original_amt)}</td>
@@ -1116,8 +1152,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-date" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-status" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-customer" style="text-align: right; padding-right: 20px; color: #1e293b; font-size: 11px; font-weight: 800; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">GRAND TOTAL</td>
+                        <td class="col-customer-group" style="border-top: 2px solid #cbd5e1; background: #f1f5f9 !important;"></td>
                         <td class="col-po" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-prod" style="border-top: 2px solid #cbd5e1;"></td>
+                        <td class="col-item-group" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-deliv-date" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-sp" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_amt)}</td>

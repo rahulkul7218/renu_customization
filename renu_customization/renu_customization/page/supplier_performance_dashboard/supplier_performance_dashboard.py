@@ -111,6 +111,10 @@ def get_dashboard_data(filters=None):
     today = getdate(nowdate())
     next_15_days = add_days(today, 15)
     
+    valid_suppliers = None
+    if filters.get("supplier_group"):
+        valid_suppliers = [s.name for s in frappe.get_all("Supplier", filters={"supplier_group": filters.get("supplier_group")})]
+    
     for row in report_data:
         po_name = row.get("purchase_order")
         po_detail = po_details_map.get(po_name, {})
@@ -124,6 +128,9 @@ def get_dashboard_data(filters=None):
         row["actual_delivery_time"] = pr_delivery_map.get(po_name)
         
         # Post-query filters
+        if valid_suppliers is not None and row.get("supplier") not in valid_suppliers:
+            continue
+            
         if filters.get("supplier") and row.get("supplier") != filters.get("supplier"):
             continue
             

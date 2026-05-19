@@ -101,6 +101,7 @@ def get_dashboard_data(filters=None):
     results_query = f"""
         SELECT 
             gle.name as gle_id, gle.voucher_no as payment_entry, gle.voucher_type, gle.posting_date, gle.party as customer,
+            cust.customer_group,
             gle.credit as allocated_amount, gle.against_voucher as name,
             COALESCE(si.is_export, 0) as is_export,
             COALESCE(si.is_domestic, 1) as is_domestic,
@@ -109,6 +110,7 @@ def get_dashboard_data(filters=None):
             DATEDIFF(gle.posting_date, si.due_date) as due_days
         FROM `tabGL Entry` gle
         LEFT JOIN `tabSales Invoice` si ON si.name = gle.against_voucher
+        LEFT JOIN `tabCustomer` cust ON cust.name = gle.party
         WHERE {" AND ".join(period_conditions)} AND gle.credit > 0.01
     """
     
@@ -160,7 +162,7 @@ def get_dashboard_data(filters=None):
         if filters.get("dom_exp") == "Domestic": due_si_cond.append("si.is_domestic = 1")
         elif filters.get("dom_exp") == "Export": due_si_cond.append("si.is_export = 1")
     
-    due_si = frappe.db.sql(f"SELECT 'Sales Invoice' as doctype, si.name, si.customer, si.posting_date, si.due_date, si.outstanding_amount, si.base_grand_total as base_net_total, DATEDIFF(si.due_date, CURDATE()) as due_days FROM `tabSales Invoice` si WHERE {' AND '.join(due_si_cond)}", as_dict=True)
+    due_si = frappe.db.sql(f"SELECT 'Sales Invoice' as doctype, si.name, si.customer, si.customer_group, si.posting_date, si.due_date, si.outstanding_amount, si.base_grand_total as base_net_total, DATEDIFF(si.due_date, CURDATE()) as due_days FROM `tabSales Invoice` si WHERE {' AND '.join(due_si_cond)}", as_dict=True)
     
     due_results = due_si
     due_results.sort(key=lambda x: x['due_date'])
@@ -253,7 +255,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_list.cell(row=row_idx, column=1, value="Detailed Collection List (Million INR)").font = section_font
         row_idx += 2
         
-        headers = ["S.No.", "Voucher No", "Voucher Type", "Reference", "Date", "Due Date", "Days Diff", "Customer", "Sales Person", "Amount (M)", "Status"]
+        headers = ["S.No.", "Voucher No", "Voucher Type", "Reference", "Date", "Due Date", "Days Diff", "Customer", "Customer Group", "Sales Person", "Amount (M)", "Status"]
         for idx, h in enumerate(headers, start=1):
             cell = ws_list.cell(row=row_idx, column=idx, value=h)
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
@@ -270,9 +272,10 @@ def export_to_excel(filters=None, export_type="all"):
                 ws_list.cell(row=row_idx, column=6, value=row.get('due_date')),
                 ws_list.cell(row=row_idx, column=7, value=row.get('due_days')),
                 ws_list.cell(row=row_idx, column=8, value=row.get('customer')),
-                ws_list.cell(row=row_idx, column=9, value=row.get('sales_person')),
-                ws_list.cell(row=row_idx, column=10, value=flt(row.get('allocated_amount')) / 1000000),
-                ws_list.cell(row=row_idx, column=11, value=row.get('status'))
+                ws_list.cell(row=row_idx, column=9, value=row.get('customer_group')),
+                ws_list.cell(row=row_idx, column=10, value=row.get('sales_person')),
+                ws_list.cell(row=row_idx, column=11, value=flt(row.get('allocated_amount')) / 1000000),
+                ws_list.cell(row=row_idx, column=12, value=row.get('status'))
             ]
             
             for c_idx, c in enumerate(cells, start=1):
@@ -289,11 +292,11 @@ def export_to_excel(filters=None, export_type="all"):
     
         total_amt = sum(flt(r['allocated_amount']) for r in results) / 1000000
         ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=9)
-        for c in range(1, 12):
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=10)
+        for c in range(1, 13):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
-        total_cell = ws_list.cell(row=row_idx, column=10, value=total_amt)
+        total_cell = ws_list.cell(row=row_idx, column=11, value=total_amt)
         total_cell.font, total_cell.number_format, total_cell.alignment = header_font, num_format, Alignment(horizontal="right")
 
     if export_type in ["all", "due"]:
@@ -303,7 +306,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_due.cell(row=row_idx, column=1, value="Payment Due in Next 15 Days (Million INR)").font = section_font
         row_idx += 2
         
-        headers = ["S.No.", "Invoice ID", "Customer", "Sales Person", "Posting Date", "Due Date", "Due Days", "Net Total (M)", "Outstanding (M)"]
+        headers = ["S.No.", "Invoice ID", "Customer", "Customer Group", "Sales Person", "Posting Date", "Due Date", "Due Days", "Net Total (M)", "Outstanding (M)"]
         for idx, h in enumerate(headers, start=1):
             cell = ws_due.cell(row=row_idx, column=idx, value=h)
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
@@ -315,12 +318,13 @@ def export_to_excel(filters=None, export_type="all"):
                 ws_due.cell(row=row_idx, column=1, value=r_idx + 1),
                 ws_due.cell(row=row_idx, column=2, value=row['name']),
                 ws_due.cell(row=row_idx, column=3, value=row['customer']),
-                ws_due.cell(row=row_idx, column=4, value=row['sales_person']),
-                ws_due.cell(row=row_idx, column=5, value=row['posting_date']),
-                ws_due.cell(row=row_idx, column=6, value=row['due_date']),
-                ws_due.cell(row=row_idx, column=7, value=row['due_days']),
-                ws_due.cell(row=row_idx, column=8, value=flt(row['base_net_total']) / 1000000),
-                ws_due.cell(row=row_idx, column=9, value=flt(row['outstanding_amount']) / 1000000)
+                ws_due.cell(row=row_idx, column=4, value=row['customer_group']),
+                ws_due.cell(row=row_idx, column=5, value=row['sales_person']),
+                ws_due.cell(row=row_idx, column=6, value=row['posting_date']),
+                ws_due.cell(row=row_idx, column=7, value=row['due_date']),
+                ws_due.cell(row=row_idx, column=8, value=row['due_days']),
+                ws_due.cell(row=row_idx, column=9, value=flt(row['base_net_total']) / 1000000),
+                ws_due.cell(row=row_idx, column=10, value=flt(row['outstanding_amount']) / 1000000)
             ]
             for c_idx, c in enumerate(cells, start=1):
                 c.border = table_border
@@ -334,17 +338,17 @@ def export_to_excel(filters=None, export_type="all"):
         total_due_net = sum(flt(r['base_net_total']) for r in due_results) / 1000000
         total_due_out = sum(flt(r['outstanding_amount']) for r in due_results) / 1000000
         ws_due.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-        ws_due.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
-        for c in range(1, 10):
+        ws_due.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=8)
+        for c in range(1, 11):
             ws_due.cell(row=row_idx, column=c).fill = header_fill
             ws_due.cell(row=row_idx, column=c).border = table_border
         
-        ws_due.cell(row=row_idx, column=8, value=total_due_net).font = header_font
-        ws_due.cell(row=row_idx, column=8).number_format = num_format
-        ws_due.cell(row=row_idx, column=8).alignment = Alignment(horizontal="right")
-        ws_due.cell(row=row_idx, column=9, value=total_due_out).font = header_font
+        ws_due.cell(row=row_idx, column=9, value=total_due_net).font = header_font
         ws_due.cell(row=row_idx, column=9).number_format = num_format
         ws_due.cell(row=row_idx, column=9).alignment = Alignment(horizontal="right")
+        ws_due.cell(row=row_idx, column=10, value=total_due_out).font = header_font
+        ws_due.cell(row=row_idx, column=10).number_format = num_format
+        ws_due.cell(row=row_idx, column=10).alignment = Alignment(horizontal="right")
 
     # Column Widths
     for ws in wb.worksheets:

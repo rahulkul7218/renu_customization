@@ -236,6 +236,21 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 		},
 		{ fieldtype: "Column Break" },
 		{
+			fieldname: "to_date",
+			label: __("To Date"),
+			fieldtype: "Date",
+			placeholder: __("End Date"),
+		},
+		{ fieldtype: "Column Break" },
+		{
+			fieldname: "customer_group",
+			label: __("Customer Group"),
+			fieldtype: "Link",
+			options: "Customer Group",
+			placeholder: __("Select Customer Group"),
+		},
+		{ fieldtype: "Column Break" },
+		{
 			fieldname: "customer",
 			label: __("Customer"),
 			fieldtype: "Link",
@@ -273,6 +288,15 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 			});
 		}
 	});
+
+	if (page.filter_group.fields_dict.customer) {
+		page.filter_group.fields_dict.customer.get_query = function () {
+			let filters = {};
+			let customer_group = page.filter_group.get_value("customer_group");
+			if (customer_group) filters.customer_group = customer_group;
+			return { filters: filters };
+		};
+	}
 
 	$("<style>")
 		.text(

@@ -58,12 +58,14 @@ def get_dashboard_data(filters=None):
         conditions += f" AND transaction_date <= {frappe.db.escape(filters.get('to_date'))}"
     if filters.get("customer"):
         conditions += f" AND customer = {frappe.db.escape(filters.get('customer'))}"
+    if filters.get("customer_group"):
+        conditions += f" AND customer_group = {frappe.db.escape(filters.get('customer_group'))}"
     if filters.get("sales_order"):
         conditions += f" AND name = {frappe.db.escape(filters.get('sales_order'))}"
 
     results = frappe.db.sql(f"""
         SELECT 
-            name, customer, transaction_date, delivery_date as schedule_date, 
+            name, customer, customer_group, transaction_date, delivery_date as schedule_date, 
             status, net_total, base_net_total, territory, per_delivered, 
             per_billed, po_no
         FROM `tabSales Order`

@@ -60,6 +60,13 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 			fieldtype: "Date",
 		},
 		{
+			fieldname: "supplier_group",
+			label: __("Supplier Group"),
+			fieldtype: "Link",
+			placeholder: __("Select Supplier Group"),
+			options: "Supplier Group",
+		},
+		{
 			fieldname: "supplier",
 			label: __("Supplier"),
 			fieldtype: "Link",
@@ -67,18 +74,18 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 			options: "Supplier",
 		},
 		{
+			fieldname: "item_group",
+			label: __("Product Group"),
+			fieldtype: "Link",
+			placeholder: __("Select Product Group"),
+			options: "Item Group",
+		},
+		{
 			fieldname: "item_code",
 			label: __("Product"),
 			fieldtype: "Link",
 			placeholder: __("Select Product"),
 			options: "Item",
-		},
-		{
-			fieldname: "supplier_group",
-			label: __("Supplier Group"),
-			fieldtype: "Link",
-			placeholder: __("Select Supplier Group"),
-			options: "Supplier Group",
 		},
 	];
 
@@ -112,6 +119,24 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 
 	// Global listener for the entire filter area as a final backup
 	filter_parent.on("change", "input, select", () => page.refresh());
+
+	if (page.filter_group.fields_dict.supplier) {
+		page.filter_group.fields_dict.supplier.get_query = function () {
+			let filters = {};
+			let supplier_group = page.filter_group.get_value("supplier_group");
+			if (supplier_group) filters.supplier_group = supplier_group;
+			return { filters: filters };
+		};
+	}
+
+	if (page.filter_group.fields_dict.item_code) {
+		page.filter_group.fields_dict.item_code.get_query = function () {
+			let filters = {};
+			let item_group = page.filter_group.get_value("item_group");
+			if (item_group) filters.item_group = item_group;
+			return { filters: filters };
+		};
+	}
 
 	filter_parent.addClass("border-bottom");
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
