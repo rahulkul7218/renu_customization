@@ -347,6 +347,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_pre_carriage_by_field_on_delivery_note.execute",
     "renu_customization.patches.v_0.add_is_domestic_and_is_export_on_sales_order.execute",
     "renu_customization.patches.v_0.add_is_domestic_and_is_export_on_invoice.execute",
+    "renu_customization.patches.v_0.add_item_type_field.execute",
     
     
    #Naming series

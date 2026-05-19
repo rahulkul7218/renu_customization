@@ -62,6 +62,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		{ fieldname: "from_date", label: __("From Date"), fieldtype: "Date" },
 		{ fieldname: "to_date", label: __("To Date"), fieldtype: "Date" },
 		{ fieldname: "company", label: __("Company"), fieldtype: "Link", options: "Company", default: frappe.defaults.get_user_default("Company") },
+		{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group", placeholder: __("Select Customer Group") },
 		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer", placeholder: __("Select Customer") },
 		{ fieldname: "sales_order", label: __("SO Details"), fieldtype: "Link", options: "Sales Order", placeholder: __("Select SO") },
 		{ fieldname: "is_overdue", label: __("Overdue Deliveries"), fieldtype: "Check" },
@@ -85,6 +86,17 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		on_change: () => page.refresh()
 	});
 	page.filter_group.make();
+
+	page.filter_group.fields_dict.customer.get_query = function() {
+		let customer_group = page.filter_group.get_value("customer_group");
+		if (customer_group) {
+			return {
+				filters: {
+					"customer_group": customer_group
+				}
+			};
+		}
+	};
 
     let fy_field = page.filter_group.get_field("fiscal_year");
     fy_field.df.on_change = () => {

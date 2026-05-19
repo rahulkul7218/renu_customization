@@ -243,6 +243,24 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 	// Global listener for the entire filter area as a final backup
 	filter_parent.on("change", "input, select", () => page.refresh());
 
+	if (page.filter_group.fields_dict.customer) {
+		page.filter_group.fields_dict.customer.get_query = function () {
+			let filters = {};
+			let customer_group = page.filter_group.get_value("customer_group");
+			if (customer_group) filters.customer_group = customer_group;
+			return { filters: filters };
+		};
+	}
+
+	if (page.filter_group.fields_dict.item_code) {
+		page.filter_group.fields_dict.item_code.get_query = function () {
+			let filters = {};
+			let item_group = page.filter_group.get_value("item_group");
+			if (item_group) filters.item_group = item_group;
+			return { filters: filters };
+		};
+	}
+
 	// Style the filter area and fields
 	filter_parent.addClass("border-bottom").css({
 		"background-color": "#fff",

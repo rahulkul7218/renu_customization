@@ -219,6 +219,24 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 		}
 	});
 
+	if (page.filter_group.fields_dict.customer) {
+		page.filter_group.fields_dict.customer.get_query = function () {
+			let filters = {};
+			let customer_group = page.filter_group.get_value("customer_group");
+			if (customer_group) filters.customer_group = customer_group;
+			return { filters: filters };
+		};
+	}
+
+	if (page.filter_group.fields_dict.item_code) {
+		page.filter_group.fields_dict.item_code.get_query = function () {
+			let filters = {};
+			let item_group = page.filter_group.get_value("item_group");
+			if (item_group) filters.item_group = item_group;
+			return { filters: filters };
+		};
+	}
+
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
 	$(`<style>
