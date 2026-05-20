@@ -1,544 +1,148 @@
-# import frappe
+import frappe
  
-# def execute(filters=None):
-
-#     if not filters:
-
-#         filters = {}
+def execute(filters=None):
  
-#     conditions = ""
+    if not filters:
  
-    
+        filters = {}
  
-#     if filters.get("customer_name"):
-
-#         filters["customer_name"] = f"%{filters['customer_name']}%"
-
-#         conditions += " AND c.customer_name LIKE %(customer_name)s"
+    conditions = ""
  
-#     if filters.get("invoice_id"):
-
-#         conditions += " AND si.name = %(invoice_id)s"
+   
  
-#     # Date filters
-
-#     if filters.get("from_date") and filters.get("to_date"):
-
-#         conditions += " AND si.posting_date BETWEEN %(from_date)s AND %(to_date)s"
-
-#     elif filters.get("from_date"):
-
-#         conditions += " AND si.posting_date >= %(from_date)s"
-
-#     elif filters.get("to_date"):
-
-#         conditions += " AND si.posting_date <= %(to_date)s"
+    if filters.get("customer_name"):
  
-#     if filters.get("currency"):
-
-#         conditions += " AND si.currency = %(currency)s"
+        filters["customer_name"] = f"%{filters['customer_name']}%"
  
-    
+        conditions += " AND c.customer_name LIKE %(customer_name)s"
  
-#     query = f"""
-
-#         SELECT
-
-#             IFNULL(c.customer_code, '') AS customer_code,
-
-#             c.customer_name AS customer_name,
-
-#             si.name AS invoice_id,
-
-#             si.posting_date AS invoice_date,
+    if filters.get("invoice_id"):
  
-#             si.grand_total AS invoice_value,
-
-#             si.outstanding_amount * si.conversion_rate AS outstanding,
+        conditions += " AND si.name = %(invoice_id)s"
+ 
+    # Date filters
+ 
+    if filters.get("from_date") and filters.get("to_date"):
+ 
+        conditions += " AND si.posting_date BETWEEN %(from_date)s AND %(to_date)s"
+ 
+    elif filters.get("from_date"):
+ 
+        conditions += " AND si.posting_date >= %(from_date)s"
+ 
+    elif filters.get("to_date"):
+ 
+        conditions += " AND si.posting_date <= %(to_date)s"
+ 
+    if filters.get("currency"):
+ 
+        conditions += " AND si.currency = %(currency)s"
+ 
+   
+ 
+    query = f"""
+ 
+        SELECT
+ 
+            IFNULL(c.customer_code, '') AS customer_code,
+ 
+            c.customer_name AS customer_name,
+ 
+            si.name AS invoice_id,
+ 
+            si.posting_date AS invoice_date,
+ 
+            si.rounded_total AS invoice_value,
+ 
+            si.outstanding_amount * si.conversion_rate AS outstanding,
              
  
-#             si.currency AS currency,
-
-#             si.conversion_rate AS exchange_rate,
-
-#             si.base_grand_total AS inr_value_of_foreign,
+            si.currency AS currency,
  
-#             si.due_date AS payment_due_date,
-
-#             DATEDIFF(CURDATE(), si.posting_date) AS invoice_age,
-
-#             si.po_no AS po_no,
-
-#             c.business_region_name AS business_region_name,
+            si.conversion_rate AS exchange_rate,
  
-#             (
-
-#                 SELECT GROUP_CONCAT(st.sales_person SEPARATOR ', ')
-
-#                 FROM `tabSales Team` st
-
-#                 WHERE st.parent = si.name
-
-#             ) AS sales_person,
+            si.base_grand_total AS inr_value_of_foreign,
  
-#             CASE
-
-#                 WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic'
-
-#                 ELSE 'Export'
-
-#             END AS domestic_export
+            si.due_date AS payment_due_date,
  
-#         FROM `tabSales Invoice` si
-
-#         LEFT JOIN `tabCustomer` c ON c.name = si.customer
-
-#         LEFT JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
-
-#         LEFT JOIN `tabItem` i ON i.name = sii.item_code
-
-#         LEFT JOIN `tabCurrency` cu ON cu.name = si.currency
-
-#         LEFT JOIN `tabAddress` a ON a.name = si.customer_address
+            DATEDIFF(CURDATE(), si.posting_date) AS invoice_age,
  
-#         WHERE si.docstatus = 1 {conditions}
+            si.po_no AS po_no,
  
-#         GROUP BY si.name
-#         ORDER BY si.posting_date ASC   --  ✅ CHANGED HERE (ASC)
-
-#     """
+            c.business_region_name AS business_region_name,
  
-#     data = frappe.db.sql(query, filters, as_dict=True)
+            (
  
-#     columns = [
-
-#         {"label": "Customer Code", "fieldname": "customer_code", "fieldtype": "Data", "width": 100},
-
-#         {"label": "Customer Name", "fieldname": "customer_name", "fieldtype": "Data", "width": 200},
-
-#         {"label": "Invoice ID", "fieldname": "invoice_id", "fieldtype": "Link", "options": "Sales Invoice", "width": 150},
-
-#         {"label": "Invoice Date", "fieldname": "invoice_date", "fieldtype": "Date", "width": 140},
+                SELECT GROUP_CONCAT(st.sales_person SEPARATOR ', ')
  
-#         {"label": "Invoice Value", "fieldname": "invoice_value", "fieldtype": "Float", "width": 150},
-
-#         {"label": "Outstanding Amount (INR)", "fieldname": "outstanding", "fieldtype": "Float", "width": 170},
+                FROM `tabSales Team` st
  
-#         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 140},
-
-#         {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Data", "width": 140},
-
-#         {"label": "INR Value Of Foreign", "fieldname": "inr_value_of_foreign", "fieldtype": "Float", "width": 170},
+                WHERE st.parent = si.name
  
-#         {"label": "Payment Due Date", "fieldname": "payment_due_date", "fieldtype": "Date", "width": 160},
-
-#         {"label": "Invoice Age", "fieldname": "invoice_age", "fieldtype": "Int", "width": 120},
-
-#         {"label": "Customer's PO No.", "fieldname": "po_no", "fieldtype": "Data", "width": 160},
+            ) AS sales_person,
  
-#         {"label": "Business Region Name", "fieldname": "business_region_name", "fieldtype": "Data", "width": 140},
-
-#         {"label": "Sales Person", "fieldname": "sales_person", "fieldtype": "Data", "width": 200},
-
-#         {"label": "Domestic/Export", "fieldname": "domestic_export", "fieldtype": "Data", "width": 150}
-
-#     ]
+            CASE
  
-#     return columns, data
-
-
-# @frappe.whitelist()
-# def download_xlsx(filters=None):
-
-#     import base64
-#     from io import BytesIO
-#     import openpyxl
-#     from openpyxl.styles import Alignment, Font, PatternFill
-#     from openpyxl.utils import get_column_letter
-#     from frappe.utils import flt
-
-#     if isinstance(filters, str):
-#         filters = frappe.parse_json(filters)
-
-#     columns, data = execute(filters)
-
-#     wb = openpyxl.Workbook()
-#     ws = wb.active
-#     ws.title = "Pending Payment Report"
-
-#     # ---------------- HEADER ----------------
-#     ws["A1"].value = "Report Name"
-#     ws["A1"].font = Font(bold=True)
-#     ws["B1"].value = "Pending Payment Report"
-
-#     ws["A2"].value = "Generated On"
-#     ws["A2"].font = Font(bold=True)
-#     ws["B2"].value = frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S")
-
-#     row_idx = 4
-
-#     # ---------------- COLUMN HEADERS ----------------
-#     for idx, col in enumerate(columns, start=1):
-#         c = ws.cell(row=row_idx, column=idx, value=col["label"])
-#         c.font = Font(bold=True)
-#         c.alignment = Alignment(horizontal="center")
-
-#     row_idx += 1
-
-#     # Identify numeric fields
-#     numeric_fields = {
-#         "invoice_value",
-#         "outstanding",
-#         "exchange_rate",
-#         "inr_value_of_foreign",
-#         "invoice_age"
-#     }
-
-#     # ---------------- DATA ROWS ----------------
-#     for row in data:
-#         col_idx = 1
-#         for col in columns:
-#             field = col["fieldname"]
-#             value = row.get(field)
-
-#             cell = ws.cell(row=row_idx, column=col_idx)
-
-#             if field in numeric_fields and value not in (None, ""):
-#                 try:
-#                     cell.value = flt(value)
-#                 except:
-#                     cell.value = value
-
-#                 if field == "exchange_rate":
-#                     cell.number_format = "#,##0.0000"
-#                 elif field == "invoice_age":
-#                     cell.number_format = "0"
-#                 else:
-#                     cell.number_format = "#,##0.00"
-
-#                 cell.alignment = Alignment(horizontal="right")
-#             else:
-#                 cell.value = value
-#                 cell.alignment = Alignment(horizontal="left")
-
-#             col_idx += 1
-
-#         row_idx += 1
-
-#     # ---------------- TOTAL ROW ----------------
-#     total_row = row_idx
-
-#     for idx, col in enumerate(columns, start=1):
-#         field = col["fieldname"]
-#         cell = ws.cell(row=total_row, column=idx)
-
-#         # Gray background
-#         cell.fill = PatternFill(
-#             start_color="D3D3D3",
-#             end_color="D3D3D3",
-#             fill_type="solid"
-#         )
-#         cell.font = Font(bold=True)
-
-#         if idx == 1:
-#             cell.value = "Total"
-#             cell.alignment = Alignment(horizontal="left")
-#             continue
-
-#         if field in numeric_fields:
-#             total_val = sum([flt(d.get(field)) for d in data])
-#             cell.value = total_val
-
-#             if field == "exchange_rate":
-#                 cell.number_format = "#,##0.0000"
-#             elif field == "invoice_age":
-#                 cell.number_format = "0"
-#             else:
-#                 cell.number_format = "#,##0.00"
-
-#             cell.alignment = Alignment(horizontal="right")
-#         else:
-#             cell.value = ""
-#             cell.alignment = Alignment(horizontal="left")
-
-#     # ---------------- COLUMN WIDTH ----------------
-#     for i in range(1, len(columns) + 1):
-#         ws.column_dimensions[get_column_letter(i)].width = 22
-
-#     # ---------------- EXPORT ----------------
-#     output = BytesIO()
-#     wb.save(output)
-#     output.seek(0)
-
-#     return base64.b64encode(output.read()).decode()
-
-
-
-import frappe
-from frappe.utils import flt, getdate, nowdate, date_diff
-
-def execute(filters=None):
-    if not filters:
-        filters = {}
-
-    from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute as execute_ar
-
-    ar_filters = frappe._dict({
-        "company": filters.get("company") or frappe.db.get_single_value("Global Defaults", "default_company"),
-        "report_date": filters.get("to_date") or nowdate(),
-        "customer": [filters.get("customer_name")] if filters.get("customer_name") else None,
-        "group_by_party": 0,
-        "based_on_payment_terms": 1,
-        "ageing_based_on": "Due Date",
-        "show_future_payments": 0,
-        "range_1": 30,
-        "range_2": 60,
-        "range_3": 90,
-        "range_4": 120
-    })
-
-    ar_columns, ar_data, *rest = execute_ar(ar_filters)
-
-    if not ar_data:
-        ar_data = []
-
-    # Filter out total/summary rows and zero outstanding
-    filtered_ar_data = []
-    for row in ar_data:
-        if not row.get("party") or row.get("party") in ["Total", "total"]:
-            continue
-        outstanding = flt(row.get("outstanding_amount") or row.get("outstanding") or 0)
-        if abs(outstanding) < 0.01:
-            continue
-        filtered_ar_data.append(row)
-    ar_data = filtered_ar_data
-
-    # Apply manual filters from pending_payment_report
-    if filters.get("invoice_id"):
-        ar_data = [row for row in ar_data if row.get("voucher_no") == filters.get("invoice_id")]
-
-    if filters.get("from_date"):
-        from_date = getdate(filters.get("from_date"))
-        ar_data = [row for row in ar_data if row.get("posting_date") and getdate(row.get("posting_date")) >= from_date]
-
-    if filters.get("to_date"):
-        to_date = getdate(filters.get("to_date"))
-        ar_data = [row for row in ar_data if row.get("posting_date") and getdate(row.get("posting_date")) <= to_date]
-
-    # Gather batch details
-    parties = list(set(row.get("party") for row in ar_data if row.get("party")))
-
-    customer_details = {}
-    if parties:
-        cust_list = frappe.get_all("Customer",
-            filters={"name": ["in", parties]},
-            fields=["name", "customer_code", "customer_name", "business_region_name"]
-        )
-        for c in cust_list:
-            customer_details[c.name] = c
-
-    invoice_nos = []
-    journal_entries = []
-    payment_entries = []
-
-    for row in ar_data:
-        v_type = row.get("voucher_type")
-        v_no = row.get("voucher_no")
-        if not v_no:
-            continue
-        if v_type == "Sales Invoice":
-            invoice_nos.append(v_no)
-        elif v_type == "Journal Entry":
-            journal_entries.append(v_no)
-        elif v_type == "Payment Entry":
-            payment_entries.append(v_no)
-
-    sales_invoice_details = {}
-    sales_persons = {}
-    if invoice_nos:
-        inv_list = frappe.db.sql("""
-            SELECT
-                si.name,
-                si.conversion_rate,
-                si.rounded_total,
-                si.grand_total,
-                si.base_grand_total,
-                si.po_no,
-                CASE
-                    WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic'
-                    ELSE 'Export'
-                END AS domestic_export
-            FROM `tabSales Invoice` si
-            LEFT JOIN `tabAddress` a ON a.name = si.customer_address
-            WHERE si.name IN %(invoice_nos)s
-        """, {"invoice_nos": invoice_nos}, as_dict=True)
-        for inv in inv_list:
-            sales_invoice_details[inv.name] = inv
-
-        sp_list = frappe.get_all("Sales Team",
-            filters={"parent": ["in", invoice_nos], "parenttype": "Sales Invoice"},
-            fields=["parent", "sales_person"]
-        )
-        for sp in sp_list:
-            if sp.parent not in sales_persons:
-                sales_persons[sp.parent] = []
-            sales_persons[sp.parent].append(sp.sales_person)
-
-    journal_entry_details = {}
-    if journal_entries and parties:
-        je_list = frappe.db.sql("""
-            SELECT
-                parent AS name,
-                exchange_rate,
-                account_currency AS currency,
-                (debit_in_account_currency + credit_in_account_currency) AS invoice_value,
-                (debit + credit) AS inr_value_of_foreign,
-                bill_no AS po_no
-            FROM `tabJournal Entry Account`
-            WHERE parent IN %(journal_entries)s AND party IN %(parties)s
-        """, {"journal_entries": journal_entries, "parties": parties}, as_dict=True)
-        for je in je_list:
-            journal_entry_details[je.name] = je
-
-    payment_entry_details = {}
-    if payment_entries:
-        pe_list = frappe.db.sql("""
-            SELECT
-                name,
-                source_exchange_rate,
-                target_exchange_rate,
-                paid_from_account_currency,
-                paid_to_account_currency,
-                received_amount,
-                paid_amount,
-                base_received_amount,
-                base_paid_amount
-            FROM `tabPayment Entry`
-            WHERE name IN %(payment_entries)s
-        """, {"payment_entries": payment_entries}, as_dict=True)
-        for pe in pe_list:
-            payment_entry_details[pe.name] = pe
-
-    customer_countries = {}
-    if parties:
-        address_links = frappe.get_all("Dynamic Link",
-            filters={"link_doctype": "Customer", "link_name": ["in", parties], "parenttype": "Address"},
-            fields=["link_name", "parent"]
-        )
-        address_names = [d.parent for d in address_links]
-        if address_names:
-            addresses = frappe.get_all("Address",
-                filters={"name": ["in", address_names]},
-                fields=["name", "country"]
-            )
-            address_country_map = {addr.name: addr.country for addr in addresses}
-            for link in address_links:
-                country = address_country_map.get(link.parent)
-                if country:
-                    customer_countries[link.link_name] = country
-
-    data = []
-    company_currency = frappe.get_cached_value("Company", ar_filters.company, "default_currency") or "INR"
-
-    for row in ar_data:
-        party = row.get("party")
-        v_type = row.get("voucher_type")
-        v_no = row.get("voucher_no")
-
-        cust_info = customer_details.get(party) or frappe._dict()
-
-        customer_code = cust_info.get("customer_code") or ""
-        customer_name = cust_info.get("customer_name") or row.get("customer_name") or row.get("party_name") or party
-        business_region_name = cust_info.get("business_region_name") or ""
-
-        invoice_id = v_no
-        invoice_date = row.get("posting_date")
-        payment_due_date = row.get("due_date")
-
-        invoice_age = 0
-        if invoice_date:
-            invoice_age = date_diff(nowdate(), invoice_date)
-
-        outstanding = flt(row.get("outstanding") or row.get("outstanding_amount") or 0)
-
-        currency = row.get("currency") or company_currency
-        exchange_rate = 1.0
-        invoice_value = flt(row.get("invoiced"))
-        inr_value_of_foreign = flt(row.get("invoiced"))
-        po_no = row.get("po_no") or ""
-        sales_person = row.get("sales_person") or ""
-        domestic_export = "Domestic" if customer_countries.get(party) == "India" else "Export"
-
-        if v_type == "Sales Invoice" and v_no in sales_invoice_details:
-            details = sales_invoice_details[v_no]
-            exchange_rate = flt(details.get("conversion_rate") or 1.0)
-            invoice_value = flt(details.get("rounded_total") or details.get("grand_total") or 0)
-            inr_value_of_foreign = flt(details.get("base_grand_total") or 0)
-            po_no = details.get("po_no") or ""
-            domestic_export = details.get("domestic_export") or "Domestic"
-
-            sp_list = sales_persons.get(v_no, [])
-            if sp_list:
-                sales_person = ", ".join(sp_list)
-
-        elif v_type == "Journal Entry" and v_no in journal_entry_details:
-            details = journal_entry_details[v_no]
-            exchange_rate = flt(details.get("exchange_rate") or 1.0)
-            currency = details.get("currency") or currency
-            invoice_value = flt(details.get("invoice_value") or 0)
-            inr_value_of_foreign = flt(details.get("inr_value_of_foreign") or 0)
-            po_no = details.get("po_no") or ""
-
-        elif v_type == "Payment Entry" and v_no in payment_entry_details:
-            details = payment_entry_details[v_no]
-            currency = details.get("paid_from_account_currency") or details.get("paid_to_account_currency") or currency
-            exchange_rate = flt(details.get("source_exchange_rate") or details.get("target_exchange_rate") or 1.0)
-            invoice_value = flt(details.get("received_amount") or details.get("paid_amount") or 0)
-            inr_value_of_foreign = flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
-
-        # Apply currency filter if set
-        if filters.get("currency") and currency != filters.get("currency"):
-            continue
-
-        data.append({
-            "customer_code": customer_code,
-            "customer_name": customer_name,
-            "voucher_type": v_type,
-            "invoice_id": invoice_id,
-            "invoice_date": invoice_date,
-            "invoice_value": invoice_value,
-            "outstanding": outstanding,
-            "currency": currency,
-            "exchange_rate": exchange_rate,
-            "inr_value_of_foreign": inr_value_of_foreign,
-            "payment_due_date": payment_due_date,
-            "invoice_age": invoice_age,
-            "po_no": po_no,
-            "business_region_name": business_region_name,
-            "sales_person": sales_person,
-            "domestic_export": domestic_export
-        })
-
-    # Sort data by invoice_date ascending
-    data = sorted(data, key=lambda x: getdate(x["invoice_date"]) if x["invoice_date"] else getdate("1970-01-01"))
-
+                WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic'
+ 
+                ELSE 'Export'
+ 
+            END AS domestic_export
+ 
+        FROM `tabSales Invoice` si
+ 
+        LEFT JOIN `tabCustomer` c ON c.name = si.customer
+ 
+        LEFT JOIN `tabSales Invoice Item` sii ON sii.parent = si.name
+ 
+        LEFT JOIN `tabItem` i ON i.name = sii.item_code
+ 
+        LEFT JOIN `tabCurrency` cu ON cu.name = si.currency
+ 
+        LEFT JOIN `tabAddress` a ON a.name = si.customer_address
+ 
+        WHERE si.docstatus = 1 AND si.outstanding_amount > 0
+        {conditions}
+ 
+        GROUP BY si.name
+        ORDER BY si.posting_date ASC   --  CHANGED HERE (ASC)
+ 
+    """
+ 
+    data = frappe.db.sql(query, filters, as_dict=True)
+ 
     columns = [
+ 
         {"label": "Customer Code", "fieldname": "customer_code", "fieldtype": "Data", "width": 140},
+ 
         {"label": "Customer Name", "fieldname": "customer_name", "fieldtype": "Data", "width": 200},
-        {"label": "Voucher Type", "fieldname": "voucher_type", "fieldtype": "Data", "width": 120},
-        {"label": "Invoice ID", "fieldname": "invoice_id", "fieldtype": "Dynamic Link", "options": "voucher_type", "width": 150},
+ 
+        {"label": "Invoice ID", "fieldname": "invoice_id", "fieldtype": "Link", "options": "Sales Invoice", "width": 150},
+ 
         {"label": "Invoice Date", "fieldname": "invoice_date", "fieldtype": "Date", "width": 140},
+ 
         {"label": "Invoice Value", "fieldname": "invoice_value", "fieldtype": "Float", "width": 150},
+ 
         {"label": "Outstanding Amount (INR)", "fieldname": "outstanding", "fieldtype": "Float", "width": 170},
+ 
         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 140},
-        {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Data", "width": 140, "disable_total": 1},
+ 
+        {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Data", "width": 140,"disable_total": 1},
+ 
         {"label": "INR Value Of Foreign", "fieldname": "inr_value_of_foreign", "fieldtype": "Float", "width": 170},
+ 
         {"label": "Payment Due Date", "fieldname": "payment_due_date", "fieldtype": "Date", "width": 160},
-        {"label": "Invoice Age", "fieldname": "invoice_age", "fieldtype": "Int", "width": 120, "disable_total": 1},
+ 
+        {"label": "Invoice Age", "fieldname": "invoice_age", "fieldtype": "Int", "width": 120,"disable_total": 1},
+ 
         {"label": "Customer's PO No.", "fieldname": "po_no", "fieldtype": "Data", "width": 160},
+ 
         {"label": "Business Region Name", "fieldname": "business_region_name", "fieldtype": "Data", "width": 140},
+ 
         {"label": "Sales Person", "fieldname": "sales_person", "fieldtype": "Data", "width": 200},
+ 
         {"label": "Domestic/Export", "fieldname": "domestic_export", "fieldtype": "Data", "width": 150}
+ 
     ]
  
     return columns, data
