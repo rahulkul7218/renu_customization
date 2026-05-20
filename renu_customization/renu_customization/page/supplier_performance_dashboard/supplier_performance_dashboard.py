@@ -49,6 +49,66 @@ def get_po_items(purchase_order):
         item["billed_qty"] = flt(item.get("billed_amt")) / flt(item.get("rate")) if flt(item.get("rate")) else 0.0
     return items
 
+def is_delivery_completed(row):
+    qty = flt(row.get("qty"))
+    received = flt(row.get("received_qty"))
+    return (
+        (qty > 0 and received >= qty)
+        or flt(row.get("per_delivered")) >= 100
+        or row.get("status") in ["Completed", "Closed"]
+    )
+
+
+def _parse_group_concat_dates(dates_str):
+    if not dates_str:
+        return []
+    return [getdate(d.strip()) for d in str(dates_str).split(",") if d and str(d).strip()]
+
+
+def get_actual_delivery_dates(row):
+    dates = row.get("actual_delivery_dates") or []
+    if isinstance(dates, str):
+        dates = _parse_group_concat_dates(dates)
+    elif dates:
+        dates = [getdate(d) for d in dates if d]
+    if not dates and row.get("actual_delivery_time"):
+        dates = [getdate(row["actual_delivery_time"])]
+    return sorted(dates)
+
+
+def format_actual_delivery_display(row):
+    dates = get_actual_delivery_dates(row)
+    if not dates:
+        return None
+    return ", ".join(frappe.format_date(d) for d in dates)
+
+
+def _fetch_actual_delivery_map(po_item_field):
+    """Return {po_item_name: [date, ...]} from all submitted purchase receipts."""
+    actual_delivery_map = {}
+    pr_data = frappe.db.sql(
+        f"""
+        SELECT
+            pri.{po_item_field} as po_item_name,
+            GROUP_CONCAT(DISTINCT pr.posting_date ORDER BY pr.posting_date SEPARATOR ',') as actual_delivery_dates
+        FROM
+            `tabPurchase Receipt` pr
+        INNER JOIN
+            `tabPurchase Receipt Item` pri ON pri.parent = pr.name
+        WHERE
+            pr.docstatus = 1
+            AND pri.{po_item_field} IS NOT NULL
+            AND pri.{po_item_field} != ''
+        GROUP BY
+            pri.{po_item_field}
+        """,
+        as_dict=True,
+    )
+    for r in pr_data:
+        actual_delivery_map[r.po_item_name] = _parse_group_concat_dates(r.actual_delivery_dates)
+    return actual_delivery_map
+
+
 def prepare_filters(filters):
     if not filters:
         filters = {}
@@ -141,45 +201,13 @@ def get_dashboard_data(filters=None):
     if not po_items:
         return {"summary": [], "results": []}
 
-    # Try to get actual delivery dates from Purchase Receipt
+    # All actual delivery dates from Purchase Receipt (comma-separated per PO item)
     actual_delivery_map = {}
     try:
-        pr_data = frappe.db.sql("""
-            SELECT
-                pri.purchase_order_item,
-                MAX(pr.posting_date) as actual_delivery_date
-            FROM
-                `tabPurchase Receipt` pr
-            JOIN
-                `tabPurchase Receipt Item` pri ON pri.parent = pr.name
-            WHERE
-                pr.docstatus = 1
-                AND pri.purchase_order_item IS NOT NULL
-                AND pri.purchase_order_item != ''
-            GROUP BY
-                pri.purchase_order_item
-        """, as_dict=True)
-        for r in pr_data:
-            actual_delivery_map[r.purchase_order_item] = r.actual_delivery_date
+        actual_delivery_map = _fetch_actual_delivery_map("purchase_order_item")
     except Exception:
         try:
-            pr_data = frappe.db.sql("""
-                SELECT
-                    pri.po_detail,
-                    MAX(pr.posting_date) as actual_delivery_date
-                FROM
-                    `tabPurchase Receipt` pr
-                JOIN
-                    `tabPurchase Receipt Item` pri ON pri.parent = pr.name
-                WHERE
-                    pr.docstatus = 1
-                    AND pri.po_detail IS NOT NULL
-                    AND pri.po_detail != ''
-                GROUP BY
-                    pri.po_detail
-            """, as_dict=True)
-            for r in pr_data:
-                actual_delivery_map[r.po_detail] = r.actual_delivery_date
+            actual_delivery_map = _fetch_actual_delivery_map("po_detail")
         except Exception:
             pass
 
@@ -199,6 +227,7 @@ def get_dashboard_data(filters=None):
         per_delivered = (received_qty / qty) * 100 if qty > 0 else 0.0
         per_billed = (billed_qty / qty) * 100 if qty > 0 else 0.0
         
+        delivery_dates = actual_delivery_map.get(item.name, [])
         report_data.append({
             "name": po.name,
             "supplier": po.supplier,
@@ -215,13 +244,14 @@ def get_dashboard_data(filters=None):
             "per_delivered": per_delivered,
             "per_billed": per_billed,
             "schedule_date": item.schedule_date,
-            "actual_delivery_time": actual_delivery_map.get(item.name)
+            "actual_delivery_dates": [str(d) for d in delivery_dates],
+            "actual_delivery_time": str(delivery_dates[-1]) if delivery_dates else None,
         })
 
     # Filter by actual_delivery_time if specified
     if filters.get("actual_delivery_time"):
         adt = getdate(filters.get("actual_delivery_time"))
-        report_data = [r for r in report_data if r.get("actual_delivery_time") and getdate(r["actual_delivery_time"]) == adt]
+        report_data = [r for r in report_data if adt in get_actual_delivery_dates(r)]
 
     if not report_data:
         return {"summary": [], "results": []}
@@ -465,7 +495,7 @@ def export_to_excel(filters=None, export_type="all"):
 
     # 3. Supplier Orders List Sheet
     ws_list = wb.create_sheet("Detailed Orders List")
-    list_headers = ["S.No.", "PO No", "Supplier", "Order Date", "Expected Del.", "Status", "% Received", "% Bill.", "Net Total (M)"]
+    list_headers = ["S.No.", "PO No", "Supplier", "Order Date", "Expected Del.", "Actual Del.", "Status", "% Received", "% Bill.", "Net Total (M)"]
     for idx, h in enumerate(list_headers, start=1):
         cell = ws_list.cell(row=1, column=idx, value=h)
         cell.font = header_font
@@ -475,9 +505,10 @@ def export_to_excel(filters=None, export_type="all"):
         
     for r_idx, row in enumerate(data, start=2):
         row_fill = zebra_fill if r_idx % 2 == 0 else None
+        actual_del = format_actual_delivery_display(row)
         vals = [
             r_idx-1, row.get("name"), row.get("supplier"), 
-            row.get("transaction_date"), row.get("schedule_date"),
+            row.get("transaction_date"), row.get("schedule_date"), actual_del,
             row.get("status"), f"{int(row.get('per_delivered') or 0)}%", 
             f"{int(row.get('per_billed') or 0)}%", flt(row.get("net_total")) / 1000000
         ]
@@ -485,7 +516,7 @@ def export_to_excel(filters=None, export_type="all"):
             cell = ws_list.cell(row=r_idx, column=c_idx, value=val)
             cell.border = table_border
             if row_fill: cell.fill = row_fill
-            if c_idx == 9:
+            if c_idx == 10:
                 cell.number_format = '#,##0.00'
                 cell.alignment = Alignment(horizontal="right")
 

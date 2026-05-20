@@ -31,6 +31,57 @@ def export_to_pdf(html=None, orientation="Landscape"):
     frappe.local.response.filecontent = pdf_content
     frappe.local.response.type = "download"
 
+def _parse_group_concat_dates(dates_str):
+    if not dates_str:
+        return []
+    return [getdate(d.strip()) for d in str(dates_str).split(",") if d and str(d).strip()]
+
+
+def get_actual_delivery_dates(row):
+    dates = row.get("actual_delivery_dates") or []
+    if isinstance(dates, str):
+        dates = _parse_group_concat_dates(dates)
+    elif dates:
+        dates = [getdate(d) for d in dates if d]
+    if not dates and row.get("actual_delivery_time"):
+        dates = [getdate(row["actual_delivery_time"])]
+    return sorted(dates)
+
+
+def format_actual_delivery_display(row):
+    dates = get_actual_delivery_dates(row)
+    if not dates:
+        return None
+    return ", ".join(frappe.format_date(d) for d in dates)
+
+
+def _fetch_delivery_note_dates(so_names):
+    if not so_names:
+        return {}
+    dn_details = frappe.db.sql(
+        """
+        SELECT
+            dni.against_sales_order AS sales_order,
+            GROUP_CONCAT(DISTINCT dn.posting_date ORDER BY dn.posting_date SEPARATOR ',') AS actual_delivery_dates
+        FROM
+            `tabDelivery Note` dn
+        INNER JOIN
+            `tabDelivery Note Item` dni ON dni.parent = dn.name
+        WHERE
+            dni.against_sales_order IN %s
+            AND dn.docstatus = 1
+        GROUP BY
+            dni.against_sales_order
+        """,
+        (tuple(so_names),),
+        as_dict=True,
+    )
+    return {
+        r.sales_order: _parse_group_concat_dates(r.actual_delivery_dates)
+        for r in dn_details
+    }
+
+
 def prepare_filters(filters):
     if not filters:
         filters = {}
@@ -76,27 +127,9 @@ def get_dashboard_data(filters=None):
     if not results:
         return {"summary": [], "results": []}
 
-    # Fetch Actual Delivery Date from Delivery Note
+    # All actual delivery dates from Delivery Note (comma-separated per Sales Order)
     so_names = [d.name for d in results]
-    dn_delivery_map = {}
-    if so_names:
-        dn_details = frappe.db.sql("""
-            SELECT 
-                dni.against_sales_order, 
-                MAX(dn.posting_date) as actual_delivery_date
-            FROM 
-                `tabDelivery Note` dn
-            JOIN 
-                `tabDelivery Note Item` dni ON dni.parent = dn.name
-            WHERE 
-                dni.against_sales_order IN %s
-                AND dn.docstatus = 1
-            GROUP BY 
-                dni.against_sales_order
-        """, (tuple(so_names),), as_dict=True)
-        
-        for dn in dn_details:
-            dn_delivery_map[dn.against_sales_order] = dn.actual_delivery_date
+    dn_delivery_map = _fetch_delivery_note_dates(so_names)
 
     total_orders = 0
     total_amount = 0
@@ -107,7 +140,9 @@ def get_dashboard_data(filters=None):
     
     processed_results = []
     for row in results:
-        row["actual_delivery_time"] = dn_delivery_map.get(row.name)
+        delivery_dates = dn_delivery_map.get(row.name, [])
+        row["actual_delivery_dates"] = [str(d) for d in delivery_dates]
+        row["actual_delivery_time"] = str(delivery_dates[-1]) if delivery_dates else None
         
         is_overdue = False
         due_next_15_days_flag = False
@@ -335,7 +370,7 @@ def export_to_excel(filters=None, export_type="all"):
 
     # 3. Customer Orders List Sheet
     ws_list = wb.create_sheet("Detailed Orders List")
-    list_headers = ["S.No.", "SO No", "Customer", "Order Date", "Expected Del.", "Status", "% Del.", "% Bill.", "Net Total (M)"]
+    list_headers = ["S.No.", "SO No", "Customer", "Order Date", "Expected Del.", "Actual Del.", "Status", "% Del.", "% Bill.", "Net Total (M)"]
     for idx, h in enumerate(list_headers, start=1):
         cell = ws_list.cell(row=1, column=idx, value=h)
         cell.font = header_font
@@ -346,16 +381,17 @@ def export_to_excel(filters=None, export_type="all"):
     for r_idx, row in enumerate(data, start=2):
         row_fill = zebra_fill if r_idx % 2 == 0 else None
         vals = [
-            r_idx-1, row.get("name"), row.get("customer"), 
+            r_idx-1, row.get("name"), row.get("customer"),
             row.get("transaction_date"), row.get("schedule_date"),
-            row.get("status"), f"{int(row.per_delivered or 0)}%", 
+            format_actual_delivery_display(row),
+            row.get("status"), f"{int(row.per_delivered or 0)}%",
             f"{int(row.per_billed or 0)}%", flt(row.get("net_total")) / 1000000
         ]
         for c_idx, val in enumerate(vals, start=1):
             cell = ws_list.cell(row=r_idx, column=c_idx, value=val)
             cell.border = table_border
             if row_fill: cell.fill = row_fill
-            if c_idx == 9:
+            if c_idx == 10:
                 cell.number_format = '#,##0.00'
                 cell.alignment = Alignment(horizontal="right")
 

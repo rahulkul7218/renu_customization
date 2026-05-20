@@ -137,23 +137,30 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .export-btn { padding: 4px 12px; font-size: 11px; font-weight: 600; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.2s; color: var(--text-color); }
         .export-btn:hover { background: var(--border-color); }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-        .dashboard-table th { background: var(--bg-color); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; }
-        .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dashboard-table.orders-table { table-layout: auto; width: max-content; min-width: 100%; }
+        .dashboard-table th { background: var(--bg-color); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; height: 42px; box-sizing: border-box; }
+        .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 48px; box-sizing: border-box; line-height: 22px; vertical-align: middle; }
         .month-table .col-sno { width: 60px; text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
         .month-table .col-customer { width: 250px; position: sticky; left: 60px; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
         .month-table th.col-sno, .month-table th.col-customer { z-index: 20; background: var(--bg-color) !important; }
-        .col-sno { width: 45px; text-align: center; }
-        .col-id { width: 155px; font-weight: 600; }
-        .col-customer { width: auto; min-width: 200px; }
-        .col-date { width: 125px; }
-        .col-days { width: 85px; text-align: center !important; }
-        .col-status { width: 160px; }
-        .col-pct { width: 75px; text-align: center !important; }
-        .col-amt { width: 120px; text-align: right !important; }
+        .col-sno { width: 55px; min-width: 55px; text-align: center; }
+        .col-id { width: 200px; min-width: 200px; font-weight: 600; }
+        .col-customer { width: 220px; min-width: 220px; }
+        .col-date { width: 115px; min-width: 115px; }
+        .col-date-actual { width: 160px; min-width: 160px; }
+        .dashboard-table.orders-table td.col-date-actual { white-space: normal; line-height: 1.35; overflow: visible; text-overflow: clip; }
+        .dashboard-table.orders-table .col-status { overflow: visible; }
+        .dashboard-table.orders-table .col-status .indicator-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
+        .delivery-actual { color: #166534; font-weight: 700; }
+        .col-days { width: 90px; min-width: 90px; text-align: center !important; }
+        .col-status { width: 200px; min-width: 200px; }
+        .col-pct { width: 72px; min-width: 72px; text-align: center !important; }
+        .col-amt { width: 115px; min-width: 115px; text-align: right !important; }
+        .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (56px * 15) + 46px); width: 100%; -webkit-overflow-scrolling: touch; }
         th.col-amt, th.col-days, th.col-pct { text-align: right !important; }
         th.col-days, th.col-pct { text-align: center !important; }
         .dashboard-table tfoot { position: sticky; bottom: 0; background: var(--bg-color); z-index: 10; border-top: 2px solid var(--border-color); }
-        .dashboard-table tfoot td { padding: 12px 16px; font-weight: 800; font-size: 14px; color: var(--text-color); }
+        .dashboard-table tfoot td { padding: 12px 16px; font-weight: 800; font-size: 14px; color: var(--text-color); height: 46px; box-sizing: border-box; }
         .indicator-pill { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .indicator-pill.completed { background: #dcfce7; color: #166534; }
         .indicator-pill.on-hold { background: #fef3c7; color: #92400e; }
@@ -171,6 +178,50 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .legend-value { font-size: 11px; color: var(--text-muted); font-weight: 500; }
         .chart-legend, .graph-legend, .frappe-chart .legend { display: none !important; }
     </style>`).appendTo(page.main);
+
+	const get_actual_delivery_dates = (row) => {
+		let dates = row.actual_delivery_dates;
+		if (typeof dates === "string") {
+			dates = dates.split(",").map((d) => d.trim()).filter(Boolean);
+		}
+		if (!dates || !dates.length) {
+			if (row.actual_delivery_time) {
+				return [row.actual_delivery_time];
+			}
+			return [];
+		}
+		return dates;
+	};
+
+	const format_expected_cell = (row) => {
+		return row.schedule_date ? frappe.datetime.str_to_user(row.schedule_date) : "-";
+	};
+
+	const format_actual_dates_display = (row) => {
+		const dates = get_actual_delivery_dates(row);
+		if (!dates.length) {
+			return "-";
+		}
+		return dates.map((d) => frappe.datetime.str_to_user(d)).join(", ");
+	};
+
+	const format_actual_cell = (row) => {
+		const display = format_actual_dates_display(row);
+		if (display === "-") {
+			return "-";
+		}
+		return `<span class="delivery-actual">${display}</span>`;
+	};
+
+	const format_actual_text = (row) => format_actual_dates_display(row);
+
+	const get_actual_sort_date = (row) => {
+		const dates = get_actual_delivery_dates(row);
+		if (!dates.length) {
+			return new Date(0);
+		}
+		return new Date(dates[dates.length - 1]);
+	};
 
 	function render_dashboard(data) {
 		page.container.empty();
@@ -294,15 +345,16 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                 <div class="header">
 					<span>${__("Orders Due in Next 15 Days")}</span>
 				</div>
-                <div style="overflow: auto; max-height: 400px;">
-                    <table class="dashboard-table due-table" id="due_15_days_table">
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table orders-table due-table" id="due_15_days_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
                                 <th class="col-id sortable-header" data-table="due" data-field="name" style="cursor: pointer; user-select: none;">SO No <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-customer sortable-header" data-table="due" data-field="customer" style="cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-date sortable-header" data-table="due" data-field="transaction_date" style="cursor: pointer; user-select: none;">Order Date <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="due" data-field="schedule_date" style="cursor: pointer; user-select: none;">Due Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="schedule_date" style="cursor: pointer; user-select: none;">${__("Expected Del.")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date-actual sortable-header" data-table="due" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${__("Actual Del.")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-days sortable-header" data-table="due" data-field="due_days" style="cursor: pointer; user-select: none;">Days Left <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-status sortable-header" data-table="due" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-pct sortable-header" data-table="due" data-field="per_delivered" style="cursor: pointer; user-select: none;">% Del. <i class="fa fa-sort text-muted ml-1"></i></th>
@@ -312,7 +364,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                         <tbody id="due_body"></tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="8" style="text-align: right;">TOTAL DUE VALUE</td>
+                                <td colspan="9" style="text-align: right;">TOTAL DUE VALUE</td>
                                 <td id="total_due_value" style="text-align: right;">₹ 0.00 M</td>
                             </tr>
                         </tfoot>
@@ -337,15 +389,16 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						</button>
 					</div>
 				</div>
-                <div style="overflow: auto; max-height: 500px;">
-                    <table class="dashboard-table" id="detailed_orders_table">
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table orders-table" id="detailed_orders_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
                                 <th class="col-id sortable-header" data-table="detailed" data-field="name" style="cursor: pointer; user-select: none;">SO No <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-customer sortable-header" data-table="detailed" data-field="customer" style="cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-date sortable-header" data-table="detailed" data-field="transaction_date" style="cursor: pointer; user-select: none;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="detailed" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Delivery <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="schedule_date" style="cursor: pointer; user-select: none;">${__("Expected Del.")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date-actual sortable-header" data-table="detailed" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${__("Actual Del.")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-status sortable-header" data-table="detailed" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-pct sortable-header" data-table="detailed" data-field="per_delivered" style="cursor: pointer; user-select: none;">% Del. <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-pct sortable-header" data-table="detailed" data-field="per_billed" style="cursor: pointer; user-select: none;">% Bill. <i class="fa fa-sort text-muted ml-1"></i></th>
@@ -355,7 +408,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                         <tbody id="so_list_body"></tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="8" style="text-align: right;">TOTAL BOOKED VALUE</td>
+                                <td colspan="9" style="text-align: right;">TOTAL BOOKED VALUE</td>
                                 <td id="total_booked_value" style="text-align: right;">₹ 0.00 M</td>
                             </tr>
                         </tfoot>
@@ -430,6 +483,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				} else if (due_sort.field === "transaction_date" || due_sort.field === "schedule_date") {
 					val_a = val_a ? new Date(val_a) : new Date(0);
 					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else if (due_sort.field === "actual_delivery_time") {
+					val_a = get_actual_sort_date(a);
+					val_b = get_actual_sort_date(b);
 				} else {
 					val_a = flt(val_a);
 					val_b = flt(val_b);
@@ -451,7 +507,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
 						<td class="col-customer" title="${row.customer}">${row.customer}</td>
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
-						<td class="col-date" style="font-weight: 600;">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
+						<td class="col-date-actual">${format_actual_cell(row)}</td>
 						<td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
 						<td class="col-status"><span class="indicator-pill ${row.status.toLowerCase().replace(/ /g, '-')}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
@@ -475,6 +532,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				} else if (detailed_sort.field === "transaction_date" || detailed_sort.field === "schedule_date") {
 					val_a = val_a ? new Date(val_a) : new Date(0);
 					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else if (detailed_sort.field === "actual_delivery_time") {
+					val_a = get_actual_sort_date(a);
+					val_b = get_actual_sort_date(b);
 				} else {
 					val_a = flt(val_a);
 					val_b = flt(val_b);
@@ -493,7 +553,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
 						<td class="col-customer" title="${row.customer}">${row.customer}</td>
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
-						<td class="col-date" style="font-weight: 600;">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
+						<td class="col-date-actual">${format_actual_cell(row)}</td>
 						<td class="col-status"><span class="indicator-pill ${row.status.toLowerCase().replace(/ /g, '-')}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
 						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
@@ -776,7 +837,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                             <th class="col-id">SO No</th>
                             <th class="col-customer">Customer</th>
                             <th class="col-date">Order Date</th>
-                            <th class="col-date">Due Date</th>
+                            <th class="col-date">Expected Del.</th>
+                            <th class="col-date">Actual Del.</th>
                             <th class="col-days">Days Left</th>
                             <th class="col-status">Status</th>
                             <th class="col-pct">% Del.</th>
@@ -790,7 +852,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                                 <td class="col-id">${row.name}</td>
                                 <td class="col-customer">${row.customer}</td>
                                 <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
-                                <td class="col-date">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+                                <td class="col-date">${format_expected_cell(row)}</td>
+                                <td class="col-date">${format_actual_text(row)}</td>
                                 <td class="col-days">${row.due_days} Days</td>
                                 <td class="col-status">${row.status}</td>
                                 <td class="col-pct">${Math.round(row.per_delivered)}%</td>
@@ -809,6 +872,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                             <th class="col-customer">Customer</th>
                             <th class="col-date">Date</th>
                             <th class="col-date">Expected Del.</th>
+                            <th class="col-date">Actual Del.</th>
                             <th class="col-status">Status</th>
                             <th class="col-pct">% Del.</th>
                             <th class="col-pct">% Bill.</th>
@@ -822,7 +886,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                                 <td class="col-id">${row.name}</td>
                                 <td class="col-customer">${row.customer}</td>
                                 <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
-                                <td class="col-date">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+                                <td class="col-date">${format_expected_cell(row)}</td>
+                                <td class="col-date">${format_actual_text(row)}</td>
                                 <td class="col-status">${row.status}</td>
                                 <td class="col-pct">${Math.round(row.per_delivered)}%</td>
                                 <td class="col-pct">${Math.round(row.per_billed)}%</td>
