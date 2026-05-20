@@ -8,6 +8,20 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 	window.cur_page = page;
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
+    // Add Export Buttons to Menu
+    page.add_menu_item(__("Export to Excel"), () => {
+        let filters = page.filter_group.get_values();
+        let baseUrl = frappe.request.url.split('?')[0];
+        let queryParams = $.param({
+            cmd: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_excel",
+            filters: JSON.stringify(filters),
+            export_type: "all"
+        });
+        window.open(baseUrl + '?' + queryParams);
+    });
+
+    page.add_menu_item(__("Export to PDF"), () => export_pdf_full());
+
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
 
 	let refresh_timer = null;
@@ -15,7 +29,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		if (refresh_timer) clearTimeout(refresh_timer);
 		refresh_timer = setTimeout(() => {
 			perform_refresh();
-		}, 50);
+		}, 100);
 	};
 
 	function perform_refresh() {
@@ -44,83 +58,32 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 	}
 
 	const filter_fields = [
-		{
-			fieldname: "fiscal_year",
-			label: __("Fiscal Year"),
-			fieldtype: "Link",
-			options: "Fiscal Year",
-			placeholder: __("Select Year"),
-		},
-		{
-			fieldname: "from_date",
-			label: __("From Date"),
-			fieldtype: "Date",
-		},
-		{
-			fieldname: "to_date",
-			label: __("To Date"),
-			fieldtype: "Date",
-		},
-		{
-			fieldname: "company",
-			label: __("Company"),
-			fieldtype: "Link",
-			options: "Company",
-			default: frappe.defaults.get_user_default("Company"),
-		},
-		{
-			fieldname: "purchase_order",
-			label: __("PO Details"),
-			fieldtype: "Link",
-			options: "Purchase Order",
-			placeholder: __("Select PO"),
-		},
-		{
-			fieldname: "supplier_group",
-			label: __("Supplier Group"),
-			fieldtype: "Link",
-			options: "Supplier Group",
-			placeholder: __("Select Supplier Group"),
-		},
-		{
-			fieldname: "supplier",
-			label: __("Supplier"),
-			fieldtype: "Link",
-			options: "Supplier",
-			placeholder: __("Select Supplier"),
-		},
-		{
-			fieldname: "expected_delivery_date",
-			label: __("Expected Delivery Date"),
-			fieldtype: "Date",
-			placeholder: __("Select Date"),
-		},
-		{
-			fieldname: "actual_delivery_time",
-			label: __("Actual Delivery Time"),
-			fieldtype: "Date",
-			placeholder: __("Select Date"),
-		},
-		{
-			fieldname: "open_po_details",
-			label: __("Open PO Details"),
-			fieldtype: "Check",
-		},
-		{
-			fieldname: "is_overdue",
-			label: __("Overdue Deliveries"),
-			fieldtype: "Check",
-		},
-		{
-			fieldname: "due_next_15_days",
-			label: __("Due in Next 15 Days"),
-			fieldtype: "Check",
-		},
+		{ fieldname: "fiscal_year", label: __("Fiscal Year"), fieldtype: "Link", options: "Fiscal Year", placeholder: __("Select Year") },
+		{ fieldname: "from_date", label: __("From Date"), fieldtype: "Date" },
+		{ fieldname: "to_date", label: __("To Date"), fieldtype: "Date" },
+		{ fieldname: "company", label: __("Company"), fieldtype: "Link", options: "Company", default: frappe.defaults.get_user_default("Company") },
+		{ fieldname: "supplier_group", label: __("Supplier Group"), fieldtype: "Link", options: "Supplier Group", placeholder: __("Select Supplier Group") },
+		{ fieldname: "supplier", label: __("Supplier"), fieldtype: "Link", options: "Supplier", placeholder: __("Select Supplier") },
+		{ fieldname: "purchase_order", label: __("PO Details"), fieldtype: "Link", options: "Purchase Order", placeholder: __("Select PO") },
+		{ fieldname: "is_overdue", label: __("Overdue Deliveries"), fieldtype: "Check" },
+		{ fieldname: "due_next_15_days", label: __("Due in Next 15 days"), fieldtype: "Check" },
 	];
+
+	$("<style>")
+		.text(`
+		.dashboard-filter-area { padding: 15px 20px 5px 20px !important; background-color: var(--bg-color) !important; border-bottom: 1px solid var(--border-color) !important; }
+		.dashboard-filter-area .form-column form { display: flex !important; flex-wrap: wrap !important; gap: 15px !important; align-items: flex-end !important; }
+		.dashboard-filter-area .frappe-control { margin-bottom: 10px !important; width: calc(25% - 12px) !important; }
+		.dashboard-filter-area .control-label { font-size: 12px !important; font-weight: 600 !important; color: var(--text-muted) !important; margin-bottom: 6px !important; display: block !important; }
+        .dashboard-filter-area .frappe-control[data-fieldtype="Check"] { display: flex !important; align-items: center !important; height: 32px; }
+        .dashboard-filter-area .frappe-control[data-fieldtype="Check"] label { display: flex !important; align-items: center !important; margin-bottom: 0 !important; }
+        .dashboard-filter-area .frappe-control[data-fieldtype="Check"] input { margin-right: 8px !important; }
+	`).appendTo(filter_parent);
 
 	page.filter_group = new frappe.ui.FieldGroup({
 		parent: filter_parent,
 		fields: filter_fields,
+		on_change: () => page.refresh()
 	});
 	page.filter_group.make();
 
@@ -135,560 +98,309 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		}
 	};
 
-	$("<style>")
-		.text(
-			`
-		.dashboard-filter-area {
-			padding: 15px 20px 5px 20px !important;
-			background-color: var(--bg-color) !important;
-			border-bottom: 1px solid var(--border-color) !important;
-		}
-		.dashboard-filter-area .form-section .section-body,
-		.dashboard-filter-area .section-body,
-		.dashboard-filter-area .form-column {
-			display: block !important;
-			width: 100% !important;
-		}
-		.dashboard-filter-area .form-column form {
-			display: flex !important;
-			flex-wrap: wrap !important;
-			gap: 15px !important;
-			align-items: flex-end !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
-		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
-			display: none !important;
-		}
-		.dashboard-filter-area .frappe-control {
-			margin-bottom: 10px !important;
-			width: calc(25% - 12px) !important;
-		}
-		.dashboard-filter-area .frappe-control .form-group {
-			margin-bottom: 0 !important;
-			width: 100% !important;
-		}
-		.dashboard-filter-area .control-input,
-		.dashboard-filter-area .awesomplete,
-		.dashboard-filter-area input:not([type="checkbox"]),
-		.dashboard-filter-area select {
-			width: 100% !important;
-			max-width: 100% !important;
-		}
-		.dashboard-filter-area label,
-		.dashboard-filter-area .control-label {
-			font-size: 12px !important;
-			font-weight: 600 !important;
-			color: #475569 !important;
-			margin-bottom: 6px !important;
-			display: block !important;
-			white-space: nowrap !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] {
-			display: flex !important;
-			align-items: center !important;
-			padding-bottom: 4px !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .control-label {
-			display: none !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .form-group {
-			margin-bottom: 0 !important;
-			width: 100% !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .checkbox {
-			margin: 0 !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] label {
-			display: flex !important;
-			align-items: center !important;
-			margin-bottom: 0 !important;
-			cursor: pointer !important;
-			white-space: normal !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] input[type="checkbox"] {
-			width: 16px !important;
-			height: 16px !important;
-			margin: 0 8px 0 0 !important;
-			cursor: pointer !important;
-			flex-shrink: 0 !important;
-		}
-	`,
-		)
-		.appendTo(filter_parent);
+    let fy_field = page.filter_group.get_field("fiscal_year");
+    fy_field.df.on_change = () => {
+        let fy = fy_field.get_value();
+        if (fy) {
+            frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
+                if (r) {
+                    page.filter_group.set_values({ from_date: r.year_start_date, to_date: r.year_end_date });
+                    page.refresh();
+                }
+            });
+        }
+    };
 
-	Object.keys(page.filter_group.fields_dict).forEach((key) => {
-		let field = page.filter_group.fields_dict[key];
-		field.on_change = () => {
-			if (key === "fiscal_year") {
-				let fy = page.filter_group.get_value("fiscal_year");
-				if (fy) {
-					frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
-						if (r) {
-							page.filter_group.set_values({
-								from_date: r.year_start_date,
-								to_date: r.year_end_date
-							});
-						}
-					});
-				}
-			}
-			page.refresh();
-		};
-		if (field.$input) {
-			field.$input.on("change input blur", () => {
-				setTimeout(() => page.refresh(), 50);
-			});
-		}
-	});
-
-	filter_parent.addClass("border-bottom").css({
-		"background-color": "var(--bg-color)",
-		"margin-bottom": "0",
-	});
+    Object.keys(page.filter_group.fields_dict).forEach(key => {
+        let f = page.filter_group.fields_dict[key];
+        if (f.$input) f.$input.on("change input blur", () => page.refresh());
+    });
 
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
 	$(`<style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        
-        .dashboard-content { 
-            padding: 20px; 
-            background: var(--bg-color); 
-            min-height: 100vh; 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            color: #1e293b;
-            width: 100% !important;
-            box-sizing: border-box;
-        }
-
-        .summary-wrapper { 
-            display: grid !important; 
-            grid-template-columns: repeat(4, 1fr) !important; 
-            gap: 16px; 
-            margin-bottom: 24px; 
-            width: 100% !important;
-        }
-        .summary-card { 
-            background: var(--card-bg) !important;
-            border: 1px solid var(--border-color);
-            border-radius: 12px; 
-            padding: 16px; 
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            border-left: 5px solid #cbd5e1;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-        }
-        .summary-card:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
-        }
-        
-        /* Consistent Border Colors */
+        .dashboard-content { padding: 20px; background: var(--bg-color); min-height: 100vh; font-family: 'Inter', sans-serif; color: var(--text-color); width: 100% !important; }
+        .summary-wrapper { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 16px; margin-bottom: 24px; }
+        .summary-card { background: var(--card-bg) !important; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; border-left: 5px solid #cbd5e1; }
         .summary-card.blue { border-left-color: #3b82f6; }
-        .summary-card.purple { border-left-color: #8b5cf6; }
         .summary-card.green { border-left-color: #10b981; }
-        .summary-card.orange { border-left-color: #f59e0b; }
-        .summary-card.cyan { border-left-color: #06b6d4; }
         .summary-card.red { border-left-color: #ef4444; }
-
-        .summary-card .label { 
-            font-size: 11px; 
-            color: #64748b; 
-            font-weight: 700; 
-            margin-bottom: 8px; 
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .summary-card .value { 
-            font-size: 20px; 
-            font-weight: 800; 
-            color: #0f172a; 
-        }
-        .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+        .summary-card.orange { border-left-color: #f59e0b; }
+        .summary-card .label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+        .summary-card .value { font-size: 20px; font-weight: 800; color: var(--text-color); }
+        .charts-row { display: grid !important; grid-template-columns: 1fr !important; gap: 24px; margin-bottom: 24px; }
+        .chart-card { background: var(--card-bg) !important; border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); }
+        .chart-card .title { font-size: 15px; font-weight: 700; margin-bottom: 20px; text-transform: uppercase; color: var(--text-color); }
+        .table-card { background: var(--card-bg) !important; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 24px; overflow: hidden; }
+        .table-card .header { padding: 15px 24px; border-bottom: 1px solid var(--border-color); font-weight: 700; display: flex; justify-content: space-between; align-items: center; color: var(--text-color); }
+        .export-btn { padding: 4px 12px; font-size: 11px; font-weight: 600; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.2s; color: var(--text-color); }
+        .export-btn:hover { background: var(--border-color); }
+        .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        .dashboard-table.orders-table { table-layout: auto; width: max-content; min-width: 100%; }
+        .dashboard-table th { background: var(--bg-color); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; height: 42px; box-sizing: border-box; }
+        .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 48px; box-sizing: border-box; line-height: 22px; }
         
-        .bg-blue { background-color: #3b82f6; }
-        .bg-green { background-color: #10b981; }
-        .bg-orange { background-color: #f59e0b; }
-        .bg-cyan { background-color: #06b6d4; }
-        .bg-purple { background-color: #8b5cf6; }
-        .bg-red { background-color: #ef4444; }
-
-        .charts-row { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 24px; 
-            margin-bottom: 24px; 
-            width: 100%;
-        }
-        .chart-card { 
-            background: var(--card-bg) !important; border-radius: 12px; padding: 24px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-            border: 1px solid var(--border-color);
-        }
-        .chart-card .title { 
-            font-size: 15px; font-weight: 700; color: #1e293b; 
-            margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.025em;
-        }
-
-        .custom-legend { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-            gap: 16px; 
-            margin-top: 30px; 
-            padding: 20px; 
-            border-top: 1px solid #f1f5f9;
-            background: #fafafa;
-            border-radius: 8px;
-        }
-        .legend-item { display: flex; align-items: flex-start; gap: 12px; }
-        .legend-item .dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
-        .legend-item .info { display: flex; flex-direction: column; line-height: 1.2; }
-        .legend-item .label { font-size: 12px; font-weight: 600; color: #475569; text-decoration: none !important; }
-        .legend-item .val { font-size: 11px; color: #94a3b8; }
-
-        .frappe-chart .chart-legend, .frappe-chart .legend { display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; overflow: hidden !important; }
-        .frappe-chart text { font-size: 11px !important; }
-
-        .table-card { 
-            background: var(--card-bg) !important; border-radius: 12px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-            margin-bottom: 24px; overflow: hidden;
-            border: 1px solid var(--border-color);
-            width: 100%;
-        }
-        .table-card .header { 
-            padding: 15px 24px; background: var(--card-bg) !important;
-            border-bottom: 1px solid var(--border-color); font-weight: 700; 
-            color: var(--text-color); display: flex; justify-content: space-between; align-items: center;
-        }
-        .table-actions { display: flex; gap: 12px; align-items: center; }
-        .export-btn { font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; padding: 6px 14px; border-radius: 6px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e8f0; white-space: nowrap; }
-        .export-btn:hover { color: #2563eb !important; background: #eff6ff !important; border-color: #bfdbfe !important; }
-        tr.sticky-total td { position: sticky; bottom: 0; z-index: 9; background: #f1f3f5 !important; font-weight: 700; border-top: 2px solid #ddd; }
+        /* Sticky columns for breakdown table */
+        .month-table .col-sno { width: 60px; text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
+        .month-table .col-supplier { width: 250px; position: sticky; left: 60px; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
+        .month-table th.col-sno, .month-table th.col-supplier { z-index: 20; background: var(--bg-color) !important; }
         
-        .table-container { 
-            overflow: auto; width: 100%; max-height: 750px; 
-            position: relative;
-        }
-        .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .col-sno { width: 55px; min-width: 55px; text-align: center; }
+        .col-id { width: 200px; min-width: 200px; font-weight: 600; }
+        .col-supplier { width: 180px; min-width: 180px; }
+        .col-item-code { width: 145px; min-width: 145px; }
+        .col-item-name { width: 240px; min-width: 240px; }
+        .col-date { width: 115px; min-width: 115px; }
+        .col-days { width: 90px; min-width: 90px; text-align: center !important; }
+        .col-status { width: 200px; min-width: 200px; }
+        .col-pct { width: 72px; min-width: 72px; text-align: center !important; }
+        .col-amt { width: 115px; min-width: 115px; text-align: right !important; }
+        .dashboard-table.orders-table .col-status { overflow: visible; }
+        .dashboard-table.orders-table .col-status .indicator-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
+        th.col-amt, th.col-days, th.col-pct { text-align: right !important; }
+        th.col-days, th.col-pct { text-align: center !important; }
+        .dashboard-table tfoot { position: sticky; bottom: 0; background: var(--bg-color); z-index: 10; border-top: 2px solid var(--border-color); }
+        .dashboard-table tfoot td { padding: 12px 16px; font-weight: 800; font-size: 14px; color: var(--text-color); height: 46px; box-sizing: border-box; }
+        .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (48px * 20) + 46px); -webkit-overflow-scrolling: touch; }
         
-        .dashboard-table th { 
-            background: #f8fafc; padding: 12px 16px; text-align: left; 
-            font-size: 11px; font-weight: 700; color: #64748b; 
-            position: sticky; top: 0; z-index: 50; 
-            border-bottom: 1px solid #e2e8f0;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
+        /* Status Badges */
+        .indicator-pill { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .indicator-pill.completed { background: #dcfce7; color: #166534; }
+        .indicator-pill.closed { background: #f1f5f9; color: #475569; }
+        .indicator-pill.on-hold { background: #fef3c7; color: #92400e; }
+        .indicator-pill.to-receive-and-bill { background: #dbeafe; color: #1e40af; }
+        .indicator-pill.to-receive { background: #e0f2fe; color: #0369a1; }
+        .indicator-pill.to-bill { background: #fae8ff; color: #86198f; }
+        .indicator-pill.cancelled { background: #fee2e2; color: #991b1b; }
         
-        .dashboard-table td { 
-            padding: 12px 16px; border-bottom: 1px solid #f1f5f9; 
-            font-size: 13px; color: #334155; 
-            background: #fff;
-            vertical-align: middle;
-            white-space: nowrap;
-        }
-
-        .col-sno { width: 60px !important; min-width: 60px !important; text-align: center !important; }
-        .col-supplier { width: 280px !important; min-width: 280px !important; white-space: normal !important; word-wrap: break-word; }
-        .col-po { width: 160px !important; min-width: 160px !important; }
-        .col-date { width: 130px !important; min-width: 130px !important; }
-        .col-days { width: 100px !important; min-width: 100px !important; text-align: center !important; }
-        .col-status { width: 140px !important; min-width: 140px !important; }
-        .col-amt { width: 140px !important; min-width: 140px !important; text-align: right !important; }
-
-        .indicator-pill { 
-            padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.025em;
-        }
-        .indicator-pill.green { background: #dcfce7; color: #166534; }
-        .indicator-pill.blue { background: #dbeafe; color: #1e40af; }
-        .indicator-pill.orange { background: #fef3c7; color: #92400e; }
-        .indicator-pill.red { background: #fee2e2; color: #991b1b; }
-        .indicator-pill.gray { background: #f1f5f9; color: #475569; }
+        /* Percent Badge colors */
+        .pct-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+        .pct-badge.full { background: #10b981; color: white; }
+        .pct-badge.partial { background: #f59e0b; color: white; }
+        .pct-badge.none { background: #f1f5f9; color: #64748b; }
+        
+        /* Grid Legends */
+        .custom-legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color); }
+        [data-theme="dark"] .custom-legend { background: var(--control-bg); }
+        .legend-item { display: flex; align-items: flex-start; gap: 8px; }
+        .legend-item .dot { width: 10px; height: 10px; border-radius: 3px; margin-top: 4px; flex-shrink: 0; }
+        .legend-info { display: flex; flex-direction: column; gap: 2px; }
+        .legend-label { font-size: 12px; font-weight: 700; color: var(--text-color); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+        .legend-value { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+        .chart-legend, .graph-legend, .frappe-chart .legend { display: none !important; }
     </style>`).appendTo(page.main);
 
 	function render_dashboard(data) {
 		page.container.empty();
-		page.clear_menu();
 		if (!data.results || data.results.length === 0) {
-			$(
-				`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found for the selected filters")}</div></div>`,
-			).appendTo(page.container);
+			$(`<div class="text-center text-muted" style="padding: 100px 0;">${__("No data found")}</div>`).appendTo(page.container);
 			return;
 		}
 
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 		data.summary.forEach((m) => {
 			let indicator = (m.indicator || "blue").toLowerCase();
-			let val =
-				m.fieldtype === "Currency"
-					? "₹ " +
-						(flt(m.value) / 1000000).toLocaleString("en-US", {
-							minimumFractionDigits: 2,
-							maximumFractionDigits: 2,
-						}) +
-						" M"
-					: m.value;
+			let val = m.fieldtype === "Currency" 
+                ? "₹ " + (flt(m.value) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
+                : m.value;
 			$(`
                 <div class="summary-card ${indicator}">
-                    <div class="label"><span class="indicator bg-${indicator}"></span>${m.label}</div>
+                    <div class="label">${m.label}</div>
                     <div class="value">${val}</div>
                 </div>
             `).appendTo(summary_row);
 		});
 
-		// 2. Charts Row
 		let charts_row = $('<div class="charts-row"></div>').appendTo(page.container);
-		if (data.charts) {
-			Object.keys(data.charts).forEach((chart_id) => {
-				let chart_obj = data.charts[chart_id];
-				if (!chart_obj.data.labels || chart_obj.data.labels.length === 0) return;
+        page.chart_instances = {};
+		Object.keys(data.charts).forEach((chart_id) => {
+			let chart_obj = data.charts[chart_id];
+            let title = chart_obj.title || chart_id.replace(/_/g, " ").toUpperCase();
+			$(`
+				<div class="chart-card">
+					<div class="title">${title}</div>
+					<div id="wrapper_${chart_id}" style="height: 300px;"></div>
+				</div>
+			`).appendTo(charts_row);
 
-				$(`
-					<div class="chart-card">
-						<div class="title"><span>${chart_obj.title || chart_id.replace(/_/g, " ").toUpperCase()}</span></div>
-						<div id="wrapper_${chart_id}" style="height: 350px;"></div>
-						<div id="legend_${chart_id}" class="custom-legend"></div>
-					</div>
-				`).appendTo(charts_row);
+			setTimeout(() => {
+				let chart = new frappe.Chart(`#wrapper_${chart_id}`, {
+					data: chart_obj.data,
+					type: chart_obj.type || "donut",
+					height: 300,
+					colors: chart_obj.colors,
+					lineOptions: { hideLegend: 1 },
+					legend: 0,
+					show_legend: 0,
+					tooltipOptions: {
+						formatTooltipY: (d) =>
+							chart_obj.is_currency
+								? "₹ " + (d / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
+								: d,
+					},
+				});
+                page.chart_instances[chart_id] = chart;
 
-				setTimeout(() => {
-					let is_currency = chart_obj.is_currency || false;
-					let c_data = Object.assign({}, chart_obj.data);
+				// Force redraw after a short delay to fix potential dimension issues on first load
+				setTimeout(() => chart.draw(true), 250);
 
-					if (is_currency) {
-						c_data.datasets = c_data.datasets.map((ds) => ({
-							name: ds.name,
-							values: ds.values.map((v) => parseFloat((v / 1000000).toFixed(4))),
-						}));
-					}
-
-					const chart = new frappe.Chart(`#wrapper_${chart_id}`, {
-						data: c_data,
-						type: chart_obj.type || "donut",
-						height: 350,
-						colors: chart_obj.colors,
-						valuesOverPoints: 1,
-						isNavigable: 1,
-						legend: 0,
-						show_legend: 0,
-						legendOptions: { showLegend: false },
-						tooltipOptions: {
-							formatTooltipY: (d) =>
-								is_currency
-									? "₹ " +
-										d.toLocaleString("en-US", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										}) +
-										" M"
-									: d,
-						},
-					});
-
-					// Force redraw after a short delay to fix potential dimension issues on first load
-					setTimeout(() => chart.draw(true), 250);
-
-					let legend_container = page.container.find(`#legend_${chart_id}`);
-					let total_val =
-						chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-
-					chart_obj.data.labels.forEach((label, idx) => {
-						let val = chart_obj.data.datasets[0].values[idx];
-						let color = chart_obj.colors[idx % chart_obj.colors.length];
-						let share = ((val / total_val) * 100).toFixed(1) + "%";
-
-						let val_str = is_currency
-							? "₹ " +
-								(val / 1000000).toLocaleString("en-US", {
-									minimumFractionDigits: 2,
-									maximumFractionDigits: 2,
-								}) +
-								" M"
+				if (chart_obj.type === "donut" || !chart_obj.type) {
+					let total = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
+					let legend_html = $(`<div class="custom-legend" id="legend_${chart_id}"></div>`).appendTo($(`#wrapper_${chart_id}`).parent());
+					chart_obj.data.labels.forEach((label, i) => {
+						let val = chart_obj.data.datasets[0].values[i];
+						let pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+						let color = chart_obj.colors[i % chart_obj.colors.length];
+						let display_val = chart_obj.is_currency 
+							? "₹ " + (val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
 							: val;
 
-						legend_container.append(`
+						legend_html.append(`
 							<div class="legend-item">
-								<span class="dot" style="background: ${color}"></span>
-								<div class="info">
-									<span class="label">${label}</span>
-									<span class="val">${val_str} (${share})</span>
+								<div class="dot" style="background: ${color}"></div>
+								<div class="legend-info">
+									<div class="legend-label">${label}</div>
+									<div class="legend-value">${display_val} (${pct}%)</div>
 								</div>
 							</div>
 						`);
 					});
-
-					// Append 'M' to Y-axis ticks and values-over-points in SVG
-					if (is_currency) {
-						const append_m_to_svg = () => {
-							page.container.find(`#wrapper_${chart_id} text`).each(function () {
-								let t = $(this).text();
-								// Strip commas for isNaN check
-								let clean_t = t.replace(/,/g, "").trim();
-								if (
-									!isNaN(clean_t) &&
-									clean_t !== "" &&
-									clean_t !== "0" &&
-									!t.includes("M")
-								) {
-									// Exclude x-axis labels to avoid altering supplier names that might be numbers
-									if ($(this).closest(".x-axis").length === 0) {
-										$(this).text(t + " M");
-									}
-								}
-							});
-						};
-
-						// Run initially
-						setTimeout(append_m_to_svg, 100);
-
-						// Observe SVG for animations/re-renders
-						let wrapperNode = document.querySelector(`#wrapper_${chart_id}`);
-						if (wrapperNode) {
-							let observer = new MutationObserver(() => {
-								append_m_to_svg();
-							});
-							observer.observe(wrapperNode, {
-								childList: true,
-								subtree: true,
-								characterData: true,
-							});
-						}
-					}
-				}, 100);
-			});
-		}
-
-		let tables_container = $('<div class="tables-view"></div>').appendTo(page.container);
-
-		let months = [];
-		let months_map = {};
-		data.results.forEach((row) => {
-			if (row.transaction_date) {
-				let d = moment(row.transaction_date);
-				let m_key = d.format("MMM YYYY");
-				let m_sort = d.format("YYYYMM");
-				if (!months_map[m_key]) {
-					months_map[m_key] = m_sort;
-					months.push({ key: m_key, sort: m_sort });
 				}
-			}
+			}, 100);
 		});
-		months.sort((a, b) => a.sort - b.sort);
 
-		let tables_html = $(`
-            <div class="table-card" style="margin-top: 24px; overflow: visible;">
-                <div class="header" style="overflow: visible;">
-                    <span style="font-size: 15px;">${__("Month-Wise Order Breakdown")}</span>
-                    <div class="table-actions">
-                        <span class="export-btn" id="export_month_table"><i class="fa fa-file-excel-o"></i> Export to Excel</span>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="dashboard-table month-table" id="po_month_table">
+		// 1. Month-Wise Booking Breakdown
+		let months = data.months || [];
+		let month_table_card = $(`
+            <div class="table-card">
+                <div class="header">
+					<span>${__("Month-Wise Booking Breakdown")}</span>
+					<div class="export-options">
+						<button class="export-btn" id="export_month_excel_btn">
+							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
+						</button>
+					</div>
+				</div>
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table month-table" id="month_wise_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-supplier sortable-header" data-table="month" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
-                                ${months.map((m) => `<th class="col-amt sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
-                                <th class="col-amt sortable-header" data-table="month" data-field="total" style="position: sticky; right: 0; background: var(--bg-color); z-index: 60; text-align: right; cursor: pointer; user-select: none;">Total (Net) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="month" data-field="supplier" style="width: 250px; cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${months.map(m => `<th class="col-amt sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="col-amt sortable-header" data-table="month" data-field="total" style="font-weight: 800; cursor: pointer; user-select: none;">Total (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
-                        <tbody id="po_month_body"></tbody>
-                        <tfoot id="po_month_tfoot"></tfoot>
+                        <tbody id="month_wise_body"></tbody>
+                        <tfoot>
+                            <tr style="background: var(--bg-color); font-weight: 800;">
+                                <td colspan="2" style="text-align: right;">GRAND TOTAL</td>
+                                ${months.map(m => `<td class="col-amt" id="total_${m.sort}">0.00 M</td>`).join("")}
+                                <td class="col-amt" id="grand_total_all">0.00 M</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
+        `).appendTo(page.container);
 
-            <div class="table-card" style="margin-top: 32px;">
+		let month_tbody = month_table_card.find("#month_wise_body");
+		
+		// 2. ORDERS DUE IN NEXT 15 DAYS Table
+		let due_table_card = $(`
+            <div class="table-card" style="margin-top: 24px;">
                 <div class="header">
-                    <span style="font-size: 15px;">${__("Due Next 15 Days")}</span>
-                </div>
-                <div class="table-container">
-                    <table class="dashboard-table" id="po_due_15_table">
+					<span>${__("Orders Due in Next 15 Days")}</span>
+				</div>
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table orders-table due-table" id="due_15_days_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-po sortable-header" data-table="due_15" data-field="name" style="cursor: pointer; user-select: none;">PO No <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-supplier sortable-header" data-table="due_15" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="due_15" data-field="transaction_date" style="cursor: pointer; user-select: none;">PO Date <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="due_15" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Del. <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="due_15" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">Actual Delivery <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-days sortable-header" data-table="due_15" data-field="due_days" style="cursor: pointer; user-select: none;">Due Days <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-status sortable-header" data-table="due_15" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-amt sortable-header" data-table="due_15" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-id sortable-header" data-table="due" data-field="name" style="cursor: pointer; user-select: none;">PO No <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="due" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-code sortable-header" data-table="due" data-field="item_code" style="cursor: pointer; user-select: none;">Item Code <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-name sortable-header" data-table="due" data-field="item_name" style="cursor: pointer; user-select: none;">Item Name <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="transaction_date" style="cursor: pointer; user-select: none;">PO Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Del. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-days sortable-header" data-table="due" data-field="due_days" style="cursor: pointer; user-select: none;">Days Left <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="due" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="due" data-field="per_delivered" style="cursor: pointer; user-select: none;">% Rec. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="due" data-field="net_total" style="cursor: pointer; user-select: none;">Amount <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
-                        <tbody id="po_due_15_body"></tbody>
-                        <tfoot id="po_due_15_tfoot"></tfoot>
+                        <tbody id="due_body"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="10" style="text-align: right; font-weight: 800;">TOTAL DUE VALUE</td>
+                                <td id="total_due_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
+        `).appendTo(page.container);
 
-            <div class="table-card" style="margin-top: 32px;">
+		let due_tbody = due_table_card.find("#due_body");
+		
+		// 3. Detailed Supplier Orders List Table
+		let table_card = $(`
+            <div class="table-card" style="margin-top: 24px;">
                 <div class="header">
-                    <span style="font-size: 15px;">${__("Supplier Orders")}</span>
-                    <div class="table-actions">
-                        <span class="export-btn" id="export_list_table"><i class="fa fa-file-excel-o"></i> Export to Excel</span>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="dashboard-table" id="po_list_table">
+					<span>${__("Detailed Supplier Orders List")}</span>
+					<div class="export-options">
+						<button class="export-btn" id="export_excel_btn">
+							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
+						</button>
+						<button class="export-btn" id="export_pdf_btn">
+							<i class="fa fa-file-pdf-o"></i> ${__("PDF")}
+						</button>
+					</div>
+				</div>
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table orders-table" id="detailed_orders_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-po sortable-header" data-table="po" data-field="name" style="cursor: pointer; user-select: none;">PO No <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-supplier sortable-header" data-table="po" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="po" data-field="transaction_date" style="cursor: pointer; user-select: none;">PO Date <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="po" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Del. <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="po" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">Actual Delivery <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-days sortable-header" data-table="po" data-field="due_days" style="cursor: pointer; user-select: none;">Due Days <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-status sortable-header" data-table="po" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-amt sortable-header" data-table="po" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-id sortable-header" data-table="detailed" data-field="name" style="cursor: pointer; user-select: none;">PO No <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="detailed" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-code sortable-header" data-table="detailed" data-field="item_code" style="cursor: pointer; user-select: none;">Item Code <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-name sortable-header" data-table="detailed" data-field="item_name" style="cursor: pointer; user-select: none;">Item Name <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="transaction_date" style="cursor: pointer; user-select: none;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Del. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="detailed" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_delivered" style="cursor: pointer; user-select: none;">% Rec. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_billed" style="cursor: pointer; user-select: none;">% Bill. <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="detailed" data-field="net_total" style="cursor: pointer; user-select: none;">Amount <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="po_list_body"></tbody>
-                        <tfoot id="po_list_tfoot"></tfoot>
+                        <tfoot>
+                            <tr>
+                                <td colspan="10" style="text-align: right; font-weight: 800;">TOTAL BOOKED VALUE</td>
+                                <td id="total_booked_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
-        `).appendTo(tables_container);
+        `).appendTo(page.container);
 
-		let tbody_month = tables_container.find("#po_month_body");
-		let tbody_list = tables_container.find("#po_list_body");
-		let tbody_due_15 = tables_container.find("#po_due_15_body");
-
-		let merged_data = {};
-		data.results.forEach((row) => {
-			let supp = row.supplier || "-";
-			let amt = flt(row.net_total);
-			let m_key = row.transaction_date
-				? moment(row.transaction_date).format("MMM YYYY")
-				: "Unknown";
-
-			if (!merged_data[supp]) {
-				merged_data[supp] = { supp: supp, months: {}, total: 0 };
-			}
-			merged_data[supp].months[m_key] = (merged_data[supp].months[m_key] || 0) + amt;
-			merged_data[supp].total += amt;
-		});
+		let tbody = table_card.find("#po_list_body");
 
 		// State variables for sorting
 		let month_sort = { field: "total", asc: false };
-		let po_sort = { field: "transaction_date", asc: false };
-		let due_15_sort = { field: "transaction_date", asc: false };
+		let due_sort = { field: "due_days", asc: true };
+		let detailed_sort = { field: "transaction_date", asc: false };
 
 		const render_month_table = () => {
-			let sorted_data = Object.values(merged_data);
+			let sorted_data = [...(data.month_wise_supplier || [])];
 			sorted_data.sort((a, b) => {
 				let val_a, val_b;
 				if (month_sort.field === "supplier") {
-					val_a = a.supp || "";
-					val_b = b.supp || "";
+					val_a = a.supplier || "";
+					val_b = b.supplier || "";
 					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
 				} else if (month_sort.field === "total") {
 					val_a = flt(a.total);
@@ -700,182 +412,133 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				return month_sort.asc ? val_a - val_b : val_b - val_a;
 			});
 
-			tbody_month.empty();
-			let total_month_amts = {};
-			let g_total_net = 0;
-
-			if (sorted_data.length === 0) {
-				tbody_month.append(
-					`<tr><td colspan="${3 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
-				);
-			} else {
-				sorted_data.forEach((row, idx) => {
-					g_total_net += row.total;
-					let cells = months
-						.map((m) => {
-							let val = row.months[m.key] || 0;
-							total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
-							return `<td class="col-amt" style="text-align: right;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
-						})
-						.join("");
-
-					tbody_month.append(`
-						<tr>
-							<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
-							<td class="col-supplier" style="font-weight: 600; color: #0f172a;">${row.supp}</td>
-							${cells}
-							<td class="col-amt" style="position: sticky; right: 0; background: var(--bg-color); font-weight: 700; color: var(--primary); text-align: right; border-left: 1px solid var(--border-color);">₹ ${(row.total / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-						</tr>
-					`);
-				});
-
-				let footer_month = tables_container.find("#po_month_tfoot");
-				footer_month.empty();
-				footer_month.append(`
-					<tr class="sticky-total">
-						<td class="col-sno" style="background: #f1f3f5 !important; border-top: 2px solid #ddd;">-</td>
-						<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px; background: #f1f3f5 !important; border-top: 2px solid #ddd;">GRAND TOTAL</td>
-						${months
-							.map((m) => {
-								let val = total_month_amts[m.key] || 0;
-								return `<td class="col-amt" style="text-align: right; background: #f1f3f5 !important; border-top: 2px solid #ddd;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
-							})
-							.join("")}
-						<td class="col-amt" style="position: sticky; right: 0; background: var(--control-bg) !important; z-index: 80; text-align: right; border-left: 1px solid var(--border-color); border-top: 2px solid var(--border-color); font-weight: 800;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-					</tr>
-				`);
-			}
-		};
-
-		const render_due_15_table = () => {
-			let sorted_data = (data.results || []).filter(r => r.is_due_next_15_days);
-			sorted_data.sort((a, b) => {
-				let val_a = a[due_15_sort.field];
-				let val_b = b[due_15_sort.field];
-				
-				if (due_15_sort.field === "name" || due_15_sort.field === "supplier" || due_15_sort.field === "status") {
-					val_a = val_a || "";
-					val_b = val_b || "";
-					return due_15_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
-				} else if (due_15_sort.field === "transaction_date" || due_15_sort.field === "schedule_date" || due_15_sort.field === "actual_delivery_time") {
-					val_a = val_a ? new Date(val_a) : new Date(0);
-					val_b = val_b ? new Date(val_b) : new Date(0);
-				} else {
-					val_a = flt(val_a);
-					val_b = flt(val_b);
-				}
-				return due_15_sort.asc ? val_a - val_b : val_b - val_a;
-			});
-
-			tbody_due_15.empty();
-			let total_amt = 0;
-
-			if (sorted_data.length === 0) {
-				tbody_due_15.append(`<tr><td colspan="9" class="text-center text-muted" style="padding: 40px;">No orders due in next 15 days</td></tr>`);
-			} else {
-				sorted_data.forEach((row, idx) => {
-					let status_color = "gray";
-					if (["Completed", "Closed"].includes(row.status)) status_color = "green";
-					if (["Draft"].includes(row.status)) status_color = "blue";
-					if (["To Receive", "To Bill", "To Receive and Bill"].includes(row.status)) status_color = "orange";
-					if (["Cancelled"].includes(row.status)) status_color = "red";
-
-					let amt = flt(row.net_total);
-					total_amt += amt;
-
-					tbody_due_15.append(`
-						<tr>
-							<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
-							<td class="col-po"><a href="/app/purchase-order/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-							<td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
-							<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
-							<td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
-							<td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
-							<td class="col-days">
-								${row.due_days !== "-" ? `<span class="indicator-pill ${row.due_days > 0 ? "red" : "gray"}">${row.due_days} Days</span>` : "-"}
-							</td>
-							<td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
-							<td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-						</tr>
-					`);
-				});
-			}
-
-			let tfoot_due_15 = tables_container.find("#po_due_15_tfoot");
-			tfoot_due_15.empty();
-			tfoot_due_15.append(`
-				<tr class="sticky-total">
-					<td colspan="8" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
-					<td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid var(--border-color);">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-				</tr>
-			`);
-		};
-
-		const render_po_table = () => {
-			let sorted_data = [...(data.results || [])];
-			sorted_data.sort((a, b) => {
-				let val_a = a[po_sort.field];
-				let val_b = b[po_sort.field];
-				
-				if (po_sort.field === "name" || po_sort.field === "supplier" || po_sort.field === "status") {
-					val_a = val_a || "";
-					val_b = val_b || "";
-					return po_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
-				} else if (po_sort.field === "transaction_date" || po_sort.field === "schedule_date" || po_sort.field === "actual_delivery_time") {
-					val_a = val_a ? new Date(val_a) : new Date(0);
-					val_b = val_b ? new Date(val_b) : new Date(0);
-				} else {
-					val_a = flt(val_a);
-					val_b = flt(val_b);
-				}
-				return po_sort.asc ? val_a - val_b : val_b - val_a;
-			});
-
-			tbody_list.empty();
-			let total_amt = 0;
+			month_tbody.empty();
+			let month_totals = {};
+			let grand_total_all = 0;
 
 			sorted_data.forEach((row, idx) => {
-				let status_color = "gray";
-				if (["Completed", "Closed"].includes(row.status)) status_color = "green";
-				if (["Draft"].includes(row.status)) status_color = "blue";
-				if (["To Receive", "To Bill", "To Receive and Bill"].includes(row.status))
-					status_color = "orange";
-				if (["Cancelled"].includes(row.status)) status_color = "red";
-
-				let amt = flt(row.net_total);
-				total_amt += amt;
-
-				tbody_list.append(`
+				let row_total = row.total || 0;
+				grand_total_all += row_total;
+				let row_html = `
 					<tr>
-						<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
-						<td class="col-po"><a href="/app/purchase-order/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-						<td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
-						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
-						<td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
-						<td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
-						<td class="col-days">
-							${row.due_days !== "-" ? `<span class="indicator-pill ${row.due_days > 0 ? "red" : "gray"}">${row.due_days} Days</span>` : "-"}
-						</td>
-						<td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
-						<td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-supplier" title="${row.supplier}">${row.supplier}</td>
+						${months.map(m => {
+							let val = row.months[m.key] || 0;
+							month_totals[m.sort] = (month_totals[m.sort] || 0) + val;
+							return `<td class="col-amt">₹ ${(val / 1000000).toFixed(2)} M</td>`;
+						}).join("")}
+						<td class="col-amt" style="font-weight: 700;">₹ ${(row_total / 1000000).toFixed(2)} M</td>
+					</tr>
+				`;
+				month_tbody.append(row_html);
+			});
+
+			months.forEach(m => {
+				month_table_card.find(`#total_${m.sort}`).text(`₹ ${( (month_totals[m.sort] || 0) / 1000000).toFixed(2)} M`);
+			});
+			month_table_card.find("#grand_total_all").text(`₹ ${(grand_total_all / 1000000).toFixed(2)} M`);
+		};
+
+		const render_due_table = () => {
+			let sorted_data = [...(data.due_next_15_days || [])];
+			sorted_data.sort((a, b) => {
+				let val_a = a[due_sort.field];
+				let val_b = b[due_sort.field];
+				
+				if (["name", "supplier", "status", "item_code", "item_name"].includes(due_sort.field)) {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return due_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (due_sort.field === "transaction_date" || due_sort.field === "schedule_date") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return due_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			due_tbody.empty();
+			let due_total_val = 0;
+
+			sorted_data.forEach((row, idx) => {
+				due_total_val += flt(row.net_total);
+				let days_class = row.due_days <= 3 ? "text-danger font-weight-bold" : (row.due_days <= 7 ? "text-warning" : "");
+				let rec_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+                let status_slug = (row.status || '').toLowerCase().replace(/ /g, '-');
+
+				due_tbody.append(`
+					<tr>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-id"><a href="/app/purchase-order/${row.name}">${row.name}</a></td>
+						<td class="col-supplier" title="${row.supplier}">${row.supplier}</td>
+						<td class="col-item-code">${row.item_code || '-'}</td>
+						<td class="col-item-name" title="${row.item_name}">${row.item_name || '-'}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+						<td class="col-date" style="font-weight: 600;">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+						<td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
+						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
+						<td class="col-pct"><span class="pct-badge ${rec_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toFixed(2)} M</td>
+					</tr>
+				`);
+			});
+			due_table_card.find("#total_due_value").text(`₹ ${(due_total_val / 1000000).toFixed(2)} M`);
+		};
+
+		const render_detailed_table = () => {
+			let sorted_data = [...(data.results || [])];
+			sorted_data.sort((a, b) => {
+				let val_a = a[detailed_sort.field];
+				let val_b = b[detailed_sort.field];
+				
+				if (["name", "supplier", "status", "item_code", "item_name"].includes(detailed_sort.field)) {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return detailed_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detailed_sort.field === "transaction_date" || detailed_sort.field === "schedule_date") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return detailed_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			tbody.empty();
+			sorted_data.forEach((row, idx) => {
+				let rec_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
+                let status_slug = (row.status || '').toLowerCase().replace(/ /g, '-');
+
+				tbody.append(`
+					<tr>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-id"><a href="/app/purchase-order/${row.name}">${row.name}</a></td>
+						<td class="col-supplier" title="${row.supplier}">${row.supplier}</td>
+						<td class="col-item-code">${row.item_code || '-'}</td>
+						<td class="col-item-name" title="${row.item_name}">${row.item_name || '-'}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+						<td class="col-date" style="font-weight: 600;">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
+						<td class="col-pct"><span class="pct-badge ${rec_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
+						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
 					</tr>
 				`);
 			});
 
-			let tfoot_list = tables_container.find("#po_list_tfoot");
-			tfoot_list.empty();
-			tfoot_list.append(`
-				<tr class="sticky-total">
-					<td colspan="8" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
-					<td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid var(--border-color);">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-				</tr>
-			`);
+			let total_val = sorted_data.reduce((acc, row) => acc + flt(row.net_total), 0);
+			table_card.find("#total_booked_value").text(`₹ ${(total_val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M`);
 		};
 
-		// Initial render of tables
+		// Initial render of all tables
 		render_month_table();
-		render_due_15_table();
-		render_po_table();
+		render_due_table();
+		render_detailed_table();
 
 		// Header clicks for real-time sort toggling
 		page.container.on("click", ".sortable-header", function () {
@@ -891,8 +554,8 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				}
 				
 				// Reset icons
-				tables_container.find("#po_month_table .sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
-				tables_container.find("#po_month_table .sortable-header").removeClass("sorted-asc sorted-desc");
+				month_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				month_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
 				
 				// Update active
 				if (month_sort.asc) {
@@ -904,20 +567,20 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				}
 				
 				render_month_table();
-			} else if (table_type === "due_15") {
-				if (due_15_sort.field === field) {
-					due_15_sort.asc = !due_15_sort.asc;
+			} else if (table_type === "due") {
+				if (due_sort.field === field) {
+					due_sort.asc = !due_sort.asc;
 				} else {
-					due_15_sort.field = field;
-					due_15_sort.asc = true;
+					due_sort.field = field;
+					due_sort.asc = true;
 				}
 				
 				// Reset icons
-				tables_container.find("#po_due_15_table .sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
-				tables_container.find("#po_due_15_table .sortable-header").removeClass("sorted-asc sorted-desc");
+				due_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				due_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
 				
 				// Update active
-				if (due_15_sort.asc) {
+				if (due_sort.asc) {
 					$(this).addClass("sorted-asc");
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
 				} else {
@@ -925,21 +588,21 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
 				}
 				
-				render_due_15_table();
-			} else if (table_type === "po") {
-				if (po_sort.field === field) {
-					po_sort.asc = !po_sort.asc;
+				render_due_table();
+			} else if (table_type === "detailed") {
+				if (detailed_sort.field === field) {
+					detailed_sort.asc = !detailed_sort.asc;
 				} else {
-					po_sort.field = field;
-					po_sort.asc = true;
+					detailed_sort.field = field;
+					detailed_sort.asc = true;
 				}
 				
 				// Reset icons
-				tables_container.find("#po_list_table .sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
-				tables_container.find("#po_list_table .sortable-header").removeClass("sorted-asc sorted-desc");
+				table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
 				
 				// Update active
-				if (po_sort.asc) {
+				if (detailed_sort.asc) {
 					$(this).addClass("sorted-asc");
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
 				} else {
@@ -947,232 +610,278 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
 				}
 				
-				render_po_table();
+				render_detailed_table();
 			}
 		});
 
-		const export_to_excel = (export_type = "all") => {
-			let filters = page.filter_group.get_values();
-			frappe.call({
-				method: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_excel",
-				args: { filters: filters, export_type: export_type },
-				callback: function (r) {
-					if (r.message) {
-						const { filename, filecontent } = r.message;
-						const byteCharacters = atob(filecontent);
-						const byteNumbers = new Array(byteCharacters.length);
-						for (let i = 0; i < byteCharacters.length; i++) {
-							byteNumbers[i] = byteCharacters.charCodeAt(i);
-						}
-						const byteArray = new Uint8Array(byteNumbers);
-						const blob = new Blob([byteArray], {
-							type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-						});
-						const link = document.createElement("a");
-						link.href = URL.createObjectURL(blob);
-						link.download = filename;
-						link.click();
-					}
-				},
-			});
-		};
+		month_table_card.find("#export_month_excel_btn").on("click", () => export_data_excel("summary"));
+		table_card.find("#export_excel_btn").on("click", () => export_data_excel("all"));
+		table_card.find("#export_pdf_btn").on("click", () => export_pdf_full());
 
-		const export_to_pdf = async () => {
-			const report_date = frappe.datetime.now_datetime();
-
-			const get_chart_png = (id) => {
-				const svg_el = document.querySelector(`#wrapper_${id} svg`);
-				if (!svg_el) return null;
-				const clone = svg_el.cloneNode(true);
-				const internal_legend = clone.querySelector(
-					".chart-legend, .legend, .frappe-chart-legend",
-				);
-				if (internal_legend) internal_legend.style.display = "none";
-				const canvas = document.createElement("canvas");
-				const context = canvas.getContext("2d");
-				const svg_data = new XMLSerializer().serializeToString(clone);
-				const img = new Image();
-				return new Promise((resolve) => {
-					img.onload = () => {
-						canvas.width = img.width * 2;
-						canvas.height = img.height * 2;
-						context.fillStyle = "white";
-						context.fillRect(0, 0, canvas.width, canvas.height);
-						context.drawImage(img, 0, 0, canvas.width, canvas.height);
-						resolve(canvas.toDataURL("image/png"));
-					};
-					img.src =
-						"data:image/svg+xml;base64," +
-						btoa(unescape(encodeURIComponent(svg_data)));
-				});
-			};
-
-			const [png1, png2] = await Promise.all([
-				get_chart_png("top_10_suppliers"),
-				get_chart_png("order_status"),
-			]);
-
-			const chart_h = (src, title) =>
-				src
-					? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>`
-					: "";
-
-			const chart_l = (chart_id) => {
-				const c_obj = data.charts[chart_id];
-				if (!c_obj || !c_obj.data.labels.length) return "";
-				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-				let is_currency = c_obj.is_currency || false;
-
-				let legend_html = '<div class="pdf-legend">';
-				c_obj.data.labels.forEach((l, i) => {
-					const val = c_obj.data.datasets[0].values[i];
-					const color = c_obj.colors[i % c_obj.colors.length];
-					const share = ((val / total_val) * 100).toFixed(1);
-					const val_str = is_currency
-						? format_currency(val / 1000000, "INR") + " M"
-						: val;
-					legend_html += `
-                        <div class="pdf-legend-item">
-                            <span class="pdf-dot" style="background: ${color}"></span>
-                            <div class="pdf-legend-info">
-                                <div class="pdf-legend-label">${l}</div>
-                                <div class="pdf-legend-val">${val_str} (${share}%)</div>
-                            </div>
-                        </div>
-                    `;
-				});
-				legend_html += "</div>";
-				return legend_html;
-			};
-
-			const chart_t = (chart_id, title) => {
-				const c_obj = data.charts[chart_id];
-				if (!c_obj || !c_obj.data.labels.length) return "";
-				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-				let is_currency = c_obj.is_currency || false;
-				let rows = c_obj.data.labels
-					.map((l, i) => {
-						const val = c_obj.data.datasets[0].values[i];
-						const share = ((val / total_val) * 100).toFixed(1);
-						const val_str = is_currency
-							? format_currency(val / 1000000, "INR") + " M"
-							: val;
-						return `<tr><td style="text-align:center;">${i + 1}</td><td>${l}</td><td style="text-align:right;">${val_str}</td><td style="text-align:right;">${share}%</td></tr>`;
-					})
-					.join("");
-				return `<div style="margin-top:10px; page-break-inside: avoid;"><table style="width:80%; margin: 10px auto; border-collapse: collapse; font-size: 10px; border: 1px solid #eee;"><thead><tr style="background: #f8f9fa;"><th style="width: 40px; text-align:center; border-bottom:2px solid #3b82f6;">S.No.</th><th style="text-align:left; border-bottom:2px solid #3b82f6;">${title}</th><th style="width: 120px; text-align:right; border-bottom:2px solid #3b82f6;">Value</th><th style="width: 80px; text-align:right; border-bottom:2px solid #3b82f6;">Share %</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-			};
-
-			const html = `
-                <html>
-                <head>
-                    <style>
-                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
-                        @page { size: landscape; margin: 10mm; }
-                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
-                        
-                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
-                        .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
-                        .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-                        .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
-                        
-                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
-                        
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-                        th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
-                        thead { display: table-header-group; }
-                        tfoot { display: table-row-group; }
-                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
-                        
-                        .text-right { text-align: right; }
-                        .text-center { text-align: center; }
-                        .font-weight-bold { font-weight: 700; }
-                        .page-break { page-break-after: always; }
-
-                        /* Column Widths */
-                        .col-sno { width: 40px; text-align: center; }
-                        .col-customer, .col-supplier { width: 180px; }
-                        .col-sp { width: 120px; }
-                        .col-prod { width: 150px; }
-                        .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
-                        .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
-
-                        .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-                        .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
-                        .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
-                        .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
-                        .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                        .pdf-legend-val { font-size: 9px; color: #64748b; }
-                    </style>
-                </head>
-                <body>
-                    <div class="report-header">
-                        <h1 style="margin:0; font-size: 24px;">Supplier Order Dashboard</h1>
-                        <p style="font-size: 11px; color: #999; margin: 8px 0 0 0;">Generated: ${report_date}</p>
-                    </div>
-
-                    <div class="kpi-wrapper">
-                        ${data.summary
-							.map(
-								(m) => `
-                            <div class="kpi-card">
-                                <div class="kpi-label">${m.label}</div>
-                                <div class="kpi-value">${m.fieldtype === "Currency" ? format_currency(m.value / 1000000, "INR") + " M" : m.value}</div>
-                            </div>
-                        `,
-							)
-							.join("")}
-                    </div>
-
-                    <h3>Visual Analytics</h3>
-					${chart_h(png1, "Top 10 Suppliers")}
-                    ${chart_l("top_10_suppliers")}
-					${chart_t("top_10_suppliers", "Supplier Data")}
-                    <div class="page-break"></div>
-
-                    ${chart_h(png2, "Order Status")}
-                    ${chart_l("order_status")}
-					${chart_t("order_status", "Status Data")}
-                    <div class="page-break"></div>
-
-                    <h3>Month-Wise Order Breakdown</h3>
-                    <table>
-                        <thead>${tables_html.find(".month-table thead").html()}</thead>
-                        <tbody>${tables_html.find("#po_month_body").html()}</tbody>
-                    </table>
-                    <div class="page-break"></div>
-
-                    <h3>Supplier Orders List</h3>
-                    <table>
-                        <thead>${tables_html.find(".dashboard-table").not(".month-table").find("thead").html()}</thead>
-                        <tbody>${tables_html.find("#po_list_body").html()}</tbody>
-                        <tfoot>${tables_html.find("#po_list_tfoot").html()}</tfoot>
-                    </table>
-                </body>
-                </html>
-            `;
-
-			const method_url =
-				"/api/method/renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_pdf";
-			const $form =
-				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
-                <input type="hidden" name="html" value="">
-                <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
-            </form>`).appendTo("body");
-
-			$form.find('input[name="html"]').val(html);
-			$form.submit();
-			$form.remove();
-		};
-
-		tables_html.find("#export_month_table").on("click", () => export_to_excel("summary"));
-		tables_html.find("#export_list_table").on("click", () => export_to_excel("detail"));
-
-		page.add_menu_item(__("Export to PDF"), export_to_pdf);
-		page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
+        function export_data_excel(type) {
+            let filters = page.filter_group.get_values();
+            let baseUrl = frappe.request.url.split('?')[0];
+            let queryParams = $.param({
+                cmd: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_excel",
+                filters: JSON.stringify(filters),
+                export_type: type
+            });
+            window.open(baseUrl + '?' + queryParams);
+        }
 	}
+
+    async function export_pdf_full() {
+        frappe.show_alert({message: __("Preparing professional PDF export with visual legends..."), indicator: "blue"});
+        
+        const data = page.dashboard_data;
+        if (!data) return;
+
+        const get_chart_image = (chart_id) => {
+            return new Promise((resolve) => {
+                const chart = page.chart_instances[chart_id];
+                if (!chart) return resolve(null);
+                
+                const svg = chart.parent.querySelector('svg');
+                const svgData = new XMLSerializer().serializeToString(svg);
+                const canvas = document.createElement("canvas");
+                const svgSize = svg.getBoundingClientRect();
+                canvas.width = svgSize.width * 2;
+                canvas.height = svgSize.height * 2;
+                const ctx = canvas.getContext("2d");
+                const img = new Image();
+                img.onload = () => {
+                    ctx.fillStyle = "white";
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL("image/png"));
+                };
+                img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
+                setTimeout(() => resolve(null), 2000);
+            });
+        };
+
+        const chart_images = {};
+        for (let cid of Object.keys(data.charts)) {
+            chart_images[cid] = await get_chart_image(cid);
+        }
+
+        const report_date = frappe.datetime.global_date_format(frappe.datetime.now_date());
+        const filters = page.filter_group.get_values();
+        const period = `${frappe.datetime.str_to_user(filters.from_date || '')} to ${frappe.datetime.str_to_user(filters.to_date || '')}`;
+
+        let html = `
+            <html>
+            <head>
+                <style>
+                    body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 20px; color: #1e293b; background: #fff; }
+                    @page { size: A4 landscape; margin: 10mm; }
+                    .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
+                    .report-title { margin: 0; font-size: 24px; color: #0f172a; text-transform: uppercase; }
+                    .kpi-row { display: table; width: 100%; border-spacing: 10px; margin-bottom: 25px; }
+                    .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; background: #f8fafc; text-align: center; border-left: 5px solid #3b82f6; }
+                    .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+                    .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
+                    .section-title { font-size: 14px; font-weight: 700; color: #3b82f6; margin: 25px 0 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; text-transform: uppercase; }
+                    .chart-section { display: table; width: 100%; margin-bottom: 30px; page-break-inside: avoid; }
+                    .chart-cell { display: table-cell; width: 50%; padding: 15px; border: 1px solid #f1f5f9; border-radius: 12px; background: #fff; vertical-align: top; }
+                    .chart-title { font-weight: 800; margin-bottom: 15px; font-size: 12px; text-align: center; color: #1e293b; text-transform: uppercase; }
+                    .chart-img { max-width: 80%; height: auto; display: block; margin: 0 auto 15px; }
+                    
+                    /* PDF Legend Styling */
+                    .pdf-legend { display: table; width: 100%; border-spacing: 5px; margin-top: 10px; background: #f8fafc; padding: 10px; border-radius: 8px; }
+                    .pdf-legend-row { display: table-row; }
+                    .pdf-legend-item { display: table-cell; width: 25%; font-size: 7px; padding: 3px; vertical-align: top; }
+                    .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+                    .legend-text { display: inline-block; vertical-align: middle; line-height: 1.2; width: 80%; }
+                    .legend-name { font-weight: 700; color: #1e293b; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+                    .legend-val { color: #64748b; font-size: 6.5px; }
+
+                    table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 20px; table-layout: fixed; }
+                    th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; word-wrap: break-word; overflow: hidden; }
+                    th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; }
+                    .col-amt { text-align: right; width: 10%; }
+                    .col-sno { width: 4%; text-align: center; }
+                    .col-id { width: 11%; }
+                    .col-supplier { width: 22%; }
+                    .col-item-code { width: 10%; }
+                    .col-item-name { width: 15%; }
+                    .col-date { width: 10%; }
+                    .col-status { width: 12%; }
+                    .col-pct { width: 6%; text-align: center; }
+                    .col-days { width: 7%; text-align: center; }
+                    .text-danger { color: #ef4444 !important; }
+                    .page-break { page-break-after: always; }
+                </style>
+            </head>
+            <body>
+                <div class="report-header">
+                    <h1 class="report-title">Supplier Performance Report</h1>
+                    <p style="font-size: 12px; color: #64748b;">Period: ${period} | Generated: ${report_date}</p>
+                </div>
+
+                <div class="kpi-row">
+                    ${data.summary.map(m => `
+                        <div class="kpi-card" style="border-left-color: ${m.indicator === 'Green' ? '#10b981' : (m.indicator === 'Red' ? '#ef4444' : '#3b82f6')}">
+                            <div class="kpi-label">${m.label}</div>
+                            <div class="kpi-value">${m.fieldtype === 'Currency' ? '₹ ' + (flt(m.value) / 1000000).toFixed(2) + ' M' : m.value}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <h3 class="section-title">Visual Analytics</h3>
+                <div class="chart-section">
+                ${Object.keys(data.charts).map(cid => {
+                    let c_obj = data.charts[cid];
+                    let title = c_obj.title || cid.replace(/_/g, " ").toUpperCase();
+                    let labels = c_obj.data.labels;
+                    let values = c_obj.data.datasets[0].values;
+                    let colors = c_obj.colors;
+                    let total = values.reduce((a, b) => a + b, 0);
+
+                    // Generate Legend Rows (4 items per row)
+                    let legend_html = '<div class="pdf-legend">';
+                    for (let i = 0; i < labels.length; i += 4) {
+                        legend_html += '<div class="pdf-legend-row">';
+                        for (let j = 0; j < 4; j++) {
+                            if (labels[i + j]) {
+                                let val = values[i + j];
+                                let pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                let display_val = c_obj.is_currency 
+                                    ? "₹ " + (val / 1000000).toFixed(2) + " M"
+                                    : val;
+                                legend_html += `
+                                    <div class="pdf-legend-item">
+                                        <div class="legend-dot" style="background: ${colors[(i+j) % colors.length]}"></div>
+                                        <div class="legend-text">
+                                            <span class="legend-name">${labels[i + j]}</span>
+                                            <span class="legend-val">${display_val} (${pct}%)</span>
+                                        </div>
+                                    </div>
+                                `;
+                            } else {
+                                legend_html += '<div class="pdf-legend-item"></div>';
+                            }
+                        }
+                        legend_html += '</div>';
+                    }
+                    legend_html += '</div>';
+
+                    return `
+                    <div class="chart-cell">
+                        <div class="chart-title">${title}</div>
+                        ${chart_images[cid] ? `<img src="${chart_images[cid]}" class="chart-img">` : '<p>Chart image unavailable</p>'}
+                        ${legend_html}
+                    </div>`;
+                }).join('')}
+                </div>
+
+                <div class="page-break"></div>
+                <h3 class="section-title">Month-Wise Booking Breakdown (M INR)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-sno">S.No.</th>
+                            <th class="col-supplier">Supplier</th>
+                            ${data.months.map(m => `<th class="col-amt">${m.key}</th>`).join("")}
+                            <th class="col-amt">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.month_wise_supplier.map((row, idx) => `
+                            <tr>
+                                <td class="col-sno">${idx + 1}</td>
+                                <td class="col-supplier">${row.supplier}</td>
+                                ${data.months.map(m => `<td class="col-amt">₹ ${(flt(row.months[m.key] || 0) / 1000000).toFixed(2)}</td>`).join("")}
+                                <td class="col-amt">₹ ${(flt(row.total) / 1000000).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <div class="page-break"></div>
+                <h3 class="section-title">Orders Due in Next 15 Days (M INR)</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-sno">S.No.</th>
+                            <th class="col-id">PO No</th>
+                            <th class="col-supplier">Supplier</th>
+                            <th class="col-item-code">Item Code</th>
+                            <th class="col-item-name">Item Name</th>
+                            <th class="col-date">PO Date</th>
+                            <th class="col-date">Expected Del.</th>
+                            <th class="col-days">Days Left</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-pct">% Rec.</th>
+                            <th class="col-amt">Net Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.due_next_15_days.map((row, idx) => `
+                            <tr>
+                                <td class="col-sno">${idx + 1}</td>
+                                <td class="col-id">${row.name}</td>
+                                <td class="col-supplier">${row.supplier}</td>
+                                <td class="col-item-code">${row.item_code || '-'}</td>
+                                <td class="col-item-name">${row.item_name || '-'}</td>
+                                <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+                                <td class="col-date">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+                                <td class="col-days">${row.due_days} Days</td>
+                                <td class="col-status">${row.status}</td>
+                                <td class="col-pct">${Math.round(row.per_delivered)}%</td>
+                                <td class="col-amt">₹ ${(flt(row.net_total) / 1000000).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+
+                <h3 class="section-title">Detailed Orders List</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th class="col-sno">S.No.</th>
+                            <th class="col-id">PO No</th>
+                            <th class="col-supplier">Supplier</th>
+                            <th class="col-item-code">Item Code</th>
+                            <th class="col-item-name">Item Name</th>
+                            <th class="col-date">Date</th>
+                            <th class="col-date">Expected Del.</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-pct">% Rec.</th>
+                            <th class="col-pct">% Bill.</th>
+                            <th class="col-amt">Net Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.results.map((row, idx) => `
+                            <tr>
+                                <td class="col-sno">${idx + 1}</td>
+                                <td class="col-id">${row.name}</td>
+                                <td class="col-supplier">${row.supplier}</td>
+                                <td class="col-item-code">${row.item_code || '-'}</td>
+                                <td class="col-item-name">${row.item_name || '-'}</td>
+                                <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+                                <td class="col-date">${frappe.datetime.str_to_user(row.schedule_date)}</td>
+                                <td class="col-status">${row.status}</td>
+                                <td class="col-pct">${Math.round(row.per_delivered)}%</td>
+                                <td class="col-pct">${Math.round(row.per_billed)}%</td>
+                                <td class="col-amt">₹ ${(flt(row.net_total) / 1000000).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </body>
+            </html>
+        `;
+
+        const $form = $(`<form action="/api/method/renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_pdf" method="POST" style="display:none;">
+            <input type="hidden" name="html" value="">
+            <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
+        </form>`).appendTo("body");
+        $form.find('input[name="html"]').val(html);
+        $form.submit();
+        $form.remove();
+    }
 
 	// Set default Fiscal Year and trigger initial load
 	frappe.call({
@@ -1186,7 +895,11 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
 		},
 		always: function() { 
-			setTimeout(() => page.refresh(), 300);
+			setTimeout(() => {
+                page.refresh();
+                // Sub-refresh to ensure rendering takes final values
+                setTimeout(() => page.refresh(), 500);
+            }, 300);
 		}
 	});
 };
