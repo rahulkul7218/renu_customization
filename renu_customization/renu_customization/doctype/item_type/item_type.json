@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "allow_rename": 1,
  "autoname": "field:item_type",
  "creation": "2026-05-19 12:00:34.800469",
@@ -26,7 +27,7 @@
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-05-19 12:21:26.846119",
+ "modified": "2026-05-21 16:49:55.259265",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "Item Type",

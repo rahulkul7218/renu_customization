@@ -958,5 +958,5 @@ frappe.pages["purchase_invoice_dashboard"].on_page_load = function (wrapper) {
 		page.add_menu_item(__("Export to PDF"), () => export_pdf());
 	}
 
-	setTimeout(() => page.refresh(), 300);
+	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
 };

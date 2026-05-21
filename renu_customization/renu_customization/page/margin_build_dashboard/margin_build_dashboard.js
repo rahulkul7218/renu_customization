@@ -755,18 +755,5 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 		);
 	}
 
-	frappe.call({
-		method: "frappe.client.get_value",
-		args: {
-			doctype: "Fiscal Year",
-			filters: { year_start_date: ["<=", frappe.datetime.get_today()], year_end_date: [">=", frappe.datetime.get_today()] },
-			fieldname: "name"
-		},
-		callback: function (r) {
-			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
-		},
-		always: function() { 
-			setTimeout(() => page.refresh(), 300);
-		}
-	});
+	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
 };

@@ -95,6 +95,8 @@ def get_dashboard_data(filters=None):
                 conditions += " AND i.item_group = %(item_group)s"
         except Exception:
             conditions += " AND i.item_group = %(item_group)s"
+    if filters.get("item_type"):
+        conditions += " AND i.item_type = %(item_type)s"
     if filters.get("item_code"):
         conditions += " AND soi.item_code = %(item_code)s"
     if filters.get("sales_person"):

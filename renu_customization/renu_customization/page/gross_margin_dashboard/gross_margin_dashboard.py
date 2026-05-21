@@ -96,7 +96,7 @@ def get_dashboard_data(filters=None):
     cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory", "business_region_name"])
     customer_map = {c.name: c for c in cust_list}
         
-    item_list = frappe.get_all("Item", fields=["name", "item_group"])
+    item_list = frappe.get_all("Item", fields=["name", "item_group", "item_type"])
     item_map = {i.name: i for i in item_list}
     
     cg_list = []
@@ -175,6 +175,12 @@ def get_dashboard_data(filters=None):
         item_info = item_map.get(row.get("item_code"))
         if keep and ig_filter:
             if not item_info or item_info.item_group not in ig_list:
+                keep = False
+
+        # 4b. Item Type
+        item_type_filter = filters.get("item_type")
+        if keep and item_type_filter:
+            if not item_info or str(item_info.item_type or "") != str(item_type_filter):
                 keep = False
 
         # 5. Business Region Name

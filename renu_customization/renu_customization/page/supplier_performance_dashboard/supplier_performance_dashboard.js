@@ -91,19 +91,6 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		};
 	};
 
-    let fy_field = page.filter_group.get_field("fiscal_year");
-    fy_field.df.on_change = () => {
-        let fy = fy_field.get_value();
-        if (fy) {
-            frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
-                if (r) {
-                    page.filter_group.set_values({ from_date: r.year_start_date, to_date: r.year_end_date });
-                    page.refresh();
-                }
-            });
-        }
-    };
-
     Object.keys(page.filter_group.fields_dict).forEach(key => {
         let f = page.filter_group.fields_dict[key];
         if (f.$input) f.$input.on("change input blur", () => page.refresh());
@@ -1016,15 +1003,15 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                 </div>
 
                 <div class="page-break"></div>
-                <h3 class="section-title">Month-Wise Booking Breakdown (M INR)</h3>
+                <h3 class="section-title">Month-Wise Booking Breakdown </h3>
                 ${month_table_html || "<p>No data</p>"}
 
                 <div class="page-break"></div>
-                <h3 class="section-title">Orders Due in Next 15 Days (M INR)</h3>
+                <h3 class="section-title">Orders Due in Next 15 Days </h3>
                 ${due_table_html || "<p>No data</p>"}
 
                 <div class="page-break"></div>
-                <h3 class="section-title">Detailed Orders List (M INR)</h3>
+                <h3 class="section-title">Detailed Orders List </h3>
                 ${detailed_table_html || "<p>No data</p>"}
             </body>
             </html>
@@ -1046,22 +1033,5 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
     }
 
 	// Set default Fiscal Year and trigger initial load
-	frappe.call({
-		method: "frappe.client.get_value",
-		args: {
-			doctype: "Fiscal Year",
-			filters: { year_start_date: ["<=", frappe.datetime.get_today()], year_end_date: [">=", frappe.datetime.get_today()] },
-			fieldname: "name"
-		},
-		callback: function (r) {
-			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
-		},
-		always: function() { 
-			setTimeout(() => {
-                page.refresh();
-                // Sub-refresh to ensure rendering takes final values
-                setTimeout(() => page.refresh(), 500);
-            }, 300);
-		}
-	});
+	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
 };

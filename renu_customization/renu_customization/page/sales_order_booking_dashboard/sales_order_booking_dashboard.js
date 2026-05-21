@@ -92,6 +92,13 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			placeholder: __("Select Product Group"),
 		},
 		{
+			fieldname: "item_type",
+			label: __("Item Type"),
+			fieldtype: "Link",
+			options: "Item Type",
+			placeholder: __("Select Item Type"),
+		},
+		{
 			fieldname: "item_code",
 			label: __("Product (Item)"),
 			fieldtype: "Link",
@@ -242,6 +249,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			let filters = {};
 			let item_group = page.filter_group.get_value("item_group");
 			if (item_group) filters.item_group = item_group;
+			let item_type = page.filter_group.get_value("item_type");
+			if (item_type) filters.item_type = item_type;
 			return { filters: filters };
 		};
 	}
@@ -273,33 +282,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		return true;
 	};
 
-	// Handle Fiscal Year and Date Range Interaction
-	fy_field.on_change = function () {
-		let fy = this.get_value();
-		if (fy) {
-			frappe.db.get_doc("Fiscal Year", fy).then((doc) => {
-				fy_field._start_date = doc.year_start_date;
-				fy_field._end_date = doc.year_end_date;
-
-				// Constrain current values if they are outside the new FY bounds
-				let fd = from_field.get_value();
-				let td = to_field.get_value();
-
-				if (fd && (fd < doc.year_start_date || fd > doc.year_end_date)) {
-					page.filter_group.set_value("from_date", doc.year_start_date);
-				}
-				if (td && (td < doc.year_start_date || td > doc.year_end_date)) {
-					page.filter_group.set_value("to_date", doc.year_end_date);
-				}
-
-				page.refresh();
-			});
-		} else {
-			fy_field._start_date = null;
-			fy_field._end_date = null;
-			page.refresh();
-		}
-	};
+	renu_customization.dashboard_fiscal_year.bind_fiscal_year_change(page, { cache_bounds: true });
 
 	// Override Date Changes with FY Constraint
 	from_field.on_change = function () {
@@ -1560,7 +1543,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		});
 	};
 
-	setTimeout(() => page.refresh(), 300);
+	renu_customization.dashboard_fiscal_year.init(page, { cache_bounds: true, refresh_delay: 300 });
 };
 
 function format_currency_short(num) {

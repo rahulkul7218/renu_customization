@@ -672,8 +672,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 
 		setup_filter_events();
 
-		// Initial Load after filter group is ready
-		setTimeout(() => page.refresh(), 300);
+		renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
 	}, 100);
 
 	function setup_filter_events() {

@@ -55,31 +55,57 @@ def format_actual_delivery_display(row):
     return ", ".join(formatdate(d) for d in dates)
 
 
-def _fetch_delivery_note_dates(so_names):
-    if not so_names:
-        return {}
-    dn_details = frappe.db.sql(
-        """
+def _fetch_actual_delivery_map(so_item_field):
+    """Return {so_item_name: [date, ...]} from all submitted delivery notes."""
+    actual_delivery_map = {}
+    dn_data = frappe.db.sql(
+        f"""
         SELECT
-            dni.against_sales_order AS sales_order,
+            dni.{so_item_field} AS so_item_name,
             GROUP_CONCAT(DISTINCT dn.posting_date ORDER BY dn.posting_date SEPARATOR ',') AS actual_delivery_dates
         FROM
             `tabDelivery Note` dn
         INNER JOIN
             `tabDelivery Note Item` dni ON dni.parent = dn.name
         WHERE
-            dni.against_sales_order IN %s
-            AND dn.docstatus = 1
+            dn.docstatus = 1
+            AND dni.{so_item_field} IS NOT NULL
+            AND dni.{so_item_field} != ''
         GROUP BY
-            dni.against_sales_order
+            dni.{so_item_field}
         """,
-        (tuple(so_names),),
         as_dict=True,
     )
-    return {
-        r.sales_order: _parse_group_concat_dates(r.actual_delivery_dates)
-        for r in dn_details
-    }
+    for r in dn_data:
+        actual_delivery_map[r.so_item_name] = _parse_group_concat_dates(r.actual_delivery_dates)
+    return actual_delivery_map
+
+
+EXCLUDED_SO_STATUSES = ("Cancelled", "Draft")
+
+
+def get_line_net_amount(item):
+    short_close = flt(item.get("total_short_close_qty"))
+    effective_qty = flt(item.get("qty")) - short_close
+    base_rate = flt(item.get("base_rate"))
+    if base_rate:
+        return effective_qty * base_rate
+    return flt(item.get("base_amount")) or flt(item.get("amount"))
+
+
+def _get_freight_item_codes(item_codes):
+    if not item_codes:
+        return set()
+    return set(
+        frappe.db.sql_list(
+            """
+            SELECT name FROM `tabItem`
+            WHERE name IN %s
+            AND (IFNULL(custom_is_freight_item, 0) = 1 OR item_name = 'Freight')
+            """,
+            (tuple(item_codes),),
+        )
+    )
 
 
 def prepare_filters(filters):
@@ -98,80 +124,194 @@ def prepare_filters(filters):
 
 @frappe.whitelist()
 def get_dashboard_data(filters=None):
+    if not frappe.has_permission("Sales Order", "read"):
+        frappe.throw(_("Not permitted to read Sales Order"), frappe.PermissionError)
+
     filters = prepare_filters(filters)
-    
-    conditions = " docstatus = 1 "
+
+    so_filters = {"docstatus": 1}
+
     if filters.get("company"):
-        conditions += f" AND company = {frappe.db.escape(filters.get('company'))}"
+        so_filters["company"] = filters.get("company")
+
     if filters.get("from_date"):
-        conditions += f" AND transaction_date >= {frappe.db.escape(filters.get('from_date'))}"
+        so_filters["transaction_date"] = [">=", filters.get("from_date")]
+
     if filters.get("to_date"):
-        conditions += f" AND transaction_date <= {frappe.db.escape(filters.get('to_date'))}"
-    if filters.get("customer"):
-        conditions += f" AND customer = {frappe.db.escape(filters.get('customer'))}"
-    if filters.get("customer_group"):
-        conditions += f" AND customer_group = {frappe.db.escape(filters.get('customer_group'))}"
+        if "transaction_date" in so_filters:
+            so_filters["transaction_date"] = ["between", [filters.get("from_date"), filters.get("to_date")]]
+        else:
+            so_filters["transaction_date"] = ["<=", filters.get("to_date")]
+
     if filters.get("sales_order"):
-        conditions += f" AND name = {frappe.db.escape(filters.get('sales_order'))}"
+        so_filters["name"] = filters.get("sales_order")
 
-    results = frappe.db.sql(f"""
-        SELECT 
-            name, customer, customer_group, transaction_date, delivery_date as schedule_date, 
-            status, net_total, base_net_total, territory, per_delivered, 
-            per_billed, po_no
-        FROM `tabSales Order`
-        WHERE {conditions}
-        ORDER BY transaction_date DESC
-    """, as_dict=True)
+    if filters.get("customer"):
+        so_filters["customer"] = filters.get("customer")
+    elif filters.get("customer_group"):
+        try:
+            lft, rgt = frappe.db.get_value("Customer Group", filters.customer_group, ["lft", "rgt"])
+            customers = frappe.db.sql_list(
+                "SELECT name FROM `tabCustomer` WHERE customer_group IN "
+                "(SELECT name FROM `tabCustomer Group` WHERE lft >= %s AND rgt <= %s)",
+                (lft, rgt),
+            )
+        except Exception:
+            customers = frappe.get_all(
+                "Customer", filters={"customer_group": filters.customer_group}, pluck="name"
+            )
+        so_filters["customer"] = ["in", customers] if customers else ["in", [""]]
 
-    if not results:
+    if filters.get("status"):
+        if filters.get("status") in EXCLUDED_SO_STATUSES:
+            return {"summary": [], "results": []}
+        so_filters["status"] = filters.get("status")
+    else:
+        so_filters["status"] = ["not in", list(EXCLUDED_SO_STATUSES)]
+
+    sales_orders = frappe.get_all(
+        "Sales Order",
+        filters=so_filters,
+        fields=["name", "customer", "customer_name", "transaction_date", "delivery_date", "status"],
+        order_by="transaction_date desc",
+        limit_page_length=0,
+    )
+
+    if not sales_orders:
         return {"summary": [], "results": []}
 
-    # All actual delivery dates from Delivery Note (comma-separated per Sales Order)
-    so_names = [d.name for d in results]
-    dn_delivery_map = _fetch_delivery_note_dates(so_names)
+    so_names = [so.name for so in sales_orders]
+    so_map = {so.name: so for so in sales_orders}
 
-    total_orders = 0
+    soi_filters = {"parent": ["in", so_names]}
+    if filters.get("expected_delivery_date"):
+        soi_filters["delivery_date"] = filters.get("expected_delivery_date")
+
+    so_items = frappe.get_all(
+        "Sales Order Item",
+        filters=soi_filters,
+        fields=[
+            "name", "parent", "item_code", "item_name", "qty", "rate", "amount",
+            "base_rate", "base_amount", "delivered_qty", "billed_amt",
+            "delivery_date", "total_short_close_qty",
+        ],
+        order_by="parent, idx",
+        limit_page_length=0,
+    )
+
+    if not so_items:
+        return {"summary": [], "results": []}
+
+    freight_item_codes = _get_freight_item_codes(list({i.item_code for i in so_items if i.item_code}))
+
+    actual_delivery_map = {}
+    try:
+        actual_delivery_map = _fetch_actual_delivery_map("so_detail")
+    except Exception:
+        try:
+            actual_delivery_map = _fetch_actual_delivery_map("sales_order_item")
+        except Exception:
+            pass
+
+    report_data = []
+    for item in so_items:
+        so = so_map.get(item.parent)
+        if not so or so.status in EXCLUDED_SO_STATUSES:
+            continue
+        if item.item_code in freight_item_codes:
+            continue
+
+        qty = flt(item.qty)
+        delivered_qty = flt(item.delivered_qty)
+        short_close_qty = flt(item.total_short_close_qty)
+        rate = flt(item.rate)
+        billed_amt = flt(item.billed_amt)
+        billed_qty = billed_amt / rate if rate > 0 else 0.0
+        pending_qty = max(0, qty - short_close_qty - delivered_qty)
+
+        per_delivered = (delivered_qty / qty) * 100 if qty > 0 else 0.0
+        per_billed = (billed_qty / qty) * 100 if qty > 0 else 0.0
+
+        schedule_date = item.delivery_date or so.delivery_date
+        delivery_dates = actual_delivery_map.get(item.name, [])
+
+        report_data.append({
+            "name": so.name,
+            "customer": so.customer_name or so.customer,
+            "transaction_date": so.transaction_date,
+            "status": so.status,
+            "so_item_name": item.name,
+            "item_code": item.item_code,
+            "item_name": item.item_name,
+            "qty": qty,
+            "rate": rate,
+            "net_total": get_line_net_amount(item),
+            "delivered_qty": delivered_qty,
+            "pending_qty": pending_qty,
+            "billed_qty": billed_qty,
+            "per_delivered": per_delivered,
+            "per_billed": per_billed,
+            "schedule_date": schedule_date,
+            "actual_delivery_dates": [str(d) for d in delivery_dates],
+            "actual_delivery_time": str(delivery_dates[-1]) if delivery_dates else None,
+        })
+
+    if not report_data:
+        return {"summary": [], "results": []}
+
+    results = []
     total_amount = 0
     total_overdue = 0
     total_due_next_15_days = 0
+    unique_sos = set()
+
     today = getdate(nowdate())
     next_15_days = add_days(today, 15)
-    
-    processed_results = []
-    for row in results:
-        delivery_dates = dn_delivery_map.get(row.name, [])
-        row["actual_delivery_dates"] = [str(d) for d in delivery_dates]
-        row["actual_delivery_time"] = str(delivery_dates[-1]) if delivery_dates else None
-        
+
+    for row in report_data:
         is_overdue = False
         due_next_15_days_flag = False
-        
+        row["due_days"] = "-"
+
         if row.get("schedule_date") and row.get("status") not in ["Completed", "Closed", "Cancelled"]:
             delivery_date = getdate(row.get("schedule_date"))
-            if delivery_date < today:
+            pending_delivery = flt(row.get("delivered_qty")) < flt(row.get("qty"))
+
+            if delivery_date < today and pending_delivery:
                 is_overdue = True
+                row["due_days"] = (today - delivery_date).days
             elif today <= delivery_date <= next_15_days:
                 due_next_15_days_flag = True
-                
+                row["due_days"] = (delivery_date - today).days
+            elif delivery_date > today and pending_delivery:
+                row["due_days"] = (delivery_date - today).days
+
         row["is_overdue"] = is_overdue
-        
+        row["is_due_next_15_days"] = due_next_15_days_flag
+
         if filters.get("is_overdue") and not is_overdue:
             continue
         if filters.get("due_next_15_days") and not due_next_15_days_flag:
             continue
-            
-        total_orders += 1
+
+        unique_sos.add(row.get("name"))
         total_amount += flt(row.get("net_total"))
         if is_overdue:
             total_overdue += flt(row.get("net_total"))
         if due_next_15_days_flag:
             total_due_next_15_days += flt(row.get("net_total"))
-            
-        processed_results.append(row)
+
+        results.append(row)
+
+    results.sort(
+        key=lambda x: getdate(x.get("schedule_date")) if x.get("schedule_date") else today,
+        reverse=True,
+    )
+
+    processed_results = results
 
     summary = [
-        {"label": _("Total Orders"), "value": total_orders, "indicator": "blue", "fieldtype": "Int"},
+        {"label": _("Total Orders"), "value": len(unique_sos), "indicator": "blue", "fieldtype": "Int"},
         {"label": _("Total Net Amount"), "value": total_amount, "indicator": "green", "fieldtype": "Currency"},
         {"label": _("Overdue Amount"), "value": total_overdue, "indicator": "red", "fieldtype": "Currency"},
         {"label": _("Due Next 15 days"), "value": total_due_next_15_days, "indicator": "orange", "fieldtype": "Currency"}
@@ -190,7 +330,7 @@ def get_dashboard_data(filters=None):
     
     charts = {
         "top_10_customers": {
-            "title": _("Top 10 Customers (M INR)"),
+            "title": _("Top 10 Customers"),
             "data": {
                 "labels": [x[0] for x in top_10_customers],
                 "datasets": [{"name": "Amount", "values": [x[1] for x in top_10_customers]}]
@@ -200,7 +340,7 @@ def get_dashboard_data(filters=None):
             "is_currency": True
         },
         "order_status": {
-            "title": _("Order Status Wise Amount (M INR)"),
+            "title": _("Order Status Wise Amount "),
             "data": {
                 "labels": list(status_counts.keys()),
                 "datasets": [{"name": "Amount", "values": list(status_counts.values())}]
@@ -251,17 +391,7 @@ def get_dashboard_data(filters=None):
         month_wise_customer[cust]["months"][m_key] = month_wise_customer[cust]["months"].get(m_key, 0) + amt
         month_wise_customer[cust]["total"] += amt
 
-    # Due in Next 15 Days
-    due_next_15_days = []
-    today = getdate(nowdate())
-    next_15 = add_days(today, 15)
-    
-    for row in processed_results:
-        if row.get("status") not in ["Completed", "Closed", "Cancelled"]:
-            delivery_date = getdate(row.get("schedule_date"))
-            if delivery_date and today <= delivery_date <= next_15:
-                row["due_days"] = (delivery_date - today).days
-                due_next_15_days.append(row)
+    due_next_15_days = [row for row in processed_results if row.get("is_due_next_15_days")]
 
     sorted_months = [{"key": x[1], "sort": x[0]} for x in sorted(list(months_set), key=lambda x: x[0])]
 
@@ -417,15 +547,15 @@ def _write_customer_overview_sheet(ws, dashboard_data, styles, results=None, due
 
     if results is not None and due_rows is not None:
         row_idx += 1
-        row_idx = _write_customer_section_title(ws, row_idx, "Month-Wise Booking Breakdown (M INR)", styles)
+        row_idx = _write_customer_section_title(ws, row_idx, "Month-Wise Booking Breakdown ", styles)
         row_idx = _write_customer_month_table(ws, dashboard_data, styles, row_idx)
 
         row_idx += 1
-        row_idx = _write_customer_section_title(ws, row_idx, "Orders Due in Next 15 Days (M INR)", styles)
+        row_idx = _write_customer_section_title(ws, row_idx, "Orders Due in Next 15 Days ", styles)
         row_idx = _write_customer_due_table(ws, due_rows, styles, row_idx)
 
         row_idx += 1
-        row_idx = _write_customer_section_title(ws, row_idx, "Detailed Customer Orders List (M INR)", styles)
+        row_idx = _write_customer_section_title(ws, row_idx, "Detailed Customer Orders List ", styles)
         _write_customer_detail_table(ws, results, styles, row_idx)
 
     _autofit_customer_sheet(ws)
@@ -481,46 +611,55 @@ def _write_customer_month_sheet(ws, dashboard_data, styles):
     _write_customer_month_table(ws, dashboard_data, styles, start_row=1)
 
 
+def _customer_order_row_values(row, serial_no, include_days_left=False):
+    pending_qty = flt(row.get("pending_qty"))
+    if not pending_qty and row.get("qty") is not None:
+        pending_qty = max(0, flt(row.get("qty")) - flt(row.get("delivered_qty")))
+
+    vals = [
+        serial_no,
+        row.get("name"),
+        row.get("customer"),
+        row.get("item_code"),
+        row.get("item_name"),
+        row.get("transaction_date"),
+        row.get("schedule_date"),
+        format_actual_delivery_display(row),
+    ]
+    if include_days_left:
+        due_days = row.get("due_days")
+        vals.append(f"{due_days} Days" if due_days != "-" else due_days)
+    vals.extend([
+        row.get("status"),
+        int(row.get("per_delivered") or 0),
+        int(row.get("per_billed") or 0),
+        flt(row.get("qty")),
+        flt(row.get("delivered_qty")),
+        pending_qty,
+        flt(row.get("net_total")) / 1000000,
+    ])
+    return vals
+
+
 CUSTOMER_DUE_HEADERS = [
-    "S.No.", "SO No", "Customer", "Order Date", "Expected Del.", "Actual Del.",
-    "Days Left", "Status", "% Del.", "Net Total (M)",
+    "S.No.", "SO No", "Customer", "Item Code", "Item Name", "Order Date",
+    "Expected Del.", "Actual Del.", "Days Left", "Status", "% Del.", "% Bill.",
+    "Order Qty", "Delivered Qty", "Pending Qty", "Net Total (M)",
 ]
 
 CUSTOMER_DETAIL_HEADERS = [
-    "S.No.", "SO No", "Customer", "Order Date", "Expected Del.", "Actual Del.",
-    "Status", "% Del.", "% Bill.", "Net Total (M)",
+    "S.No.", "SO No", "Customer", "Item Code", "Item Name", "Order Date",
+    "Expected Del.", "Actual Del.", "Status", "% Del.", "% Bill.",
+    "Order Qty", "Delivered Qty", "Pending Qty", "Net Total (M)",
 ]
 
 
 def _customer_due_row_values(row, serial_no):
-    due_days = row.get("due_days")
-    return [
-        serial_no,
-        row.get("name"),
-        row.get("customer"),
-        row.get("transaction_date"),
-        row.get("schedule_date"),
-        format_actual_delivery_display(row),
-        f"{due_days} Days" if due_days != "-" else due_days,
-        row.get("status"),
-        int(row.get("per_delivered") or 0),
-        flt(row.get("net_total")) / 1000000,
-    ]
+    return _customer_order_row_values(row, serial_no, include_days_left=True)
 
 
 def _customer_detail_row_values(row, serial_no):
-    return [
-        serial_no,
-        row.get("name"),
-        row.get("customer"),
-        row.get("transaction_date"),
-        row.get("schedule_date"),
-        format_actual_delivery_display(row),
-        row.get("status"),
-        int(row.get("per_delivered") or 0),
-        int(row.get("per_billed") or 0),
-        flt(row.get("net_total")) / 1000000,
-    ]
+    return _customer_order_row_values(row, serial_no, include_days_left=False)
 
 
 def _write_customer_due_table(ws, rows, styles, start_row=1):

@@ -106,6 +106,9 @@ def get_dashboard_data(filters=None):
         except Exception:
             conditions += " AND i.item_group = %(item_group)s"
             query_params["item_group"] = filters.item_group
+    if filters.get("item_type"):
+        conditions += " AND i.item_type = %(item_type)s"
+        query_params["item_type"] = filters.item_type
     if filters.get("item_code"):
         conditions += " AND sii.item_code = %(item_code)s"
         query_params["item_code"] = filters.item_code
