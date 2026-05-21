@@ -8,18 +8,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 	window.cur_page = page;
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
-    // Add Export Buttons to Menu
-    page.add_menu_item(__("Export to Excel"), () => {
-        let filters = page.filter_group.get_values();
-        let baseUrl = frappe.request.url.split('?')[0];
-        let queryParams = $.param({
-            cmd: "renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.export_to_excel",
-            filters: JSON.stringify(filters),
-            export_type: "all"
-        });
-        window.open(baseUrl + '?' + queryParams);
-    });
-
+    page.add_menu_item(__("Export to Excel"), () => export_data_excel("all"));
     page.add_menu_item(__("Export to PDF"), () => export_pdf_full());
 
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
@@ -65,8 +54,6 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group", placeholder: __("Select Customer Group") },
 		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer", placeholder: __("Select Customer") },
 		{ fieldname: "sales_order", label: __("SO Details"), fieldtype: "Link", options: "Sales Order", placeholder: __("Select SO") },
-		{ fieldname: "is_overdue", label: __("Overdue Deliveries"), fieldtype: "Check" },
-		{ fieldname: "due_next_15_days", label: __("Due in Next 15 days"), fieldtype: "Check" },
 	];
 
 	$("<style>")
@@ -75,9 +62,6 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		.dashboard-filter-area .form-column form { display: flex !important; flex-wrap: wrap !important; gap: 15px !important; align-items: flex-end !important; }
 		.dashboard-filter-area .frappe-control { margin-bottom: 10px !important; width: calc(25% - 12px) !important; }
 		.dashboard-filter-area .control-label { font-size: 12px !important; font-weight: 600 !important; color: var(--text-muted) !important; margin-bottom: 6px !important; display: block !important; }
-        .dashboard-filter-area .frappe-control[data-fieldtype="Check"] { display: flex !important; align-items: center !important; height: 32px; }
-        .dashboard-filter-area .frappe-control[data-fieldtype="Check"] label { display: flex !important; align-items: center !important; margin-bottom: 0 !important; }
-        .dashboard-filter-area .frappe-control[data-fieldtype="Check"] input { margin-right: 8px !important; }
 	`).appendTo(filter_parent);
 
 	page.filter_group = new frappe.ui.FieldGroup({
@@ -129,9 +113,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .summary-card.orange { border-left-color: #f59e0b; }
         .summary-card .label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
         .summary-card .value { font-size: 20px; font-weight: 800; color: var(--text-color); }
-        .charts-row { display: grid !important; grid-template-columns: 1fr !important; gap: 24px; margin-bottom: 24px; }
-        .chart-card { background: var(--card-bg) !important; border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); }
-        .chart-card .title { font-size: 15px; font-weight: 700; margin-bottom: 20px; text-transform: uppercase; color: var(--text-color); }
+        .charts-row { display: grid !important; grid-template-columns: 1fr !important; gap: 24px; margin-bottom: 24px; width: 100%; }
+        .chart-card { background: var(--card-bg) !important; border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); width: 100%; }
+        .chart-card .title { font-size: 15px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; color: var(--text-color); text-align: center; }
         .table-card { background: var(--card-bg) !important; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 24px; overflow: hidden; }
         .table-card .header { padding: 15px 24px; border-bottom: 1px solid var(--border-color); font-weight: 700; display: flex; justify-content: space-between; align-items: center; color: var(--text-color); }
         .export-btn { padding: 4px 12px; font-size: 11px; font-weight: 600; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.2s; color: var(--text-color); }
@@ -169,6 +153,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .pct-badge.full { background: #10b981; color: white; }
         .pct-badge.partial { background: #f59e0b; color: white; }
         .pct-badge.none { background: #f1f5f9; color: #64748b; }
+        .chart-body { display: flex; flex-direction: column; width: 100%; }
+        .chart-wrapper { width: 100%; min-height: 300px; display: flex; align-items: center; justify-content: center; padding: 8px 0; }
+        .chart-wrapper .dashboard-chart-img { width: 280px; height: 280px; max-width: 100%; display: block; margin: 0 auto; object-fit: contain; }
         .custom-legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color); }
         [data-theme="dark"] .custom-legend { background: var(--control-bg); }
         .legend-item { display: flex; align-items: flex-start; gap: 8px; }
@@ -176,7 +163,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .legend-info { display: flex; flex-direction: column; gap: 2px; }
         .legend-label { font-size: 12px; font-weight: 700; color: var(--text-color); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
         .legend-value { font-size: 11px; color: var(--text-muted); font-weight: 500; }
-        .chart-legend, .graph-legend, .frappe-chart .legend { display: none !important; }
+        .graph-legend, .chart-legend { display: none !important; }
     </style>`).appendTo(page.main);
 
 	const get_actual_delivery_dates = (row) => {
@@ -223,6 +210,175 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		return new Date(dates[dates.length - 1]);
 	};
 
+	const download_base64_file = (fileinfo, mime_type) => {
+		if (!fileinfo || !fileinfo.filecontent) {
+			frappe.msgprint(__("Export failed. No file was returned."));
+			return;
+		}
+		const byteCharacters = atob(fileinfo.filecontent);
+		const byteNumbers = new Array(byteCharacters.length);
+		for (let i = 0; i < byteCharacters.length; i++) {
+			byteNumbers[i] = byteCharacters.charCodeAt(i);
+		}
+		const blob = new Blob([new Uint8Array(byteNumbers)], { type: mime_type });
+		const link = document.createElement("a");
+		link.href = window.URL.createObjectURL(blob);
+		link.download = fileinfo.filename;
+		link.click();
+		window.URL.revokeObjectURL(link.href);
+	};
+
+	const build_donut_chart_png = (chart_obj, size = 320) => {
+		const values = (chart_obj?.data?.datasets || [{}])[0]?.values || [];
+		const colors = chart_obj?.colors || ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#06b6d4"];
+		const total = values.reduce((a, b) => a + flt(b), 0);
+		if (!total) {
+			return null;
+		}
+		const canvas = document.createElement("canvas");
+		const px = size * 2;
+		canvas.width = px;
+		canvas.height = px;
+		const ctx = canvas.getContext("2d");
+		const cx = px / 2;
+		const cy = px / 2;
+		const outer = px * 0.38;
+		const inner = px * 0.24;
+		ctx.fillStyle = "#fff";
+		ctx.fillRect(0, 0, px, px);
+		let start = -Math.PI / 2;
+		values.forEach((val, i) => {
+			const slice = (flt(val) / total) * Math.PI * 2;
+			ctx.beginPath();
+			ctx.arc(cx, cy, outer, start, start + slice);
+			ctx.arc(cx, cy, inner, start + slice, start, true);
+			ctx.closePath();
+			ctx.fillStyle = colors[i % colors.length];
+			ctx.fill();
+			start += slice;
+		});
+		return canvas.toDataURL("image/png");
+	};
+
+	const render_chart_legend = ($legend, chart_obj) => {
+		$legend.empty();
+		const labels = chart_obj.data?.labels || [];
+		const values = (chart_obj.data?.datasets || [{}])[0]?.values || [];
+		const colors = chart_obj.colors || [];
+		const total = values.reduce((a, b) => a + flt(b), 0);
+		labels.forEach((label, i) => {
+			const val = flt(values[i]);
+			const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+			const color = colors[i % colors.length];
+			const display_val = chart_obj.is_currency
+				? "₹ " + (val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
+				: val;
+			$legend.append(`
+				<div class="legend-item">
+					<div class="dot" style="background: ${color}"></div>
+					<div class="legend-info">
+						<div class="legend-label">${label}</div>
+						<div class="legend-value">${display_val} (${pct}%)</div>
+					</div>
+				</div>
+			`);
+		});
+	};
+
+	const render_donut_chart = (chart_id, chart_obj, $wrapper, $legend) => {
+		const dataUrl = build_donut_chart_png(chart_obj, 280);
+		$wrapper.empty();
+		if (dataUrl) {
+			$('<img>', { src: dataUrl, class: "dashboard-chart-img", alt: chart_obj.title || chart_id }).appendTo($wrapper);
+		} else {
+			$wrapper.append(`<p class="text-muted text-center">${__("No chart data")}</p>`);
+		}
+		page.chart_instances[chart_id] = { dataUrl, chart_obj };
+		render_chart_legend($legend, chart_obj);
+	};
+
+	const capture_charts_for_pdf = async (charts) => {
+		const images = {};
+		for (const chart_id of Object.keys(charts || {})) {
+			images[chart_id] = build_donut_chart_png(charts[chart_id], 420);
+		}
+		return images;
+	};
+
+	const build_pdf_chart_legend_html = (c_obj) => {
+		const labels = c_obj.data.labels || [];
+		const values = c_obj.data.datasets[0].values || [];
+		const colors = c_obj.colors || [];
+		const total = values.reduce((a, b) => a + flt(b), 0);
+		let legend_html = '<div class="pdf-legend">';
+		for (let i = 0; i < labels.length; i += 4) {
+			legend_html += '<div class="pdf-legend-row">';
+			for (let j = 0; j < 4; j++) {
+				if (labels[i + j]) {
+					const val = values[i + j];
+					const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+					const display_val = c_obj.is_currency
+						? "₹ " + (val / 1000000).toFixed(2) + " M"
+						: val;
+					legend_html += `
+						<div class="pdf-legend-item">
+							<span class="legend-dot" style="background:${colors[(i + j) % colors.length]}"></span>
+							<span class="legend-text">
+								<span class="legend-name">${labels[i + j]}</span>
+								<span class="legend-val">${display_val} (${pct}%)</span>
+							</span>
+						</div>`;
+				}
+			}
+			legend_html += "</div>";
+		}
+		legend_html += "</div>";
+		return legend_html;
+	};
+
+	const build_pdf_charts_section_html = (charts, chart_images) => {
+		return Object.keys(charts || {})
+			.map((cid) => {
+				const c_obj = charts[cid];
+				const title = c_obj.title || cid.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+				const img_src = chart_images[cid];
+				return `
+					<div class="chart-row">
+						<div class="chart-title">${title}</div>
+						<div class="chart-img-wrap">
+							${img_src
+								? `<img src="${img_src}" class="chart-img" alt="${title}">`
+								: "<p class=\"chart-missing\">Chart unavailable</p>"}
+						</div>
+						${build_pdf_chart_legend_html(c_obj)}
+					</div>`;
+			})
+			.join("");
+	};
+
+	const export_data_excel = (export_type = "all") => {
+		frappe.show_alert({ message: __("Preparing Excel export..."), indicator: "blue" });
+		frappe.call({
+			method: "renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.export_to_excel",
+			args: {
+				filters: page.filter_group.get_values(),
+				export_type: export_type,
+			},
+			callback(r) {
+				if (r.message) {
+					download_base64_file(
+						r.message,
+						"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+					);
+					frappe.show_alert({ message: __("Excel downloaded"), indicator: "green" });
+				}
+			},
+			error(r) {
+				frappe.msgprint(r.message || __("Excel export failed"));
+			},
+		});
+	};
+
 	function render_dashboard(data) {
 		page.container.empty();
 		if (!data.results || data.results.length === 0) {
@@ -252,54 +408,16 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 			$(`
 				<div class="chart-card">
 					<div class="title">${title}</div>
-					<div id="wrapper_${chart_id}" style="height: 300px;"></div>
+					<div class="chart-body">
+						<div id="wrapper_${chart_id}" class="chart-wrapper"></div>
+						<div class="custom-legend" id="legend_${chart_id}"></div>
+					</div>
 				</div>
 			`).appendTo(charts_row);
 
-			setTimeout(() => {
-				let chart = new frappe.Chart(`#wrapper_${chart_id}`, {
-					data: chart_obj.data,
-					type: chart_obj.type || "donut",
-					height: 300,
-					colors: chart_obj.colors,
-					lineOptions: { hideLegend: 1 },
-					legend: 0,
-					show_legend: 0,
-					tooltipOptions: {
-						formatTooltipY: (d) =>
-							chart_obj.is_currency
-								? "₹ " + (d / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
-								: d,
-					},
-				});
-                page.chart_instances[chart_id] = chart;
-
-				// Force redraw after a short delay to fix potential dimension issues on first load
-				setTimeout(() => chart.draw(true), 250);
-
-				if (chart_obj.type === "donut" || !chart_obj.type) {
-					let total = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
-					let legend_html = $(`<div class="custom-legend" id="legend_${chart_id}"></div>`).appendTo($(`#wrapper_${chart_id}`).parent());
-					chart_obj.data.labels.forEach((label, i) => {
-						let val = chart_obj.data.datasets[0].values[i];
-						let pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-						let color = chart_obj.colors[i % chart_obj.colors.length];
-						let display_val = chart_obj.is_currency 
-							? "₹ " + (val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
-							: val;
-
-						legend_html.append(`
-							<div class="legend-item">
-								<div class="dot" style="background: ${color}"></div>
-								<div class="legend-info">
-									<div class="legend-label">${label}</div>
-									<div class="legend-value">${display_val} (${pct}%)</div>
-								</div>
-							</div>
-						`);
-					});
-				}
-			}, 100);
+			const $wrapper = $(`#wrapper_${chart_id}`);
+			const $legend = $(`#legend_${chart_id}`);
+			render_donut_chart(chart_id, chart_obj, $wrapper, $legend);
 		});
 
 		// Month-Wise Booking Table
@@ -344,6 +462,11 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
             <div class="table-card" style="margin-top: 24px;">
                 <div class="header">
 					<span>${__("Orders Due in Next 15 Days")}</span>
+					<div class="export-options">
+						<button class="export-btn" id="export_due_excel_btn">
+							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
+						</button>
+					</div>
 				</div>
                 <div class="dashboard-table-scroll">
                     <table class="dashboard-table orders-table due-table" id="due_15_days_table">
@@ -647,19 +770,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		});
 
 		month_table_card.find("#export_month_excel_btn").on("click", () => export_data_excel("summary"));
-		table_card.find("#export_excel_btn").on("click", () => export_data_excel("all"));
+		due_table_card.find("#export_due_excel_btn").on("click", () => export_data_excel("due"));
+		table_card.find("#export_excel_btn").on("click", () => export_data_excel("detail"));
 		table_card.find("#export_pdf_btn").on("click", () => export_pdf_full());
-
-        function export_data_excel(type) {
-            let filters = page.filter_group.get_values();
-            let baseUrl = frappe.request.url.split('?')[0];
-            let queryParams = $.param({
-                cmd: "renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.export_to_excel",
-                filters: JSON.stringify(filters),
-                export_type: type
-            });
-            window.open(baseUrl + '?' + queryParams);
-        }
 	}
 
     async function export_pdf_full() {
@@ -668,34 +781,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         const data = page.dashboard_data;
         if (!data) return;
 
-        const get_chart_image = (chart_id) => {
-            return new Promise((resolve) => {
-                const chart = page.chart_instances[chart_id];
-                if (!chart) return resolve(null);
-                
-                const svg = chart.parent.querySelector('svg');
-                const svgData = new XMLSerializer().serializeToString(svg);
-                const canvas = document.createElement("canvas");
-                const svgSize = svg.getBoundingClientRect();
-                canvas.width = svgSize.width * 2;
-                canvas.height = svgSize.height * 2;
-                const ctx = canvas.getContext("2d");
-                const img = new Image();
-                img.onload = () => {
-                    ctx.fillStyle = "white";
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    resolve(canvas.toDataURL("image/png"));
-                };
-                img.src = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(svgData)));
-                setTimeout(() => resolve(null), 2000);
-            });
-        };
-
-        const chart_images = {};
-        for (let cid of Object.keys(data.charts)) {
-            chart_images[cid] = await get_chart_image(cid);
-        }
+        const chart_images = await capture_charts_for_pdf(data.charts);
 
         const report_date = frappe.datetime.global_date_format(frappe.datetime.now_date());
         const filters = page.filter_group.get_values();
@@ -714,19 +800,19 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                     .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
                     .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
                     .section-title { font-size: 14px; font-weight: 700; color: #3b82f6; margin: 25px 0 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; text-transform: uppercase; }
-                    .chart-section { display: table; width: 100%; margin-bottom: 30px; page-break-inside: avoid; }
-                    .chart-cell { display: table-cell; width: 50%; padding: 15px; border: 1px solid #f1f5f9; border-radius: 12px; background: #fff; vertical-align: top; }
-                    .chart-title { font-weight: 800; margin-bottom: 15px; font-size: 12px; text-align: center; color: #1e293b; text-transform: uppercase; }
-                    .chart-img { max-width: 80%; height: auto; display: block; margin: 0 auto 15px; }
-                    
-                    /* PDF Legend Styling */
-                    .pdf-legend { display: table; width: 100%; border-spacing: 5px; margin-top: 10px; background: #f8fafc; padding: 10px; border-radius: 8px; }
-                    .pdf-legend-row { display: table-row; }
-                    .pdf-legend-item { display: table-cell; width: 25%; font-size: 7px; padding: 3px; vertical-align: top; }
-                    .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
-                    .legend-text { display: inline-block; vertical-align: middle; line-height: 1.2; width: 80%; }
-                    .legend-name { font-weight: 700; color: #1e293b; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-                    .legend-val { color: #64748b; font-size: 6.5px; }
+                    .chart-section { width: 100%; margin-bottom: 24px; }
+                    .chart-row { display: block; width: 100%; margin-bottom: 22px; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; page-break-inside: avoid; }
+                    .chart-title { font-weight: 800; margin-bottom: 12px; font-size: 12px; text-align: center; color: #1e293b; text-transform: uppercase; }
+                    .chart-img-wrap { text-align: center; margin-bottom: 12px; min-height: 220px; width: 100%; }
+                    .chart-img { width: 420px; max-width: 100%; height: auto; display: inline-block; }
+                    .chart-missing { text-align: center; color: #94a3b8; font-size: 11px; }
+                    .pdf-legend { width: 100%; margin-top: 8px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
+                    .pdf-legend-row { display: block; width: 100%; overflow: hidden; margin-bottom: 6px; }
+                    .pdf-legend-item { display: inline-block; width: 24%; vertical-align: top; font-size: 7px; padding: 2px 4px; box-sizing: border-box; }
+                    .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+                    .legend-text { display: inline-block; vertical-align: middle; line-height: 1.25; max-width: calc(100% - 14px); }
+                    .legend-name { font-weight: 700; color: #1e293b; display: block; }
+                    .legend-val { color: #64748b; font-size: 6.5px; display: block; }
 
                     table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 20px; table-layout: fixed; }
                     th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; word-wrap: break-word; overflow: hidden; }
@@ -760,49 +846,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 
                 <h3 class="section-title">Visual Analytics</h3>
                 <div class="chart-section">
-                ${Object.keys(data.charts).map(cid => {
-                    let c_obj = data.charts[cid];
-                    let title = c_obj.title || cid.replace(/_/g, " ").toUpperCase();
-                    let labels = c_obj.data.labels;
-                    let values = c_obj.data.datasets[0].values;
-                    let colors = c_obj.colors;
-                    let total = values.reduce((a, b) => a + b, 0);
-
-                    // Generate Legend Rows (4 items per row)
-                    let legend_html = '<div class="pdf-legend">';
-                    for (let i = 0; i < labels.length; i += 4) {
-                        legend_html += '<div class="pdf-legend-row">';
-                        for (let j = 0; j < 4; j++) {
-                            if (labels[i + j]) {
-                                let val = values[i + j];
-                                let pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
-                                let display_val = c_obj.is_currency 
-                                    ? "₹ " + (val / 1000000).toFixed(2) + " M"
-                                    : val;
-                                legend_html += `
-                                    <div class="pdf-legend-item">
-                                        <div class="legend-dot" style="background: ${colors[(i+j) % colors.length]}"></div>
-                                        <div class="legend-text">
-                                            <span class="legend-name">${labels[i + j]}</span>
-                                            <span class="legend-val">${display_val} (${pct}%)</span>
-                                        </div>
-                                    </div>
-                                `;
-                            } else {
-                                legend_html += '<div class="pdf-legend-item"></div>';
-                            }
-                        }
-                        legend_html += '</div>';
-                    }
-                    legend_html += '</div>';
-
-                    return `
-                    <div class="chart-cell">
-                        <div class="chart-title">${title}</div>
-                        ${chart_images[cid] ? `<img src="${chart_images[cid]}" class="chart-img">` : '<p>Chart image unavailable</p>'}
-                        ${legend_html}
-                    </div>`;
-                }).join('')}
+                ${build_pdf_charts_section_html(data.charts, chart_images)}
                 </div>
 
                 <div class="page-break"></div>
