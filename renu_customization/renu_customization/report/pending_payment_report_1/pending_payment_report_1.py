@@ -225,13 +225,14 @@ def execute(filters=None):
             if details.get("payment_type") == "Receive":
                 currency = details.get("paid_from_account_currency") or currency
                 exchange_rate = flt(details.get("source_exchange_rate") or 1.0)
-                invoice_value = flt(details.get("paid_amount") or 0)
+                invoice_value = 0  # Receive payments show 0 in Invoice Value
+                inr_value_of_foreign = 0
             else:
+                # Pay type: show 0 in Invoice Value, show positive value in INR Value of Foreign
                 currency = details.get("paid_to_account_currency") or currency
                 exchange_rate = flt(details.get("target_exchange_rate") or 1.0)
-                invoice_value = flt(details.get("received_amount") or 0)
-            
-            inr_value_of_foreign = -flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
+                invoice_value = 0  # Pay payments show 0 in Invoice Value
+                inr_value_of_foreign = flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
  
         # Apply currency filter if set
         if filters.get("currency") and currency != filters.get("currency"):
@@ -246,6 +247,7 @@ def execute(filters=None):
             "invoice_id": invoice_id,
             "invoice_date": invoice_date,
             "invoice_value": invoice_value,
+            "advance_payment": flt(row.get("paid") or row.get("paid_amount") or 0),
             "outstanding": outstanding,
             "currency": currency,
             "exchange_rate": exchange_rate,
@@ -268,6 +270,7 @@ def execute(filters=None):
         {"label": "Invoice ID", "fieldname": "invoice_id", "fieldtype": "Dynamic Link", "options": "voucher_type", "width": 150},
         {"label": "Invoice Date", "fieldname": "invoice_date", "fieldtype": "Date", "width": 140},
         {"label": "Invoice Value", "fieldname": "invoice_value", "fieldtype": "Float", "width": 150},
+        {"label": "Advance Payment", "fieldname": "advance_payment", "fieldtype": "Float", "width": 150},
         {"label": "Outstanding Amount (INR)", "fieldname": "outstanding", "fieldtype": "Float", "width": 170},
         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 140},
         {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Data", "width": 140, "disable_total": 1},
@@ -335,6 +338,7 @@ def download_xlsx(filters=None):   # CHANGE #2 (added include_filters)
  
     numeric_fields = {
         "invoice_value",
+        "advance_payment",
         "outstanding",
         "exchange_rate",
         "inr_value_of_foreign",
