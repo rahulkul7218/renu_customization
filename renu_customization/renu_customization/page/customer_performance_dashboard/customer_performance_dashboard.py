@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate, nowdate, add_days
+from frappe.utils import flt, getdate, nowdate, add_days, formatdate
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -52,7 +52,7 @@ def format_actual_delivery_display(row):
     dates = get_actual_delivery_dates(row)
     if not dates:
         return None
-    return ", ".join(frappe.format_date(d) for d in dates)
+    return ", ".join(formatdate(d) for d in dates)
 
 
 def _fetch_delivery_note_dates(so_names):

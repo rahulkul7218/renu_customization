@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate, nowdate, add_days
+from frappe.utils import flt, getdate, nowdate, add_days, formatdate
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill, Border, Side
 from openpyxl.utils import get_column_letter
@@ -10,10 +10,8 @@ import base64
 @frappe.whitelist()
 def export_to_pdf(html=None, orientation="Landscape"):
     if not html:
-        return
-    
-    frappe.set_user("Administrator")
-    
+        frappe.throw(_("PDF content is empty"))
+
     options = {
         "page-size": "A4",
         "orientation": orientation,
@@ -22,14 +20,15 @@ def export_to_pdf(html=None, orientation="Landscape"):
         "margin-bottom": "10mm",
         "margin-left": "10mm",
         "encoding": "UTF-8",
-        "no-outline": None
+        "no-outline": None,
     }
-    
+
     pdf_content = frappe.utils.pdf.get_pdf(html, options)
-    
-    frappe.local.response.filename = "Supplier_Performance_Dashboard.pdf"
-    frappe.local.response.filecontent = pdf_content
-    frappe.local.response.type = "download"
+
+    return {
+        "filename": f"Supplier_Performance_{nowdate()}.pdf",
+        "filecontent": base64.b64encode(pdf_content).decode(),
+    }
 
 @frappe.whitelist()
 def get_po_items(purchase_order):
@@ -80,7 +79,7 @@ def format_actual_delivery_display(row):
     dates = get_actual_delivery_dates(row)
     if not dates:
         return None
-    return ", ".join(frappe.format_date(d) for d in dates)
+    return ", ".join(formatdate(d) for d in dates)
 
 
 def _fetch_actual_delivery_map(po_item_field):
@@ -107,6 +106,9 @@ def _fetch_actual_delivery_map(po_item_field):
     for r in pr_data:
         actual_delivery_map[r.po_item_name] = _parse_group_concat_dates(r.actual_delivery_dates)
     return actual_delivery_map
+
+
+EXCLUDED_PO_STATUSES = ("Cancelled", "Draft")
 
 
 def prepare_filters(filters):
@@ -166,7 +168,11 @@ def get_dashboard_data(filters=None):
     if filters.get("open_po_details"):
         po_filters["status"] = ["in", ["To Receive and Bill", "To Receive", "To Bill"]]
     elif filters.get("status"):
+        if filters.get("status") in EXCLUDED_PO_STATUSES:
+            return {"summary": [], "results": []}
         po_filters["status"] = filters.get("status")
+    else:
+        po_filters["status"] = ["not in", list(EXCLUDED_PO_STATUSES)]
 
     # Fetch Purchase Orders
     purchase_orders = frappe.get_all(
@@ -215,9 +221,9 @@ def get_dashboard_data(filters=None):
     report_data = []
     for item in po_items:
         po = po_map.get(item.parent)
-        if not po:
+        if not po or po.status in EXCLUDED_PO_STATUSES:
             continue
-        
+
         rate = flt(item.rate)
         qty = flt(item.qty)
         received_qty = flt(item.received_qty)
@@ -226,7 +232,8 @@ def get_dashboard_data(filters=None):
         
         per_delivered = (received_qty / qty) * 100 if qty > 0 else 0.0
         per_billed = (billed_qty / qty) * 100 if qty > 0 else 0.0
-        
+        pending_qty = max(0, qty - received_qty)
+
         delivery_dates = actual_delivery_map.get(item.name, [])
         report_data.append({
             "name": po.name,
@@ -240,6 +247,7 @@ def get_dashboard_data(filters=None):
             "rate": rate,
             "net_total": item.amount,
             "received_qty": received_qty,
+            "pending_qty": pending_qty,
             "billed_qty": billed_qty,
             "per_delivered": per_delivered,
             "per_billed": per_billed,
@@ -322,6 +330,7 @@ def get_dashboard_data(filters=None):
 
     charts = {
         "top_10_suppliers": {
+            "title": _("Top 10 Suppliers (M INR)"),
             "data": {
                 "labels": [x[0] for x in top_10_suppliers],
                 "datasets": [{"name": "Amount", "values": [x[1] for x in top_10_suppliers]}]
@@ -331,6 +340,7 @@ def get_dashboard_data(filters=None):
             "is_currency": True
         },
         "order_status": {
+            "title": _("Order Status Wise Amount (M INR)"),
             "data": {
                 "labels": list(status_counts.keys()),
                 "datasets": [{"name": "Amount", "values": list(status_counts.values())}]
@@ -398,144 +408,424 @@ def get_dashboard_data(filters=None):
         "due_next_15_days": sorted(due_next_15_days, key=lambda x: x.get("schedule_date") if x.get("schedule_date") else today)
     }
 
+def _excel_styles():
+    thin_side = Side(style="thin")
+    return {
+        "header_font": Font(bold=True, color="FFFFFF"),
+        "header_fill": PatternFill(start_color="2c3e50", fill_type="solid"),
+        "title_font": Font(bold=True, size=14),
+        "section_font": Font(bold=True, size=12),
+        "table_border": Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side),
+        "zebra_fill": PatternFill(start_color="f8f9fa", fill_type="solid"),
+    }
+
+
+def _write_excel_headers(ws, headers, styles, row_idx=1):
+    for idx, header in enumerate(headers, start=1):
+        cell = ws.cell(row=row_idx, column=idx, value=header)
+        cell.font = styles["header_font"]
+        cell.fill = styles["header_fill"]
+        cell.alignment = Alignment(horizontal="center")
+        cell.border = styles["table_border"]
+
+
+def _write_excel_row(ws, row_idx, values, styles, amount_col=None, date_cols=None, qty_cols=None, pct_cols=None):
+    row_fill = styles["zebra_fill"] if row_idx % 2 == 0 else None
+    date_cols = date_cols or set()
+    qty_cols = qty_cols or set()
+    pct_cols = pct_cols or set()
+    for c_idx, val in enumerate(values, start=1):
+        cell = ws.cell(row=row_idx, column=c_idx, value=val)
+        cell.border = styles["table_border"]
+        if row_fill:
+            cell.fill = row_fill
+        if c_idx in date_cols and val:
+            cell.number_format = "DD-MM-YYYY"
+        if c_idx in qty_cols:
+            cell.number_format = "#,##0.##"
+            cell.alignment = Alignment(horizontal="right")
+        if c_idx in pct_cols:
+            cell.number_format = "0"
+            cell.alignment = Alignment(horizontal="center")
+        if amount_col and c_idx == amount_col:
+            cell.number_format = "#,##0.00"
+            cell.alignment = Alignment(horizontal="right")
+
+
+def _total_row_style(styles):
+    return {
+        "font": Font(bold=True, size=11),
+        "fill": PatternFill(start_color="e2e8f0", fill_type="solid"),
+        "border": styles["table_border"],
+    }
+
+
+def _write_excel_total_row(ws, row_idx, label, amount_col, amount_value, label_end_col, styles, amount_cols=None):
+    """Write a merged label + total amount row at the bottom of a data table."""
+    total_style = _total_row_style(styles)
+    amount_cols = amount_cols or set()
+
+    if label_end_col > 1:
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=label_end_col)
+    label_cell = ws.cell(row=row_idx, column=1, value=label)
+    label_cell.font = total_style["font"]
+    label_cell.fill = total_style["fill"]
+    label_cell.border = total_style["border"]
+    label_cell.alignment = Alignment(horizontal="right", vertical="center")
+    for col in range(2, label_end_col + 1):
+        cell = ws.cell(row=row_idx, column=col)
+        cell.fill = total_style["fill"]
+        cell.border = total_style["border"]
+
+    amount_cell = ws.cell(row=row_idx, column=amount_col, value=amount_value)
+    amount_cell.font = total_style["font"]
+    amount_cell.fill = total_style["fill"]
+    amount_cell.border = total_style["border"]
+    amount_cell.number_format = "#,##0.00"
+    amount_cell.alignment = Alignment(horizontal="right")
+
+    for col in range(label_end_col + 1, amount_col):
+        if col == amount_col:
+            continue
+        cell = ws.cell(row=row_idx, column=col)
+        cell.fill = total_style["fill"]
+        cell.border = total_style["border"]
+        if col in amount_cols:
+            cell.number_format = "#,##0.00"
+            cell.alignment = Alignment(horizontal="right")
+
+
+def _write_chart_tables_on_overview(ws, dashboard_data, styles, start_row):
+    charts = dashboard_data.get("charts") or {}
+    row_idx = start_row
+    chart_headers = ["Label", "Amount (M)", "% Share"]
+
+    for chart_obj in charts.values():
+        title = chart_obj.get("title") or "Chart"
+        labels = chart_obj.get("data", {}).get("labels") or []
+        values = (chart_obj.get("data", {}).get("datasets") or [{}])[0].get("values") or []
+        is_currency = chart_obj.get("is_currency")
+        chart_total = sum(flt(v) for v in values)
+
+        ws.cell(row=row_idx, column=1, value=title).font = styles["section_font"]
+        row_idx += 1
+        _write_excel_headers(ws, chart_headers, styles, row_idx=row_idx)
+        row_idx += 1
+
+        for label, val in zip(labels, values):
+            amount = flt(val) / 1000000 if is_currency else flt(val)
+            pct = (flt(val) / chart_total * 100) if chart_total else 0
+            _write_excel_row(
+                ws, row_idx, [label, amount, round(pct, 1)],
+                styles, amount_col=2, pct_cols={3},
+            )
+            row_idx += 1
+
+        _write_excel_row(
+            ws, row_idx, ["TOTAL", chart_total / 1000000 if is_currency else chart_total, 100],
+            styles, amount_col=2, pct_cols={3},
+        )
+        for col in range(1, 4):
+            cell = ws.cell(row=row_idx, column=col)
+            cell.font = Font(bold=True)
+            cell.fill = PatternFill(start_color="e2e8f0", fill_type="solid")
+        row_idx += 2
+
+    return row_idx
+
+
+def _autofit_columns(ws, min_widths=None):
+    """Set column width from content, respecting optional minimum widths per column letter."""
+    min_widths = min_widths or {}
+    for col in ws.columns:
+        max_length = 0
+        column = col[0].column_letter
+        for cell in col:
+            try:
+                if cell.value is not None:
+                    max_length = max(max_length, len(str(cell.value)))
+            except Exception:
+                pass
+        width = max(min_widths.get(column, 0), max_length + 3)
+        ws.column_dimensions[column].width = min(width, 55)
+
+
+def _apply_header_column_widths(ws, headers, width_by_header):
+    for idx, header in enumerate(headers, start=1):
+        ws.column_dimensions[get_column_letter(idx)].width = width_by_header.get(header, 14)
+
+
+def _min_widths_for_headers(headers, width_by_header):
+    return {
+        get_column_letter(idx): width_by_header.get(header, 14)
+        for idx, header in enumerate(headers, start=1)
+    }
+
+
+MONTH_SHEET_WIDTHS = {
+    "S.No.": 8,
+    "Supplier": 32,
+    "Total (M)": 14,
+}
+
+ORDER_SHEET_WIDTHS = {
+    "S.No.": 8,
+    "PO No": 22,
+    "Supplier": 28,
+    "Item Code": 16,
+    "Item Name": 42,
+    "Order Date": 14,
+    "Expected Delivery": 16,
+    "Actual Delivery": 22,
+    "Days Left": 12,
+    "Status": 22,
+    "% Received": 12,
+    "% Billed": 12,
+    "Order Qty": 12,
+    "Received Qty": 14,
+    "Pending Qty": 14,
+    "Net Total (M)": 14,
+}
+
+
+def _write_overview_sheet(ws, dashboard_data, styles):
+    summary = dashboard_data.get("summary") or []
+    ws.cell(row=1, column=1, value="Supplier Performance Dashboard Overview").font = styles["title_font"]
+    ws.cell(row=1, column=4, value="Generated On: " + str(nowdate()))
+
+    row_idx = 3
+    ws.cell(row=row_idx, column=1, value="Operational Summary (Million INR)").font = styles["section_font"]
+    row_idx += 1
+
+    colors = {"blue": "3498db", "green": "2ecc71", "red": "e74c3c", "orange": "e67e22"}
+    for i, s in enumerate(summary):
+        r = row_idx + (i // 4) * 3
+        c = 1 + (i % 4) * 2
+        bg_color = colors.get((s.get("indicator") or "blue").lower(), "3498db")
+
+        cell_l = ws.cell(row=r, column=c, value=s.get("label"))
+        cell_l.font = Font(bold=True, color="FFFFFF")
+        cell_l.fill = PatternFill(start_color=bg_color, fill_type="solid")
+        cell_l.alignment = Alignment(horizontal="center")
+
+        val = flt(s.get("value"))
+        if s.get("fieldtype") == "Currency":
+            val = val / 1000000
+
+        cell_v = ws.cell(row=r + 1, column=c, value=val)
+        cell_v.font = Font(bold=True, size=12)
+        if s.get("fieldtype") == "Currency":
+            cell_v.number_format = '"₹ "#,##0.00" M"'
+        cell_v.alignment = Alignment(horizontal="center")
+
+        ws.merge_cells(start_row=r, start_column=c, end_row=r, end_column=c + 1)
+        ws.merge_cells(start_row=r + 1, start_column=c, end_row=r + 1, end_column=c + 1)
+
+    chart_start_row = row_idx + 4
+    _write_chart_tables_on_overview(ws, dashboard_data, styles, chart_start_row)
+    _autofit_columns(ws)
+
+
+def _write_month_sheet(ws, dashboard_data, styles):
+    months = dashboard_data.get("months") or []
+    headers = ["S.No.", "Supplier"] + [m["key"] for m in months] + ["Total (M)"]
+    _write_excel_headers(ws, headers, styles)
+
+    month_widths = dict(MONTH_SHEET_WIDTHS)
+    for m in months:
+        month_widths[m["key"]] = 14
+
+    _apply_header_column_widths(ws, headers, month_widths)
+
+    amount_cols = set(range(3, len(headers)))  # month amount columns + total
+    month_rows = dashboard_data.get("month_wise_supplier") or []
+    month_totals = {m["key"]: 0 for m in months}
+    grand_total = 0
+    for r_idx, row in enumerate(month_rows, start=2):
+        vals = [r_idx - 1, row.get("supplier")]
+        for m in months:
+            amt = flt(row.get("months", {}).get(m["key"], 0))
+            month_totals[m["key"]] += amt
+            vals.append(amt / 1000000)
+        row_total = flt(row.get("total"))
+        grand_total += row_total
+        vals.append(row_total / 1000000)
+        _write_excel_row(ws, r_idx, vals, styles, amount_col=len(vals), qty_cols=amount_cols)
+
+    total_row_idx = len(month_rows) + 2
+    ws.merge_cells(start_row=total_row_idx, start_column=1, end_row=total_row_idx, end_column=2)
+    total_label = ws.cell(row=total_row_idx, column=1, value="GRAND TOTAL")
+    total_style = _total_row_style(styles)
+    total_label.font = total_style["font"]
+    total_label.fill = total_style["fill"]
+    total_label.border = total_style["border"]
+    total_label.alignment = Alignment(horizontal="right")
+    ws.cell(row=total_row_idx, column=2).fill = total_style["fill"]
+    ws.cell(row=total_row_idx, column=2).border = total_style["border"]
+    for col_idx, m in enumerate(months, start=3):
+        cell = ws.cell(row=total_row_idx, column=col_idx, value=month_totals[m["key"]] / 1000000)
+        cell.font = total_style["font"]
+        cell.fill = total_style["fill"]
+        cell.border = total_style["border"]
+        cell.number_format = "#,##0.00"
+        cell.alignment = Alignment(horizontal="right")
+    grand_cell = ws.cell(row=total_row_idx, column=len(headers), value=grand_total / 1000000)
+    grand_cell.font = total_style["font"]
+    grand_cell.fill = total_style["fill"]
+    grand_cell.border = total_style["border"]
+    grand_cell.number_format = "#,##0.00"
+    grand_cell.alignment = Alignment(horizontal="right")
+
+    _autofit_columns(ws, min_widths=_min_widths_for_headers(headers, month_widths))
+
+
+def _as_excel_date(val):
+    if not val:
+        return None
+    try:
+        return getdate(val)
+    except Exception:
+        return val
+
+
+def _order_row_values(row, serial_no, include_days_left=False):
+    pending_qty = flt(row.get("pending_qty"))
+    if not pending_qty and row.get("qty") is not None:
+        pending_qty = max(0, flt(row.get("qty")) - flt(row.get("received_qty")))
+
+    vals = [
+        serial_no,
+        row.get("name"),
+        row.get("supplier"),
+        row.get("item_code"),
+        row.get("item_name"),
+        _as_excel_date(row.get("transaction_date")),
+        _as_excel_date(row.get("schedule_date")),
+        format_actual_delivery_display(row),
+    ]
+    if include_days_left:
+        due_days = row.get("due_days")
+        vals.append(f"{due_days} Days" if due_days != "-" else due_days)
+    vals.extend([
+        row.get("status"),
+        int(row.get("per_delivered") or 0),
+        int(row.get("per_billed") or 0),
+        flt(row.get("qty")),
+        flt(row.get("received_qty")),
+        pending_qty,
+        flt(row.get("net_total")) / 1000000,
+    ])
+    return vals
+
+
+DETAILED_ORDER_HEADERS = [
+    "S.No.", "PO No", "Supplier", "Item Code", "Item Name", "Order Date",
+    "Expected Delivery", "Actual Delivery", "Status", "% Received", "% Billed",
+    "Order Qty", "Received Qty", "Pending Qty", "Net Total (M)",
+]
+
+DUE_ORDER_HEADERS = [
+    "S.No.", "PO No", "Supplier", "Item Code", "Item Name", "Order Date",
+    "Expected Delivery", "Actual Delivery", "Days Left", "Status", "% Received", "% Billed",
+    "Order Qty", "Received Qty", "Pending Qty", "Net Total (M)",
+]
+
+
+def _order_sheet_col_sets(headers):
+    """Return column index sets for date, qty, pct formatting based on header positions."""
+    date_headers = {"Order Date", "Expected Delivery"}
+    qty_headers = {"Order Qty", "Received Qty", "Pending Qty"}
+    pct_headers = {"% Received", "% Billed"}
+    date_cols, qty_cols, pct_cols = set(), set(), set()
+    for idx, header in enumerate(headers, start=1):
+        if header in date_headers:
+            date_cols.add(idx)
+        if header in qty_headers:
+            qty_cols.add(idx)
+        if header in pct_headers:
+            pct_cols.add(idx)
+    return date_cols, qty_cols, pct_cols
+
+
+def _write_detailed_orders_sheet(ws, rows, styles):
+    _write_excel_headers(ws, DETAILED_ORDER_HEADERS, styles)
+    _apply_header_column_widths(ws, DETAILED_ORDER_HEADERS, ORDER_SHEET_WIDTHS)
+    date_cols, qty_cols, pct_cols = _order_sheet_col_sets(DETAILED_ORDER_HEADERS)
+    data_rows = rows or []
+    for r_idx, row in enumerate(data_rows, start=2):
+        _write_excel_row(
+            ws, r_idx, _order_row_values(row, r_idx - 1), styles,
+            amount_col=16, date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
+        )
+    total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
+    _write_excel_total_row(
+        ws, len(data_rows) + 2, "TOTAL BOOKED VALUE", 16, total_amount, 15, styles,
+    )
+    _autofit_columns(ws, min_widths=_min_widths_for_headers(DETAILED_ORDER_HEADERS, ORDER_SHEET_WIDTHS))
+
+
+def _write_due_orders_sheet(ws, rows, styles):
+    _write_excel_headers(ws, DUE_ORDER_HEADERS, styles)
+    _apply_header_column_widths(ws, DUE_ORDER_HEADERS, ORDER_SHEET_WIDTHS)
+    date_cols, qty_cols, pct_cols = _order_sheet_col_sets(DUE_ORDER_HEADERS)
+    data_rows = rows or []
+    for r_idx, row in enumerate(data_rows, start=2):
+        _write_excel_row(
+            ws, r_idx, _order_row_values(row, r_idx - 1, include_days_left=True), styles,
+            amount_col=17, date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
+        )
+    total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
+    _write_excel_total_row(
+        ws, len(data_rows) + 2, "TOTAL DUE VALUE", 17, total_amount, 16, styles,
+    )
+    _autofit_columns(ws, min_widths=_min_widths_for_headers(DUE_ORDER_HEADERS, ORDER_SHEET_WIDTHS))
+
+
 @frappe.whitelist()
 def export_to_excel(filters=None, export_type="all"):
     filters = prepare_filters(filters)
     dashboard_data = get_dashboard_data(filters)
-    data = dashboard_data.get("results")
-    summary = dashboard_data.get("summary")
-    
-    if not data:
-        return None
+    results = dashboard_data.get("results") or []
+    due_rows = dashboard_data.get("due_next_15_days") or []
 
+    if not results and not dashboard_data.get("month_wise_supplier"):
+        frappe.throw(_("No data to export"))
+
+    styles = _excel_styles()
     wb = openpyxl.Workbook()
-    
-    # Styling Helpers
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="2c3e50", fill_type="solid")
-    title_font = Font(bold=True, size=14)
-    section_font = Font(bold=True, size=12)
-    thin_side = Side(style='thin')
-    table_border = Border(left=thin_side, right=thin_side, top=thin_side, bottom=thin_side)
-    zebra_fill = PatternFill(start_color="f8f9fa", fill_type="solid")
 
-    # 1. Overview Sheet (KPIs)
-    ws_overview = wb.active
-    ws_overview.title = "Dashboard Overview"
-    
-    ws_overview.cell(row=1, column=1, value="Supplier Performance Dashboard Overview").font = title_font
-    ws_overview.cell(row=1, column=4, value="Generated On: " + nowdate())
-    
-    row_idx = 3
-    ws_overview.cell(row=row_idx, column=1, value="Operational Summary (Million INR)").font = section_font
-    row_idx += 1
-    
-    summary_start_row = row_idx
-    colors = {"blue": "3498db", "green": "2ecc71", "red": "e74c3c", "orange": "e67e22"}
-    
-    for i, s in enumerate(summary):
-        r = summary_start_row + (i // 4) * 3
-        c = 1 + (i % 4) * 2
-        
-        # Label
-        cell_l = ws_overview.cell(row=r, column=c, value=s.get('label'))
-        cell_l.font = Font(bold=True, color="FFFFFF")
-        bg_color = colors.get(s.get('indicator', 'blue').lower(), "3498db")
-        cell_l.fill = PatternFill(start_color=bg_color, fill_type="solid")
-        cell_l.alignment = Alignment(horizontal="center")
-        
-        # Value
-        val = flt(s.get('value'))
-        if s.get('fieldtype') == "Currency":
-            val = val / 1000000
-        
-        cell_v = ws_overview.cell(row=r+1, column=c, value=val)
-        cell_v.font = Font(bold=True, size=12)
-        if s.get('fieldtype') == "Currency":
-            cell_v.number_format = '"₹ "#,##0.00" M"'
-        cell_v.alignment = Alignment(horizontal="center")
-        cell_v.border = Border(left=Side(style='medium', color=bg_color), 
-                               right=Side(style='medium', color=bg_color), 
-                               bottom=Side(style='medium', color=bg_color))
-        
-        ws_overview.merge_cells(start_row=r, start_column=c, end_row=r, end_column=c+1)
-        ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
-
-    # 2. Month-Wise Booking Sheet
-    ws_months = wb.create_sheet("Month-Wise Booking")
-    months = dashboard_data.get("months", [])
-    headers = ["S.No.", "Supplier"] + [m["key"] for m in months] + ["Total (M)"]
-    
-    for idx, h in enumerate(headers, start=1):
-        cell = ws_months.cell(row=1, column=idx, value=h)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
-        cell.border = table_border
-        
-    for r_idx, row in enumerate(dashboard_data.get("month_wise_supplier", []), start=2):
-        row_fill = zebra_fill if r_idx % 2 == 0 else None
-        ws_months.cell(row=r_idx, column=1, value=r_idx-1).border = table_border
-        ws_months.cell(row=r_idx, column=2, value=row["supplier"]).border = table_border
-        
-        col_idx = 3
-        for m in months:
-            val = flt(row["months"].get(m["key"], 0)) / 1000000
-            c = ws_months.cell(row=r_idx, column=col_idx, value=val)
-            c.number_format = '#,##0.00'
-            c.border = table_border
-            if row_fill: c.fill = row_fill
-            col_idx += 1
-            
-        c_tot = ws_months.cell(row=r_idx, column=col_idx, value=flt(row["total"]) / 1000000)
-        c_tot.number_format = '#,##0.00'
-        c_tot.font = Font(bold=True)
-        c_tot.border = table_border
-        if row_fill: c_tot.fill = row_fill
-
-    # 3. Supplier Orders List Sheet
-    ws_list = wb.create_sheet("Detailed Orders List")
-    list_headers = ["S.No.", "PO No", "Supplier", "Order Date", "Expected Del.", "Actual Del.", "Status", "% Received", "% Bill.", "Net Total (M)"]
-    for idx, h in enumerate(list_headers, start=1):
-        cell = ws_list.cell(row=1, column=idx, value=h)
-        cell.font = header_font
-        cell.fill = header_fill
-        cell.alignment = Alignment(horizontal="center")
-        cell.border = table_border
-        
-    for r_idx, row in enumerate(data, start=2):
-        row_fill = zebra_fill if r_idx % 2 == 0 else None
-        actual_del = format_actual_delivery_display(row)
-        vals = [
-            r_idx-1, row.get("name"), row.get("supplier"), 
-            row.get("transaction_date"), row.get("schedule_date"), actual_del,
-            row.get("status"), f"{int(row.get('per_delivered') or 0)}%", 
-            f"{int(row.get('per_billed') or 0)}%", flt(row.get("net_total")) / 1000000
-        ]
-        for c_idx, val in enumerate(vals, start=1):
-            cell = ws_list.cell(row=r_idx, column=c_idx, value=val)
-            cell.border = table_border
-            if row_fill: cell.fill = row_fill
-            if c_idx == 10:
-                cell.number_format = '#,##0.00'
-                cell.alignment = Alignment(horizontal="right")
-
-    # Auto-adjust column widths
-    for ws in [ws_months, ws_list]:
-        for col in ws.columns:
-            max_length = 0
-            column = col[0].column_letter
-            for cell in col:
-                try:
-                    if len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except: pass
-            ws.column_dimensions[column].width = max_length + 5
+    if export_type == "all":
+        ws_overview = wb.active
+        ws_overview.title = "Overview"
+        ws_months = wb.create_sheet("Month-Wise Booking")
+        ws_due = wb.create_sheet("Due in 15 Days")
+        ws_list = wb.create_sheet("Detailed Orders")
+        _write_overview_sheet(ws_overview, dashboard_data, styles)
+        _write_month_sheet(ws_months, dashboard_data, styles)
+        _write_due_orders_sheet(ws_due, due_rows, styles)
+        _write_detailed_orders_sheet(ws_list, results, styles)
+    elif export_type == "summary":
+        ws_months = wb.active
+        ws_months.title = "Month-Wise Booking"
+        _write_month_sheet(ws_months, dashboard_data, styles)
+    elif export_type == "detail":
+        ws_list = wb.active
+        ws_list.title = "Detailed Orders"
+        _write_detailed_orders_sheet(ws_list, results, styles)
+    else:
+        frappe.throw(_("Invalid export type"))
 
     output = BytesIO()
     wb.save(output)
     output.seek(0)
-    
-    frappe.response['filename'] = f"Supplier_Performance_{nowdate()}.xlsx"
-    frappe.response['filecontent'] = output.getvalue()
-    frappe.response['type'] = 'binary'
+
+    filenames = {
+        "all": f"Supplier_Performance_{nowdate()}.xlsx",
+        "summary": f"Supplier_Performance_Month_Wise_{nowdate()}.xlsx",
+        "detail": f"Supplier_Performance_Detailed_{nowdate()}.xlsx",
+    }
+
+    return {
+        "filename": filenames.get(export_type, filenames["all"]),
+        "filecontent": base64.b64encode(output.getvalue()).decode(),
+    }
