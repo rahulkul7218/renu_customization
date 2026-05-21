@@ -24,7 +24,7 @@ def execute(file_path):
     
     col_idx = {str(name).strip(): idx for idx, name in enumerate(headers) if name}
     
-    required_columns = ['Item Code', 'New Item Group', 'Item Type']
+    required_columns = ['Item Code', 'Item Type']
     for col in required_columns:
         if col not in col_idx:
             print(f"Missing required column in Excel file: {col}")
@@ -40,7 +40,6 @@ def execute(file_path):
 
     for row_idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
         item_code = row[col_idx['Item Code']]
-        new_item_group = row[col_idx['New Item Group']]
         item_type = row[col_idx['Item Type']]
 
         if not item_code:
@@ -54,9 +53,7 @@ def execute(file_path):
             continue
 
         update_dict = {}
-        if new_item_group:
-            update_dict['item_group'] = str(new_item_group).strip()
-            
+          
         if item_type:
             update_dict[item_type_fieldname] = str(item_type).strip()
                 

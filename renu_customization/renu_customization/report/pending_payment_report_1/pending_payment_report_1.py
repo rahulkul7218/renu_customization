@@ -1,16 +1,16 @@
 import frappe
 from frappe.utils import flt, getdate, nowdate, date_diff
-
+ 
 def execute(filters=None):
     if not filters:
         filters = {}
-
+ 
     from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute as execute_ar
-
+ 
     ar_filters = frappe._dict({
         "company": filters.get("company") or frappe.db.get_single_value("Global Defaults", "default_company"),
         "report_date": filters.get("to_date") or nowdate(),
-        "customer": [filters.get("customer_name")] if filters.get("customer_name") else None,
+        "party_type": "Customer",
         "group_by_party": 0,
         "based_on_payment_terms": 1,
         "ageing_based_on": "Due Date",
@@ -20,12 +20,12 @@ def execute(filters=None):
         "range_3": 90,
         "range_4": 120
     })
-
+ 
     ar_columns, ar_data, *rest = execute_ar(ar_filters)
-
+ 
     if not ar_data:
         ar_data = []
-
+ 
     # Filter out total/summary rows and zero outstanding
     filtered_ar_data = []
     for row in ar_data:
@@ -36,22 +36,26 @@ def execute(filters=None):
             continue
         filtered_ar_data.append(row)
     ar_data = filtered_ar_data
-
+ 
     # Apply manual filters from pending_payment_report
+ 
     if filters.get("invoice_id"):
         ar_data = [row for row in ar_data if row.get("voucher_no") == filters.get("invoice_id")]
 
+    if filters.get("customer_name"):
+        ar_data = [row for row in ar_data if row.get("party") == filters.get("customer_name")]
+ 
     if filters.get("from_date"):
         from_date = getdate(filters.get("from_date"))
         ar_data = [row for row in ar_data if row.get("posting_date") and getdate(row.get("posting_date")) >= from_date]
-
+ 
     if filters.get("to_date"):
         to_date = getdate(filters.get("to_date"))
         ar_data = [row for row in ar_data if row.get("posting_date") and getdate(row.get("posting_date")) <= to_date]
-
+ 
     # Gather batch details
     parties = list(set(row.get("party") for row in ar_data if row.get("party")))
-
+ 
     customer_details = {}
     if parties:
         cust_list = frappe.get_all("Customer",
@@ -60,11 +64,11 @@ def execute(filters=None):
         )
         for c in cust_list:
             customer_details[c.name] = c
-
+ 
     invoice_nos = []
     journal_entries = []
     payment_entries = []
-
+ 
     for row in ar_data:
         v_type = row.get("voucher_type")
         v_no = row.get("voucher_no")
@@ -76,7 +80,7 @@ def execute(filters=None):
             journal_entries.append(v_no)
         elif v_type == "Payment Entry":
             payment_entries.append(v_no)
-
+ 
     sales_invoice_details = {}
     sales_persons = {}
     if invoice_nos:
@@ -88,6 +92,7 @@ def execute(filters=None):
                 si.grand_total,
                 si.base_grand_total,
                 si.po_no,
+                si.currency,
                 CASE
                     WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic'
                     ELSE 'Export'
@@ -98,7 +103,7 @@ def execute(filters=None):
         """, {"invoice_nos": invoice_nos}, as_dict=True)
         for inv in inv_list:
             sales_invoice_details[inv.name] = inv
-
+ 
         sp_list = frappe.get_all("Sales Team",
             filters={"parent": ["in", invoice_nos], "parenttype": "Sales Invoice"},
             fields=["parent", "sales_person"]
@@ -107,7 +112,7 @@ def execute(filters=None):
             if sp.parent not in sales_persons:
                 sales_persons[sp.parent] = []
             sales_persons[sp.parent].append(sp.sales_person)
-
+ 
     journal_entry_details = {}
     if journal_entries and parties:
         je_list = frappe.db.sql("""
@@ -123,12 +128,13 @@ def execute(filters=None):
         """, {"journal_entries": journal_entries, "parties": parties}, as_dict=True)
         for je in je_list:
             journal_entry_details[je.name] = je
-
+ 
     payment_entry_details = {}
     if payment_entries:
         pe_list = frappe.db.sql("""
             SELECT
                 name,
+                payment_type,
                 source_exchange_rate,
                 target_exchange_rate,
                 paid_from_account_currency,
@@ -142,7 +148,7 @@ def execute(filters=None):
         """, {"payment_entries": payment_entries}, as_dict=True)
         for pe in pe_list:
             payment_entry_details[pe.name] = pe
-
+ 
     customer_countries = {}
     if parties:
         address_links = frappe.get_all("Dynamic Link",
@@ -160,39 +166,39 @@ def execute(filters=None):
                 country = address_country_map.get(link.parent)
                 if country:
                     customer_countries[link.link_name] = country
-
+ 
     data = []
     company_currency = frappe.get_cached_value("Company", ar_filters.company, "default_currency") or "INR"
-
+ 
     for row in ar_data:
         party = row.get("party")
         v_type = row.get("voucher_type")
         v_no = row.get("voucher_no")
-
+ 
         cust_info = customer_details.get(party) or frappe._dict()
-
+ 
         customer_code = cust_info.get("customer_code") or ""
         customer_name = cust_info.get("customer_name") or row.get("customer_name") or row.get("party_name") or party
         business_region_name = cust_info.get("business_region_name") or ""
-
+ 
         invoice_id = v_no
         invoice_date = row.get("posting_date")
         payment_due_date = row.get("due_date")
-
+ 
         invoice_age = 0
-        if invoice_date:
-            invoice_age = date_diff(nowdate(), invoice_date)
-
+        if payment_due_date:
+            invoice_age = date_diff(nowdate(), payment_due_date)
+ 
         outstanding = flt(row.get("outstanding") or row.get("outstanding_amount") or 0)
-
+ 
         currency = row.get("currency") or company_currency
         exchange_rate = 1.0
-        invoice_value = flt(row.get("invoiced"))
+        invoice_value = flt(row.get("invoiced_amount_in_account_currency") or row.get("invoiced_in_account_currency") or row.get("invoiced"))
         inr_value_of_foreign = flt(row.get("invoiced"))
         po_no = row.get("po_no") or ""
         sales_person = row.get("sales_person") or ""
         domestic_export = "Domestic" if customer_countries.get(party) == "India" else "Export"
-
+ 
         if v_type == "Sales Invoice" and v_no in sales_invoice_details:
             details = sales_invoice_details[v_no]
             exchange_rate = flt(details.get("conversion_rate") or 1.0)
@@ -200,11 +206,12 @@ def execute(filters=None):
             inr_value_of_foreign = flt(details.get("base_grand_total") or 0)
             po_no = details.get("po_no") or ""
             domestic_export = details.get("domestic_export") or "Domestic"
-
+            currency = details.get("currency") or currency
+ 
             sp_list = sales_persons.get(v_no, [])
             if sp_list:
                 sales_person = ", ".join(sp_list)
-
+ 
         elif v_type == "Journal Entry" and v_no in journal_entry_details:
             details = journal_entry_details[v_no]
             exchange_rate = flt(details.get("exchange_rate") or 1.0)
@@ -212,18 +219,27 @@ def execute(filters=None):
             invoice_value = flt(details.get("invoice_value") or 0)
             inr_value_of_foreign = flt(details.get("inr_value_of_foreign") or 0)
             po_no = details.get("po_no") or ""
-
+ 
         elif v_type == "Payment Entry" and v_no in payment_entry_details:
             details = payment_entry_details[v_no]
-            currency = details.get("paid_from_account_currency") or details.get("paid_to_account_currency") or currency
-            exchange_rate = flt(details.get("source_exchange_rate") or details.get("target_exchange_rate") or 1.0)
-            invoice_value = flt(details.get("received_amount") or details.get("paid_amount") or 0)
-            inr_value_of_foreign = flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
-
+            if details.get("payment_type") == "Receive":
+                currency = details.get("paid_from_account_currency") or currency
+                exchange_rate = flt(details.get("source_exchange_rate") or 1.0)
+                invoice_value = 0  # Receive payments show 0 in Invoice Value
+                inr_value_of_foreign = outstanding  # Show outstanding amount in INR Value of Foreign
+            else:
+                # Pay type: show actual amount in Invoice Value and positive value in INR Value of Foreign
+                currency = details.get("paid_to_account_currency") or currency
+                exchange_rate = flt(details.get("target_exchange_rate") or 1.0)
+                invoice_value = flt(details.get("base_paid_amount") or details.get("received_amount") or 0)
+                inr_value_of_foreign = flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
+ 
         # Apply currency filter if set
         if filters.get("currency") and currency != filters.get("currency"):
             continue
-
+ 
+        # The Outstanding Amount is fetched directly from the Accounts Receivable report
+ 
         data.append({
             "customer_code": customer_code,
             "customer_name": customer_name,
@@ -231,6 +247,7 @@ def execute(filters=None):
             "invoice_id": invoice_id,
             "invoice_date": invoice_date,
             "invoice_value": invoice_value,
+            "advance_payment": 0 if v_type == "Sales Invoice" else flt(flt(row.get("paid") or row.get("paid_amount") or 0) / exchange_rate if exchange_rate else 0),
             "outstanding": outstanding,
             "currency": currency,
             "exchange_rate": exchange_rate,
@@ -242,10 +259,10 @@ def execute(filters=None):
             "sales_person": sales_person,
             "domestic_export": domestic_export
         })
-
-    # Sort data by invoice_date ascending
-    data = sorted(data, key=lambda x: getdate(x["invoice_date"]) if x["invoice_date"] else getdate("1970-01-01"))
-
+ 
+    # Sort data by customer_name and then invoice_date ascending
+    data = sorted(data, key=lambda x: (x.get("customer_name") or "", getdate(x["invoice_date"]) if x["invoice_date"] else getdate("1970-01-01")))
+ 
     columns = [
         {"label": "Customer Code", "fieldname": "customer_code", "fieldtype": "Data", "width": 140},
         {"label": "Customer Name", "fieldname": "customer_name", "fieldtype": "Data", "width": 200},
@@ -253,6 +270,7 @@ def execute(filters=None):
         {"label": "Invoice ID", "fieldname": "invoice_id", "fieldtype": "Dynamic Link", "options": "voucher_type", "width": 150},
         {"label": "Invoice Date", "fieldname": "invoice_date", "fieldtype": "Date", "width": 140},
         {"label": "Invoice Value", "fieldname": "invoice_value", "fieldtype": "Float", "width": 150},
+        {"label": "Advance Payment", "fieldname": "advance_payment", "fieldtype": "Float", "width": 150},
         {"label": "Outstanding Amount (INR)", "fieldname": "outstanding", "fieldtype": "Float", "width": 170},
         {"label": "Currency", "fieldname": "currency", "fieldtype": "Data", "width": 140},
         {"label": "Exchange Rate", "fieldname": "exchange_rate", "fieldtype": "Data", "width": 140, "disable_total": 1},
@@ -320,6 +338,7 @@ def download_xlsx(filters=None):   # CHANGE #2 (added include_filters)
  
     numeric_fields = {
         "invoice_value",
+        "advance_payment",
         "outstanding",
         "exchange_rate",
         "inr_value_of_foreign",
@@ -403,3 +422,4 @@ def download_xlsx(filters=None):   # CHANGE #2 (added include_filters)
     output.seek(0)
  
     return base64.b64encode(output.read()).decode()
+ 
