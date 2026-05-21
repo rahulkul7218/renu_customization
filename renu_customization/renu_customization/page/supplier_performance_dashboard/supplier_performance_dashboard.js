@@ -8,6 +8,9 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 	window.cur_page = page;
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
+    page.add_menu_item(__("Export to Excel"), () => export_data_excel("all"));
+    page.add_menu_item(__("Export to PDF"), () => export_pdf_full());
+
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
 
 	let refresh_timer = null;
@@ -15,7 +18,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		if (refresh_timer) clearTimeout(refresh_timer);
 		refresh_timer = setTimeout(() => {
 			perform_refresh();
-		}, 50);
+		}, 100);
 	};
 
 	function perform_refresh() {
@@ -44,606 +47,626 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 	}
 
 	const filter_fields = [
-		{
-			fieldname: "fiscal_year",
-			label: __("Fiscal Year"),
-			fieldtype: "Link",
-			options: "Fiscal Year",
-			placeholder: __("Select Year"),
-		},
-		{
-			fieldname: "from_date",
-			label: __("From Date"),
-			fieldtype: "Date",
-		},
-		{
-			fieldname: "to_date",
-			label: __("To Date"),
-			fieldtype: "Date",
-		},
-		{
-			fieldname: "company",
-			label: __("Company"),
-			fieldtype: "Link",
-			options: "Company",
-			default: frappe.defaults.get_user_default("Company"),
-		},
-		{
-			fieldname: "purchase_order",
-			label: __("PO Details"),
-			fieldtype: "Link",
-			options: "Purchase Order",
-			placeholder: __("Select PO"),
-		},
-		{
-			fieldname: "supplier",
-			label: __("Supplier"),
-			fieldtype: "Link",
-			options: "Supplier",
-			placeholder: __("Select Supplier"),
-		},
-		{
-			fieldname: "expected_delivery_date",
-			label: __("Expected Delivery Date"),
-			fieldtype: "Date",
-			placeholder: __("Select Date"),
-		},
-		{
-			fieldname: "actual_delivery_time",
-			label: __("Actual Delivery Time"),
-			fieldtype: "Date",
-			placeholder: __("Select Date"),
-		},
-		{
-			fieldname: "open_po_details",
-			label: __("Open PO Details"),
-			fieldtype: "Check",
-		},
-		{
-			fieldname: "is_overdue",
-			label: __("Overdue Deliveries"),
-			fieldtype: "Check",
-		},
-		{
-			fieldname: "due_next_week",
-			label: __("Due in Next Week"),
-			fieldtype: "Check",
-		},
+		{ fieldname: "fiscal_year", label: __("Fiscal Year"), fieldtype: "Link", options: "Fiscal Year", placeholder: __("Select Year") },
+		{ fieldname: "from_date", label: __("From Date"), fieldtype: "Date" },
+		{ fieldname: "to_date", label: __("To Date"), fieldtype: "Date" },
+		{ fieldname: "company", label: __("Company"), fieldtype: "Link", options: "Company", default: frappe.defaults.get_user_default("Company") },
+		{ fieldname: "supplier_group", label: __("Supplier Group"), fieldtype: "Link", options: "Supplier Group", placeholder: __("Select Supplier Group") },
+		{ fieldname: "supplier", label: __("Supplier"), fieldtype: "Link", options: "Supplier", placeholder: __("Select Supplier") },
+		{ fieldname: "purchase_order", label: __("PO Details"), fieldtype: "Link", options: "Purchase Order", placeholder: __("Select PO") },
 	];
+
+	$("<style>")
+		.text(`
+		.dashboard-filter-area { padding: 15px 20px 5px 20px !important; background-color: var(--bg-color) !important; border-bottom: 1px solid var(--border-color) !important; }
+		.dashboard-filter-area .form-column form { display: flex !important; flex-wrap: wrap !important; gap: 15px !important; align-items: flex-end !important; }
+		.dashboard-filter-area .frappe-control { margin-bottom: 10px !important; width: calc(25% - 12px) !important; }
+		.dashboard-filter-area .control-label { font-size: 12px !important; font-weight: 600 !important; color: var(--text-muted) !important; margin-bottom: 6px !important; display: block !important; }
+	`).appendTo(filter_parent);
 
 	page.filter_group = new frappe.ui.FieldGroup({
 		parent: filter_parent,
 		fields: filter_fields,
+		on_change: () => page.refresh()
 	});
 	page.filter_group.make();
 
-	$("<style>")
-		.text(
-			`
-		.dashboard-filter-area {
-			padding: 15px 20px 5px 20px !important;
-			background-color: var(--bg-color) !important;
-			border-bottom: 1px solid var(--border-color) !important;
-		}
-		.dashboard-filter-area .form-section .section-body,
-		.dashboard-filter-area .section-body,
-		.dashboard-filter-area .form-column {
-			display: block !important;
-			width: 100% !important;
-		}
-		.dashboard-filter-area .form-column form {
-			display: flex !important;
-			flex-wrap: wrap !important;
-			gap: 15px !important;
-			align-items: flex-end !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
-		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
-			display: none !important;
-		}
-		.dashboard-filter-area .frappe-control {
-			margin-bottom: 10px !important;
-			width: calc(25% - 12px) !important;
-		}
-		.dashboard-filter-area .frappe-control .form-group {
-			margin-bottom: 0 !important;
-			width: 100% !important;
-		}
-		.dashboard-filter-area .control-input,
-		.dashboard-filter-area .awesomplete,
-		.dashboard-filter-area input:not([type="checkbox"]),
-		.dashboard-filter-area select {
-			width: 100% !important;
-			max-width: 100% !important;
-		}
-		.dashboard-filter-area label,
-		.dashboard-filter-area .control-label {
-			font-size: 12px !important;
-			font-weight: 600 !important;
-			color: #475569 !important;
-			margin-bottom: 6px !important;
-			display: block !important;
-			white-space: nowrap !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] {
-			display: flex !important;
-			align-items: center !important;
-			padding-bottom: 4px !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .control-label {
-			display: none !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .form-group {
-			margin-bottom: 0 !important;
-			width: 100% !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] .checkbox {
-			margin: 0 !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] label {
-			display: flex !important;
-			align-items: center !important;
-			margin-bottom: 0 !important;
-			cursor: pointer !important;
-			white-space: normal !important;
-		}
-		.dashboard-filter-area .frappe-control[data-fieldtype="Check"] input[type="checkbox"] {
-			width: 16px !important;
-			height: 16px !important;
-			margin: 0 8px 0 0 !important;
-			cursor: pointer !important;
-			flex-shrink: 0 !important;
-		}
-	`,
-		)
-		.appendTo(filter_parent);
-
-	Object.keys(page.filter_group.fields_dict).forEach((key) => {
-		let field = page.filter_group.fields_dict[key];
-		field.on_change = () => {
-			if (key === "fiscal_year") {
-				let fy = page.filter_group.get_value("fiscal_year");
-				if (fy) {
-					frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
-						if (r) {
-							page.filter_group.set_values({
-								from_date: r.year_start_date,
-								to_date: r.year_end_date
-							});
-						}
-					});
+	page.filter_group.fields_dict.supplier.get_query = function() {
+		let supplier_group = page.filter_group.get_value("supplier_group");
+		if (supplier_group) {
+			return {
+				filters: {
+					"supplier_group": supplier_group
 				}
-			}
-			page.refresh();
-		};
-		if (field.$input) {
-			field.$input.on("change input blur", () => {
-				setTimeout(() => page.refresh(), 50);
-			});
+			};
 		}
-	});
+	};
 
-	filter_parent.addClass("border-bottom").css({
-		"background-color": "var(--bg-color)",
-		"margin-bottom": "0",
-	});
+	page.filter_group.fields_dict.purchase_order.get_query = function() {
+		return {
+			filters: {
+				docstatus: 1,
+				status: ["not in", ["Cancelled", "Draft"]]
+			}
+		};
+	};
+
+    Object.keys(page.filter_group.fields_dict).forEach(key => {
+        let f = page.filter_group.fields_dict[key];
+        if (f.$input) f.$input.on("change input blur", () => page.refresh());
+    });
 
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
 	$(`<style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        
-        .dashboard-content { 
-            padding: 20px; 
-            background: var(--bg-color); 
-            min-height: 100vh; 
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            color: #1e293b;
-            width: 100% !important;
-            box-sizing: border-box;
-        }
-
-        .summary-wrapper { 
-            display: grid !important; 
-            grid-template-columns: repeat(4, 1fr) !important; 
-            gap: 16px; 
-            margin-bottom: 24px; 
-            width: 100% !important;
-        }
-        .summary-card { 
-            background: var(--card-bg) !important;
-            border: 1px solid var(--border-color);
-            border-radius: 12px; 
-            padding: 16px; 
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-            border-left: 5px solid #cbd5e1;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-        }
-        .summary-card:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
-        }
-        
-        /* Consistent Border Colors */
+        .dashboard-content { padding: 20px; background: var(--bg-color); min-height: 100vh; font-family: 'Inter', sans-serif; color: var(--text-color); width: 100% !important; }
+        .summary-wrapper { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 16px; margin-bottom: 24px; }
+        .summary-card { background: var(--card-bg) !important; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; border-left: 5px solid #cbd5e1; }
         .summary-card.blue { border-left-color: #3b82f6; }
-        .summary-card.purple { border-left-color: #8b5cf6; }
         .summary-card.green { border-left-color: #10b981; }
-        .summary-card.orange { border-left-color: #f59e0b; }
-        .summary-card.cyan { border-left-color: #06b6d4; }
         .summary-card.red { border-left-color: #ef4444; }
-
-        .summary-card .label { 
-            font-size: 11px; 
-            color: #64748b; 
-            font-weight: 700; 
-            margin-bottom: 8px; 
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .summary-card .value { 
-            font-size: 20px; 
-            font-weight: 800; 
-            color: #0f172a; 
-        }
-        .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+        .summary-card.orange { border-left-color: #f59e0b; }
+        .summary-card .label { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; margin-bottom: 8px; }
+        .summary-card .value { font-size: 20px; font-weight: 800; color: var(--text-color); }
+        .charts-row { display: grid !important; grid-template-columns: 1fr !important; gap: 24px; margin-bottom: 24px; width: 100%; }
+        .chart-card { background: var(--card-bg) !important; border-radius: 12px; padding: 24px; border: 1px solid var(--border-color); width: 100%; }
+        .chart-card .title { font-size: 15px; font-weight: 700; margin-bottom: 16px; text-transform: uppercase; color: var(--text-color); text-align: center; }
+        .table-card { background: var(--card-bg) !important; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 24px; overflow: hidden; }
+        .table-card .header { padding: 15px 24px; border-bottom: 1px solid var(--border-color); font-weight: 700; display: flex; justify-content: space-between; align-items: center; color: var(--text-color); }
+        .export-btn { padding: 4px 12px; font-size: 11px; font-weight: 600; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.2s; color: var(--text-color); }
+        .export-btn:hover { background: var(--border-color); }
+        .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        .dashboard-table.orders-table { table-layout: auto; width: max-content; min-width: 100%; }
+        .dashboard-table th { background: var(--bg-color); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; height: 42px; box-sizing: border-box; }
+        .dashboard-table.orders-table th { text-transform: none; font-size: 12px; letter-spacing: 0; white-space: nowrap; }
+        .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 48px; box-sizing: border-box; line-height: 22px; }
         
-        .bg-blue { background-color: #3b82f6; }
-        .bg-green { background-color: #10b981; }
-        .bg-orange { background-color: #f59e0b; }
-        .bg-cyan { background-color: #06b6d4; }
-        .bg-purple { background-color: #8b5cf6; }
-        .bg-red { background-color: #ef4444; }
-
-        .charts-row { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 24px; 
-            margin-bottom: 24px; 
-            width: 100%;
-        }
-        .chart-card { 
-            background: var(--card-bg) !important; border-radius: 12px; padding: 24px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-            border: 1px solid var(--border-color);
-        }
-        .chart-card .title { 
-            font-size: 15px; font-weight: 700; color: #1e293b; 
-            margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.025em;
-        }
-
-        .custom-legend { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-            gap: 16px; 
-            margin-top: 30px; 
-            padding: 20px; 
-            border-top: 1px solid #f1f5f9;
-            background: #fafafa;
-            border-radius: 8px;
-        }
-        .legend-item { display: flex; align-items: flex-start; gap: 12px; }
-        .legend-item .dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
-        .legend-item .info { display: flex; flex-direction: column; line-height: 1.2; }
-        .legend-item .label { font-size: 12px; font-weight: 600; color: #475569; text-decoration: none !important; }
-        .legend-item .val { font-size: 11px; color: #94a3b8; }
-
-        .frappe-chart .chart-legend, .frappe-chart .legend { display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; overflow: hidden !important; }
-        .frappe-chart text { font-size: 11px !important; }
-
-        .table-card { 
-            background: var(--card-bg) !important; border-radius: 12px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
-            margin-bottom: 24px; overflow: hidden;
-            border: 1px solid var(--border-color);
-            width: 100%;
-        }
-        .table-card .header { 
-            padding: 15px 24px; background: var(--card-bg) !important;
-            border-bottom: 1px solid var(--border-color); font-weight: 700; 
-            color: var(--text-color); display: flex; justify-content: space-between; align-items: center;
-        }
-        .table-actions { display: flex; gap: 12px; align-items: center; }
-        .export-btn { font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; padding: 6px 14px; border-radius: 6px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e8f0; white-space: nowrap; }
-        .export-btn:hover { color: #2563eb !important; background: #eff6ff !important; border-color: #bfdbfe !important; }
-        tr.sticky-total td { position: sticky; bottom: 0; z-index: 9; background: #f1f3f5 !important; font-weight: 700; border-top: 2px solid #ddd; }
+        /* Sticky columns for breakdown table */
+        .month-table .col-sno { width: 60px; text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
+        .month-table .col-supplier { width: 250px; position: sticky; left: 60px; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
+        .month-table th.col-sno, .month-table th.col-supplier { z-index: 20; background: var(--bg-color) !important; }
         
-        .table-container { 
-            overflow: auto; width: 100%; max-height: 750px; 
-            position: relative;
-        }
-        .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+        .col-sno { width: 55px; min-width: 55px; text-align: center; }
+        .col-id { width: 200px; min-width: 200px; font-weight: 600; }
+        .col-supplier { width: 180px; min-width: 180px; }
+        .col-item-code { width: 145px; min-width: 145px; }
+        .col-item-name { width: 240px; min-width: 240px; }
+        .col-date { width: 130px; min-width: 130px; }
+        .col-date-actual { width: 165px; min-width: 165px; }
+        .dashboard-table.orders-table td.col-date-actual { white-space: normal; line-height: 1.35; overflow: visible; text-overflow: clip; }
+        .col-days { width: 90px; min-width: 90px; text-align: center !important; }
+        .col-status { width: 200px; min-width: 200px; }
+        .col-pct { width: 72px; min-width: 72px; text-align: center !important; }
+        .col-qty { width: 88px; min-width: 88px; text-align: right !important; }
+        .col-amt { width: 115px; min-width: 115px; text-align: right !important; }
+        th.col-qty { text-align: right !important; }
+        .dashboard-table.orders-table .col-status { overflow: visible; }
+        .dashboard-table.orders-table .col-status .indicator-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
+        th.col-amt, th.col-days, th.col-pct { text-align: right !important; }
+        th.col-days, th.col-pct { text-align: center !important; }
+        .dashboard-table tfoot { position: sticky; bottom: 0; background: var(--bg-color); z-index: 10; border-top: 2px solid var(--border-color); }
+        .dashboard-table tfoot td { padding: 12px 16px; font-weight: 800; font-size: 14px; color: var(--text-color); height: 46px; box-sizing: border-box; }
+        .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (48px * 20) + 46px); -webkit-overflow-scrolling: touch; }
+        .delivery-actual { color: #166534; font-weight: 700; }
+        .chart-body { display: flex; flex-direction: column; width: 100%; }
+        .chart-wrapper { width: 100%; min-height: 300px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 8px 0; }
+        .chart-wrapper .dashboard-chart-img { width: 280px; height: 280px; max-width: 100%; display: block; margin: 0 auto; object-fit: contain; }
+        .chart-card .custom-legend { display: grid !important; }
         
-        .dashboard-table th { 
-            background: #f8fafc; padding: 12px 16px; text-align: left; 
-            font-size: 11px; font-weight: 700; color: #64748b; 
-            position: sticky; top: 0; z-index: 50; 
-            border-bottom: 1px solid #e2e8f0;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
+        /* Status Badges */
+        .indicator-pill { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+        .indicator-pill.completed { background: #dcfce7; color: #166534; }
+        .indicator-pill.closed { background: #f1f5f9; color: #475569; }
+        .indicator-pill.on-hold { background: #fef3c7; color: #92400e; }
+        .indicator-pill.to-receive-and-bill { background: #dbeafe; color: #1e40af; }
+        .indicator-pill.to-receive { background: #e0f2fe; color: #0369a1; }
+        .indicator-pill.to-bill { background: #fae8ff; color: #86198f; }
+        .indicator-pill.cancelled { background: #fee2e2; color: #991b1b; }
         
-        .dashboard-table td { 
-            padding: 12px 16px; border-bottom: 1px solid #f1f5f9; 
-            font-size: 13px; color: #334155; 
-            background: #fff;
-            vertical-align: middle;
-            white-space: nowrap;
-        }
-
-        .col-sno { width: 60px !important; min-width: 60px !important; text-align: center !important; }
-        .col-supplier { width: 280px !important; min-width: 280px !important; white-space: normal !important; word-wrap: break-word; }
-        .col-po { width: 160px !important; min-width: 160px !important; }
-        .col-date { width: 130px !important; min-width: 130px !important; }
-        .col-days { width: 100px !important; min-width: 100px !important; text-align: center !important; }
-        .col-status { width: 140px !important; min-width: 140px !important; }
-        .col-amt { width: 140px !important; min-width: 140px !important; text-align: right !important; }
-
-        .indicator-pill { 
-            padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.025em;
-        }
-        .indicator-pill.green { background: #dcfce7; color: #166534; }
-        .indicator-pill.blue { background: #dbeafe; color: #1e40af; }
-        .indicator-pill.orange { background: #fef3c7; color: #92400e; }
-        .indicator-pill.red { background: #fee2e2; color: #991b1b; }
-        .indicator-pill.gray { background: #f1f5f9; color: #475569; }
+        /* Percent Badge colors */
+        .pct-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+        .pct-badge.full { background: #10b981; color: white; }
+        .pct-badge.partial { background: #f59e0b; color: white; }
+        .pct-badge.none { background: #f1f5f9; color: #64748b; }
+        
+        /* Grid Legends */
+        .custom-legend { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border-color); }
+        [data-theme="dark"] .custom-legend { background: var(--control-bg); }
+        .legend-item { display: flex; align-items: flex-start; gap: 8px; }
+        .legend-item .dot { width: 10px; height: 10px; border-radius: 3px; margin-top: 4px; flex-shrink: 0; }
+        .legend-info { display: flex; flex-direction: column; gap: 2px; }
+        .legend-label { font-size: 12px; font-weight: 700; color: var(--text-color); line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px; }
+        .legend-value { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+        .graph-legend, .chart-legend { display: none !important; }
     </style>`).appendTo(page.main);
+
+	const is_delivery_completed = (row) => {
+		const qty = flt(row.qty);
+		const received = flt(row.received_qty);
+		return (qty > 0 && received >= qty) || flt(row.per_delivered) >= 100
+			|| ["Completed", "Closed"].includes(row.status);
+	};
+
+	const format_expected_cell = (row) => {
+		return row.schedule_date ? frappe.datetime.str_to_user(row.schedule_date) : "-";
+	};
+
+	const get_actual_delivery_dates = (row) => {
+		let dates = row.actual_delivery_dates;
+		if (typeof dates === "string") {
+			dates = dates.split(",").map((d) => d.trim()).filter(Boolean);
+		}
+		if (!dates || !dates.length) {
+			if (row.actual_delivery_time) {
+				return [row.actual_delivery_time];
+			}
+			return [];
+		}
+		return dates;
+	};
+
+	const format_actual_dates_display = (row) => {
+		const dates = get_actual_delivery_dates(row);
+		if (!dates.length) {
+			return "-";
+		}
+		return dates.map((d) => frappe.datetime.str_to_user(d)).join(", ");
+	};
+
+	const format_actual_cell = (row) => {
+		const display = format_actual_dates_display(row);
+		if (display === "-") {
+			return "-";
+		}
+		return `<span class="delivery-actual">${display}</span>`;
+	};
+
+	const format_actual_text = (row) => format_actual_dates_display(row);
+
+	const get_actual_sort_date = (row) => {
+		const dates = get_actual_delivery_dates(row);
+		if (!dates.length) {
+			return new Date(0);
+		}
+		return new Date(dates[dates.length - 1]);
+	};
+
+	const ORDER_COL = {
+		sno: __("S.No."),
+		po_no: __("PO No"),
+		supplier: __("Supplier"),
+		item_code: __("Item Code"),
+		item_name: __("Item Name"),
+		po_date: __("PO Date"),
+		expected_delivery: __("Expected Delivery"),
+		actual_delivery: __("Actual Delivery"),
+		days_left: __("Days Left"),
+		status: __("Status"),
+		pct_received: __("% Received"),
+		pct_billed: __("% Billed"),
+		order_qty: __("Order Qty"),
+		received_qty: __("Received Qty"),
+		pending_qty: __("Pending Qty"),
+		amount: __("Amount"),
+		net_total: __("Net Total"),
+	};
+
+	const format_qty = (val) => {
+		const n = flt(val);
+		return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
+	};
+
+	const download_base64_file = (fileinfo, mime_type) => {
+		if (!fileinfo || !fileinfo.filecontent) {
+			frappe.msgprint(__("Export failed. No file was returned."));
+			return;
+		}
+		const byteCharacters = atob(fileinfo.filecontent);
+		const byteNumbers = new Array(byteCharacters.length);
+		for (let i = 0; i < byteCharacters.length; i++) {
+			byteNumbers[i] = byteCharacters.charCodeAt(i);
+		}
+		const blob = new Blob([new Uint8Array(byteNumbers)], { type: mime_type });
+		const link = document.createElement("a");
+		link.href = window.URL.createObjectURL(blob);
+		link.download = fileinfo.filename;
+		link.click();
+		window.URL.revokeObjectURL(link.href);
+	};
+
+	const build_donut_chart_png = (chart_obj, size = 320) => {
+		const values = (chart_obj?.data?.datasets || [{}])[0]?.values || [];
+		const colors = chart_obj?.colors || ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#06b6d4"];
+		const total = values.reduce((a, b) => a + flt(b), 0);
+		if (!total) {
+			return null;
+		}
+		const canvas = document.createElement("canvas");
+		const px = size * 2;
+		canvas.width = px;
+		canvas.height = px;
+		const ctx = canvas.getContext("2d");
+		const cx = px / 2;
+		const cy = px / 2;
+		const outer = px * 0.38;
+		const inner = px * 0.24;
+		ctx.fillStyle = "#fff";
+		ctx.fillRect(0, 0, px, px);
+		let start = -Math.PI / 2;
+		values.forEach((val, i) => {
+			const slice = (flt(val) / total) * Math.PI * 2;
+			ctx.beginPath();
+			ctx.arc(cx, cy, outer, start, start + slice);
+			ctx.arc(cx, cy, inner, start + slice, start, true);
+			ctx.closePath();
+			ctx.fillStyle = colors[i % colors.length];
+			ctx.fill();
+			start += slice;
+		});
+		return canvas.toDataURL("image/png");
+	};
+
+	const render_chart_legend = ($legend, chart_obj) => {
+		$legend.empty();
+		const labels = chart_obj.data?.labels || [];
+		const values = (chart_obj.data?.datasets || [{}])[0]?.values || [];
+		const colors = chart_obj.colors || [];
+		const total = values.reduce((a, b) => a + flt(b), 0);
+		labels.forEach((label, i) => {
+			const val = flt(values[i]);
+			const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+			const color = colors[i % colors.length];
+			const display_val = chart_obj.is_currency
+				? "₹ " + (val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
+				: val;
+			$legend.append(`
+				<div class="legend-item">
+					<div class="dot" style="background: ${color}"></div>
+					<div class="legend-info">
+						<div class="legend-label">${label}</div>
+						<div class="legend-value">${display_val} (${pct}%)</div>
+					</div>
+				</div>
+			`);
+		});
+	};
+
+	const render_donut_chart = (chart_id, chart_obj, $wrapper, $legend) => {
+		const dataUrl = build_donut_chart_png(chart_obj, 280);
+		$wrapper.empty();
+		if (dataUrl) {
+			$('<img>', { src: dataUrl, class: "dashboard-chart-img", alt: chart_obj.title || chart_id }).appendTo($wrapper);
+		} else {
+			$wrapper.append(`<p class="text-muted text-center">${__("No chart data")}</p>`);
+		}
+		page.chart_instances[chart_id] = { dataUrl, chart_obj };
+		render_chart_legend($legend, chart_obj);
+	};
+
+	const capture_charts_for_pdf = async (charts) => {
+		const images = {};
+		for (const chart_id of Object.keys(charts || {})) {
+			images[chart_id] = build_donut_chart_png(charts[chart_id], 420);
+		}
+		return images;
+	};
+
+	const build_pdf_chart_legend_html = (c_obj) => {
+		const labels = c_obj.data.labels || [];
+		const values = c_obj.data.datasets[0].values || [];
+		const colors = c_obj.colors || [];
+		const total = values.reduce((a, b) => a + flt(b), 0);
+		let legend_html = '<div class="pdf-legend">';
+		for (let i = 0; i < labels.length; i += 4) {
+			legend_html += '<div class="pdf-legend-row">';
+			for (let j = 0; j < 4; j++) {
+				if (labels[i + j]) {
+					const val = values[i + j];
+					const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+					const display_val = c_obj.is_currency
+						? "₹ " + (val / 1000000).toFixed(2) + " M"
+						: val;
+					legend_html += `
+						<div class="pdf-legend-item">
+							<span class="legend-dot" style="background:${colors[(i + j) % colors.length]}"></span>
+							<span class="legend-text">
+								<span class="legend-name">${labels[i + j]}</span>
+								<span class="legend-val">${display_val} (${pct}%)</span>
+							</span>
+						</div>`;
+				}
+			}
+			legend_html += "</div>";
+		}
+		legend_html += "</div>";
+		return legend_html;
+	};
+
+	const build_pdf_charts_section_html = (charts, chart_images) => {
+		return Object.keys(charts || {})
+			.map((cid) => {
+				const c_obj = charts[cid];
+				const title = c_obj.title || cid.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+				const img_src = chart_images[cid];
+				return `
+					<div class="chart-row">
+						<div class="chart-title">${title}</div>
+						<div class="chart-img-wrap">
+							${img_src
+								? `<img src="${img_src}" class="chart-img" alt="${title}">`
+								: "<p class=\"chart-missing\">Chart unavailable</p>"}
+						</div>
+						${build_pdf_chart_legend_html(c_obj)}
+					</div>`;
+			})
+			.join("");
+	};
+
+	const export_data_excel = (export_type = "all") => {
+		frappe.show_alert({ message: __("Preparing Excel export..."), indicator: "blue" });
+		frappe.call({
+			method: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_excel",
+			args: {
+				filters: page.filter_group.get_values(),
+				export_type: export_type,
+			},
+			callback(r) {
+				if (r.message) {
+					download_base64_file(
+						r.message,
+						"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+					);
+					frappe.show_alert({ message: __("Excel downloaded"), indicator: "green" });
+				}
+			},
+			error(r) {
+				frappe.msgprint(r.message || __("Excel export failed"));
+			},
+		});
+	};
+
+	const PDF_COL_WIDTHS = {
+		"col-sno": "4%",
+		"col-id": "11%",
+		"col-supplier": "13%",
+		"col-item-code": "9%",
+		"col-item-name": "17%",
+		"col-date": "7%",
+		"col-date-actual": "9%",
+		"col-days": "5%",
+		"col-status": "10%",
+		"col-pct": "4%",
+		"col-qty": "4%",
+		"col-amt": "7%",
+	};
+
+	const clone_table_html_for_pdf = ($table) => {
+		if (!$table || !$table.length) {
+			return "";
+		}
+		const $clone = $table.clone();
+		$clone.addClass("export-pdf-table");
+		$clone.find("a").each(function () {
+			const text = $(this).text();
+			$(this).replaceWith(document.createTextNode(text));
+		});
+		$clone.find("i.fa").remove();
+		$clone.find(".indicator-pill, .pct-badge, .delivery-actual").each(function () {
+			$(this).replaceWith($(this).text());
+		});
+
+		const $colgroup = $("<colgroup></colgroup>");
+		$clone.find("thead tr").first().find("th").each(function () {
+			const col_class = [...this.classList].find((c) => c.startsWith("col-")) || "col-date";
+			const width = PDF_COL_WIDTHS[col_class] || "6%";
+			$colgroup.append(`<col style="width:${width}">`);
+		});
+		if ($colgroup.children().length) {
+			$clone.prepend($colgroup);
+		}
+
+		// wkhtmltopdf often drops <tfoot> on long tables — append footer rows to tbody
+		const $tbody = $clone.find("tbody");
+		$clone.find("tfoot tr").each(function () {
+			const $row = $(this).clone().addClass("pdf-total-row");
+			$row.find("td, th").css({ "font-weight": "800", "background": "#e2e8f0" });
+			$tbody.append($row);
+		});
+		$clone.find("tfoot").remove();
+
+		return $clone[0].outerHTML;
+	};
 
 	function render_dashboard(data) {
 		page.container.empty();
-		page.clear_menu();
 		if (!data.results || data.results.length === 0) {
-			$(
-				`<div class="text-center text-muted" style="padding: 100px 0;"><div>${__("No data found for the selected filters")}</div></div>`,
-			).appendTo(page.container);
+			$(`<div class="text-center text-muted" style="padding: 100px 0;">${__("No data found")}</div>`).appendTo(page.container);
 			return;
 		}
 
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 		data.summary.forEach((m) => {
 			let indicator = (m.indicator || "blue").toLowerCase();
-			let val =
-				m.fieldtype === "Currency"
-					? "₹ " +
-						(flt(m.value) / 1000000).toLocaleString("en-US", {
-							minimumFractionDigits: 2,
-							maximumFractionDigits: 2,
-						}) +
-						" M"
-					: m.value;
+			let val = m.fieldtype === "Currency" 
+                ? "₹ " + (flt(m.value) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
+                : m.value;
 			$(`
                 <div class="summary-card ${indicator}">
-                    <div class="label"><span class="indicator bg-${indicator}"></span>${m.label}</div>
+                    <div class="label">${m.label}</div>
                     <div class="value">${val}</div>
                 </div>
             `).appendTo(summary_row);
 		});
 
-		// 2. Charts Row
 		let charts_row = $('<div class="charts-row"></div>').appendTo(page.container);
-		if (data.charts) {
-			Object.keys(data.charts).forEach((chart_id) => {
-				let chart_obj = data.charts[chart_id];
-				if (!chart_obj.data.labels || chart_obj.data.labels.length === 0) return;
-
-				$(`
-					<div class="chart-card">
-						<div class="title"><span>${chart_obj.title || chart_id.replace(/_/g, " ").toUpperCase()}</span></div>
-						<div id="wrapper_${chart_id}" style="height: 350px;"></div>
-						<div id="legend_${chart_id}" class="custom-legend"></div>
+        page.chart_instances = {};
+		Object.keys(data.charts).forEach((chart_id) => {
+			let chart_obj = data.charts[chart_id];
+            let title = chart_obj.title || chart_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+			$(`
+				<div class="chart-card">
+					<div class="title">${title}</div>
+					<div class="chart-body">
+						<div id="wrapper_${chart_id}" class="chart-wrapper"></div>
+						<div class="custom-legend" id="legend_${chart_id}"></div>
 					</div>
-				`).appendTo(charts_row);
+				</div>
+			`).appendTo(charts_row);
 
-				setTimeout(() => {
-					let is_currency = chart_obj.is_currency || false;
-					let c_data = Object.assign({}, chart_obj.data);
-
-					if (is_currency) {
-						c_data.datasets = c_data.datasets.map((ds) => ({
-							name: ds.name,
-							values: ds.values.map((v) => parseFloat((v / 1000000).toFixed(4))),
-						}));
-					}
-
-					const chart = new frappe.Chart(`#wrapper_${chart_id}`, {
-						data: c_data,
-						type: chart_obj.type || "donut",
-						height: 350,
-						colors: chart_obj.colors,
-						valuesOverPoints: 1,
-						isNavigable: 1,
-						legend: 0,
-						show_legend: 0,
-						legendOptions: { showLegend: false },
-						tooltipOptions: {
-							formatTooltipY: (d) =>
-								is_currency
-									? "₹ " +
-										d.toLocaleString("en-US", {
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										}) +
-										" M"
-									: d,
-						},
-					});
-
-					// Force redraw after a short delay to fix potential dimension issues on first load
-					setTimeout(() => chart.draw(true), 250);
-
-					let legend_container = page.container.find(`#legend_${chart_id}`);
-					let total_val =
-						chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-
-					chart_obj.data.labels.forEach((label, idx) => {
-						let val = chart_obj.data.datasets[0].values[idx];
-						let color = chart_obj.colors[idx % chart_obj.colors.length];
-						let share = ((val / total_val) * 100).toFixed(1) + "%";
-
-						let val_str = is_currency
-							? "₹ " +
-								(val / 1000000).toLocaleString("en-US", {
-									minimumFractionDigits: 2,
-									maximumFractionDigits: 2,
-								}) +
-								" M"
-							: val;
-
-						legend_container.append(`
-							<div class="legend-item">
-								<span class="dot" style="background: ${color}"></span>
-								<div class="info">
-									<span class="label">${label}</span>
-									<span class="val">${val_str} (${share})</span>
-								</div>
-							</div>
-						`);
-					});
-
-					// Append 'M' to Y-axis ticks and values-over-points in SVG
-					if (is_currency) {
-						const append_m_to_svg = () => {
-							page.container.find(`#wrapper_${chart_id} text`).each(function () {
-								let t = $(this).text();
-								// Strip commas for isNaN check
-								let clean_t = t.replace(/,/g, "").trim();
-								if (
-									!isNaN(clean_t) &&
-									clean_t !== "" &&
-									clean_t !== "0" &&
-									!t.includes("M")
-								) {
-									// Exclude x-axis labels to avoid altering supplier names that might be numbers
-									if ($(this).closest(".x-axis").length === 0) {
-										$(this).text(t + " M");
-									}
-								}
-							});
-						};
-
-						// Run initially
-						setTimeout(append_m_to_svg, 100);
-
-						// Observe SVG for animations/re-renders
-						let wrapperNode = document.querySelector(`#wrapper_${chart_id}`);
-						if (wrapperNode) {
-							let observer = new MutationObserver(() => {
-								append_m_to_svg();
-							});
-							observer.observe(wrapperNode, {
-								childList: true,
-								subtree: true,
-								characterData: true,
-							});
-						}
-					}
-				}, 100);
-			});
-		}
-
-		let tables_container = $('<div class="tables-view"></div>').appendTo(page.container);
-
-		let months = [];
-		let months_map = {};
-		data.results.forEach((row) => {
-			if (row.transaction_date) {
-				let d = moment(row.transaction_date);
-				let m_key = d.format("MMM YYYY");
-				let m_sort = d.format("YYYYMM");
-				if (!months_map[m_key]) {
-					months_map[m_key] = m_sort;
-					months.push({ key: m_key, sort: m_sort });
-				}
-			}
+			const $wrapper = $(`#wrapper_${chart_id}`);
+			const $legend = $(`#legend_${chart_id}`);
+			render_donut_chart(chart_id, chart_obj, $wrapper, $legend);
 		});
-		months.sort((a, b) => a.sort - b.sort);
 
-		let tables_html = $(`
-            <div class="table-card" style="margin-top: 24px; overflow: visible;">
-                <div class="header" style="overflow: visible;">
-                    <span style="font-size: 15px;">${__("Month-Wise Order Breakdown")}</span>
-                    <div class="table-actions">
-                        <span class="export-btn" id="export_month_table"><i class="fa fa-file-excel-o"></i> Export to Excel</span>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="dashboard-table month-table" id="po_month_table">
+		// 1. Month-Wise Booking Breakdown
+		let months = data.months || [];
+		let month_table_card = $(`
+            <div class="table-card">
+                <div class="header">
+					<span>${__("Month-Wise Booking Breakdown")}</span>
+					<div class="export-options">
+						<button class="export-btn" id="export_month_excel_btn">
+							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
+						</button>
+					</div>
+				</div>
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table month-table" id="month_wise_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-supplier sortable-header" data-table="month" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
-                                ${months.map((m) => `<th class="col-amt sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
-                                <th class="col-amt sortable-header" data-table="month" data-field="total" style="position: sticky; right: 0; background: var(--bg-color); z-index: 60; text-align: right; cursor: pointer; user-select: none;">Total (Net) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="month" data-field="supplier" style="width: 250px; cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${months.map(m => `<th class="col-amt sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="col-amt sortable-header" data-table="month" data-field="total" style="font-weight: 800; cursor: pointer; user-select: none;">Total (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
-                        <tbody id="po_month_body"></tbody>
-                        <tfoot id="po_month_tfoot"></tfoot>
+                        <tbody id="month_wise_body"></tbody>
+                        <tfoot>
+                            <tr style="background: var(--bg-color); font-weight: 800;">
+                                <td colspan="2" style="text-align: right;">GRAND TOTAL</td>
+                                ${months.map(m => `<td class="col-amt" id="total_${m.sort}">0.00 M</td>`).join("")}
+                                <td class="col-amt" id="grand_total_all">0.00 M</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
+        `).appendTo(page.container);
 
-            <div class="table-card" style="margin-top: 32px;">
+		let month_tbody = month_table_card.find("#month_wise_body");
+		
+		// 2. ORDERS DUE IN NEXT 15 DAYS Table
+		let due_table_card = $(`
+            <div class="table-card" style="margin-top: 24px;">
                 <div class="header">
-                    <span style="font-size: 15px;">${__("Supplier Orders")}</span>
-                    <div class="table-actions">
-                        <span class="export-btn" id="export_list_table"><i class="fa fa-file-excel-o"></i> Export to Excel</span>
-                    </div>
-                </div>
-                <div class="table-container">
-                    <table class="dashboard-table" id="po_list_table">
+					<span>${__("Orders Due in Next 15 Days")}</span>
+					<div class="export-options">
+						<button class="export-btn" id="export_due_excel_btn">
+							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
+						</button>
+					</div>
+				</div>
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table orders-table due-table" id="due_15_days_table">
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-po sortable-header" data-table="po" data-field="name" style="cursor: pointer; user-select: none;">PO No <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-supplier sortable-header" data-table="po" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="po" data-field="transaction_date" style="cursor: pointer; user-select: none;">PO Date <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="po" data-field="schedule_date" style="cursor: pointer; user-select: none;">Expected Del. <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="po" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">Actual Delivery <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-days sortable-header" data-table="po" data-field="due_days" style="cursor: pointer; user-select: none;">Due Days <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-status sortable-header" data-table="po" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-amt sortable-header" data-table="po" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-id sortable-header" data-table="due" data-field="name" style="cursor: pointer; user-select: none;">${ORDER_COL.po_no} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="due" data-field="supplier" style="cursor: pointer; user-select: none;">${ORDER_COL.supplier} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-code sortable-header" data-table="due" data-field="item_code" style="cursor: pointer; user-select: none;">${ORDER_COL.item_code} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-name sortable-header" data-table="due" data-field="item_name" style="cursor: pointer; user-select: none;">${ORDER_COL.item_name} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="transaction_date" style="cursor: pointer; user-select: none;">${ORDER_COL.po_date} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="schedule_date" style="cursor: pointer; user-select: none;">${ORDER_COL.expected_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date-actual sortable-header" data-table="due" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${ORDER_COL.actual_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-days sortable-header" data-table="due" data-field="due_days" style="cursor: pointer; user-select: none;">${ORDER_COL.days_left} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="due" data-field="status" style="cursor: pointer; user-select: none;">${ORDER_COL.status} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="due" data-field="per_delivered" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_received} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="due" data-field="per_billed" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_billed} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="due" data-field="qty" style="cursor: pointer; user-select: none;">${ORDER_COL.order_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="due" data-field="received_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.received_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="due" data-field="pending_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.pending_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="due" data-field="net_total" style="cursor: pointer; user-select: none;">${ORDER_COL.amount} <i class="fa fa-sort text-muted ml-1"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="due_body"></tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="15" style="text-align: right; font-weight: 800;">TOTAL DUE VALUE</td>
+                                <td id="total_due_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        `).appendTo(page.container);
+
+		let due_tbody = due_table_card.find("#due_body");
+		
+		// 3. Detailed Supplier Orders List Table
+		let table_card = $(`
+            <div class="table-card" style="margin-top: 24px;">
+                <div class="header">
+					<span>${__("Detailed Supplier Orders List")}</span>
+					<div class="export-options">
+						<button class="export-btn" id="export_excel_btn">
+							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
+						</button>
+						<button class="export-btn" id="export_pdf_btn">
+							<i class="fa fa-file-pdf-o"></i> ${__("PDF")}
+						</button>
+					</div>
+				</div>
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table orders-table" id="detailed_orders_table">
+                        <thead>
+                            <tr>
+                                <th class="col-sno">S.No.</th>
+                                <th class="col-id sortable-header" data-table="detailed" data-field="name" style="cursor: pointer; user-select: none;">${ORDER_COL.po_no} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="detailed" data-field="supplier" style="cursor: pointer; user-select: none;">${ORDER_COL.supplier} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-code sortable-header" data-table="detailed" data-field="item_code" style="cursor: pointer; user-select: none;">${ORDER_COL.item_code} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-name sortable-header" data-table="detailed" data-field="item_name" style="cursor: pointer; user-select: none;">${ORDER_COL.item_name} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="transaction_date" style="cursor: pointer; user-select: none;">${ORDER_COL.po_date} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="schedule_date" style="cursor: pointer; user-select: none;">${ORDER_COL.expected_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date-actual sortable-header" data-table="detailed" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${ORDER_COL.actual_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="detailed" data-field="status" style="cursor: pointer; user-select: none;">${ORDER_COL.status} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_delivered" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_received} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_billed" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_billed} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="detailed" data-field="net_total" style="cursor: pointer; user-select: none;">${ORDER_COL.net_total} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="po_list_body"></tbody>
-                        <tfoot id="po_list_tfoot"></tfoot>
+                        <tfoot>
+                            <tr>
+                                <td colspan="11" style="text-align: right; font-weight: 800;">TOTAL BOOKED VALUE</td>
+                                <td id="total_booked_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
+                            </tr>
+                        </tfoot>
                     </table>
                 </div>
             </div>
-        `).appendTo(tables_container);
+        `).appendTo(page.container);
 
-		let tbody_month = tables_container.find("#po_month_body");
-		let tbody_list = tables_container.find("#po_list_body");
+		let tbody = table_card.find("#po_list_body");
 
-		let merged_data = {};
-		data.results.forEach((row) => {
-			let supp = row.supplier || "-";
-			let amt = flt(row.net_total);
-			let m_key = row.transaction_date
-				? moment(row.transaction_date).format("MMM YYYY")
-				: "Unknown";
-
-			if (!merged_data[supp]) {
-				merged_data[supp] = { supp: supp, months: {}, total: 0 };
-			}
-			merged_data[supp].months[m_key] = (merged_data[supp].months[m_key] || 0) + amt;
-			merged_data[supp].total += amt;
-		});
+		page.export_tables = {
+			month: month_table_card.find("table"),
+			due: due_table_card.find("table"),
+			detailed: table_card.find("table"),
+		};
 
 		// State variables for sorting
 		let month_sort = { field: "total", asc: false };
-		let po_sort = { field: "transaction_date", asc: false };
+		let due_sort = { field: "due_days", asc: true };
+		let detailed_sort = { field: "transaction_date", asc: false };
 
 		const render_month_table = () => {
-			let sorted_data = Object.values(merged_data);
+			let sorted_data = [...(data.month_wise_supplier || [])];
 			sorted_data.sort((a, b) => {
 				let val_a, val_b;
 				if (month_sort.field === "supplier") {
-					val_a = a.supp || "";
-					val_b = b.supp || "";
+					val_a = a.supplier || "";
+					val_b = b.supplier || "";
 					return month_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
 				} else if (month_sort.field === "total") {
 					val_a = flt(a.total);
@@ -655,117 +678,153 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				return month_sort.asc ? val_a - val_b : val_b - val_a;
 			});
 
-			tbody_month.empty();
-			let total_month_amts = {};
-			let g_total_net = 0;
+			month_tbody.empty();
+			let month_totals = {};
+			let grand_total_all = 0;
 
-			if (sorted_data.length === 0) {
-				tbody_month.append(
-					`<tr><td colspan="${3 + months.length}" class="text-center text-muted" style="padding: 40px;">No data matching filters</td></tr>`,
-				);
-			} else {
-				sorted_data.forEach((row, idx) => {
-					g_total_net += row.total;
-					let cells = months
-						.map((m) => {
+			sorted_data.forEach((row, idx) => {
+				let row_total = row.total || 0;
+				grand_total_all += row_total;
+				let row_html = `
+					<tr>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-supplier" title="${row.supplier}">${row.supplier}</td>
+						${months.map(m => {
 							let val = row.months[m.key] || 0;
-							total_month_amts[m.key] = (total_month_amts[m.key] || 0) + val;
-							return `<td class="col-amt" style="text-align: right;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
-						})
-						.join("");
-
-					tbody_month.append(`
-						<tr>
-							<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
-							<td class="col-supplier" style="font-weight: 600; color: #0f172a;">${row.supp}</td>
-							${cells}
-							<td class="col-amt" style="position: sticky; right: 0; background: var(--bg-color); font-weight: 700; color: var(--primary); text-align: right; border-left: 1px solid var(--border-color);">₹ ${(row.total / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-						</tr>
-					`);
-				});
-
-				let footer_month = tables_container.find("#po_month_tfoot");
-				footer_month.empty();
-				footer_month.append(`
-					<tr class="sticky-total">
-						<td class="col-sno" style="background: #f1f3f5 !important; border-top: 2px solid #ddd;">-</td>
-						<td class="col-supplier" style="text-align: right; padding-right: 20px; color: #64748b; font-size: 11px; background: #f1f3f5 !important; border-top: 2px solid #ddd;">GRAND TOTAL</td>
-						${months
-							.map((m) => {
-								let val = total_month_amts[m.key] || 0;
-								return `<td class="col-amt" style="text-align: right; background: #f1f3f5 !important; border-top: 2px solid #ddd;">₹ ${(val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>`;
-							})
-							.join("")}
-						<td class="col-amt" style="position: sticky; right: 0; background: var(--control-bg) !important; z-index: 80; text-align: right; border-left: 1px solid var(--border-color); border-top: 2px solid var(--border-color); font-weight: 800;">₹ ${(g_total_net / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+							month_totals[m.sort] = (month_totals[m.sort] || 0) + val;
+							return `<td class="col-amt">₹ ${(val / 1000000).toFixed(2)} M</td>`;
+						}).join("")}
+						<td class="col-amt" style="font-weight: 700;">₹ ${(row_total / 1000000).toFixed(2)} M</td>
 					</tr>
-				`);
-			}
+				`;
+				month_tbody.append(row_html);
+			});
+
+			months.forEach(m => {
+				month_table_card.find(`#total_${m.sort}`).text(`₹ ${( (month_totals[m.sort] || 0) / 1000000).toFixed(2)} M`);
+			});
+			month_table_card.find("#grand_total_all").text(`₹ ${(grand_total_all / 1000000).toFixed(2)} M`);
 		};
 
-		const render_po_table = () => {
-			let sorted_data = [...(data.results || [])];
+		const render_due_table = () => {
+			let sorted_data = [...(data.due_next_15_days || [])];
 			sorted_data.sort((a, b) => {
-				let val_a = a[po_sort.field];
-				let val_b = b[po_sort.field];
+				let val_a = a[due_sort.field];
+				let val_b = b[due_sort.field];
 				
-				if (po_sort.field === "name" || po_sort.field === "supplier" || po_sort.field === "status") {
+				if (["name", "supplier", "status", "item_code", "item_name"].includes(due_sort.field)) {
 					val_a = val_a || "";
 					val_b = val_b || "";
-					return po_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
-				} else if (po_sort.field === "transaction_date" || po_sort.field === "schedule_date" || po_sort.field === "actual_delivery_time") {
+					return due_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (due_sort.field === "transaction_date") {
 					val_a = val_a ? new Date(val_a) : new Date(0);
 					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else if (due_sort.field === "schedule_date") {
+					val_a = a.schedule_date ? new Date(a.schedule_date) : new Date(0);
+					val_b = b.schedule_date ? new Date(b.schedule_date) : new Date(0);
+				} else if (due_sort.field === "actual_delivery_time") {
+					val_a = get_actual_sort_date(a);
+					val_b = get_actual_sort_date(b);
 				} else {
 					val_a = flt(val_a);
 					val_b = flt(val_b);
 				}
-				return po_sort.asc ? val_a - val_b : val_b - val_a;
+				return due_sort.asc ? val_a - val_b : val_b - val_a;
 			});
 
-			tbody_list.empty();
-			let total_amt = 0;
+			due_tbody.empty();
+			let due_total_val = 0;
 
 			sorted_data.forEach((row, idx) => {
-				let status_color = "gray";
-				if (["Completed", "Closed"].includes(row.status)) status_color = "green";
-				if (["Draft"].includes(row.status)) status_color = "blue";
-				if (["To Receive", "To Bill", "To Receive and Bill"].includes(row.status))
-					status_color = "orange";
-				if (["Cancelled"].includes(row.status)) status_color = "red";
+				due_total_val += flt(row.net_total);
+				let days_class = row.due_days <= 3 ? "text-danger font-weight-bold" : (row.due_days <= 7 ? "text-warning" : "");
+				let rec_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
+                let status_slug = (row.status || '').toLowerCase().replace(/ /g, '-');
+				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.received_qty)));
 
-				let amt = flt(row.net_total);
-				total_amt += amt;
-
-				tbody_list.append(`
+				due_tbody.append(`
 					<tr>
-						<td class="col-sno" style="color: #94a3b8; font-weight: 600; text-align: center;">${idx + 1}</td>
-						<td class="col-po"><a href="/app/purchase-order/${row.name}" style="font-weight: 600; color: #4338ca;">${row.name}</a></td>
-						<td class="col-supplier" style="font-weight: 500;">${row.supplier || "-"}</td>
-						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date) || "-"}</td>
-						<td class="col-date" style="${row.is_overdue ? "color: red; font-weight: 600;" : ""}">${frappe.datetime.str_to_user(row.schedule_date) || "-"}</td>
-						<td class="col-date">${frappe.datetime.str_to_user(row.actual_delivery_time) || "-"}</td>
-						<td class="col-days">
-							${row.due_days !== "-" ? `<span class="indicator-pill ${row.due_days > 0 ? "red" : "gray"}">${row.due_days} Days</span>` : "-"}
-						</td>
-						<td class="col-status"><span class="indicator-pill ${status_color}">${row.status}</span></td>
-						<td class="col-amt" style="font-weight: 700; color: #0f172a;">₹ ${(amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-id"><a href="/app/purchase-order/${row.name}">${row.name}</a></td>
+						<td class="col-supplier" title="${row.supplier}">${row.supplier}</td>
+						<td class="col-item-code">${row.item_code || '-'}</td>
+						<td class="col-item-name" title="${row.item_name}">${row.item_name || '-'}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
+						<td class="col-date-actual">${format_actual_cell(row)}</td>
+						<td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
+						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
+						<td class="col-pct"><span class="pct-badge ${rec_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
+						<td class="col-qty">${format_qty(row.qty)}</td>
+						<td class="col-qty">${format_qty(row.received_qty)}</td>
+						<td class="col-qty" style="font-weight: 600;">${format_qty(pending_qty)}</td>
+						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toFixed(2)} M</td>
+					</tr>
+				`);
+			});
+			due_table_card.find("#total_due_value").text(`₹ ${(due_total_val / 1000000).toFixed(2)} M`);
+		};
+
+		const render_detailed_table = () => {
+			let sorted_data = [...(data.results || [])];
+			sorted_data.sort((a, b) => {
+				let val_a = a[detailed_sort.field];
+				let val_b = b[detailed_sort.field];
+				
+				if (["name", "supplier", "status", "item_code", "item_name"].includes(detailed_sort.field)) {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return detailed_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (detailed_sort.field === "transaction_date") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else if (detailed_sort.field === "schedule_date") {
+					val_a = a.schedule_date ? new Date(a.schedule_date) : new Date(0);
+					val_b = b.schedule_date ? new Date(b.schedule_date) : new Date(0);
+				} else if (detailed_sort.field === "actual_delivery_time") {
+					val_a = get_actual_sort_date(a);
+					val_b = get_actual_sort_date(b);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return detailed_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			tbody.empty();
+			sorted_data.forEach((row, idx) => {
+				let rec_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
+                let status_slug = (row.status || '').toLowerCase().replace(/ /g, '-');
+
+				tbody.append(`
+					<tr>
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-id"><a href="/app/purchase-order/${row.name}">${row.name}</a></td>
+						<td class="col-supplier" title="${row.supplier}">${row.supplier}</td>
+						<td class="col-item-code">${row.item_code || '-'}</td>
+						<td class="col-item-name" title="${row.item_name}">${row.item_name || '-'}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
+						<td class="col-date-actual">${format_actual_cell(row)}</td>
+						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
+						<td class="col-pct"><span class="pct-badge ${rec_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
+						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
 					</tr>
 				`);
 			});
 
-			let tfoot_list = tables_container.find("#po_list_tfoot");
-			tfoot_list.empty();
-			tfoot_list.append(`
-				<tr class="sticky-total">
-					<td colspan="8" style="text-align: right; padding-right: 24px; color: #64748b; font-weight: 700;">GRAND TOTAL</td>
-					<td style="text-align: right; font-weight: 800; color: #0f172a; border-left: 1px solid var(--border-color);">₹ ${(total_amt / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
-				</tr>
-			`);
+			let total_val = sorted_data.reduce((acc, row) => acc + flt(row.net_total), 0);
+			table_card.find("#total_booked_value").text(`₹ ${(total_val / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M`);
 		};
 
-		// Initial render of tables
+		// Initial render of all tables
 		render_month_table();
-		render_po_table();
+		render_due_table();
+		render_detailed_table();
 
 		// Header clicks for real-time sort toggling
 		page.container.on("click", ".sortable-header", function () {
@@ -781,8 +840,8 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				}
 				
 				// Reset icons
-				tables_container.find("#po_month_table .sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
-				tables_container.find("#po_month_table .sortable-header").removeClass("sorted-asc sorted-desc");
+				month_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				month_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
 				
 				// Update active
 				if (month_sort.asc) {
@@ -794,20 +853,20 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				}
 				
 				render_month_table();
-			} else if (table_type === "po") {
-				if (po_sort.field === field) {
-					po_sort.asc = !po_sort.asc;
+			} else if (table_type === "due") {
+				if (due_sort.field === field) {
+					due_sort.asc = !due_sort.asc;
 				} else {
-					po_sort.field = field;
-					po_sort.asc = true;
+					due_sort.field = field;
+					due_sort.asc = true;
 				}
 				
 				// Reset icons
-				tables_container.find("#po_list_table .sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
-				tables_container.find("#po_list_table .sortable-header").removeClass("sorted-asc sorted-desc");
+				due_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				due_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
 				
 				// Update active
-				if (po_sort.asc) {
+				if (due_sort.asc) {
 					$(this).addClass("sorted-asc");
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
 				} else {
@@ -815,246 +874,164 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
 				}
 				
-				render_po_table();
+				render_due_table();
+			} else if (table_type === "detailed") {
+				if (detailed_sort.field === field) {
+					detailed_sort.asc = !detailed_sort.asc;
+				} else {
+					detailed_sort.field = field;
+					detailed_sort.asc = true;
+				}
+				
+				// Reset icons
+				table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
+				
+				// Update active
+				if (detailed_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+				
+				render_detailed_table();
 			}
 		});
 
-		const export_to_excel = (export_type = "all") => {
-			let filters = page.filter_group.get_values();
-			frappe.call({
-				method: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_excel",
-				args: { filters: filters, export_type: export_type },
-				callback: function (r) {
-					if (r.message) {
-						const { filename, filecontent } = r.message;
-						const byteCharacters = atob(filecontent);
-						const byteNumbers = new Array(byteCharacters.length);
-						for (let i = 0; i < byteCharacters.length; i++) {
-							byteNumbers[i] = byteCharacters.charCodeAt(i);
-						}
-						const byteArray = new Uint8Array(byteNumbers);
-						const blob = new Blob([byteArray], {
-							type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-						});
-						const link = document.createElement("a");
-						link.href = URL.createObjectURL(blob);
-						link.download = filename;
-						link.click();
-					}
-				},
-			});
-		};
-
-		const export_to_pdf = async () => {
-			const report_date = frappe.datetime.now_datetime();
-
-			const get_chart_png = (id) => {
-				const svg_el = document.querySelector(`#wrapper_${id} svg`);
-				if (!svg_el) return null;
-				const clone = svg_el.cloneNode(true);
-				const internal_legend = clone.querySelector(
-					".chart-legend, .legend, .frappe-chart-legend",
-				);
-				if (internal_legend) internal_legend.style.display = "none";
-				const canvas = document.createElement("canvas");
-				const context = canvas.getContext("2d");
-				const svg_data = new XMLSerializer().serializeToString(clone);
-				const img = new Image();
-				return new Promise((resolve) => {
-					img.onload = () => {
-						canvas.width = img.width * 2;
-						canvas.height = img.height * 2;
-						context.fillStyle = "white";
-						context.fillRect(0, 0, canvas.width, canvas.height);
-						context.drawImage(img, 0, 0, canvas.width, canvas.height);
-						resolve(canvas.toDataURL("image/png"));
-					};
-					img.src =
-						"data:image/svg+xml;base64," +
-						btoa(unescape(encodeURIComponent(svg_data)));
-				});
-			};
-
-			const [png1, png2] = await Promise.all([
-				get_chart_png("top_10_suppliers"),
-				get_chart_png("order_status"),
-			]);
-
-			const chart_h = (src, title) =>
-				src
-					? `<div style="margin-top:20px; text-align:center;"><h4 style="color:#444; margin-bottom: 15px; padding-bottom: 5px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">${title}</h4><img src="${src}" style="width:100%; max-width:900px; border:1px solid #f1f5f9; border-radius:12px; padding: 15px; background: #fff;"></div>`
-					: "";
-
-			const chart_l = (chart_id) => {
-				const c_obj = data.charts[chart_id];
-				if (!c_obj || !c_obj.data.labels.length) return "";
-				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-				let is_currency = c_obj.is_currency || false;
-
-				let legend_html = '<div class="pdf-legend">';
-				c_obj.data.labels.forEach((l, i) => {
-					const val = c_obj.data.datasets[0].values[i];
-					const color = c_obj.colors[i % c_obj.colors.length];
-					const share = ((val / total_val) * 100).toFixed(1);
-					const val_str = is_currency
-						? format_currency(val / 1000000, "INR") + " M"
-						: val;
-					legend_html += `
-                        <div class="pdf-legend-item">
-                            <span class="pdf-dot" style="background: ${color}"></span>
-                            <div class="pdf-legend-info">
-                                <div class="pdf-legend-label">${l}</div>
-                                <div class="pdf-legend-val">${val_str} (${share}%)</div>
-                            </div>
-                        </div>
-                    `;
-				});
-				legend_html += "</div>";
-				return legend_html;
-			};
-
-			const chart_t = (chart_id, title) => {
-				const c_obj = data.charts[chart_id];
-				if (!c_obj || !c_obj.data.labels.length) return "";
-				const total_val = c_obj.data.datasets[0].values.reduce((a, b) => a + b, 0) || 1;
-				let is_currency = c_obj.is_currency || false;
-				let rows = c_obj.data.labels
-					.map((l, i) => {
-						const val = c_obj.data.datasets[0].values[i];
-						const share = ((val / total_val) * 100).toFixed(1);
-						const val_str = is_currency
-							? format_currency(val / 1000000, "INR") + " M"
-							: val;
-						return `<tr><td style="text-align:center;">${i + 1}</td><td>${l}</td><td style="text-align:right;">${val_str}</td><td style="text-align:right;">${share}%</td></tr>`;
-					})
-					.join("");
-				return `<div style="margin-top:10px; page-break-inside: avoid;"><table style="width:80%; margin: 10px auto; border-collapse: collapse; font-size: 10px; border: 1px solid #eee;"><thead><tr style="background: #f8f9fa;"><th style="width: 40px; text-align:center; border-bottom:2px solid #3b82f6;">S.No.</th><th style="text-align:left; border-bottom:2px solid #3b82f6;">${title}</th><th style="width: 120px; text-align:right; border-bottom:2px solid #3b82f6;">Value</th><th style="width: 80px; text-align:right; border-bottom:2px solid #3b82f6;">Share %</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-			};
-
-			const html = `
-                <html>
-                <head>
-                    <style>
-                        body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
-                        @page { size: landscape; margin: 10mm; }
-                        .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
-                        
-                        .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
-                        .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
-                        .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-                        .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-                        .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
-                        
-                        h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
-                        
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-                        th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; vertical-align: top; word-wrap: break-word; }
-                        thead { display: table-header-group; }
-                        tfoot { display: table-row-group; }
-                        th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
-                        
-                        .text-right { text-align: right; }
-                        .text-center { text-align: center; }
-                        .font-weight-bold { font-weight: 700; }
-                        .page-break { page-break-after: always; }
-
-                        /* Column Widths */
-                        .col-sno { width: 40px; text-align: center; }
-                        .col-customer, .col-supplier { width: 180px; }
-                        .col-sp { width: 120px; }
-                        .col-prod { width: 150px; }
-                        .col-amt, .col-qty, .col-rate { width: 90px; text-align: right; }
-                        .total-net-col, .grand-total-col { width: 100px; text-align: right; font-weight: 700; }
-
-                        .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-                        .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
-                        .pdf-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 8px; vertical-align: middle; }
-                        .pdf-legend-info { display: inline-block; vertical-align: middle; width: calc(100% - 25px); }
-                        .pdf-legend-label { font-size: 11px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                        .pdf-legend-val { font-size: 9px; color: #64748b; }
-                    </style>
-                </head>
-                <body>
-                    <div class="report-header">
-                        <h1 style="margin:0; font-size: 24px;">Supplier Order Dashboard</h1>
-                        <p style="font-size: 11px; color: #999; margin: 8px 0 0 0;">Generated: ${report_date}</p>
-                    </div>
-
-                    <div class="kpi-wrapper">
-                        ${data.summary
-							.map(
-								(m) => `
-                            <div class="kpi-card">
-                                <div class="kpi-label">${m.label}</div>
-                                <div class="kpi-value">${m.fieldtype === "Currency" ? format_currency(m.value / 1000000, "INR") + " M" : m.value}</div>
-                            </div>
-                        `,
-							)
-							.join("")}
-                    </div>
-
-                    <h3>Visual Analytics</h3>
-					${chart_h(png1, "Top 10 Suppliers")}
-                    ${chart_l("top_10_suppliers")}
-					${chart_t("top_10_suppliers", "Supplier Data")}
-                    <div class="page-break"></div>
-
-                    ${chart_h(png2, "Order Status")}
-                    ${chart_l("order_status")}
-					${chart_t("order_status", "Status Data")}
-                    <div class="page-break"></div>
-
-                    <h3>Month-Wise Order Breakdown</h3>
-                    <table>
-                        <thead>${tables_html.find(".month-table thead").html()}</thead>
-                        <tbody>${tables_html.find("#po_month_body").html()}</tbody>
-                    </table>
-                    <div class="page-break"></div>
-
-                    <h3>Supplier Orders List</h3>
-                    <table>
-                        <thead>${tables_html.find(".dashboard-table").not(".month-table").find("thead").html()}</thead>
-                        <tbody>${tables_html.find("#po_list_body").html()}</tbody>
-                        <tfoot>${tables_html.find("#po_list_tfoot").html()}</tfoot>
-                    </table>
-                </body>
-                </html>
-            `;
-
-			const method_url =
-				"/api/method/renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_pdf";
-			const $form =
-				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
-                <input type="hidden" name="html" value="">
-                <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
-            </form>`).appendTo("body");
-
-			$form.find('input[name="html"]').val(html);
-			$form.submit();
-			$form.remove();
-		};
-
-		tables_html.find("#export_month_table").on("click", () => export_to_excel("summary"));
-		tables_html.find("#export_list_table").on("click", () => export_to_excel("detail"));
-
-		page.add_menu_item(__("Export to PDF"), export_to_pdf);
-		page.add_menu_item(__("Export to Excel"), () => export_to_excel("all"));
+		month_table_card.find("#export_month_excel_btn").on("click", () => export_data_excel("summary"));
+		due_table_card.find("#export_due_excel_btn").on("click", () => export_data_excel("due"));
+		table_card.find("#export_excel_btn").on("click", () => export_data_excel("detail"));
+		table_card.find("#export_pdf_btn").on("click", () => export_pdf_full());
 	}
 
+    async function export_pdf_full() {
+        frappe.show_alert({ message: __("Preparing PDF export..."), indicator: "blue" });
+
+        const data = page.dashboard_data;
+        if (
+            !data ||
+            (
+                !(data.results || []).length &&
+                !(data.due_next_15_days || []).length &&
+                !(data.month_wise_supplier || []).length
+            )
+        ) {
+            frappe.msgprint(__("No data to export. Refresh the dashboard and try again."));
+            return;
+        }
+
+        const chart_images = await capture_charts_for_pdf(data.charts);
+
+        const report_date = frappe.datetime.global_date_format(frappe.datetime.now_date());
+        const filters = page.filter_group.get_values();
+        const period = `${frappe.datetime.str_to_user(filters.from_date || '')} to ${frappe.datetime.str_to_user(filters.to_date || '')}`;
+
+        const kpi_border_color = (indicator) => {
+            const colors = { green: "#10b981", red: "#ef4444", orange: "#f59e0b", blue: "#3b82f6" };
+            return colors[(indicator || "blue").toLowerCase()] || colors.blue;
+        };
+
+        const month_table_html = clone_table_html_for_pdf(page.export_tables?.month);
+        const due_table_html = clone_table_html_for_pdf(page.export_tables?.due);
+        const detailed_table_html = clone_table_html_for_pdf(page.export_tables?.detailed);
+
+        let html = `
+            <html>
+            <head>
+                <style>
+                    body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 20px; color: #1e293b; background: #fff; }
+                    @page { size: A4 landscape; margin: 10mm; }
+                    .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
+                    .report-title { margin: 0; font-size: 24px; color: #0f172a; text-transform: uppercase; }
+                    .kpi-row { display: table; width: 100%; border-spacing: 10px; margin-bottom: 25px; }
+                    .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; background: #f8fafc; text-align: center; border-left: 5px solid #3b82f6; }
+                    .kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
+                    .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
+                    .section-title { font-size: 14px; font-weight: 700; color: #3b82f6; margin: 25px 0 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; text-transform: uppercase; }
+                    .chart-section { width: 100%; margin-bottom: 24px; }
+                    .chart-row { display: block; width: 100%; margin-bottom: 22px; padding: 14px 16px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; page-break-inside: avoid; }
+                    .chart-title { font-weight: 800; margin-bottom: 12px; font-size: 12px; text-align: center; color: #1e293b; text-transform: uppercase; }
+                    .chart-img-wrap { text-align: center; margin-bottom: 12px; min-height: 220px; width: 100%; }
+                    .chart-img { width: 420px; max-width: 100%; height: auto; display: inline-block; }
+                    .chart-missing { text-align: center; color: #94a3b8; font-size: 11px; }
+                    .pdf-legend { width: 100%; margin-top: 8px; background: #f8fafc; padding: 10px; border-radius: 6px; border: 1px solid #e2e8f0; }
+                    .pdf-legend-row { display: block; width: 100%; overflow: hidden; margin-bottom: 6px; }
+                    .pdf-legend-item { display: inline-block; width: 24%; vertical-align: top; font-size: 7px; padding: 2px 4px; box-sizing: border-box; }
+                    .legend-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+                    .legend-text { display: inline-block; vertical-align: middle; line-height: 1.25; max-width: calc(100% - 14px); }
+                    .legend-name { font-weight: 700; color: #1e293b; display: block; }
+                    .legend-val { color: #64748b; font-size: 6.5px; display: block; }
+
+                    table.export-pdf-table { width: 100%; border-collapse: collapse; font-size: 7px; margin-bottom: 20px; table-layout: fixed; page-break-inside: auto; }
+                    .export-pdf-table th, .export-pdf-table td { border: 1px solid #cbd5e1; padding: 4px 5px; text-align: left; word-wrap: break-word; overflow-wrap: break-word; vertical-align: top; }
+                    .export-pdf-table th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: none; font-size: 6.5px; }
+                    .export-pdf-table thead { display: table-header-group; }
+                    .export-pdf-table tfoot { display: table-row-group; }
+                    .export-pdf-table .col-sno { text-align: center; }
+                    .export-pdf-table .col-id { word-break: break-all; }
+                    .export-pdf-table .col-item-code { word-break: break-all; }
+                    .export-pdf-table .col-item-name { white-space: normal; line-height: 1.25; }
+                    .export-pdf-table .col-date, .export-pdf-table .col-date-actual { white-space: nowrap; font-size: 6.5px; }
+                    .export-pdf-table .col-days, .export-pdf-table .col-pct, .export-pdf-table .col-qty { text-align: center; white-space: nowrap; }
+                    .export-pdf-table .col-amt { text-align: right; white-space: nowrap; }
+                    .export-pdf-table .col-status { white-space: normal; line-height: 1.2; font-size: 6px; }
+                    .export-pdf-table .pdf-total-row td { background: #e2e8f0 !important; font-weight: 800 !important; border-top: 2px solid #94a3b8 !important; }
+                    .text-danger { color: #ef4444 !important; }
+                    .page-break { page-break-after: always; }
+                </style>
+            </head>
+            <body>
+                <div class="report-header">
+                    <h1 class="report-title">Supplier Performance Report</h1>
+                    <p style="font-size: 12px; color: #64748b;">Period: ${period} | Generated: ${report_date}</p>
+                </div>
+
+                <div class="kpi-row">
+                    ${data.summary.map(m => `
+                        <div class="kpi-card" style="border-left-color: ${kpi_border_color(m.indicator)}">
+                            <div class="kpi-label">${m.label}</div>
+                            <div class="kpi-value">${m.fieldtype === 'Currency' ? '₹ ' + (flt(m.value) / 1000000).toFixed(2) + ' M' : m.value}</div>
+                        </div>
+                    `).join('')}
+                </div>
+
+                <h3 class="section-title">Visual Analytics</h3>
+                <div class="chart-section">
+                ${build_pdf_charts_section_html(data.charts, chart_images)}
+                </div>
+
+                <div class="page-break"></div>
+                <h3 class="section-title">Month-Wise Booking Breakdown </h3>
+                ${month_table_html || "<p>No data</p>"}
+
+                <div class="page-break"></div>
+                <h3 class="section-title">Orders Due in Next 15 Days </h3>
+                ${due_table_html || "<p>No data</p>"}
+
+                <div class="page-break"></div>
+                <h3 class="section-title">Detailed Orders List </h3>
+                ${detailed_table_html || "<p>No data</p>"}
+            </body>
+            </html>
+        `;
+
+        frappe.call({
+            method: "renu_customization.renu_customization.page.supplier_performance_dashboard.supplier_performance_dashboard.export_to_pdf",
+            args: { html: html },
+            callback(r) {
+                if (r.message) {
+                    download_base64_file(r.message, "application/pdf");
+                    frappe.show_alert({ message: __("PDF downloaded"), indicator: "green" });
+                }
+            },
+            error(r) {
+                frappe.msgprint(r.message || __("PDF export failed"));
+            },
+        });
+    }
+
 	// Set default Fiscal Year and trigger initial load
-	frappe.call({
-		method: "frappe.client.get_value",
-		args: {
-			doctype: "Fiscal Year",
-			filters: { year_start_date: ["<=", frappe.datetime.get_today()], year_end_date: [">=", frappe.datetime.get_today()] },
-			fieldname: "name"
-		},
-		callback: function (r) {
-			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
-		},
-		always: function() { 
-			setTimeout(() => page.refresh(), 300);
-		}
-	});
+	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
 };

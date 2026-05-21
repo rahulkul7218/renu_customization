@@ -92,6 +92,13 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			options: "Item Group",
 		},
 		{
+			fieldname: "item_type",
+			label: __("Item Type"),
+			placeholder: __("Select Item Type"),
+			fieldtype: "Link",
+			options: "Item Type",
+		},
+		{
 			label: __("Product (Item)"),
 			placeholder: __("Select Product"),
 			fieldname: "item_code",
@@ -243,6 +250,26 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 	// Global listener for the entire filter area as a final backup
 	filter_parent.on("change", "input, select", () => page.refresh());
 
+	if (page.filter_group.fields_dict.customer) {
+		page.filter_group.fields_dict.customer.get_query = function () {
+			let filters = {};
+			let customer_group = page.filter_group.get_value("customer_group");
+			if (customer_group) filters.customer_group = customer_group;
+			return { filters: filters };
+		};
+	}
+
+	if (page.filter_group.fields_dict.item_code) {
+		page.filter_group.fields_dict.item_code.get_query = function () {
+			let filters = {};
+			let item_group = page.filter_group.get_value("item_group");
+			if (item_group) filters.item_group = item_group;
+			let item_type = page.filter_group.get_value("item_type");
+			if (item_type) filters.item_type = item_type;
+			return { filters: filters };
+		};
+	}
+
 	// Style the filter area and fields
 	filter_parent.addClass("border-bottom").css({
 		"background-color": "#fff",
@@ -276,33 +303,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		return true;
 	};
 
-	// Override Fiscal Year Change
-	fy_field.on_change = function () {
-		const fy = this.get_value();
-		if (fy) {
-			frappe.db.get_doc("Fiscal Year", fy).then((doc) => {
-				fy_field._start_date = doc.year_start_date;
-				fy_field._end_date = doc.year_end_date;
-
-				// Constrain current values if they are outside the new FY bounds
-				let fd = from_field.get_value();
-				let td = to_field.get_value();
-
-				if (fd && (fd < doc.year_start_date || fd > doc.year_end_date)) {
-					page.filter_group.set_value("from_date", doc.year_start_date);
-				}
-				if (td && (td < doc.year_start_date || td > doc.year_end_date)) {
-					page.filter_group.set_value("to_date", doc.year_end_date);
-				}
-
-				page.refresh();
-			});
-		} else {
-			fy_field._start_date = null;
-			fy_field._end_date = null;
-			page.refresh();
-		}
-	};
+	renu_customization.dashboard_fiscal_year.bind_fiscal_year_change(page, { cache_bounds: true });
 
 	// Override Date Changes with FY Constraint
 	from_field.on_change = function () {
@@ -697,6 +698,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .customer-col { min-width: 200px !important; width: 200px !important; }
         .item-col { min-width: 280px !important; width: 280px !important; }
         .sp-col { min-width: 150px !important; width: 150px !important; }
+        .item-group-col { min-width: 180px !important; width: 180px !important; }
         .qty-col { min-width: 80px !important; width: 80px !important; text-align: right !important; }
         .amount-col { min-width: 140px !important; width: 140px !important; text-align: right !important; }
 
@@ -1164,8 +1166,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
                                 <th class="customer-col sortable-header" data-field="cust">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="customer-group-col sortable-header" data-field="cust_group" style="min-width: 150px;">Customer Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="sp-col sortable-header" data-field="sp">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="item-col sortable-header" data-field="item_name">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="item-group-col sortable-header" data-field="item_group" style="min-width: 150px;">Item Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 ${months.map((m) => `<th class="month-col sortable-header" data-field="${m.key}">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
                                 <th class="total-col sticky-total-header net-total-col sortable-header" data-field="total">Total (Net) <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="total-col sticky-total-header gross-total-col gross-col sortable-header" data-field="total_gross">Grand Total (Gross) <i class="fa fa-sort text-muted ml-1"></i></th>
@@ -1198,8 +1202,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 <th class="invoice-type-col sortable-header" data-field="invoice_type">Invoice Type <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="status-col sortable-header" data-field="status">Status <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="customer-col sortable-header" data-field="customer_name">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="customer-group-col sortable-header" data-field="customer_group" style="min-width: 150px;">Customer Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="item-col sortable-header" data-field="item_name">Item <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="sp-col sortable-header" data-field="sales_person">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="item-group-col sortable-header" data-field="item_group" style="min-width: 150px;">Item Group <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="qty-col sortable-header" data-field="qty">Qty <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="amount-col sortable-header" data-field="amt_allocated">Amount (Net) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
@@ -1250,8 +1256,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			results.forEach((row) => {
 				let sp = row.sales_person || "-";
 				let cust = row.customer_name || row.customer || "-";
+				let cust_group = row.customer_group || "-";
 				let prod = row.item_code || "-";
 				let prod_name = row.item_name || "";
+				let item_group = row.item_group || "-";
 				let amt = flt(row.amt_allocated || 0);
 				let gross_amt = flt(row.gross_amount || amt);
 
@@ -1263,8 +1271,10 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					merged_data[row_key] = {
 						sp,
 						cust,
+						cust_group,
 						prod,
 						prod_name,
+						item_group,
 						months: {},
 						total: 0,
 						total_gross: 0,
@@ -1282,7 +1292,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				let field = page.summary_sort.field;
 				let asc = page.summary_sort.asc;
 
-				if (field === "cust" || field === "sp" || field === "item_name") {
+				if (field === "cust" || field === "cust_group" || field === "sp" || field === "item_name" || field === "item_group") {
 					val_a = a[field] || "";
 					val_b = b[field] || "";
 					return asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
@@ -1336,7 +1346,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			if (summary_list.length === 0) {
 				tbody_summary.append(
-					`<tr><td colspan="${6 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="${8 + months.length}" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				summary_list.slice(0, 100).forEach((row, idx) => {
@@ -1351,6 +1361,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <tr>
                             <td style="text-align: center;">${idx + 1}</td>
                             <td class="customer-col"><div title="${row.cust}">${row.cust}</div></td>
+                            <td class="customer-group-col"><div title="${row.cust_group}">${row.cust_group}</div></td>
                             <td class="sp-col"><div title="${row.sp}">${row.sp}</div></td>
                             <td class="item-col">
                                 <div style="line-height: 1.4;">
@@ -1358,6 +1369,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                     <div style="font-weight: 600; color: #1e293b;">${row.prod_name}</div>
                                 </div>
                             </td>
+                            <td class="item-group-col"><div title="${row.item_group}">${row.item_group}</div></td>
                             ${month_cells}
                             <td class="total-col net-total-col">${format_currency_short(row.total)}</td>
                             <td class="total-col gross-total-col gross-col">${format_currency_short(row.total_gross)}</td>
@@ -1392,6 +1404,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                         <td style="text-align: right; font-weight: 700; background: #f8fafc !important;">Grand Total (Net)</td>
                         <td style="background: #f8fafc !important;"></td>
                         <td style="background: #f8fafc !important;"></td>
+                        <td style="background: #f8fafc !important;"></td>
+                        <td style="background: #f8fafc !important;"></td>
                         ${footer_cells_net}
                         <td class="total-col net-total-col">${format_currency_short(grand_total_net)}</td>
                         <td class="total-col gross-total-col gross-col" style="background: #e9ecef !important; opacity: 0.5;">-</td>
@@ -1399,6 +1413,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                     <tr class="sticky-total">
                         <td style="background: #f8fafc !important;"></td>
                         <td style="text-align: right; font-weight: 800; background: #f8fafc !important;">Grand Total (Gross)</td>
+                        <td style="background: #f8fafc !important;"></td>
+                        <td style="background: #f8fafc !important;"></td>
                         <td style="background: #f8fafc !important;"></td>
                         <td style="background: #f8fafc !important;"></td>
                         ${footer_cells_gross}
@@ -1415,7 +1431,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 			if (results.length === 0) {
 				tbody_detail.append(
-					`<tr><td colspan="11" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
+					`<tr><td colspan="13" class="text-center text-muted" style="padding: 20px;">No data matching filters</td></tr>`,
 				);
 			} else {
 				let detailed_list = [...results];
@@ -1424,7 +1440,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					let field = page.detail_sort.field;
 					let asc = page.detail_sort.asc;
 
-					if (["invoice_id", "dom_exp", "invoice_type", "status", "customer_name", "item_name", "sales_person"].includes(field)) {
+					if (["invoice_id", "dom_exp", "invoice_type", "status", "customer_name", "customer_group", "item_name", "item_group", "sales_person"].includes(field)) {
 						val_a = a[field] || "";
 						val_b = b[field] || "";
 						return asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
@@ -1472,6 +1488,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                             <td class="invoice-type-col">${row.invoice_type || ""}</td>
                             <td class="status-col"><span class="indicator-pill ${status_color}">${row.status}</span></td>
                             <td class="customer-col">${row.customer_name}</td>
+                            <td class="customer-group-col" style="min-width: 150px;">${row.customer_group || "-"}</td>
                             <td class="item-col">
                                 <div style="line-height: 1.4;">
                                     <div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code}</div>
@@ -1479,6 +1496,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                                 </div>
                             </td>
                             <td class="sp-col">${row.sales_person || "-"}</td>
+                            <td class="item-group-col" style="min-width: 150px;">${row.item_group || "-"}</td>
                             <td class="qty-col">${frappe.format(row.qty, { fieldtype: "Float" })}</td>
                             <td class="amount-col" style="font-weight: 600;">
                                  ${format_currency_short(row.amt_allocated || 0)}
@@ -1489,7 +1507,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 				tbody_detail.append(`
                     <tr class="sticky-total">
-                        <td colspan="9" style="text-align: right; font-weight: 700;">Total</td>
+                        <td colspan="12" style="text-align: right; font-weight: 700;">Total</td>
                         <td class="qty-col" style="font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
                         <td class="amount-col" style="font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
                     </tr>
@@ -1707,8 +1725,5 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		$(".chart-card .export-btn, .row-export-btn").remove();
 	}
 
-	// Trigger initial load automatically
-	setTimeout(() => {
-		page.refresh();
-	}, 300);
+	renu_customization.dashboard_fiscal_year.init(page, { cache_bounds: true, refresh_delay: 300 });
 };

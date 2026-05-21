@@ -81,11 +81,34 @@ def get_dashboard_data(filters=None):
         conditions += " AND si.customer = %(customer)s"
         query_params["customer"] = filters.customer
     if filters.get("customer_group"):
-        conditions += " AND c.customer_group = %(customer_group)s"
-        query_params["customer_group"] = filters.customer_group
+        try:
+            lft, rgt = frappe.db.get_value("Customer Group", filters.customer_group, ["lft", "rgt"])
+            cg_list = frappe.db.sql_list("select name from `tabCustomer Group` where lft >= %s and rgt <= %s", (lft, rgt))
+            if cg_list:
+                conditions += " AND c.customer_group IN %(customer_group_list)s"
+                query_params["customer_group_list"] = tuple(cg_list)
+            else:
+                conditions += " AND c.customer_group = %(customer_group)s"
+                query_params["customer_group"] = filters.customer_group
+        except Exception:
+            conditions += " AND c.customer_group = %(customer_group)s"
+            query_params["customer_group"] = filters.customer_group
     if filters.get("item_group"):
-        conditions += " AND i.item_group = %(item_group)s"
-        query_params["item_group"] = filters.item_group
+        try:
+            lft, rgt = frappe.db.get_value("Item Group", filters.item_group, ["lft", "rgt"])
+            ig_list = frappe.db.sql_list("select name from `tabItem Group` where lft >= %s and rgt <= %s", (lft, rgt))
+            if ig_list:
+                conditions += " AND i.item_group IN %(item_group_list)s"
+                query_params["item_group_list"] = tuple(ig_list)
+            else:
+                conditions += " AND i.item_group = %(item_group)s"
+                query_params["item_group"] = filters.item_group
+        except Exception:
+            conditions += " AND i.item_group = %(item_group)s"
+            query_params["item_group"] = filters.item_group
+    if filters.get("item_type"):
+        conditions += " AND i.item_type = %(item_type)s"
+        query_params["item_type"] = filters.item_type
     if filters.get("item_code"):
         conditions += " AND sii.item_code = %(item_code)s"
         query_params["item_code"] = filters.item_code
@@ -415,7 +438,9 @@ def export_to_excel(filters=None, export_type="all"):
         for row in data:
             sp = row.get("sales_person") or "-"
             cust = row.get("customer_name") or row.get("customer") or "-"
+            cust_group = row.get("customer_group") or "-"
             prod = row.get("item_name") or row.get("item_code") or "-"
+            item_group = row.get("item_group") or "-"
             amt = row.get("amt_allocated") or 0
             gross_amt = row.get("gross_amount") or amt
     
@@ -431,13 +456,13 @@ def export_to_excel(filters=None, export_type="all"):
             months_set.add((m_sort, m_key))
             key = f"{cust}|{sp}|{prod}"
             if key not in merged_data:
-                merged_data[key] = {"cust": cust, "sp": sp, "prod": prod, "months": {}, "total": 0, "total_gross": 0}
+                merged_data[key] = {"cust": cust, "cust_group": cust_group, "sp": sp, "prod": prod, "item_group": item_group, "months": {}, "total": 0, "total_gross": 0}
             merged_data[key]["months"][m_key] = merged_data[key]["months"].get(m_key, 0) + amt
             merged_data[key]["total"] += amt
             merged_data[key]["total_gross"] += gross_amt
             
         sorted_months = [x[1] for x in sorted(list(months_set), key=lambda x: x[0])]
-        headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total (Net)", "Grand Total (Gross)"]
+        headers = ["S.No.", "Customer", "Customer Group", "Sales Person", "Product", "Item Group"] + sorted_months + ["Total (Net)", "Grand Total (Gross)"]
         
         for idx, h in enumerate(headers, start=1):
             cell = ws_months.cell(row=row_idx, column=idx, value=h)
@@ -452,13 +477,15 @@ def export_to_excel(filters=None, export_type="all"):
             
             c_no = ws_months.cell(row=row_idx, column=1, value=r_idx + 1)
             c1 = ws_months.cell(row=row_idx, column=2, value=row["cust"])
-            c2 = ws_months.cell(row=row_idx, column=3, value=row["sp"])
-            c3 = ws_months.cell(row=row_idx, column=4, value=row["prod"])
-            for c in [c_no, c1, c2, c3]:
+            c2 = ws_months.cell(row=row_idx, column=3, value=row["cust_group"])
+            c3 = ws_months.cell(row=row_idx, column=4, value=row["sp"])
+            c4 = ws_months.cell(row=row_idx, column=5, value=row["prod"])
+            c5 = ws_months.cell(row=row_idx, column=6, value=row["item_group"])
+            for c in [c_no, c1, c2, c3, c4, c5]:
                 c.border = table_border
                 if row_fill: c.fill = row_fill
                 
-            col_idx = 5
+            col_idx = 7
             for m_key in sorted_months:
                 v_m = flt(row["months"].get(m_key, 0))
                 c = ws_months.cell(row=row_idx, column=col_idx, value=v_m)
@@ -489,13 +516,13 @@ def export_to_excel(filters=None, export_type="all"):
     
         # Add Footer Rows in Excel
         ws_months.cell(row=row_idx, column=1, value="Grand Total (Net)").font = header_font
-        ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
-        for c in range(1, 5):
+        ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+        for c in range(1, 7):
             ws_months.cell(row=row_idx, column=c).fill = header_fill
             ws_months.cell(row=row_idx, column=c).border = table_border
         ws_months.cell(row=row_idx, column=1).alignment = Alignment(horizontal="right")
         
-        col_idx = 5
+        col_idx = 7
         m_totals_net = {}
         m_totals_gross = {}
         m_totals_returned = {}
@@ -554,13 +581,13 @@ def export_to_excel(filters=None, export_type="all"):
         
         # 3. Grand Total (Gross)
         ws_months.cell(row=row_idx, column=1, value="Grand Total (Gross)").font = header_font
-        ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
-        for c in range(1, 5):
+        ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+        for c in range(1, 7):
             ws_months.cell(row=row_idx, column=c).fill = header_fill
             ws_months.cell(row=row_idx, column=c).border = table_border
         ws_months.cell(row=row_idx, column=1).alignment = Alignment(horizontal="right")
             
-        col_idx = 5
+        col_idx = 7
         for m_key in sorted_months:
             v_gross = flt(m_totals_gross.get(m_key, 0))
             c = ws_months.cell(row=row_idx, column=col_idx, value=v_gross)
@@ -603,9 +630,11 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Invoice Type", "fieldname": "invoice_type", "width": 20},
             {"label": "Status", "fieldname": "status", "width": 14},
             {"label": "Customer", "fieldname": "customer_name", "width": 25},
+            {"label": "Customer Group", "fieldname": "customer_group", "width": 20},
             {"label": "Business Region", "fieldname": "business_region_name", "width": 20},
             {"label": "Item", "fieldname": "item_code", "width": 20},
             {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
+            {"label": "Item Group", "fieldname": "item_group", "width": 20},
             {"label": "Qty", "fieldname": "qty", "width": 10},
             {"label": "Amount (M)", "fieldname": "base_amount", "width": 18},
         ]
@@ -652,8 +681,8 @@ def export_to_excel(filters=None, export_type="all"):
         # Add Total Row for Detailed Invoice List
         # -------------------------------------------------------------------------
         ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=11)
-        for c in range(1, 12):
+        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=13)
+        for c in range(1, 14):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
     
@@ -662,7 +691,7 @@ def export_to_excel(filters=None, export_type="all"):
         for row in data:
             total_list_amt += (row.get("amt_allocated") or 0)
     
-        cell_total = ws_list.cell(row=row_idx, column=12, value=total_list_amt)
+        cell_total = ws_list.cell(row=row_idx, column=14, value=total_list_amt)
         cell_total.font = header_font
         cell_total.fill = header_fill
         cell_total.number_format = '"₹ "#,##0.00" M"'

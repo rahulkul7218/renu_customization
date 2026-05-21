@@ -96,10 +96,24 @@ def get_dashboard_data(filters=None):
     cust_list = frappe.get_all("Customer", fields=["name", "customer_group", "territory", "business_region_name"])
     customer_map = {c.name: c for c in cust_list}
         
-    item_map = {}
+    item_list = frappe.get_all("Item", fields=["name", "item_group", "item_type"])
+    item_map = {i.name: i for i in item_list}
+    
+    cg_list = []
+    if filters.get("customer_group"):
+        try:
+            lft, rgt = frappe.db.get_value("Customer Group", filters.customer_group, ["lft", "rgt"])
+            cg_list = frappe.db.sql_list("select name from `tabCustomer Group` where lft >= %s and rgt <= %s", (lft, rgt))
+        except Exception:
+            cg_list = [filters.customer_group]
+            
+    ig_list = []
     if filters.get("item_group"):
-        item_list = frappe.get_all("Item", fields=["name", "item_group"])
-        item_map = {i.name: i for i in item_list}
+        try:
+            lft, rgt = frappe.db.get_value("Item Group", filters.item_group, ["lft", "rgt"])
+            ig_list = frappe.db.sql_list("select name from `tabItem Group` where lft >= %s and rgt <= %s", (lft, rgt))
+        except Exception:
+            ig_list = [filters.item_group]
 
     for row in raw_data:
         keep = True
@@ -125,9 +139,9 @@ def get_dashboard_data(filters=None):
 
         # 10. Customer Group
         cg_filter = filters.get("customer_group")
+        cust_info = customer_map.get(inv_cust_id)
         if keep and cg_filter:
-            cust_info = customer_map.get(inv_cust_id)
-            if not cust_info or str(cust_info.customer_group) != str(cg_filter):
+            if not cust_info or cust_info.customer_group not in cg_list:
                 keep = False
             
         # 3. Product
@@ -158,12 +172,15 @@ def get_dashboard_data(filters=None):
             
         # 4. Product Group
         ig_filter = filters.get("item_group")
+        item_info = item_map.get(row.get("item_code"))
         if keep and ig_filter:
-            if not item_map:
-                item_list = frappe.get_all("Item", fields=["name", "item_group"])
-                item_map = {i.name: i for i in item_list}
-            item_info = item_map.get(row.get("item_code"))
-            if not item_info or str(item_info.item_group) != str(ig_filter):
+            if not item_info or item_info.item_group not in ig_list:
+                keep = False
+
+        # 4b. Item Type
+        item_type_filter = filters.get("item_type")
+        if keep and item_type_filter:
+            if not item_info or str(item_info.item_type or "") != str(item_type_filter):
                 keep = False
 
         # 5. Business Region Name
@@ -192,6 +209,8 @@ def get_dashboard_data(filters=None):
             row["status"] = status_map.get(inv_id)
             row["invoice_type"] = type_map.get(inv_id)
             row["dom_exp"] = dom_exp_map.get(inv_id, "")
+            row["customer_group"] = cust_info.customer_group if cust_info else ""
+            row["item_group"] = item_info.item_group if item_info else ""
             
             code = row.get('item_code')
             name = row.get('item_name')
@@ -439,7 +458,9 @@ def export_to_excel(filters=None, export_type="all"):
         for row in data:
             sp = row.get("sales_person") or "-"
             cust = row.get("customer_name") or row.get("customer") or "-"
+            cust_group = row.get("customer_group") or "-"
             prod = row.get("item") or row.get("item_name") or row.get("item_code") or "-"
+            item_group = row.get("item_group") or "-"
             margin = flt(row.get("margin") or 0)
             date_str = str(row.get("invoice_date") or row.get("posting_date") or "")
             try:
@@ -452,12 +473,12 @@ def export_to_excel(filters=None, export_type="all"):
             months_set.add((m_sort, m_key))
             key = f"{cust}|{sp}|{prod}"
             if key not in merged_data:
-                merged_data[key] = {"cust": cust, "sp": sp, "prod": prod, "months": {}, "total": 0}
+                merged_data[key] = {"cust": cust, "cust_group": cust_group, "sp": sp, "prod": prod, "item_group": item_group, "months": {}, "total": 0}
             merged_data[key]["months"][m_key] = merged_data[key]["months"].get(m_key, 0) + margin
             merged_data[key]["total"] += margin
             
         sorted_months = [x[1] for x in sorted(list(months_set), key=lambda x: x[0])]
-        headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total Margin (M)"]
+        headers = ["S.No.", "Customer", "Customer Group", "Sales Person", "Product", "Item Group"] + sorted_months + ["Total Margin (M)"]
         
         for idx, h in enumerate(headers, start=1):
             cell = ws2.cell(row=row_idx, column=idx, value=h)
@@ -468,13 +489,15 @@ def export_to_excel(filters=None, export_type="all"):
             row_fill = zebra_fill if r_idx % 2 != 0 else None
             c_no = ws2.cell(row=row_idx, column=1, value=r_idx + 1)
             c1 = ws2.cell(row=row_idx, column=2, value=row["cust"])
-            c2 = ws2.cell(row=row_idx, column=3, value=row["sp"])
-            c3 = ws2.cell(row=row_idx, column=4, value=row["prod"])
-            for c in [c_no, c1, c2, c3]:
+            c2 = ws2.cell(row=row_idx, column=3, value=row["cust_group"])
+            c3 = ws2.cell(row=row_idx, column=4, value=row["sp"])
+            c4 = ws2.cell(row=row_idx, column=5, value=row["prod"])
+            c5 = ws2.cell(row=row_idx, column=6, value=row["item_group"])
+            for c in [c_no, c1, c2, c3, c4, c5]:
                 c.border = table_border
                 if row_fill: c.fill = row_fill
                 
-            col_idx = 5
+            col_idx = 7
             for m_key in sorted_months:
                 v_m = flt(row["months"].get(m_key, 0)) / 1000000
                 c = ws2.cell(row=row_idx, column=col_idx, value=v_m)
@@ -494,15 +517,15 @@ def export_to_excel(filters=None, export_type="all"):
         # Add Total Row for Month-Wise Margin
         c_tot_label = ws2.cell(row=row_idx, column=1, value="Total")
         c_tot_label.font = Font(bold=True)
-        ws2.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
-        for c in range(1, 5):
+        ws2.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=6)
+        for c in range(1, 7):
             ws2.cell(row=row_idx, column=c).fill = header_fill
             ws2.cell(row=row_idx, column=c).font = header_font
             ws2.cell(row=row_idx, column=c).border = table_border
             if c == 1:
                 ws2.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right")
                 
-        col_idx = 5
+        col_idx = 7
         for m_key in sorted_months:
             total_m = sum(flt(row["months"].get(m_key, 0)) for row in merged_data.values()) / 1000000
             c = ws2.cell(row=row_idx, column=col_idx, value=total_m)
@@ -534,7 +557,9 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Invoice ID", "fieldname": "invoice_id", "width": 18},
             {"label": "Date", "fieldname": "invoice_date", "width": 14},
             {"label": "Customer", "fieldname": "customer_name", "width": 25},
+            {"label": "Customer Group", "fieldname": "customer_group", "width": 20},
             {"label": "Item", "fieldname": "item", "width": 30},
+            {"label": "Item Group", "fieldname": "item_group", "width": 20},
             {"label": "Qty", "fieldname": "qty", "width": 10},
             {"label": "Revenue (M)", "fieldname": "base_amount", "width": 18},
             {"label": "Cost of Goods (M)", "fieldname": "cogs", "width": 18},
@@ -574,8 +599,8 @@ def export_to_excel(filters=None, export_type="all"):
         # Add Total Row for Detailed List
         c_tot_label = ws3.cell(row=row_idx, column=1, value="Total")
         c_tot_label.font = Font(bold=True)
-        ws3.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=5)
-        for c in range(1, 6):
+        ws3.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=7)
+        for c in range(1, 8):
             ws3.cell(row=row_idx, column=c).fill = header_fill
             ws3.cell(row=row_idx, column=c).font = header_font
             ws3.cell(row=row_idx, column=c).border = table_border
@@ -583,27 +608,27 @@ def export_to_excel(filters=None, export_type="all"):
                 ws3.cell(row=row_idx, column=c).alignment = Alignment(horizontal="right", vertical="center")
     
         total_qty = sum(flt(row.get("qty") or 0) for row in data)
-        c_qty = ws3.cell(row=row_idx, column=6, value=total_qty)
+        c_qty = ws3.cell(row=row_idx, column=8, value=total_qty)
         c_qty.font = header_font; c_qty.fill = header_fill; c_qty.border = table_border; c_qty.alignment = Alignment(horizontal="right")
         c_qty.number_format = "#,##0.00"
     
         total_rev = sum(flt(row.get("base_amount") or 0) for row in data) / 1000000
-        c_rev = ws3.cell(row=row_idx, column=7, value=total_rev)
+        c_rev = ws3.cell(row=row_idx, column=9, value=total_rev)
         c_rev.font = header_font; c_rev.fill = header_fill; c_rev.border = table_border; c_rev.alignment = Alignment(horizontal="right")
         c_rev.number_format = '"₹ "#,##0.00" M"'
         
         total_cogs = sum(flt(row.get("cogs") or 0) for row in data) / 1000000
-        c_cogs = ws3.cell(row=row_idx, column=8, value=total_cogs)
+        c_cogs = ws3.cell(row=row_idx, column=10, value=total_cogs)
         c_cogs.font = header_font; c_cogs.fill = header_fill; c_cogs.border = table_border; c_cogs.alignment = Alignment(horizontal="right")
         c_cogs.number_format = '"₹ "#,##0.00" M"'
     
         total_margin = sum(flt(row.get("margin") or 0) for row in data) / 1000000
-        c_margin = ws3.cell(row=row_idx, column=9, value=total_margin)
+        c_margin = ws3.cell(row=row_idx, column=11, value=total_margin)
         c_margin.font = header_font; c_margin.fill = header_fill; c_margin.border = table_border; c_margin.alignment = Alignment(horizontal="right")
         c_margin.number_format = '"₹ "#,##0.00" M"'
     
         avg_margin_pct = (total_margin / total_rev * 100) if total_rev else 0
-        c_margin_pct = ws3.cell(row=row_idx, column=10, value=avg_margin_pct)
+        c_margin_pct = ws3.cell(row=row_idx, column=12, value=avg_margin_pct)
         c_margin_pct.font = header_font; c_margin_pct.fill = header_fill; c_margin_pct.border = table_border; c_margin_pct.alignment = Alignment(horizontal="right")
         c_margin_pct.number_format = '0.00"%"'
         row_idx += 1
