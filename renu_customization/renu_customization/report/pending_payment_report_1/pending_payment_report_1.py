@@ -186,8 +186,8 @@ def execute(filters=None):
         payment_due_date = row.get("due_date")
  
         invoice_age = 0
-        if invoice_date:
-            invoice_age = date_diff(nowdate(), invoice_date)
+        if payment_due_date:
+            invoice_age = date_diff(nowdate(), payment_due_date)
  
         outstanding = flt(row.get("outstanding") or row.get("outstanding_amount") or 0)
  
@@ -231,7 +231,7 @@ def execute(filters=None):
                 exchange_rate = flt(details.get("target_exchange_rate") or 1.0)
                 invoice_value = flt(details.get("received_amount") or 0)
             
-            inr_value_of_foreign = flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
+            inr_value_of_foreign = -flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
  
         # Apply currency filter if set
         if filters.get("currency") and currency != filters.get("currency"):
