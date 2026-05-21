@@ -226,7 +226,8 @@ def execute(filters=None):
             continue
  
         # Convert outstanding to INR for export/foreign transactions
-        outstanding = outstanding * exchange_rate
+        if currency != 'INR':
+            outstanding = outstanding * exchange_rate
  
         data.append({
             "customer_code": customer_code,
