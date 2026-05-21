@@ -89,6 +89,7 @@ def execute(filters=None):
                 si.grand_total,
                 si.base_grand_total,
                 si.po_no,
+                si.currency,
                 CASE
                     WHEN IFNULL(a.country, '') = 'India' THEN 'Domestic'
                     ELSE 'Export'
@@ -188,7 +189,7 @@ def execute(filters=None):
  
         currency = row.get("currency") or company_currency
         exchange_rate = 1.0
-        invoice_value = flt(row.get("invoiced"))
+        invoice_value = flt(row.get("invoiced_amount_in_account_currency") or row.get("invoiced_in_account_currency") or row.get("invoiced"))
         inr_value_of_foreign = flt(row.get("invoiced"))
         po_no = row.get("po_no") or ""
         sales_person = row.get("sales_person") or ""
@@ -201,6 +202,7 @@ def execute(filters=None):
             inr_value_of_foreign = flt(details.get("base_grand_total") or 0)
             po_no = details.get("po_no") or ""
             domestic_export = details.get("domestic_export") or "Domestic"
+            currency = details.get("currency") or currency
  
             sp_list = sales_persons.get(v_no, [])
             if sp_list:
@@ -225,9 +227,7 @@ def execute(filters=None):
         if filters.get("currency") and currency != filters.get("currency"):
             continue
  
-        # Convert outstanding to INR for export/foreign transactions
-        if currency != 'INR':
-            outstanding = outstanding * exchange_rate
+        # The Outstanding Amount is fetched directly from the Accounts Receivable report
  
         data.append({
             "customer_code": customer_code,
