@@ -1507,7 +1507,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 				tbody_detail.append(`
                     <tr class="sticky-total">
-                        <td colspan="12" style="text-align: right; font-weight: 700;">Total</td>
+                        <td colspan="11" style="text-align: right; font-weight: 700;">Total</td>
                         <td class="qty-col" style="font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
                         <td class="amount-col" style="font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
                     </tr>
