@@ -226,7 +226,7 @@ def execute(filters=None):
                 currency = details.get("paid_from_account_currency") or currency
                 exchange_rate = flt(details.get("source_exchange_rate") or 1.0)
                 invoice_value = 0  # Receive payments show 0 in Invoice Value
-                inr_value_of_foreign = 0
+                inr_value_of_foreign = outstanding  # Show outstanding amount in INR Value of Foreign
             else:
                 # Pay type: show actual amount in Invoice Value and positive value in INR Value of Foreign
                 currency = details.get("paid_to_account_currency") or currency
@@ -247,7 +247,7 @@ def execute(filters=None):
             "invoice_id": invoice_id,
             "invoice_date": invoice_date,
             "invoice_value": invoice_value,
-            "advance_payment": flt(row.get("paid") or row.get("paid_amount") or 0),
+            "advance_payment": 0 if v_type == "Sales Invoice" else flt(row.get("paid") or row.get("paid_amount") or 0),
             "outstanding": outstanding,
             "currency": currency,
             "exchange_rate": exchange_rate,
