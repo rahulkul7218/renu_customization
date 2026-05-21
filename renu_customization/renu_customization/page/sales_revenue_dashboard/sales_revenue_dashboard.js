@@ -92,6 +92,13 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			options: "Item Group",
 		},
 		{
+			fieldname: "item_type",
+			label: __("Item Type"),
+			placeholder: __("Select Item Type"),
+			fieldtype: "Link",
+			options: "Item Type",
+		},
+		{
 			label: __("Product (Item)"),
 			placeholder: __("Select Product"),
 			fieldname: "item_code",
@@ -257,6 +264,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			let filters = {};
 			let item_group = page.filter_group.get_value("item_group");
 			if (item_group) filters.item_group = item_group;
+			let item_type = page.filter_group.get_value("item_type");
+			if (item_type) filters.item_type = item_type;
 			return { filters: filters };
 		};
 	}

@@ -90,6 +90,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Product Group"),
 		},
 		{
+			fieldname: "item_type",
+			label: __("Item Type"),
+			fieldtype: "Link",
+			options: "Item Type",
+			placeholder: __("Select Item Type"),
+		},
+		{
 			fieldname: "item_code",
 			label: __("Product (Item)"),
 			fieldtype: "Link",
@@ -233,6 +240,8 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 			let filters = {};
 			let item_group = page.filter_group.get_value("item_group");
 			if (item_group) filters.item_group = item_group;
+			let item_type = page.filter_group.get_value("item_type");
+			if (item_type) filters.item_type = item_type;
 			return { filters: filters };
 		};
 	}
