@@ -457,16 +457,19 @@ def _total_row_style(styles):
 
 
 def _write_excel_total_row(ws, row_idx, label, amount_col, amount_value, styles):
-    """Total label in column before amount; amount in last column (no merge)."""
+    """Total label merged across columns 1..amount_col-1; amount in last column."""
     total_style = _total_row_style(styles)
-    label_col = max(1, amount_col - 1)
+    label_end_col = max(1, amount_col - 1)
 
     for col in range(1, amount_col + 1):
         cell = ws.cell(row=row_idx, column=col)
         cell.fill = total_style["fill"]
         cell.border = total_style["border"]
 
-    label_cell = ws.cell(row=row_idx, column=label_col, value=label)
+    if label_end_col > 1:
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=label_end_col)
+
+    label_cell = ws.cell(row=row_idx, column=1, value=label)
     label_cell.font = total_style["font"]
     label_cell.fill = total_style["fill"]
     label_cell.border = total_style["border"]
@@ -771,11 +774,12 @@ def _write_detailed_orders_table(ws, rows, styles, start_row=1):
         r_idx = data_start + i
         _write_excel_row(
             ws, r_idx, _order_row_values(row, i + 1), styles,
-            amount_col=16, date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
+            amount_col=len(DETAILED_ORDER_HEADERS),
+            date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
         )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
     _write_excel_total_row(
-        ws, data_start + len(data_rows), "TOTAL BOOKED VALUE", 16, total_amount, styles,
+        ws, data_start + len(data_rows), "TOTAL BOOKED VALUE", len(DETAILED_ORDER_HEADERS), total_amount, styles,
     )
     if start_row == 1:
         _autofit_columns(ws, min_widths=_min_widths_for_headers(DETAILED_ORDER_HEADERS, ORDER_SHEET_WIDTHS))
@@ -797,11 +801,12 @@ def _write_due_orders_table(ws, rows, styles, start_row=1):
         r_idx = data_start + i
         _write_excel_row(
             ws, r_idx, _order_row_values(row, i + 1, include_days_left=True), styles,
-            amount_col=17, date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
+            amount_col=len(DUE_ORDER_HEADERS),
+            date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
         )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
     _write_excel_total_row(
-        ws, data_start + len(data_rows), "TOTAL DUE VALUE", 17, total_amount, styles,
+        ws, data_start + len(data_rows), "TOTAL DUE VALUE", len(DUE_ORDER_HEADERS), total_amount, styles,
     )
     if start_row == 1:
         _autofit_columns(ws, min_widths=_min_widths_for_headers(DUE_ORDER_HEADERS, ORDER_SHEET_WIDTHS))
@@ -828,7 +833,16 @@ def export_to_excel(filters=None, export_type="all"):
     if export_type == "all":
         ws_overview = wb.active
         ws_overview.title = "Overview"
-        _write_overview_sheet(ws_overview, dashboard_data, styles, results=results, due_rows=due_rows)
+        _write_overview_sheet(ws_overview, dashboard_data, styles)
+
+        ws_months = wb.create_sheet("Month-Wise Booking")
+        _write_month_sheet(ws_months, dashboard_data, styles)
+
+        ws_due = wb.create_sheet("Due in 15 Days")
+        _write_due_orders_sheet(ws_due, due_rows, styles)
+
+        ws_list = wb.create_sheet("Detailed Orders")
+        _write_detailed_orders_sheet(ws_list, results, styles)
     elif export_type == "summary":
         ws_months = wb.active
         ws_months.title = "Month-Wise Booking"

@@ -311,12 +311,14 @@ def _write_customer_row(ws, row_idx, values, styles, amount_col=None):
 
 
 def _write_customer_total_row(ws, row_idx, label, amount_col, amount_value, styles):
-    label_col = max(1, amount_col - 1)
+    label_end_col = max(1, amount_col - 1)
     for col in range(1, amount_col + 1):
         cell = ws.cell(row=row_idx, column=col)
         cell.fill = styles["total_fill"]
         cell.border = styles["table_border"]
-    label_cell = ws.cell(row=row_idx, column=label_col, value=label)
+    if label_end_col > 1:
+        ws.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=label_end_col)
+    label_cell = ws.cell(row=row_idx, column=1, value=label)
     label_cell.font = styles["total_font"]
     label_cell.fill = styles["total_fill"]
     label_cell.border = styles["table_border"]
@@ -527,9 +529,13 @@ def _write_customer_due_table(ws, rows, styles, start_row=1):
     data_start = start_row + 1
     for i, row in enumerate(data_rows):
         r_idx = data_start + i
-        _write_customer_row(ws, r_idx, _customer_due_row_values(row, i + 1), styles, amount_col=10)
+        _write_customer_row(
+            ws, r_idx, _customer_due_row_values(row, i + 1), styles, amount_col=len(CUSTOMER_DUE_HEADERS),
+        )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
-    _write_customer_total_row(ws, data_start + len(data_rows), "TOTAL DUE VALUE", 10, total_amount, styles)
+    _write_customer_total_row(
+        ws, data_start + len(data_rows), "TOTAL DUE VALUE", len(CUSTOMER_DUE_HEADERS), total_amount, styles,
+    )
     if start_row == 1:
         _autofit_customer_sheet(ws)
     return data_start + len(data_rows) + 1
@@ -545,9 +551,13 @@ def _write_customer_detail_table(ws, rows, styles, start_row=1):
     data_start = start_row + 1
     for i, row in enumerate(data_rows):
         r_idx = data_start + i
-        _write_customer_row(ws, r_idx, _customer_detail_row_values(row, i + 1), styles, amount_col=10)
+        _write_customer_row(
+            ws, r_idx, _customer_detail_row_values(row, i + 1), styles, amount_col=len(CUSTOMER_DETAIL_HEADERS),
+        )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
-    _write_customer_total_row(ws, data_start + len(data_rows), "TOTAL BOOKED VALUE", 10, total_amount, styles)
+    _write_customer_total_row(
+        ws, data_start + len(data_rows), "TOTAL BOOKED VALUE", len(CUSTOMER_DETAIL_HEADERS), total_amount, styles,
+    )
     if start_row == 1:
         _autofit_customer_sheet(ws)
     return data_start + len(data_rows) + 1
@@ -573,7 +583,16 @@ def export_to_excel(filters=None, export_type="all"):
     if export_type == "all":
         ws_overview = wb.active
         ws_overview.title = "Overview"
-        _write_customer_overview_sheet(ws_overview, dashboard_data, styles, results=results, due_rows=due_rows)
+        _write_customer_overview_sheet(ws_overview, dashboard_data, styles)
+
+        ws_months = wb.create_sheet("Month-Wise Booking")
+        _write_customer_month_sheet(ws_months, dashboard_data, styles)
+
+        ws_due = wb.create_sheet("Due in 15 Days")
+        _write_customer_due_sheet(ws_due, due_rows, styles)
+
+        ws_list = wb.create_sheet("Detailed Orders")
+        _write_customer_detail_sheet(ws_list, results, styles)
     elif export_type == "summary":
         ws_months = wb.active
         ws_months.title = "Month-Wise Booking"
