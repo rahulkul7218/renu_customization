@@ -91,19 +91,6 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		};
 	};
 
-    let fy_field = page.filter_group.get_field("fiscal_year");
-    fy_field.df.on_change = () => {
-        let fy = fy_field.get_value();
-        if (fy) {
-            frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
-                if (r) {
-                    page.filter_group.set_values({ from_date: r.year_start_date, to_date: r.year_end_date });
-                    page.refresh();
-                }
-            });
-        }
-    };
-
     Object.keys(page.filter_group.fields_dict).forEach(key => {
         let f = page.filter_group.fields_dict[key];
         if (f.$input) f.$input.on("change input blur", () => page.refresh());
@@ -1046,21 +1033,5 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         $form.remove();
     }
 
-	frappe.call({
-		method: "frappe.client.get_value",
-		args: {
-			doctype: "Fiscal Year",
-			filters: { year_start_date: ["<=", frappe.datetime.get_today()], year_end_date: [">=", frappe.datetime.get_today()] },
-			fieldname: "name"
-		},
-		callback: function (r) {
-			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
-		},
-		always: function() { 
-			setTimeout(() => {
-				page.refresh();
-				setTimeout(() => page.refresh(), 500);
-			}, 300);
-		}
-	});
+	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
 };
