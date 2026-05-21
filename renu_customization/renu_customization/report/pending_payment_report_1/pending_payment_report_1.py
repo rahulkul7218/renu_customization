@@ -117,14 +117,15 @@ def execute(filters=None):
     if journal_entries and parties:
         je_list = frappe.db.sql("""
             SELECT
-                parent AS name,
-                exchange_rate,
-                account_currency AS currency,
-                (debit_in_account_currency + credit_in_account_currency) AS invoice_value,
-                (debit + credit) AS inr_value_of_foreign,
-                bill_no AS po_no
-            FROM `tabJournal Entry Account`
-            WHERE parent IN %(journal_entries)s AND party IN %(parties)s
+                tjea.parent AS name,
+                tjea.exchange_rate,
+                tjea.account_currency AS currency,
+                (tjea.debit_in_account_currency + tjea.credit_in_account_currency) AS invoice_value,
+                (tjea.debit + tjea.credit) AS inr_value_of_foreign,
+                tje.bill_no AS po_no
+            FROM `tabJournal Entry Account` tjea
+            LEFT JOIN `tabJournal Entry` tje ON tje.name = tjea.parent
+            WHERE tjea.parent IN %(journal_entries)s AND tjea.party IN %(parties)s
         """, {"journal_entries": journal_entries, "parties": parties}, as_dict=True)
         for je in je_list:
             journal_entry_details[je.name] = je
