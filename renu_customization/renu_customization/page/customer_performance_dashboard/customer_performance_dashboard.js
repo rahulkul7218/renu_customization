@@ -82,6 +82,15 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		}
 	};
 
+	page.filter_group.fields_dict.sales_order.get_query = function() {
+		return {
+			filters: {
+				docstatus: 1,
+				status: ["not in", ["Cancelled", "Draft"]]
+			}
+		};
+	};
+
     let fy_field = page.filter_group.get_field("fiscal_year");
     fy_field.df.on_change = () => {
         let fy = fy_field.get_value();
@@ -130,7 +139,12 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .col-sno { width: 55px; min-width: 55px; text-align: center; }
         .col-id { width: 200px; min-width: 200px; font-weight: 600; }
         .col-customer { width: 220px; min-width: 220px; }
+        .col-item-code { width: 145px; min-width: 145px; }
+        .col-item-name { width: 240px; min-width: 240px; }
+        .col-qty { width: 95px; min-width: 95px; text-align: right !important; }
         .col-date { width: 115px; min-width: 115px; }
+        .dashboard-table.orders-table th { text-transform: none; font-size: 12px; letter-spacing: 0; white-space: nowrap; }
+        th.col-qty { text-align: right !important; }
         .col-date-actual { width: 160px; min-width: 160px; }
         .dashboard-table.orders-table td.col-date-actual { white-space: normal; line-height: 1.35; overflow: visible; text-overflow: clip; }
         .dashboard-table.orders-table .col-status { overflow: visible; }
@@ -208,6 +222,30 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 			return new Date(0);
 		}
 		return new Date(dates[dates.length - 1]);
+	};
+
+	const ORDER_COL = {
+		sno: __("S.No."),
+		so_no: __("SO No"),
+		customer: __("Customer"),
+		item_code: __("Item Code"),
+		item_name: __("Item Name"),
+		order_date: __("Order Date"),
+		expected_delivery: __("Expected Del."),
+		actual_delivery: __("Actual Del."),
+		days_left: __("Days Left"),
+		status: __("Status"),
+		pct_delivered: __("% Del."),
+		pct_billed: __("% Bill."),
+		order_qty: __("Order Qty"),
+		delivered_qty: __("Delivered Qty"),
+		pending_qty: __("Pending Qty"),
+		net_total: __("Net Total"),
+	};
+
+	const format_qty = (val) => {
+		const n = flt(val);
+		return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
 	};
 
 	const download_base64_file = (fileinfo, mime_type) => {
@@ -473,22 +511,28 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-id sortable-header" data-table="due" data-field="name" style="cursor: pointer; user-select: none;">SO No <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-customer sortable-header" data-table="due" data-field="customer" style="cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="due" data-field="transaction_date" style="cursor: pointer; user-select: none;">Order Date <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="due" data-field="schedule_date" style="cursor: pointer; user-select: none;">${__("Expected Del.")} <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date-actual sortable-header" data-table="due" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${__("Actual Del.")} <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-days sortable-header" data-table="due" data-field="due_days" style="cursor: pointer; user-select: none;">Days Left <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-status sortable-header" data-table="due" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-pct sortable-header" data-table="due" data-field="per_delivered" style="cursor: pointer; user-select: none;">% Del. <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-amt sortable-header" data-table="due" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-id sortable-header" data-table="due" data-field="name" style="cursor: pointer; user-select: none;">${ORDER_COL.so_no} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer sortable-header" data-table="due" data-field="customer" style="cursor: pointer; user-select: none;">${ORDER_COL.customer} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-code sortable-header" data-table="due" data-field="item_code" style="cursor: pointer; user-select: none;">${ORDER_COL.item_code} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-name sortable-header" data-table="due" data-field="item_name" style="cursor: pointer; user-select: none;">${ORDER_COL.item_name} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="transaction_date" style="cursor: pointer; user-select: none;">${ORDER_COL.order_date} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="due" data-field="schedule_date" style="cursor: pointer; user-select: none;">${ORDER_COL.expected_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date-actual sortable-header" data-table="due" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${ORDER_COL.actual_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-days sortable-header" data-table="due" data-field="due_days" style="cursor: pointer; user-select: none;">${ORDER_COL.days_left} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="due" data-field="status" style="cursor: pointer; user-select: none;">${ORDER_COL.status} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="due" data-field="per_delivered" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_delivered} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="due" data-field="per_billed" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_billed} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="due" data-field="qty" style="cursor: pointer; user-select: none;">${ORDER_COL.order_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="due" data-field="delivered_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.delivered_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="due" data-field="pending_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.pending_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="due" data-field="net_total" style="cursor: pointer; user-select: none;">${ORDER_COL.net_total} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="due_body"></tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="9" style="text-align: right;">TOTAL DUE VALUE</td>
-                                <td id="total_due_value" style="text-align: right;">₹ 0.00 M</td>
+                                <td colspan="15" style="text-align: right; font-weight: 800;">TOTAL DUE VALUE</td>
+                                <td id="total_due_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -517,22 +561,27 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-id sortable-header" data-table="detailed" data-field="name" style="cursor: pointer; user-select: none;">SO No <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-customer sortable-header" data-table="detailed" data-field="customer" style="cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="detailed" data-field="transaction_date" style="cursor: pointer; user-select: none;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-table="detailed" data-field="schedule_date" style="cursor: pointer; user-select: none;">${__("Expected Del.")} <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date-actual sortable-header" data-table="detailed" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${__("Actual Del.")} <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-status sortable-header" data-table="detailed" data-field="status" style="cursor: pointer; user-select: none;">Status <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_delivered" style="cursor: pointer; user-select: none;">% Del. <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_billed" style="cursor: pointer; user-select: none;">% Bill. <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-amt sortable-header" data-table="detailed" data-field="net_total" style="cursor: pointer; user-select: none;">Net Total <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-id sortable-header" data-table="detailed" data-field="name" style="cursor: pointer; user-select: none;">${ORDER_COL.so_no} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer sortable-header" data-table="detailed" data-field="customer" style="cursor: pointer; user-select: none;">${ORDER_COL.customer} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-code sortable-header" data-table="detailed" data-field="item_code" style="cursor: pointer; user-select: none;">${ORDER_COL.item_code} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-name sortable-header" data-table="detailed" data-field="item_name" style="cursor: pointer; user-select: none;">${ORDER_COL.item_name} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="transaction_date" style="cursor: pointer; user-select: none;">${ORDER_COL.order_date} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="detailed" data-field="schedule_date" style="cursor: pointer; user-select: none;">${ORDER_COL.expected_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date-actual sortable-header" data-table="detailed" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${ORDER_COL.actual_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="detailed" data-field="status" style="cursor: pointer; user-select: none;">${ORDER_COL.status} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_delivered" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_delivered} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="detailed" data-field="per_billed" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_billed} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="detailed" data-field="qty" style="cursor: pointer; user-select: none;">${ORDER_COL.order_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="detailed" data-field="delivered_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.delivered_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="detailed" data-field="pending_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.pending_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="detailed" data-field="net_total" style="cursor: pointer; user-select: none;">${ORDER_COL.net_total} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="so_list_body"></tbody>
                         <tfoot>
                             <tr>
-                                <td colspan="9" style="text-align: right;">TOTAL BOOKED VALUE</td>
-                                <td id="total_booked_value" style="text-align: right;">₹ 0.00 M</td>
+                                <td colspan="15" style="text-align: right; font-weight: 800;">TOTAL BOOKED VALUE</td>
+                                <td id="total_booked_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
                             </tr>
                         </tfoot>
                     </table>
@@ -599,13 +648,16 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				let val_a = a[due_sort.field];
 				let val_b = b[due_sort.field];
 				
-				if (due_sort.field === "name" || due_sort.field === "customer" || due_sort.field === "status") {
+				if (["name", "customer", "status", "item_code", "item_name"].includes(due_sort.field)) {
 					val_a = val_a || "";
 					val_b = val_b || "";
 					return due_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
-				} else if (due_sort.field === "transaction_date" || due_sort.field === "schedule_date") {
+				} else if (due_sort.field === "transaction_date") {
 					val_a = val_a ? new Date(val_a) : new Date(0);
 					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else if (due_sort.field === "schedule_date") {
+					val_a = a.schedule_date ? new Date(a.schedule_date) : new Date(0);
+					val_b = b.schedule_date ? new Date(b.schedule_date) : new Date(0);
 				} else if (due_sort.field === "actual_delivery_time") {
 					val_a = get_actual_sort_date(a);
 					val_b = get_actual_sort_date(b);
@@ -623,18 +675,27 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				due_total_val += flt(row.net_total);
 				let days_class = row.due_days <= 3 ? "text-danger font-weight-bold" : (row.due_days <= 7 ? "text-warning" : "");
 				let del_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
+				let status_slug = (row.status || "").toLowerCase().replace(/ /g, "-");
+				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.delivered_qty)));
 
 				due_tbody.append(`
 					<tr>
 						<td class="col-sno">${idx + 1}</td>
 						<td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
 						<td class="col-customer" title="${row.customer}">${row.customer}</td>
+						<td class="col-item-code">${row.item_code || "-"}</td>
+						<td class="col-item-name" title="${row.item_name}">${row.item_name || "-"}</td>
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
 						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
 						<td class="col-date-actual">${format_actual_cell(row)}</td>
 						<td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
-						<td class="col-status"><span class="indicator-pill ${row.status.toLowerCase().replace(/ /g, '-')}">${row.status}</span></td>
+						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
+						<td class="col-qty">${format_qty(row.qty)}</td>
+						<td class="col-qty">${format_qty(row.delivered_qty)}</td>
+						<td class="col-qty" style="font-weight: 600;">${format_qty(pending_qty)}</td>
 						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toFixed(2)} M</td>
 					</tr>
 				`);
@@ -648,13 +709,16 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				let val_a = a[detailed_sort.field];
 				let val_b = b[detailed_sort.field];
 				
-				if (detailed_sort.field === "name" || detailed_sort.field === "customer" || detailed_sort.field === "status") {
+				if (["name", "customer", "status", "item_code", "item_name"].includes(detailed_sort.field)) {
 					val_a = val_a || "";
 					val_b = val_b || "";
 					return detailed_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
-				} else if (detailed_sort.field === "transaction_date" || detailed_sort.field === "schedule_date") {
+				} else if (detailed_sort.field === "transaction_date") {
 					val_a = val_a ? new Date(val_a) : new Date(0);
 					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else if (detailed_sort.field === "schedule_date") {
+					val_a = a.schedule_date ? new Date(a.schedule_date) : new Date(0);
+					val_b = b.schedule_date ? new Date(b.schedule_date) : new Date(0);
 				} else if (detailed_sort.field === "actual_delivery_time") {
 					val_a = get_actual_sort_date(a);
 					val_b = get_actual_sort_date(b);
@@ -669,18 +733,25 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 			sorted_data.forEach((row, idx) => {
 				let del_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
 				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
+				let status_slug = (row.status || "").toLowerCase().replace(/ /g, "-");
+				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.delivered_qty)));
 
 				tbody.append(`
 					<tr>
 						<td class="col-sno">${idx + 1}</td>
 						<td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
 						<td class="col-customer" title="${row.customer}">${row.customer}</td>
+						<td class="col-item-code">${row.item_code || "-"}</td>
+						<td class="col-item-name" title="${row.item_name}">${row.item_name || "-"}</td>
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
 						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
 						<td class="col-date-actual">${format_actual_cell(row)}</td>
-						<td class="col-status"><span class="indicator-pill ${row.status.toLowerCase().replace(/ /g, '-')}">${row.status}</span></td>
+						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
 						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
+						<td class="col-qty">${format_qty(row.qty)}</td>
+						<td class="col-qty">${format_qty(row.delivered_qty)}</td>
+						<td class="col-qty" style="font-weight: 600;">${format_qty(pending_qty)}</td>
 						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} M</td>
 					</tr>
 				`);
@@ -880,12 +951,18 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                             <th class="col-sno">S.No.</th>
                             <th class="col-id">SO No</th>
                             <th class="col-customer">Customer</th>
+                            <th>Item Code</th>
+                            <th>Item Name</th>
                             <th class="col-date">Order Date</th>
                             <th class="col-date">Expected Del.</th>
                             <th class="col-date">Actual Del.</th>
                             <th class="col-days">Days Left</th>
                             <th class="col-status">Status</th>
                             <th class="col-pct">% Del.</th>
+                            <th class="col-pct">% Bill.</th>
+                            <th class="col-pct">Order Qty</th>
+                            <th class="col-pct">Del. Qty</th>
+                            <th class="col-pct">Pending</th>
                             <th class="col-amt">Net Total</th>
                         </tr>
                     </thead>
@@ -895,12 +972,18 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                                 <td class="col-sno">${idx + 1}</td>
                                 <td class="col-id">${row.name}</td>
                                 <td class="col-customer">${row.customer}</td>
+                                <td>${row.item_code || "-"}</td>
+                                <td>${row.item_name || "-"}</td>
                                 <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
                                 <td class="col-date">${format_expected_cell(row)}</td>
                                 <td class="col-date">${format_actual_text(row)}</td>
                                 <td class="col-days">${row.due_days} Days</td>
                                 <td class="col-status">${row.status}</td>
                                 <td class="col-pct">${Math.round(row.per_delivered)}%</td>
+                                <td class="col-pct">${Math.round(row.per_billed)}%</td>
+                                <td class="col-pct">${format_qty(row.qty)}</td>
+                                <td class="col-pct">${format_qty(row.delivered_qty)}</td>
+                                <td class="col-pct">${format_qty(row.pending_qty)}</td>
                                 <td class="col-amt">₹ ${(flt(row.net_total) / 1000000).toFixed(2)}</td>
                             </tr>
                         `).join('')}
@@ -914,12 +997,17 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                             <th class="col-sno">S.No.</th>
                             <th class="col-id">SO No</th>
                             <th class="col-customer">Customer</th>
+                            <th>Item Code</th>
+                            <th>Item Name</th>
                             <th class="col-date">Date</th>
                             <th class="col-date">Expected Del.</th>
                             <th class="col-date">Actual Del.</th>
                             <th class="col-status">Status</th>
                             <th class="col-pct">% Del.</th>
                             <th class="col-pct">% Bill.</th>
+                            <th class="col-pct">Order Qty</th>
+                            <th class="col-pct">Del. Qty</th>
+                            <th class="col-pct">Pending</th>
                             <th class="col-amt">Net Total</th>
                         </tr>
                     </thead>
@@ -929,12 +1017,17 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                                 <td class="col-sno">${idx + 1}</td>
                                 <td class="col-id">${row.name}</td>
                                 <td class="col-customer">${row.customer}</td>
+                                <td>${row.item_code || "-"}</td>
+                                <td>${row.item_name || "-"}</td>
                                 <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
                                 <td class="col-date">${format_expected_cell(row)}</td>
                                 <td class="col-date">${format_actual_text(row)}</td>
                                 <td class="col-status">${row.status}</td>
                                 <td class="col-pct">${Math.round(row.per_delivered)}%</td>
                                 <td class="col-pct">${Math.round(row.per_billed)}%</td>
+                                <td class="col-pct">${format_qty(row.qty)}</td>
+                                <td class="col-pct">${format_qty(row.delivered_qty)}</td>
+                                <td class="col-pct">${format_qty(row.pending_qty)}</td>
                                 <td class="col-amt">₹ ${(flt(row.net_total) / 1000000).toFixed(2)}</td>
                             </tr>
                         `).join('')}
