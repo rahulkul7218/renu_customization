@@ -228,10 +228,10 @@ def execute(filters=None):
                 invoice_value = 0  # Receive payments show 0 in Invoice Value
                 inr_value_of_foreign = 0
             else:
-                # Pay type: show 0 in Invoice Value, show positive value in INR Value of Foreign
+                # Pay type: show actual amount in Invoice Value and positive value in INR Value of Foreign
                 currency = details.get("paid_to_account_currency") or currency
                 exchange_rate = flt(details.get("target_exchange_rate") or 1.0)
-                invoice_value = 0  # Pay payments show 0 in Invoice Value
+                invoice_value = flt(details.get("base_paid_amount") or details.get("received_amount") or 0)
                 inr_value_of_foreign = flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
  
         # Apply currency filter if set
