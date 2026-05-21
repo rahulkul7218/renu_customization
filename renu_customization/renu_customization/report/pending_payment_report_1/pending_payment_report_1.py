@@ -247,7 +247,7 @@ def execute(filters=None):
             "invoice_id": invoice_id,
             "invoice_date": invoice_date,
             "invoice_value": invoice_value,
-            "advance_payment": 0 if v_type == "Sales Invoice" else flt(row.get("paid") or row.get("paid_amount") or 0),
+            "advance_payment": 0 if v_type == "Sales Invoice" else flt(flt(row.get("paid") or row.get("paid_amount") or 0) / exchange_rate if exchange_rate else 0),
             "outstanding": outstanding,
             "currency": currency,
             "exchange_rate": exchange_rate,
