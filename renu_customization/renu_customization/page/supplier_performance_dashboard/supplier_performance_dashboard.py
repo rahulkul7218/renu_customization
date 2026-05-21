@@ -333,7 +333,7 @@ def get_dashboard_data(filters=None):
 
     charts = {
         "top_10_suppliers": {
-            "title": _("Top 10 Suppliers (M INR)"),
+            "title": _("Top 10 Suppliers "),
             "data": {
                 "labels": [x[0] for x in top_10_suppliers],
                 "datasets": [{"name": "Amount", "values": [x[1] for x in top_10_suppliers]}]
@@ -343,7 +343,7 @@ def get_dashboard_data(filters=None):
             "is_currency": True
         },
         "order_status": {
-            "title": _("Order Status Wise Amount (M INR)"),
+            "title": _("Order Status Wise Amount "),
             "data": {
                 "labels": list(status_counts.keys()),
                 "datasets": [{"name": "Amount", "values": list(status_counts.values())}]
@@ -619,15 +619,15 @@ def _write_overview_sheet(ws, dashboard_data, styles, results=None, due_rows=Non
 
     if results is not None and due_rows is not None:
         row_idx += 1
-        row_idx = _write_section_title(ws, row_idx, "Month-Wise Booking Breakdown (M INR)", styles)
+        row_idx = _write_section_title(ws, row_idx, "Month-Wise Booking Breakdown", styles)
         row_idx = _write_month_table(ws, dashboard_data, styles, row_idx)
 
         row_idx += 1
-        row_idx = _write_section_title(ws, row_idx, "Orders Due in Next 15 Days (M INR)", styles)
+        row_idx = _write_section_title(ws, row_idx, "Orders Due in Next 15 Days", styles)
         row_idx = _write_due_orders_table(ws, due_rows, styles, row_idx)
 
         row_idx += 1
-        row_idx = _write_section_title(ws, row_idx, "Detailed Supplier Orders List (M INR)", styles)
+        row_idx = _write_section_title(ws, row_idx, "Detailed Supplier Orders List ", styles)
         _write_detailed_orders_table(ws, results, styles, row_idx)
 
     _autofit_columns(ws)

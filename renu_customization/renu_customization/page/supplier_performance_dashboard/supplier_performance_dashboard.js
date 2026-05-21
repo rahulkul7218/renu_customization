@@ -1016,15 +1016,15 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                 </div>
 
                 <div class="page-break"></div>
-                <h3 class="section-title">Month-Wise Booking Breakdown (M INR)</h3>
+                <h3 class="section-title">Month-Wise Booking Breakdown </h3>
                 ${month_table_html || "<p>No data</p>"}
 
                 <div class="page-break"></div>
-                <h3 class="section-title">Orders Due in Next 15 Days (M INR)</h3>
+                <h3 class="section-title">Orders Due in Next 15 Days </h3>
                 ${due_table_html || "<p>No data</p>"}
 
                 <div class="page-break"></div>
-                <h3 class="section-title">Detailed Orders List (M INR)</h3>
+                <h3 class="section-title">Detailed Orders List </h3>
                 ${detailed_table_html || "<p>No data</p>"}
             </body>
             </html>
