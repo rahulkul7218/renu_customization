@@ -41,6 +41,9 @@ def execute(filters=None):
  
     if filters.get("invoice_id"):
         ar_data = [row for row in ar_data if row.get("voucher_no") == filters.get("invoice_id")]
+
+    if filters.get("customer_name"):
+        ar_data = [row for row in ar_data if row.get("party") == filters.get("customer_name")]
  
     if filters.get("from_date"):
         from_date = getdate(filters.get("from_date"))
@@ -131,6 +134,7 @@ def execute(filters=None):
         pe_list = frappe.db.sql("""
             SELECT
                 name,
+                payment_type,
                 source_exchange_rate,
                 target_exchange_rate,
                 paid_from_account_currency,
@@ -218,9 +222,15 @@ def execute(filters=None):
  
         elif v_type == "Payment Entry" and v_no in payment_entry_details:
             details = payment_entry_details[v_no]
-            currency = details.get("paid_from_account_currency") or details.get("paid_to_account_currency") or currency
-            exchange_rate = flt(details.get("source_exchange_rate") or details.get("target_exchange_rate") or 1.0)
-            invoice_value = flt(details.get("received_amount") or details.get("paid_amount") or 0)
+            if details.get("payment_type") == "Receive":
+                currency = details.get("paid_from_account_currency") or currency
+                exchange_rate = flt(details.get("source_exchange_rate") or 1.0)
+                invoice_value = flt(details.get("paid_amount") or 0)
+            else:
+                currency = details.get("paid_to_account_currency") or currency
+                exchange_rate = flt(details.get("target_exchange_rate") or 1.0)
+                invoice_value = flt(details.get("received_amount") or 0)
+            
             inr_value_of_foreign = flt(details.get("base_received_amount") or details.get("base_paid_amount") or 0)
  
         # Apply currency filter if set
