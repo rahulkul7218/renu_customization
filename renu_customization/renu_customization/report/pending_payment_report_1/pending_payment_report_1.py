@@ -217,8 +217,15 @@ def execute(filters=None):
             details = journal_entry_details[v_no]
             exchange_rate = flt(details.get("exchange_rate") or 1.0)
             currency = details.get("currency") or currency
-            invoice_value = flt(details.get("invoice_value") or 0)
-            inr_value_of_foreign = flt(details.get("inr_value_of_foreign") or 0)
+            
+            # invoice_value remains as fetched from Accounts Receivable
+            
+            raw_inr_foreign = abs(flt(details.get("inr_value_of_foreign") or 0))
+            if outstanding < 0:
+                inr_value_of_foreign = -raw_inr_foreign
+            else:
+                inr_value_of_foreign = raw_inr_foreign
+                
             po_no = details.get("po_no") or ""
  
         elif v_type == "Payment Entry" and v_no in payment_entry_details:
