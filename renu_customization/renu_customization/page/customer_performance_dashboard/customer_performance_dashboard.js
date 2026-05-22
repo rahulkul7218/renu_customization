@@ -309,6 +309,13 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
 	};
 
+	const is_open_order_line = (row) => {
+		const pending_qty = flt(
+			row.pending_qty != null ? row.pending_qty : flt(row.qty) - flt(row.delivered_qty)
+		);
+		return pending_qty > 0 || flt(row.net_total) > 0;
+	};
+
 	const ORDERS_COLGROUP_16 = `
 		<colgroup>
 			<col style="width:52px"><col style="width:172px"><col style="width:260px">
@@ -770,7 +777,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		};
 
 		const render_due_table = () => {
-			let sorted_data = [...(data.due_next_15_days || [])];
+			let sorted_data = [...(data.due_next_15_days || [])].filter(is_open_order_line);
 			sorted_data.sort((a, b) => {
 				let val_a = a[due_sort.field];
 				let val_b = b[due_sort.field];
@@ -831,7 +838,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		};
 
 		const render_detailed_table = () => {
-			let sorted_data = [...(data.results || [])];
+			let sorted_data = [...(data.results || [])].filter(is_open_order_line);
 			sorted_data.sort((a, b) => {
 				let val_a = a[detailed_sort.field];
 				let val_b = b[detailed_sort.field];
