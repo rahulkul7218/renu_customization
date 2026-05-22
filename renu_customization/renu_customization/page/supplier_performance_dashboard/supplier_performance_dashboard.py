@@ -190,7 +190,7 @@ def get_dashboard_data(filters=None):
     po_map = {po.name: po for po in purchase_orders}
 
     # Fetch Purchase Order Items
-    poi_filters = {"parent": ["in", po_names], "docstatus": 1}
+    poi_filters = {"parent": ["in", po_names]}
 
     if filters.get("expected_delivery_date"):
         poi_filters["schedule_date"] = filters.get("expected_delivery_date")

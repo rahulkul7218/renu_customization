@@ -43,6 +43,15 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 					render_dashboard(r.message);
 				}
 			},
+			error(r) {
+				page.container.css("opacity", "1");
+				page.container.html(
+					`<div class="text-center text-muted" style="padding: 100px 0;">${__(
+						"Failed to load dashboard data"
+					)}</div>`
+				);
+				frappe.msgprint(r.message || __("Failed to load dashboard data"));
+			},
 		});
 	}
 
@@ -537,15 +546,15 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 	};
 
 	const PDF_COL_WIDTHS = {
-		"col-sno": "4%",
-		"col-id": "11%",
-		"col-supplier": "13%",
-		"col-item-code": "9%",
-		"col-item-name": "17%",
-		"col-date": "7%",
-		"col-date-actual": "9%",
+		"col-sno": "3%",
+		"col-id": "8%",
+		"col-supplier": "11%",
+		"col-item-code": "8%",
+		"col-item-name": "13%",
+		"col-date": "6%",
+		"col-date-actual": "8%",
 		"col-days": "5%",
-		"col-status": "10%",
+		"col-status": "9%",
 		"col-pct": "4%",
 		"col-qty": "4%",
 		"col-amt": "7%",
@@ -557,6 +566,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		}
 		const $clone = $table.clone();
 		$clone.addClass("export-pdf-table");
+		$clone.removeAttr("style").css({ width: "100%" });
 		$clone.find("a").each(function () {
 			const text = $(this).text();
 			$(this).replaceWith(document.createTextNode(text));
@@ -569,9 +579,10 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		const $colgroup = $("<colgroup></colgroup>");
 		$clone.find("thead tr").first().find("th").each(function () {
 			const col_class = [...this.classList].find((c) => c.startsWith("col-")) || "col-date";
-			const width = PDF_COL_WIDTHS[col_class] || "6%";
+			const width = PDF_COL_WIDTHS[col_class] || "5%";
 			$colgroup.append(`<col style="width:${width}">`);
 		});
+		$clone.find("colgroup").remove();
 		if ($colgroup.children().length) {
 			$clone.prepend($colgroup);
 		}
@@ -611,7 +622,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
 		let charts_row = $('<div class="charts-row"></div>').appendTo(page.container);
         page.chart_instances = {};
-		Object.keys(data.charts).forEach((chart_id) => {
+		Object.keys(data.charts || {}).forEach((chart_id) => {
 			let chart_obj = data.charts[chart_id];
             let title = chart_obj.title || chart_id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 			$(`
@@ -1082,6 +1093,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                     .export-pdf-table tfoot { display: table-row-group; }
                     .export-pdf-table .col-sno { text-align: center; }
                     .export-pdf-table .col-id { word-break: break-all; }
+                    .export-pdf-table .col-supplier { white-space: normal; line-height: 1.2; }
                     .export-pdf-table .col-item-code { word-break: break-all; }
                     .export-pdf-table .col-item-name { white-space: normal; line-height: 1.25; }
                     .export-pdf-table .col-date, .export-pdf-table .col-date-actual { white-space: nowrap; font-size: 6.5px; }
@@ -1144,5 +1156,34 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
     }
 
 	// Set default Fiscal Year and trigger initial load
-	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
+	const init_fiscal_year_and_refresh = () => {
+		frappe.call({
+			method: "frappe.client.get_value",
+			args: {
+				doctype: "Fiscal Year",
+				filters: {
+					year_start_date: ["<=", frappe.datetime.get_today()],
+					year_end_date: [">=", frappe.datetime.get_today()],
+				},
+				fieldname: "name",
+			},
+			callback(r) {
+				if (r.message) {
+					page.filter_group.set_value("fiscal_year", r.message.name);
+				}
+			},
+			always() {
+				setTimeout(() => {
+					page.refresh();
+					setTimeout(() => page.refresh(), 500);
+				}, 300);
+			},
+		});
+	};
+
+	if (renu_customization.dashboard_fiscal_year && renu_customization.dashboard_fiscal_year.init) {
+		renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
+	} else {
+		init_fiscal_year_and_refresh();
+	}
 };

@@ -10,10 +10,8 @@ import base64
 @frappe.whitelist()
 def export_to_pdf(html=None, orientation="Landscape"):
     if not html:
-        return
-    
-    frappe.set_user("Administrator")
-    
+        frappe.throw(_("PDF content is empty"))
+
     options = {
         "page-size": "A4",
         "orientation": orientation,
@@ -22,12 +20,12 @@ def export_to_pdf(html=None, orientation="Landscape"):
         "margin-bottom": "10mm",
         "margin-left": "10mm",
         "encoding": "UTF-8",
-        "no-outline": None
+        "no-outline": None,
     }
-    
+
     pdf_content = frappe.utils.pdf.get_pdf(html, options)
-    
-    frappe.local.response.filename = "Customer_Performance_Dashboard.pdf"
+
+    frappe.local.response.filename = f"Customer_Performance_{nowdate()}.pdf"
     frappe.local.response.filecontent = pdf_content
     frappe.local.response.type = "download"
 
