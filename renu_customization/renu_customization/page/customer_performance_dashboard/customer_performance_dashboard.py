@@ -275,12 +275,12 @@ def get_dashboard_data(filters=None):
 
         if row.get("schedule_date") and row.get("status") not in ["Completed", "Closed", "Cancelled"]:
             delivery_date = getdate(row.get("schedule_date"))
-            pending_delivery = flt(row.get("delivered_qty")) < flt(row.get("qty"))
+            pending_delivery = flt(row.get("pending_qty")) > 0
 
             if delivery_date < today and pending_delivery:
                 is_overdue = True
                 row["due_days"] = (today - delivery_date).days
-            elif today <= delivery_date <= next_15_days:
+            elif today <= delivery_date <= next_15_days and pending_delivery:
                 due_next_15_days_flag = True
                 row["due_days"] = (delivery_date - today).days
             elif delivery_date > today and pending_delivery:
@@ -380,7 +380,10 @@ def get_dashboard_data(filters=None):
         
         # We'll calculate Pending and Overdue after processing all rows if needed, 
         # or just use the current status for simplified dashboard view
-        if row.get("status") not in ["Completed", "Closed", "Cancelled"]:
+        if (
+            flt(row.get("pending_qty")) > 0
+            and row.get("status") not in ["Completed", "Closed", "Cancelled"]
+        ):
             monthly_lifecycle["Pending"][m_key] = monthly_lifecycle["Pending"].get(m_key, 0) + amt
             if row.get("is_overdue"):
                 monthly_lifecycle["Overdue"][m_key] = monthly_lifecycle["Overdue"].get(m_key, 0) + amt
