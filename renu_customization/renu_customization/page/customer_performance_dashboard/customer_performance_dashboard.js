@@ -202,10 +202,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .dashboard-table.orders-table td.col-amt,
         .dashboard-table.orders-table th.col-amt {
             overflow: visible; text-overflow: clip; white-space: nowrap;
-            position: sticky; right: 0; background: var(--card-bg) !important; z-index: 5;
-            box-shadow: -2px 0 5px rgba(0,0,0,0.06);
         }
-        .dashboard-table.orders-table th.col-amt { z-index: 25 !important; background: var(--bg-color) !important; }
         .dashboard-table.orders-table tfoot td { overflow: visible; text-overflow: clip; }
         .delivery-actual { color: #166534; font-weight: 700; }
         .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (48px * 15) + 46px); width: 100%; -webkit-overflow-scrolling: touch; }
@@ -217,7 +214,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .orders-table tfoot td.col-id { position: sticky; left: var(--ot-sno); bottom: 0; z-index: 13; }
         .orders-table tfoot td.col-customer { position: sticky; left: calc(var(--ot-sno) + var(--ot-id)); bottom: 0; z-index: 13; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); }
         .orders-table tfoot td.tfoot-label { text-align: right; white-space: nowrap; overflow: visible; text-overflow: clip; padding-right: 16px; }
-        .orders-table tfoot td.col-amt { text-align: right; z-index: 14; font-size: 14px; white-space: nowrap; position: sticky; right: 0; background: var(--bg-color) !important; box-shadow: -2px 0 5px rgba(0,0,0,0.06); }
+        .orders-table tfoot td.col-amt { text-align: right; font-size: 14px; white-space: nowrap; }
         .orders-table tfoot td.tfoot-spacer { padding: 0; background: var(--bg-color) !important; }
         .indicator-pill { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .indicator-pill.completed { background: #dcfce7; color: #166534; }
