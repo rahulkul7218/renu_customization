@@ -93,6 +93,11 @@ def get_line_net_amount(item):
     return flt(item.get("base_amount")) or flt(item.get("amount"))
 
 
+def is_open_order_line(pending_qty, net_total):
+    """Fully short-closed lines have no pending qty and no booked value."""
+    return flt(pending_qty) > 0 or flt(net_total) > 0
+
+
 def _get_freight_item_codes(item_codes):
     if not item_codes:
         return set()
@@ -228,6 +233,9 @@ def get_dashboard_data(filters=None):
         billed_amt = flt(item.billed_amt)
         billed_qty = billed_amt / rate if rate > 0 else 0.0
         pending_qty = max(0, qty - short_close_qty - delivered_qty)
+        net_total = get_line_net_amount(item)
+        if not is_open_order_line(pending_qty, net_total):
+            continue
 
         per_delivered = (delivered_qty / qty) * 100 if qty > 0 else 0.0
         per_billed = (billed_qty / qty) * 100 if qty > 0 else 0.0
@@ -245,7 +253,8 @@ def get_dashboard_data(filters=None):
             "item_name": item.item_name,
             "qty": qty,
             "rate": rate,
-            "net_total": get_line_net_amount(item),
+            "net_total": net_total,
+            "short_close_qty": short_close_qty,
             "delivered_qty": delivered_qty,
             "pending_qty": pending_qty,
             "billed_qty": billed_qty,
@@ -275,12 +284,12 @@ def get_dashboard_data(filters=None):
 
         if row.get("schedule_date") and row.get("status") not in ["Completed", "Closed", "Cancelled"]:
             delivery_date = getdate(row.get("schedule_date"))
-            pending_delivery = flt(row.get("delivered_qty")) < flt(row.get("qty"))
+            pending_delivery = flt(row.get("pending_qty")) > 0
 
             if delivery_date < today and pending_delivery:
                 is_overdue = True
                 row["due_days"] = (today - delivery_date).days
-            elif today <= delivery_date <= next_15_days:
+            elif today <= delivery_date <= next_15_days and pending_delivery:
                 due_next_15_days_flag = True
                 row["due_days"] = (delivery_date - today).days
             elif delivery_date > today and pending_delivery:
@@ -380,7 +389,10 @@ def get_dashboard_data(filters=None):
         
         # We'll calculate Pending and Overdue after processing all rows if needed, 
         # or just use the current status for simplified dashboard view
-        if row.get("status") not in ["Completed", "Closed", "Cancelled"]:
+        if (
+            flt(row.get("pending_qty")) > 0
+            and row.get("status") not in ["Completed", "Closed", "Cancelled"]
+        ):
             monthly_lifecycle["Pending"][m_key] = monthly_lifecycle["Pending"].get(m_key, 0) + amt
             if row.get("is_overdue"):
                 monthly_lifecycle["Overdue"][m_key] = monthly_lifecycle["Overdue"].get(m_key, 0) + amt

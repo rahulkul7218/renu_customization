@@ -1065,5 +1065,5 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 		return new Blob(byteArrays, { type: contentType });
 	}
 
-	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
+	setTimeout(() => page.refresh(), 300);
 };

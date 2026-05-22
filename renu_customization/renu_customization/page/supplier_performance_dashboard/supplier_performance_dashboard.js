@@ -117,37 +117,87 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
         .export-btn { padding: 4px 12px; font-size: 11px; font-weight: 600; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.2s; color: var(--text-color); }
         .export-btn:hover { background: var(--border-color); }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-        .dashboard-table.orders-table { table-layout: auto; width: max-content; min-width: 100%; }
+        .dashboard-table.orders-table {
+            --ot-sno: 52px;
+            --ot-id: 172px;
+            --ot-party: 228px;
+            --ot-item-code: 142px;
+            --ot-item-name: 228px;
+            --ot-date: 112px;
+            --ot-date-actual: 172px;
+            --ot-days: 92px;
+            --ot-status: 212px;
+            --ot-pct: 80px;
+            --ot-qty: 98px;
+            --ot-amt: 138px;
+            table-layout: fixed;
+            min-width: 100%;
+        }
+        .dashboard-table.orders-table.due-table { width: 1997px; }
+        .dashboard-table.orders-table.detailed-table { width: 1716px; }
         .dashboard-table th { background: var(--bg-color); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; height: 42px; box-sizing: border-box; }
         .dashboard-table.orders-table th { text-transform: none; font-size: 12px; letter-spacing: 0; white-space: nowrap; }
-        .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 48px; box-sizing: border-box; line-height: 22px; }
-        
-        /* Sticky columns for breakdown table */
-        .month-table .col-sno { width: 60px; text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
-        .month-table .col-supplier { width: 250px; position: sticky; left: 60px; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
-        .month-table th.col-sno, .month-table th.col-supplier { z-index: 20; background: var(--bg-color) !important; }
-        
-        .col-sno { width: 55px; min-width: 55px; text-align: center; }
-        .col-id { width: 200px; min-width: 200px; font-weight: 600; }
-        .col-supplier { width: 180px; min-width: 180px; }
-        .col-item-code { width: 145px; min-width: 145px; }
-        .col-item-name { width: 240px; min-width: 240px; }
-        .col-date { width: 130px; min-width: 130px; }
-        .col-date-actual { width: 165px; min-width: 165px; }
+        .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 48px; box-sizing: border-box; line-height: 22px; vertical-align: middle; }
+        .month-table {
+            --mt-sno: 60px;
+            --mt-party: 250px;
+            --mt-amt: 120px;
+            table-layout: fixed;
+            min-width: 100%;
+        }
+        .month-table .col-sno { width: var(--mt-sno); min-width: var(--mt-sno); max-width: var(--mt-sno); text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
+        .month-table .col-supplier { width: var(--mt-party); min-width: var(--mt-party); max-width: var(--mt-party); position: sticky; left: var(--mt-sno); background: var(--card-bg) !important; z-index: 5; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); }
+        .month-table th.col-sno { left: 0; z-index: 25 !important; }
+        .month-table th.col-supplier { left: var(--mt-sno); z-index: 25 !important; }
+        .month-table .col-amt { width: var(--mt-amt); min-width: var(--mt-amt); max-width: var(--mt-amt); text-align: right !important; }
+        .month-table th.col-amt { text-align: right !important; }
+        .month-table tfoot { position: sticky; bottom: 0; z-index: 10; border-top: 2px solid var(--border-color); }
+        .month-table tfoot td { background: var(--bg-color) !important; font-weight: 800; height: 46px; box-sizing: border-box; }
+        .month-table tfoot td.col-sno { position: sticky; left: 0; bottom: 0; z-index: 13; }
+        .month-table tfoot td.col-supplier { position: sticky; left: var(--mt-sno); bottom: 0; z-index: 13; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); text-align: right; white-space: nowrap; }
+        .orders-table .col-sno { width: var(--ot-sno); min-width: var(--ot-sno); max-width: var(--ot-sno); text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
+        .orders-table .col-id { width: var(--ot-id); min-width: var(--ot-id); max-width: var(--ot-id); font-weight: 600; position: sticky; left: var(--ot-sno); background: var(--card-bg) !important; z-index: 5; }
+        .orders-table .col-supplier { width: var(--ot-party); min-width: var(--ot-party); max-width: var(--ot-party); position: sticky; left: calc(var(--ot-sno) + var(--ot-id)); background: var(--card-bg) !important; z-index: 5; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); }
+        .orders-table th.col-sno { left: 0; z-index: 25 !important; }
+        .orders-table th.col-id { left: var(--ot-sno); z-index: 25 !important; }
+        .orders-table th.col-supplier { left: calc(var(--ot-sno) + var(--ot-id)); z-index: 25 !important; }
+        .orders-table .col-item-code { width: var(--ot-item-code); min-width: var(--ot-item-code); max-width: var(--ot-item-code); }
+        .orders-table .col-item-name { width: var(--ot-item-name); min-width: var(--ot-item-name); max-width: var(--ot-item-name); }
+        .orders-table .col-date { width: var(--ot-date); min-width: var(--ot-date); max-width: var(--ot-date); }
+        .orders-table .col-date-actual { width: var(--ot-date-actual); min-width: var(--ot-date-actual); max-width: var(--ot-date-actual); }
+        .orders-table .col-days { width: var(--ot-days); min-width: var(--ot-days); max-width: var(--ot-days); }
+        .orders-table .col-status { width: var(--ot-status); min-width: var(--ot-status); max-width: var(--ot-status); }
+        .orders-table .col-pct { width: var(--ot-pct); min-width: var(--ot-pct); max-width: var(--ot-pct); }
+        .orders-table .col-qty { width: var(--ot-qty); min-width: var(--ot-qty); max-width: var(--ot-qty); }
+        .orders-table .col-amt { width: var(--ot-amt); min-width: var(--ot-amt); max-width: var(--ot-amt); }
+        .col-sno { width: 52px; min-width: 52px; max-width: 52px; text-align: center; }
+        .col-id { width: 172px; min-width: 172px; max-width: 172px; font-weight: 600; }
+        .col-supplier { width: 228px; min-width: 228px; max-width: 228px; }
+        .col-item-code { width: 142px; min-width: 142px; max-width: 142px; }
+        .col-item-name { width: 228px; min-width: 228px; max-width: 228px; }
+        .col-date { width: 112px; min-width: 112px; max-width: 112px; }
+        .col-date-actual { width: 172px; min-width: 172px; max-width: 172px; }
         .dashboard-table.orders-table td.col-date-actual { white-space: normal; line-height: 1.35; overflow: visible; text-overflow: clip; }
-        .col-days { width: 90px; min-width: 90px; text-align: center !important; }
-        .col-status { width: 200px; min-width: 200px; }
-        .col-pct { width: 72px; min-width: 72px; text-align: center !important; }
-        .col-qty { width: 88px; min-width: 88px; text-align: right !important; }
-        .col-amt { width: 115px; min-width: 115px; text-align: right !important; }
-        th.col-qty { text-align: right !important; }
-        .dashboard-table.orders-table .col-status { overflow: visible; }
-        .dashboard-table.orders-table .col-status .indicator-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
-        th.col-amt, th.col-days, th.col-pct { text-align: right !important; }
+        .col-days { width: 92px; min-width: 92px; max-width: 92px; text-align: center !important; }
+        .col-status { width: 212px; min-width: 212px; max-width: 212px; }
+        .col-pct { width: 80px; min-width: 80px; max-width: 80px; text-align: center !important; }
+        .col-qty { width: 98px; min-width: 98px; max-width: 98px; text-align: right !important; }
+        .col-amt { width: 138px; min-width: 138px; max-width: 138px; text-align: right !important; }
+        th.col-qty, th.col-amt { text-align: right !important; }
+        .dashboard-table.orders-table .col-status { overflow: visible; text-overflow: clip; }
+        .dashboard-table.orders-table .col-status .indicator-pill { max-width: none; white-space: nowrap; overflow: visible; display: inline-block; vertical-align: middle; }
+        .dashboard-table.orders-table td.col-amt,
+        .dashboard-table.orders-table th.col-amt { overflow: visible; text-overflow: clip; white-space: nowrap; }
+        .dashboard-table.orders-table tfoot td { overflow: visible; text-overflow: clip; }
         th.col-days, th.col-pct { text-align: center !important; }
-        .dashboard-table tfoot { position: sticky; bottom: 0; background: var(--bg-color); z-index: 10; border-top: 2px solid var(--border-color); }
-        .dashboard-table tfoot td { padding: 12px 16px; font-weight: 800; font-size: 14px; color: var(--text-color); height: 46px; box-sizing: border-box; }
-        .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (48px * 20) + 46px); -webkit-overflow-scrolling: touch; }
+        .dashboard-table tfoot { position: sticky; bottom: 0; z-index: 10; border-top: 2px solid var(--border-color); }
+        .dashboard-table tfoot td { padding: 12px 16px; font-weight: 800; font-size: 14px; color: var(--text-color); height: 46px; box-sizing: border-box; background: var(--bg-color) !important; }
+        .orders-table tfoot td.col-sno { position: sticky; left: 0; bottom: 0; z-index: 13; }
+        .orders-table tfoot td.col-id { position: sticky; left: var(--ot-sno); bottom: 0; z-index: 13; }
+        .orders-table tfoot td.col-supplier { position: sticky; left: calc(var(--ot-sno) + var(--ot-id)); bottom: 0; z-index: 13; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); }
+        .orders-table tfoot td.tfoot-label { text-align: right; white-space: nowrap; overflow: visible; text-overflow: clip; padding-right: 16px; }
+        .orders-table tfoot td.col-amt { text-align: right; z-index: 11; font-size: 14px; white-space: nowrap; }
+        .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (48px * 20) + 46px); width: 100%; -webkit-overflow-scrolling: touch; }
         .delivery-actual { color: #166534; font-weight: 700; }
         .chart-body { display: flex; flex-direction: column; width: 100%; }
         .chart-wrapper { width: 100%; min-height: 300px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; padding: 8px 0; }
@@ -256,6 +306,66 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		const n = flt(val);
 		return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
 	};
+
+	const ORDERS_COLGROUP_16 = `
+		<colgroup>
+			<col style="width:52px"><col style="width:172px"><col style="width:228px">
+			<col style="width:142px"><col style="width:228px">
+			<col style="width:112px"><col style="width:112px"><col style="width:172px">
+			<col style="width:92px"><col style="width:212px">
+			<col style="width:80px"><col style="width:80px">
+			<col style="width:98px"><col style="width:98px"><col style="width:98px">
+			<col style="width:138px">
+		</colgroup>`;
+
+	const ORDERS_COLGROUP_12 = `
+		<colgroup>
+			<col style="width:52px"><col style="width:172px"><col style="width:228px">
+			<col style="width:142px"><col style="width:228px">
+			<col style="width:112px"><col style="width:112px"><col style="width:172px">
+			<col style="width:212px"><col style="width:80px"><col style="width:80px">
+			<col style="width:138px">
+		</colgroup>`;
+
+	const build_orders_footer_16 = (label, amount_cell_id) => `
+		<tfoot>
+			<tr>
+				<td class="col-sno"></td>
+				<td class="col-id"></td>
+				<td class="col-supplier tfoot-label">${label}</td>
+				<td class="col-item-code"></td>
+				<td class="col-item-name"></td>
+				<td class="col-date"></td>
+				<td class="col-date"></td>
+				<td class="col-date-actual"></td>
+				<td class="col-days"></td>
+				<td class="col-status"></td>
+				<td class="col-pct"></td>
+				<td class="col-pct"></td>
+				<td class="col-qty"></td>
+				<td class="col-qty"></td>
+				<td class="col-qty"></td>
+				<td class="col-amt" id="${amount_cell_id}">₹ 0.00 M</td>
+			</tr>
+		</tfoot>`;
+
+	const build_orders_footer_12 = (label, amount_cell_id) => `
+		<tfoot>
+			<tr>
+				<td class="col-sno"></td>
+				<td class="col-id"></td>
+				<td class="col-supplier tfoot-label">${label}</td>
+				<td class="col-item-code"></td>
+				<td class="col-item-name"></td>
+				<td class="col-date"></td>
+				<td class="col-date"></td>
+				<td class="col-date-actual"></td>
+				<td class="col-status"></td>
+				<td class="col-pct"></td>
+				<td class="col-pct"></td>
+				<td class="col-amt" id="${amount_cell_id}">₹ 0.00 M</td>
+			</tr>
+		</tfoot>`;
 
 	const download_base64_file = (fileinfo, mime_type) => {
 		if (!fileinfo || !fileinfo.filecontent) {
@@ -521,6 +631,13 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
 		// 1. Month-Wise Booking Breakdown
 		let months = data.months || [];
+		const month_table_width = 60 + 250 + months.length * 120 + 120;
+		const month_colgroup = `
+			<colgroup>
+				<col style="width:60px"><col style="width:250px">
+				${months.map(() => '<col style="width:120px">').join("")}
+				<col style="width:120px">
+			</colgroup>`;
 		let month_table_card = $(`
             <div class="table-card">
                 <div class="header">
@@ -531,20 +648,22 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 						</button>
 					</div>
 				</div>
-                <div class="dashboard-table-scroll">
-                    <table class="dashboard-table month-table" id="month_wise_table">
+                <div class="dashboard-table-scroll" style="max-height: 500px;">
+                    <table class="dashboard-table month-table" id="month_wise_table" style="width:${month_table_width}px;">
+                        ${month_colgroup}
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-supplier sortable-header" data-table="month" data-field="supplier" style="width: 250px; cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="month" data-field="supplier" style="cursor: pointer; user-select: none;">Supplier <i class="fa fa-sort text-muted ml-1"></i></th>
                                 ${months.map(m => `<th class="col-amt sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
                                 <th class="col-amt sortable-header" data-table="month" data-field="total" style="font-weight: 800; cursor: pointer; user-select: none;">Total (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="month_wise_body"></tbody>
                         <tfoot>
-                            <tr style="background: var(--bg-color); font-weight: 800;">
-                                <td colspan="2" style="text-align: right;">GRAND TOTAL</td>
+                            <tr>
+                                <td class="col-sno"></td>
+                                <td class="col-supplier">${__("GRAND TOTAL")}</td>
                                 ${months.map(m => `<td class="col-amt" id="total_${m.sort}">0.00 M</td>`).join("")}
                                 <td class="col-amt" id="grand_total_all">0.00 M</td>
                             </tr>
@@ -569,6 +688,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				</div>
                 <div class="dashboard-table-scroll">
                     <table class="dashboard-table orders-table due-table" id="due_15_days_table">
+                        ${ORDERS_COLGROUP_16}
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
@@ -590,12 +710,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                             </tr>
                         </thead>
                         <tbody id="due_body"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="15" style="text-align: right; font-weight: 800;">TOTAL DUE VALUE</td>
-                                <td id="total_due_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
-                            </tr>
-                        </tfoot>
+                        ${build_orders_footer_16(__("TOTAL DUE VALUE"), "total_due_value")}
                     </table>
                 </div>
             </div>
@@ -618,7 +733,8 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 					</div>
 				</div>
                 <div class="dashboard-table-scroll">
-                    <table class="dashboard-table orders-table" id="detailed_orders_table">
+                    <table class="dashboard-table orders-table detailed-table" id="detailed_orders_table">
+                        ${ORDERS_COLGROUP_12}
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
@@ -636,12 +752,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                             </tr>
                         </thead>
                         <tbody id="po_list_body"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="11" style="text-align: right; font-weight: 800;">TOTAL BOOKED VALUE</td>
-                                <td id="total_booked_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
-                            </tr>
-                        </tfoot>
+                        ${build_orders_footer_12(__("TOTAL BOOKED VALUE"), "total_booked_value")}
                     </table>
                 </div>
             </div>
