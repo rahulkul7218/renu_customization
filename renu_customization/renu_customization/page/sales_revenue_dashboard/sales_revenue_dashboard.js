@@ -303,7 +303,33 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		return true;
 	};
 
-	renu_customization.dashboard_fiscal_year.bind_fiscal_year_change(page, { cache_bounds: true });
+	// Override Fiscal Year Change
+	fy_field.on_change = function () {
+		const fy = this.get_value();
+		if (fy) {
+			frappe.db.get_doc("Fiscal Year", fy).then((doc) => {
+				fy_field._start_date = doc.year_start_date;
+				fy_field._end_date = doc.year_end_date;
+
+				// Constrain current values if they are outside the new FY bounds
+				let fd = from_field.get_value();
+				let td = to_field.get_value();
+
+				if (fd && (fd < doc.year_start_date || fd > doc.year_end_date)) {
+					page.filter_group.set_value("from_date", doc.year_start_date);
+				}
+				if (td && (td < doc.year_start_date || td > doc.year_end_date)) {
+					page.filter_group.set_value("to_date", doc.year_end_date);
+				}
+
+				page.refresh();
+			});
+		} else {
+			fy_field._start_date = null;
+			fy_field._end_date = null;
+			page.refresh();
+		}
+	};
 
 	// Override Date Changes with FY Constraint
 	from_field.on_change = function () {
@@ -1507,7 +1533,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 				tbody_detail.append(`
                     <tr class="sticky-total">
-                        <td colspan="11" style="text-align: right; font-weight: 700;">Total</td>
+                        <td colspan="12" style="text-align: right; font-weight: 700;">Total</td>
                         <td class="qty-col" style="font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
                         <td class="amount-col" style="font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
                     </tr>
@@ -1725,5 +1751,8 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		$(".chart-card .export-btn, .row-export-btn").remove();
 	}
 
-	renu_customization.dashboard_fiscal_year.init(page, { cache_bounds: true, refresh_delay: 300 });
+	// Trigger initial load automatically
+	setTimeout(() => {
+		page.refresh();
+	}, 300);
 };
