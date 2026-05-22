@@ -91,6 +91,19 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		};
 	};
 
+    let fy_field = page.filter_group.get_field("fiscal_year");
+    fy_field.df.on_change = () => {
+        let fy = fy_field.get_value();
+        if (fy) {
+            frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
+                if (r) {
+                    page.filter_group.set_values({ from_date: r.year_start_date, to_date: r.year_end_date });
+                    page.refresh();
+                }
+            });
+        }
+    };
+
     Object.keys(page.filter_group.fields_dict).forEach(key => {
         let f = page.filter_group.fields_dict[key];
         if (f.$input) f.$input.on("change input blur", () => page.refresh());
@@ -117,39 +130,100 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         .export-btn { padding: 4px 12px; font-size: 11px; font-weight: 600; background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; cursor: pointer; transition: all 0.2s; color: var(--text-color); }
         .export-btn:hover { background: var(--border-color); }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; }
-        .dashboard-table.orders-table { table-layout: auto; width: max-content; min-width: 100%; }
+        .dashboard-table.orders-table {
+            --ot-sno: 52px;
+            --ot-id: 172px;
+            --ot-party: 260px;
+            --ot-item-code: 145px;
+            --ot-item-name: 240px;
+            --ot-date: 112px;
+            --ot-date-actual: 172px;
+            --ot-days: 92px;
+            --ot-status: 220px;
+            --ot-pct: 82px;
+            --ot-qty: 100px;
+            --ot-amt: 145px;
+            table-layout: fixed;
+            min-width: 100%;
+        }
+        .dashboard-table.orders-table.due-table { width: 2058px; }
+        .dashboard-table.orders-table.detailed-table { width: 1966px; }
         .dashboard-table th { background: var(--bg-color); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; height: 42px; box-sizing: border-box; }
-        .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-height: 48px; box-sizing: border-box; line-height: 22px; vertical-align: middle; }
-        .month-table .col-sno { width: 60px; text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
-        .month-table .col-customer { width: 250px; position: sticky; left: 60px; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
-        .month-table th.col-sno, .month-table th.col-customer { z-index: 20; background: var(--bg-color) !important; }
-        .col-sno { width: 55px; min-width: 55px; text-align: center; }
-        .col-id { width: 200px; min-width: 200px; font-weight: 600; }
-        .col-customer { width: 220px; min-width: 220px; }
-        .col-item-code { width: 145px; min-width: 145px; }
-        .col-item-name { width: 240px; min-width: 240px; }
-        .col-qty { width: 95px; min-width: 95px; text-align: right !important; }
-        .col-date { width: 115px; min-width: 115px; }
+        .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 48px; box-sizing: border-box; line-height: 22px; vertical-align: middle; }
+        .month-table {
+            --mt-sno: 60px;
+            --mt-party: 250px;
+            --mt-amt: 120px;
+            table-layout: fixed;
+            min-width: 100%;
+        }
+        .month-table .col-sno { width: var(--mt-sno); min-width: var(--mt-sno); max-width: var(--mt-sno); text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
+        .month-table .col-customer { width: var(--mt-party); min-width: var(--mt-party); max-width: var(--mt-party); position: sticky; left: var(--mt-sno); background: var(--card-bg) !important; z-index: 5; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); }
+        .month-table th.col-sno { left: 0; z-index: 25 !important; }
+        .month-table th.col-customer { left: var(--mt-sno); z-index: 25 !important; }
+        .month-table .col-amt { width: var(--mt-amt); min-width: var(--mt-amt); max-width: var(--mt-amt); text-align: right !important; }
+        .month-table th.col-amt { text-align: right !important; }
+        .month-table tfoot { position: sticky; bottom: 0; z-index: 10; border-top: 2px solid var(--border-color); }
+        .month-table tfoot td { background: var(--bg-color) !important; font-weight: 800; height: 46px; box-sizing: border-box; }
+        .month-table tfoot td.col-sno { position: sticky; left: 0; bottom: 0; z-index: 13; }
+        .month-table tfoot td.col-customer { position: sticky; left: var(--mt-sno); bottom: 0; z-index: 13; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); text-align: right; white-space: nowrap; }
+        .orders-table .col-sno { width: var(--ot-sno); min-width: var(--ot-sno); max-width: var(--ot-sno); text-align: center; position: sticky; left: 0; background: var(--card-bg) !important; z-index: 5; border-right: 1px solid var(--border-color); }
+        .orders-table .col-id { width: var(--ot-id); min-width: var(--ot-id); max-width: var(--ot-id); font-weight: 600; position: sticky; left: var(--ot-sno); background: var(--card-bg) !important; z-index: 5; }
+        .orders-table .col-customer { width: var(--ot-party); min-width: var(--ot-party); max-width: var(--ot-party); position: sticky; left: calc(var(--ot-sno) + var(--ot-id)); background: var(--card-bg) !important; z-index: 5; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); }
+        .orders-table th.col-sno { left: 0; z-index: 25 !important; }
+        .orders-table th.col-id { left: var(--ot-sno); z-index: 25 !important; }
+        .orders-table th.col-customer { left: calc(var(--ot-sno) + var(--ot-id)); z-index: 25 !important; }
+        .orders-table .col-item-code { width: var(--ot-item-code); min-width: var(--ot-item-code); max-width: var(--ot-item-code); }
+        .orders-table .col-item-name { width: var(--ot-item-name); min-width: var(--ot-item-name); max-width: var(--ot-item-name); }
+        .orders-table .col-date { width: var(--ot-date); min-width: var(--ot-date); max-width: var(--ot-date); }
+        .orders-table .col-date-actual { width: var(--ot-date-actual); min-width: var(--ot-date-actual); max-width: var(--ot-date-actual); }
+        .orders-table .col-days { width: var(--ot-days); min-width: var(--ot-days); max-width: var(--ot-days); }
+        .orders-table .col-status { width: var(--ot-status); min-width: var(--ot-status); max-width: var(--ot-status); }
+        .orders-table .col-pct { width: var(--ot-pct); min-width: var(--ot-pct); max-width: var(--ot-pct); }
+        .orders-table .col-qty { width: var(--ot-qty); min-width: var(--ot-qty); max-width: var(--ot-qty); }
+        .orders-table .col-amt { width: var(--ot-amt); min-width: var(--ot-amt); max-width: var(--ot-amt); }
+        .col-sno { width: 52px; min-width: 52px; max-width: 52px; text-align: center; }
+        .col-id { width: 172px; min-width: 172px; max-width: 172px; font-weight: 600; }
+        .col-customer { width: 260px; min-width: 260px; max-width: 260px; }
+        .col-item-code { width: 145px; min-width: 145px; max-width: 145px; }
+        .col-item-name { width: 240px; min-width: 240px; max-width: 240px; }
+        .col-date { width: 112px; min-width: 112px; max-width: 112px; }
+        .col-date-actual { width: 172px; min-width: 172px; max-width: 172px; }
+        .col-days { width: 92px; min-width: 92px; max-width: 92px; text-align: center !important; }
+        .col-status { width: 220px; min-width: 220px; max-width: 220px; }
+        .col-pct { width: 82px; min-width: 82px; max-width: 82px; text-align: center !important; }
+        .col-qty { width: 100px; min-width: 100px; max-width: 100px; text-align: right !important; }
+        .col-amt { width: 145px; min-width: 145px; max-width: 145px; text-align: right !important; }
         .dashboard-table.orders-table th { text-transform: none; font-size: 12px; letter-spacing: 0; white-space: nowrap; }
         th.col-qty { text-align: right !important; }
-        .col-date-actual { width: 160px; min-width: 160px; }
         .dashboard-table.orders-table td.col-date-actual { white-space: normal; line-height: 1.35; overflow: visible; text-overflow: clip; }
-        .dashboard-table.orders-table .col-status { overflow: visible; }
-        .dashboard-table.orders-table .col-status .indicator-pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
+        .dashboard-table.orders-table .col-status { overflow: visible; text-overflow: clip; }
+        .dashboard-table.orders-table .col-status .indicator-pill { max-width: none; white-space: nowrap; overflow: visible; display: inline-block; vertical-align: middle; }
+        .dashboard-table.orders-table td.col-amt,
+        .dashboard-table.orders-table th.col-amt {
+            overflow: visible; text-overflow: clip; white-space: nowrap;
+        }
+        .dashboard-table.orders-table tfoot td { overflow: visible; text-overflow: clip; }
         .delivery-actual { color: #166534; font-weight: 700; }
-        .col-days { width: 90px; min-width: 90px; text-align: center !important; }
-        .col-status { width: 200px; min-width: 200px; }
-        .col-pct { width: 72px; min-width: 72px; text-align: center !important; }
-        .col-amt { width: 115px; min-width: 115px; text-align: right !important; }
-        .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (56px * 15) + 46px); width: 100%; -webkit-overflow-scrolling: touch; }
-        th.col-amt, th.col-days, th.col-pct { text-align: right !important; }
+        .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (48px * 15) + 46px); width: 100%; -webkit-overflow-scrolling: touch; }
+        th.col-amt, th.col-qty { text-align: right !important; }
         th.col-days, th.col-pct { text-align: center !important; }
-        .dashboard-table tfoot { position: sticky; bottom: 0; background: var(--bg-color); z-index: 10; border-top: 2px solid var(--border-color); }
-        .dashboard-table tfoot td { padding: 12px 16px; font-weight: 800; font-size: 14px; color: var(--text-color); height: 46px; box-sizing: border-box; }
+        .dashboard-table tfoot { position: sticky; bottom: 0; z-index: 10; border-top: 2px solid var(--border-color); }
+        .dashboard-table tfoot td { padding: 12px 16px; font-weight: 800; font-size: 14px; color: var(--text-color); height: 46px; box-sizing: border-box; background: var(--bg-color) !important; }
+        .orders-table tfoot td.col-sno { position: sticky; left: 0; bottom: 0; z-index: 13; }
+        .orders-table tfoot td.col-id { position: sticky; left: var(--ot-sno); bottom: 0; z-index: 13; }
+        .orders-table tfoot td.col-customer { position: sticky; left: calc(var(--ot-sno) + var(--ot-id)); bottom: 0; z-index: 13; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); }
+        .orders-table tfoot td.tfoot-label { text-align: right; white-space: nowrap; overflow: visible; text-overflow: clip; padding-right: 16px; }
+        .orders-table tfoot td.col-amt { text-align: right; font-size: 14px; white-space: nowrap; }
+        .orders-table tfoot td.tfoot-spacer { padding: 0; background: var(--bg-color) !important; }
         .indicator-pill { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
         .indicator-pill.completed { background: #dcfce7; color: #166534; }
+        .indicator-pill.closed { background: #f1f5f9; color: #475569; }
         .indicator-pill.on-hold { background: #fef3c7; color: #92400e; }
+        .indicator-pill.to-deliver { background: #e0f2fe; color: #0369a1; }
         .indicator-pill.to-deliver-and-bill { background: #dbeafe; color: #1e40af; }
+        .indicator-pill.to-bill { background: #fae8ff; color: #86198f; }
+        .indicator-pill.cancelled { background: #fee2e2; color: #991b1b; }
         .pct-badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; }
         .pct-badge.full { background: #10b981; color: white; }
         .pct-badge.partial { background: #f59e0b; color: white; }
@@ -234,6 +308,78 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		const n = flt(val);
 		return n % 1 === 0 ? n.toFixed(0) : n.toFixed(2);
 	};
+
+	const is_open_order_line = (row) => {
+		const pending_qty = flt(
+			row.pending_qty != null ? row.pending_qty : flt(row.qty) - flt(row.delivered_qty)
+		);
+		return pending_qty > 0 || flt(row.net_total) > 0;
+	};
+
+	const ORDERS_COLGROUP_16 = `
+		<colgroup>
+			<col style="width:52px"><col style="width:172px"><col style="width:260px">
+			<col style="width:145px"><col style="width:240px">
+			<col style="width:112px"><col style="width:112px"><col style="width:172px">
+			<col style="width:92px"><col style="width:220px">
+			<col style="width:82px"><col style="width:82px">
+			<col style="width:100px"><col style="width:100px"><col style="width:100px">
+			<col style="width:145px">
+		</colgroup>`;
+
+	const ORDERS_COLGROUP_15 = `
+		<colgroup>
+			<col style="width:52px"><col style="width:172px"><col style="width:260px">
+			<col style="width:145px"><col style="width:240px">
+			<col style="width:112px"><col style="width:112px"><col style="width:172px">
+			<col style="width:220px">
+			<col style="width:82px"><col style="width:82px">
+			<col style="width:100px"><col style="width:100px"><col style="width:100px">
+			<col style="width:145px">
+		</colgroup>`;
+
+	const build_orders_footer_16 = (label, amount_cell_id) => `
+		<tfoot>
+			<tr>
+				<td class="col-sno"></td>
+				<td class="col-id"></td>
+				<td class="col-customer tfoot-label">${label}</td>
+				<td class="col-item-code tfoot-spacer"></td>
+				<td class="col-item-name tfoot-spacer"></td>
+				<td class="col-date tfoot-spacer"></td>
+				<td class="col-date tfoot-spacer"></td>
+				<td class="col-date-actual tfoot-spacer"></td>
+				<td class="col-days tfoot-spacer"></td>
+				<td class="col-status tfoot-spacer"></td>
+				<td class="col-pct tfoot-spacer"></td>
+				<td class="col-pct tfoot-spacer"></td>
+				<td class="col-qty tfoot-spacer"></td>
+				<td class="col-qty tfoot-spacer"></td>
+				<td class="col-qty tfoot-spacer"></td>
+				<td class="col-amt" id="${amount_cell_id}">₹ 0.00 M</td>
+			</tr>
+		</tfoot>`;
+
+	const build_orders_footer_15 = (label, amount_cell_id) => `
+		<tfoot>
+			<tr>
+				<td class="col-sno"></td>
+				<td class="col-id"></td>
+				<td class="col-customer tfoot-label">${label}</td>
+				<td class="col-item-code tfoot-spacer"></td>
+				<td class="col-item-name tfoot-spacer"></td>
+				<td class="col-date tfoot-spacer"></td>
+				<td class="col-date tfoot-spacer"></td>
+				<td class="col-date-actual tfoot-spacer"></td>
+				<td class="col-status tfoot-spacer"></td>
+				<td class="col-pct tfoot-spacer"></td>
+				<td class="col-pct tfoot-spacer"></td>
+				<td class="col-qty tfoot-spacer"></td>
+				<td class="col-qty tfoot-spacer"></td>
+				<td class="col-qty tfoot-spacer"></td>
+				<td class="col-amt" id="${amount_cell_id}">₹ 0.00 M</td>
+			</tr>
+		</tfoot>`;
 
 	const download_base64_file = (fileinfo, mime_type) => {
 		if (!fileinfo || !fileinfo.filecontent) {
@@ -447,6 +593,13 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 
 		// Month-Wise Booking Table
 		let months = data.months || [];
+		const month_table_width = 60 + 250 + months.length * 120 + 120;
+		const month_colgroup = `
+			<colgroup>
+				<col style="width:60px"><col style="width:250px">
+				${months.map(() => '<col style="width:120px">').join("")}
+				<col style="width:120px">
+			</colgroup>`;
 		let month_table_card = $(`
             <div class="table-card">
                 <div class="header">
@@ -457,20 +610,22 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						</button>
 					</div>
 				</div>
-                <div style="overflow: auto; max-height: 500px;">
-                    <table class="dashboard-table month-table" id="month_wise_table">
+                <div class="dashboard-table-scroll" style="max-height: 500px;">
+                    <table class="dashboard-table month-table" id="month_wise_table" style="width:${month_table_width}px;">
+                        ${month_colgroup}
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
-                                <th class="col-customer sortable-header" data-table="month" data-field="customer" style="width: 250px; cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer sortable-header" data-table="month" data-field="customer" style="cursor: pointer; user-select: none;">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
                                 ${months.map(m => `<th class="col-amt sortable-header" data-table="month" data-field="${m.key}" style="cursor: pointer; user-select: none;">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
                                 <th class="col-amt sortable-header" data-table="month" data-field="total" style="font-weight: 800; cursor: pointer; user-select: none;">Total (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="month_wise_body"></tbody>
                         <tfoot>
-                            <tr style="background: var(--bg-color); font-weight: 800;">
-                                <td colspan="2" style="text-align: right;">GRAND TOTAL</td>
+                            <tr>
+                                <td class="col-sno"></td>
+                                <td class="col-customer">${__("GRAND TOTAL")}</td>
                                 ${months.map(m => `<td class="col-amt" id="total_${m.sort}">0.00 M</td>`).join("")}
                                 <td class="col-amt" id="grand_total_all">0.00 M</td>
                             </tr>
@@ -494,7 +649,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					</div>
 				</div>
                 <div class="dashboard-table-scroll">
-                    <table class="dashboard-table orders-table due-table" id="due_15_days_table">
+                    <table class="dashboard-table orders-table due-table" id="due_15_days_table" style="width:2058px;">
+                        ${ORDERS_COLGROUP_16}
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
@@ -516,12 +672,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                             </tr>
                         </thead>
                         <tbody id="due_body"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="15" style="text-align: right; font-weight: 800;">TOTAL DUE VALUE</td>
-                                <td id="total_due_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
-                            </tr>
-                        </tfoot>
+                        ${build_orders_footer_16(__("TOTAL DUE VALUE"), "total_due_value")}
                     </table>
                 </div>
             </div>
@@ -544,7 +695,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					</div>
 				</div>
                 <div class="dashboard-table-scroll">
-                    <table class="dashboard-table orders-table" id="detailed_orders_table">
+                    <table class="dashboard-table orders-table detailed-table" id="detailed_orders_table" style="width:1966px;">
+                        ${ORDERS_COLGROUP_15}
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
@@ -565,12 +717,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                             </tr>
                         </thead>
                         <tbody id="so_list_body"></tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="15" style="text-align: right; font-weight: 800;">TOTAL BOOKED VALUE</td>
-                                <td id="total_booked_value" style="text-align: right; font-weight: 800;">₹ 0.00 M</td>
-                            </tr>
-                        </tfoot>
+                        ${build_orders_footer_15(__("TOTAL BOOKED VALUE"), "total_booked_value")}
                     </table>
                 </div>
             </div>
@@ -630,7 +777,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		};
 
 		const render_due_table = () => {
-			let sorted_data = [...(data.due_next_15_days || [])];
+			let sorted_data = [...(data.due_next_15_days || [])].filter(is_open_order_line);
 			sorted_data.sort((a, b) => {
 				let val_a = a[due_sort.field];
 				let val_b = b[due_sort.field];
@@ -691,7 +838,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		};
 
 		const render_detailed_table = () => {
-			let sorted_data = [...(data.results || [])];
+			let sorted_data = [...(data.results || [])].filter(is_open_order_line);
 			sorted_data.sort((a, b) => {
 				let val_a = a[detailed_sort.field];
 				let val_b = b[detailed_sort.field];
@@ -1033,5 +1180,21 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         $form.remove();
     }
 
-	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
+	frappe.call({
+		method: "frappe.client.get_value",
+		args: {
+			doctype: "Fiscal Year",
+			filters: { year_start_date: ["<=", frappe.datetime.get_today()], year_end_date: [">=", frappe.datetime.get_today()] },
+			fieldname: "name"
+		},
+		callback: function (r) {
+			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
+		},
+		always: function() { 
+			setTimeout(() => {
+				page.refresh();
+				setTimeout(() => page.refresh(), 500);
+			}, 300);
+		}
+	});
 };
