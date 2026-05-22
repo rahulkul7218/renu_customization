@@ -741,6 +741,28 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         }
     </style>`).appendTo(page.main);
 
+	const build_invoice_list_footer_row = (total_qty, total_amt) => {
+		const empty_td = (cls = "") =>
+			`<td class="${cls}" style="background: #f8fafc !important;"></td>`;
+		return `
+            <tr class="sticky-total">
+                ${empty_td()}
+                ${empty_td("invoice-id-col")}
+                ${empty_td("date-col")}
+                ${empty_td("type-col")}
+                ${empty_td("invoice-type-col")}
+                ${empty_td("status-col")}
+                ${empty_td("customer-col")}
+                ${empty_td("customer-group-col")}
+                ${empty_td("item-col")}
+                <td class="sp-col" style="text-align: right; font-weight: 700; background: #f8fafc !important;">${__("Total")}</td>
+                ${empty_td("item-group-col")}
+                <td class="qty-col" style="font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
+                <td class="amount-col" style="font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
+            </tr>
+        `;
+	};
+
 	function format_currency_short(num, fieldtype, force_precision = false) {
 		if (!num && num !== 0) return "₹ 0.00 M";
 		if (fieldtype === "Int") return num;
@@ -759,6 +781,57 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 	}
 
 	let current_dashboard_data = null;
+
+	const PDF_EXPORT_TABLE_CSS = `
+		table.pdf-export-table {
+			width: 100%; border-collapse: collapse; font-size: 6.5px;
+			table-layout: fixed; page-break-inside: auto; margin-top: 10px;
+		}
+		table.pdf-export-table th, table.pdf-export-table td {
+			border: 1px solid #cbd5e1; padding: 3px 4px; word-wrap: break-word;
+			overflow-wrap: break-word; vertical-align: top;
+			position: static !important; bottom: auto !important; top: auto !important;
+			left: auto !important; right: auto !important; box-shadow: none !important;
+		}
+		table.pdf-export-table thead { display: table-header-group; }
+		table.pdf-export-table thead th { background: #f1f5f9 !important; font-weight: 700; }
+		table.pdf-export-table tbody tr { page-break-inside: auto !important; }
+		table.pdf-export-table tr.sticky-total { page-break-inside: avoid !important; }
+		table.pdf-export-table tr.sticky-total td { background: #f8fafc !important; font-weight: 700; }
+		table.pdf-export-table .month-col, table.pdf-export-table .total-col,
+		table.pdf-export-table .qty-col, table.pdf-export-table .amount-col { text-align: right !important; }
+	`;
+
+	const prepare_table_html_for_pdf = ($table) => {
+		if (!$table || !$table.length) {
+			return "";
+		}
+		const $clone = $table.first().clone();
+		$clone.addClass("pdf-export-table").removeAttr("style").css({ width: "100%" });
+		$clone.find("colgroup").remove();
+		$clone.find("a").each(function () {
+			$(this).replaceWith(document.createTextNode($(this).text()));
+		});
+		$clone.find("i.fa").remove();
+		$clone.find(".indicator-pill, .pct-badge, .delivery-actual").each(function () {
+			$(this).replaceWith($(this).text());
+		});
+		$clone.find("th, td").each(function () {
+			const $el = $(this);
+			let style = ($el.attr("style") || "")
+				.replace(/position\s*:\s*(sticky|relative|fixed|absolute)[^;]*/gi, "")
+				.replace(/\b(bottom|top|left|right)\s*:\s*[^;]*/gi, "")
+				.replace(/z-index\s*:\s*[^;]*/gi, "")
+				.replace(/box-shadow\s*:\s*[^;]*/gi, "");
+			style = style.replace(/;\s*;/g, ";").trim();
+			if (style) {
+				$el.attr("style", style);
+			} else {
+				$el.removeAttr("style");
+			}
+		});
+		return $clone[0].outerHTML;
+	};
 
 	const export_pdf = async () => {
 		if (!current_dashboard_data || !current_dashboard_data.summary) {
@@ -938,15 +1011,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					.pdf-legend-label { font-size: 9px; font-weight: 700; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 					.pdf-legend-val { font-size: 8px; color: #64748b; }
 
-					table { width: 100%; border-collapse: collapse; font-size: 8px; border: 1px solid #e2e8f0; table-layout: fixed; }
-					th, td { border: 1px solid #e2e8f0; padding: 5px 8px; text-align: left; word-wrap: break-word; }
-					thead th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
-					
-					.month-revenue-table, .invoice-list-table { margin-top: 10px; page-break-inside: auto; }
-					.month-revenue-table tr, .invoice-list-table tr { page-break-inside: avoid; }
-					
-					.total-col { font-weight: 700; text-align: right; }
-					.sticky-total td { font-weight: 800; background: #f8fafc !important; }
+					${PDF_EXPORT_TABLE_CSS}
 					
 					.page-break { page-break-after: always; }
 					.clear { clear: both; }
@@ -994,31 +1059,28 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 				<div class="page-break"></div>
 				<h3 class="section-title">Month-Wise Revenue Breakdown (M INR)</h3>
-				<table class="month-revenue-table">
-					<thead>${page.container.find("#consolidated_table thead").html() || ""}</thead>
-					<tbody>${page.container.find("#consolidated_table_body").html() || ""}</tbody>
-				</table>
+				${prepare_table_html_for_pdf(page.container.find("#consolidated_table")) || "<p>No data</p>"}
 
 				<div class="page-break"></div>
 				<h3 class="section-title">Detailed Sales Invoices List (M INR)</h3>
-				<table class="invoice-list-table">
-					<thead>${page.container.find("#invoice_list_table thead").html() || ""}</thead>
-					<tbody>${page.container.find("#invoice_table_body").html() || ""}</tbody>
-				</table>
+				${prepare_table_html_for_pdf(page.container.find("#invoice_list_table")) || "<p>No data</p>"}
 
 			</body>
 			</html>
 		`;
 
 		const method_url = "/api/method/renu_customization.renu_customization.page.sales_revenue_dashboard.sales_revenue_dashboard.export_to_pdf";
-		const $form = $(`<form action="${method_url}" method="POST" style="display:none;">
+		const iframe_name = `sales_revenue_pdf_${Date.now()}`;
+		$(`<iframe name="${iframe_name}" style="display:none;"></iframe>`).appendTo("body");
+		const $form = $(`<form action="${method_url}" method="POST" target="${iframe_name}" style="display:none;">
 			<input type="hidden" name="html" value="">
 			<input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
 		</form>`).appendTo("body");
 
 		$form.find('input[name="html"]').val(html);
-		$form.submit();
-		$form.remove();
+		$form[0].submit();
+		setTimeout(() => $form.remove(), 5000);
+		frappe.show_alert({ message: __("PDF download started"), indicator: "green" });
 	};
 
 
@@ -1219,6 +1281,21 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                 </div>
                 <div class="table-container invoice-list-container">
                     <table class="dashboard-table" id="invoice_list_table">
+                        <colgroup>
+                            <col style="width:40px">
+                            <col style="width:130px">
+                            <col style="width:120px">
+                            <col style="width:100px">
+                            <col style="width:180px">
+                            <col style="width:110px">
+                            <col style="width:200px">
+                            <col style="width:150px">
+                            <col style="width:280px">
+                            <col style="width:150px">
+                            <col style="width:180px">
+                            <col style="width:80px">
+                            <col style="width:140px">
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th style="width: 40px; text-align: center;">S.No.</th>
@@ -1531,13 +1608,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
                     `);
 				});
 
-				tbody_detail.append(`
-                    <tr class="sticky-total">
-                        <td colspan="12" style="text-align: right; font-weight: 700;">Total</td>
-                        <td class="qty-col" style="font-weight: 700; white-space: nowrap;">${frappe.format(total_qty, { fieldtype: "Float" })}</td>
-                        <td class="amount-col" style="font-weight: 700; color: var(--primary); white-space: nowrap;">${format_currency_short(total_amt)}</td>
-                    </tr>
-                `);
+				tbody_detail.append(build_invoice_list_footer_row(total_qty, total_amt));
 			}
 
 			// Restore/Update Month Table active sort icon in DOM
