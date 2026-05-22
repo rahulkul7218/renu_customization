@@ -25,10 +25,9 @@ def export_to_pdf(html=None, orientation="Landscape"):
 
     pdf_content = frappe.utils.pdf.get_pdf(html, options)
 
-    return {
-        "filename": f"Customer_Performance_{nowdate()}.pdf",
-        "filecontent": base64.b64encode(pdf_content).decode(),
-    }
+    frappe.local.response.filename = f"Customer_Performance_{nowdate()}.pdf"
+    frappe.local.response.filecontent = pdf_content
+    frappe.local.response.type = "download"
 
 def _parse_group_concat_dates(dates_str):
     if not dates_str:

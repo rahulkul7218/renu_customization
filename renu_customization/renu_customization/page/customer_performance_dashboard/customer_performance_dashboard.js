@@ -9,7 +9,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
     page.add_menu_item(__("Export to Excel"), () => export_data_excel("all"));
-    page.add_menu_item(__("Export to PDF"), () => export_pdf_full());
+    page.add_menu_item(__("Export to PDF"), () => page.export_pdf_full && page.export_pdf_full());
 
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
 
@@ -1152,20 +1152,27 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
             </html>
         `;
 
-        frappe.call({
-            method: "renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.export_to_pdf",
-            args: { html: html },
-            callback(r) {
-                if (r.message) {
-                    download_base64_file(r.message, "application/pdf");
-                    frappe.show_alert({ message: __("PDF downloaded"), indicator: "green" });
-                }
-            },
-            error(r) {
-                frappe.msgprint(r.message || __("PDF export failed"));
-            },
-        });
+        const iframe_name = `customer_pdf_export_${Date.now()}`;
+        $(`<iframe name="${iframe_name}" style="display:none;"></iframe>`).appendTo("body");
+
+        const $form = $(`
+            <form method="POST"
+                action="/api/method/renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.export_to_pdf"
+                target="${iframe_name}"
+                style="display:none;">
+                <input type="hidden" name="html" value="">
+                <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
+            </form>
+        `).appendTo("body");
+
+        $form.find('input[name="html"]').val(html);
+        $form[0].submit();
+
+        setTimeout(() => $form.remove(), 5000);
+        frappe.show_alert({ message: __("PDF download started"), indicator: "green" });
     }
+
+    page.export_pdf_full = export_pdf_full;
 
 	frappe.call({
 		method: "frappe.client.get_value",
