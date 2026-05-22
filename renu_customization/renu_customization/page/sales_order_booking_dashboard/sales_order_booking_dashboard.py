@@ -10,7 +10,21 @@ import json
 
 @frappe.whitelist()
 def export_to_pdf(html):
-    pdf_content = frappe.utils.pdf.get_pdf(html, {"orientation": "Landscape"})
+    if not html:
+        frappe.throw(_("PDF content is empty"))
+
+    pdf_options = {
+        "page-size": "A4",
+        "orientation": "Landscape",
+        "margin-top": "8mm",
+        "margin-right": "8mm",
+        "margin-bottom": "8mm",
+        "margin-left": "8mm",
+        "encoding": "UTF-8",
+        "no-outline": None,
+    }
+
+    pdf_content = frappe.utils.pdf.get_pdf(html, pdf_options)
     frappe.local.response.filename = f"Sales_Order_Dashboard_{frappe.utils.nowdate()}.pdf"
     frappe.local.response.filecontent = pdf_content
     frappe.local.response.type = "download"
