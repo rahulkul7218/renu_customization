@@ -399,6 +399,60 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		window.URL.revokeObjectURL(link.href);
 	};
 
+	const PDF_COL_WIDTHS = {
+		"col-sno": "3%",
+		"col-id": "8%",
+		"col-customer": "11%",
+		"col-item-code": "8%",
+		"col-item-name": "13%",
+		"col-date": "6%",
+		"col-date-actual": "8%",
+		"col-days": "5%",
+		"col-status": "9%",
+		"col-pct": "4%",
+		"col-qty": "4%",
+		"col-amt": "7%",
+	};
+
+	const clone_table_html_for_pdf = ($table) => {
+		if (!$table || !$table.length) {
+			return "";
+		}
+		const $clone = $table.clone();
+		$clone.addClass("export-pdf-table");
+		$clone.removeAttr("style").css({ width: "100%" });
+		$clone.find("a").each(function () {
+			const text = $(this).text();
+			$(this).replaceWith(document.createTextNode(text));
+		});
+		$clone.find("i.fa").remove();
+		$clone.find(".indicator-pill, .pct-badge, .delivery-actual").each(function () {
+			$(this).replaceWith($(this).text());
+		});
+
+		const $colgroup = $("<colgroup></colgroup>");
+		$clone.find("thead tr").first().find("th").each(function () {
+			const col_class = [...this.classList].find((c) => c.startsWith("col-")) || "col-date";
+			const width = PDF_COL_WIDTHS[col_class] || "5%";
+			$colgroup.append(`<col style="width:${width}">`);
+		});
+		$clone.find("colgroup").remove();
+		if ($colgroup.children().length) {
+			$clone.prepend($colgroup);
+		}
+
+		// wkhtmltopdf often drops <tfoot> on long tables — append footer rows to tbody
+		const $tbody = $clone.find("tbody");
+		$clone.find("tfoot tr").each(function () {
+			const $row = $(this).clone().addClass("pdf-total-row");
+			$row.find("td, th").css({ "font-weight": "800", "background": "#e2e8f0" });
+			$tbody.append($row);
+		});
+		$clone.find("tfoot").remove();
+
+		return $clone[0].outerHTML;
+	};
+
 	const build_donut_chart_png = (chart_obj, size = 320) => {
 		const values = (chart_obj?.data?.datasets || [{}])[0]?.values || [];
 		const colors = chart_obj?.colors || ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#06b6d4"];
@@ -725,6 +779,12 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 
 		let tbody = table_card.find("#so_list_body");
 
+		page.export_tables = {
+			month: month_table_card.find("table"),
+			due: due_table_card.find("table"),
+			detailed: table_card.find("table"),
+		};
+
 		// State variables for sorting
 		let month_sort = { field: "customer", asc: true };
 		let due_sort = { field: "due_days", asc: true };
@@ -981,18 +1041,37 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 	}
 
     async function export_pdf_full() {
-        frappe.show_alert({message: __("Preparing professional PDF export with visual legends..."), indicator: "blue"});
-        
+        frappe.show_alert({ message: __("Preparing PDF export..."), indicator: "blue" });
+
         const data = page.dashboard_data;
-        if (!data) return;
+        if (
+            !data ||
+            (
+                !(data.results || []).length &&
+                !(data.due_next_15_days || []).length &&
+                !(data.month_wise_customer || []).length
+            )
+        ) {
+            frappe.msgprint(__("No data to export. Refresh the dashboard and try again."));
+            return;
+        }
 
         const chart_images = await capture_charts_for_pdf(data.charts);
 
         const report_date = frappe.datetime.global_date_format(frappe.datetime.now_date());
         const filters = page.filter_group.get_values();
-        const period = `${frappe.datetime.str_to_user(filters.from_date || '')} to ${frappe.datetime.str_to_user(filters.to_date || '')}`;
+        const period = `${frappe.datetime.str_to_user(filters.from_date || "")} to ${frappe.datetime.str_to_user(filters.to_date || "")}`;
 
-        let html = `
+        const kpi_border_color = (indicator) => {
+            const colors = { green: "#10b981", red: "#ef4444", orange: "#f59e0b", blue: "#3b82f6" };
+            return colors[(indicator || "blue").toLowerCase()] || colors.blue;
+        };
+
+        const month_table_html = clone_table_html_for_pdf(page.export_tables?.month);
+        const due_table_html = clone_table_html_for_pdf(page.export_tables?.due);
+        const detailed_table_html = clone_table_html_for_pdf(page.export_tables?.detailed);
+
+        const html = `
             <html>
             <head>
                 <style>
@@ -1019,17 +1098,21 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                     .legend-name { font-weight: 700; color: #1e293b; display: block; }
                     .legend-val { color: #64748b; font-size: 6.5px; display: block; }
 
-                    table { width: 100%; border-collapse: collapse; font-size: 9px; margin-bottom: 20px; table-layout: fixed; }
-                    th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; word-wrap: break-word; overflow: hidden; }
-                    th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; }
-                    .col-amt { text-align: right; width: 10%; }
-                    .col-sno { width: 4%; text-align: center; }
-                    .col-id { width: 11%; }
-                    .col-customer { width: 22%; }
-                    .col-date { width: 10%; }
-                    .col-status { width: 12%; }
-                    .col-pct { width: 6%; text-align: center; }
-                    .col-days { width: 7%; text-align: center; }
+                    table.export-pdf-table { width: 100%; border-collapse: collapse; font-size: 7px; margin-bottom: 20px; table-layout: fixed; page-break-inside: auto; }
+                    .export-pdf-table th, .export-pdf-table td { border: 1px solid #cbd5e1; padding: 4px 5px; text-align: left; word-wrap: break-word; overflow-wrap: break-word; vertical-align: top; }
+                    .export-pdf-table th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: none; font-size: 6.5px; }
+                    .export-pdf-table thead { display: table-header-group; }
+                    .export-pdf-table tfoot { display: table-row-group; }
+                    .export-pdf-table .col-sno { text-align: center; }
+                    .export-pdf-table .col-id { word-break: break-all; }
+                    .export-pdf-table .col-customer { white-space: normal; line-height: 1.2; }
+                    .export-pdf-table .col-item-code { word-break: break-all; }
+                    .export-pdf-table .col-item-name { white-space: normal; line-height: 1.25; }
+                    .export-pdf-table .col-date, .export-pdf-table .col-date-actual { white-space: nowrap; font-size: 6.5px; }
+                    .export-pdf-table .col-days, .export-pdf-table .col-pct, .export-pdf-table .col-qty { text-align: center; white-space: nowrap; }
+                    .export-pdf-table .col-amt { text-align: right; white-space: nowrap; }
+                    .export-pdf-table .col-status { white-space: normal; line-height: 1.2; font-size: 6px; }
+                    .export-pdf-table .pdf-total-row td { background: #e2e8f0 !important; font-weight: 800 !important; border-top: 2px solid #94a3b8 !important; }
                     .text-danger { color: #ef4444 !important; }
                     .page-break { page-break-after: always; }
                 </style>
@@ -1041,12 +1124,12 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                 </div>
 
                 <div class="kpi-row">
-                    ${data.summary.map(m => `
-                        <div class="kpi-card" style="border-left-color: ${m.indicator === 'Green' ? '#10b981' : (m.indicator === 'Red' ? '#ef4444' : '#3b82f6')}">
+                    ${data.summary.map((m) => `
+                        <div class="kpi-card" style="border-left-color: ${kpi_border_color(m.indicator)}">
                             <div class="kpi-label">${m.label}</div>
-                            <div class="kpi-value">${m.fieldtype === 'Currency' ? '₹ ' + (flt(m.value) / 1000000).toFixed(2) + ' M' : m.value}</div>
+                            <div class="kpi-value">${m.fieldtype === "Currency" ? "₹ " + (flt(m.value) / 1000000).toFixed(2) + " M" : m.value}</div>
                         </div>
-                    `).join('')}
+                    `).join("")}
                 </div>
 
                 <h3 class="section-title">Visual Analytics</h3>
@@ -1055,129 +1138,33 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                 </div>
 
                 <div class="page-break"></div>
-                <h3 class="section-title">Month-Wise Booking Breakdown </h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="col-sno">S.No.</th>
-                            <th class="col-customer">Customer</th>
-                            ${data.months.map(m => `<th class="col-amt">${m.key}</th>`).join("")}
-                            <th class="col-amt">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.month_wise_customer.map((row, idx) => `
-                            <tr>
-                                <td class="col-sno">${idx + 1}</td>
-                                <td class="col-customer">${row.customer}</td>
-                                ${data.months.map(m => `<td class="col-amt">₹ ${(flt(row.months[m.key] || 0) / 1000000).toFixed(2)}</td>`).join("")}
-                                <td class="col-amt">₹ ${(flt(row.total) / 1000000).toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                <h3 class="section-title">Month-Wise Booking Breakdown</h3>
+                ${month_table_html || "<p>No data</p>"}
 
                 <div class="page-break"></div>
-                <h3 class="section-title">Orders Due in Next 15 Days </h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="col-sno">S.No.</th>
-                            <th class="col-id">SO No</th>
-                            <th class="col-customer">Customer</th>
-                            <th>Item Code</th>
-                            <th>Item Name</th>
-                            <th class="col-date">Order Date</th>
-                            <th class="col-date">Expected Del.</th>
-                            <th class="col-date">Actual Del.</th>
-                            <th class="col-days">Days Left</th>
-                            <th class="col-status">Status</th>
-                            <th class="col-pct">% Del.</th>
-                            <th class="col-pct">% Bill.</th>
-                            <th class="col-pct">Order Qty</th>
-                            <th class="col-pct">Del. Qty</th>
-                            <th class="col-pct">Pending</th>
-                            <th class="col-amt">Net Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.due_next_15_days.map((row, idx) => `
-                            <tr>
-                                <td class="col-sno">${idx + 1}</td>
-                                <td class="col-id">${row.name}</td>
-                                <td class="col-customer">${row.customer}</td>
-                                <td>${row.item_code || "-"}</td>
-                                <td>${row.item_name || "-"}</td>
-                                <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
-                                <td class="col-date">${format_expected_cell(row)}</td>
-                                <td class="col-date">${format_actual_text(row)}</td>
-                                <td class="col-days">${row.due_days} Days</td>
-                                <td class="col-status">${row.status}</td>
-                                <td class="col-pct">${Math.round(row.per_delivered)}%</td>
-                                <td class="col-pct">${Math.round(row.per_billed)}%</td>
-                                <td class="col-pct">${format_qty(row.qty)}</td>
-                                <td class="col-pct">${format_qty(row.delivered_qty)}</td>
-                                <td class="col-pct">${format_qty(row.pending_qty)}</td>
-                                <td class="col-amt">₹ ${(flt(row.net_total) / 1000000).toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                <h3 class="section-title">Orders Due in Next 15 Days</h3>
+                ${due_table_html || "<p>No data</p>"}
 
+                <div class="page-break"></div>
                 <h3 class="section-title">Detailed Orders List</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th class="col-sno">S.No.</th>
-                            <th class="col-id">SO No</th>
-                            <th class="col-customer">Customer</th>
-                            <th>Item Code</th>
-                            <th>Item Name</th>
-                            <th class="col-date">Date</th>
-                            <th class="col-date">Expected Del.</th>
-                            <th class="col-date">Actual Del.</th>
-                            <th class="col-status">Status</th>
-                            <th class="col-pct">% Del.</th>
-                            <th class="col-pct">% Bill.</th>
-                            <th class="col-pct">Order Qty</th>
-                            <th class="col-pct">Del. Qty</th>
-                            <th class="col-pct">Pending</th>
-                            <th class="col-amt">Net Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${data.results.map((row, idx) => `
-                            <tr>
-                                <td class="col-sno">${idx + 1}</td>
-                                <td class="col-id">${row.name}</td>
-                                <td class="col-customer">${row.customer}</td>
-                                <td>${row.item_code || "-"}</td>
-                                <td>${row.item_name || "-"}</td>
-                                <td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
-                                <td class="col-date">${format_expected_cell(row)}</td>
-                                <td class="col-date">${format_actual_text(row)}</td>
-                                <td class="col-status">${row.status}</td>
-                                <td class="col-pct">${Math.round(row.per_delivered)}%</td>
-                                <td class="col-pct">${Math.round(row.per_billed)}%</td>
-                                <td class="col-pct">${format_qty(row.qty)}</td>
-                                <td class="col-pct">${format_qty(row.delivered_qty)}</td>
-                                <td class="col-pct">${format_qty(row.pending_qty)}</td>
-                                <td class="col-amt">₹ ${(flt(row.net_total) / 1000000).toFixed(2)}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                ${detailed_table_html || "<p>No data</p>"}
             </body>
             </html>
         `;
 
-        const $form = $(`<form action="/api/method/renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.export_to_pdf" method="POST" style="display:none;">
-            <input type="hidden" name="html" value="">
-            <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
-        </form>`).appendTo("body");
-        $form.find('input[name="html"]').val(html);
-        $form.submit();
-        $form.remove();
+        frappe.call({
+            method: "renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.export_to_pdf",
+            args: { html: html },
+            callback(r) {
+                if (r.message) {
+                    download_base64_file(r.message, "application/pdf");
+                    frappe.show_alert({ message: __("PDF downloaded"), indicator: "green" });
+                }
+            },
+            error(r) {
+                frappe.msgprint(r.message || __("PDF export failed"));
+            },
+        });
     }
 
 	frappe.call({
