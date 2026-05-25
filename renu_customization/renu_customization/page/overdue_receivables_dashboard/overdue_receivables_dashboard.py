@@ -163,6 +163,9 @@ def get_dashboard_data(filters=None):
 
         # Overdue Check & Min Days Filter
         due_date = getdate(row.get("due_date"))
+        # Due-date range filter – aligns with fiscal-year selection
+        if filters.get("from_date") and due_date and due_date < getdate(filters.get("from_date")): continue
+        if filters.get("to_date") and due_date and due_date > getdate(filters.get("to_date")): continue
         # Calculate Age (Days) based on Due Date
         if due_date:
             days_overdue = date_diff(report_date, due_date)
