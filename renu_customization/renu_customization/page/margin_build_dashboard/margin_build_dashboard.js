@@ -220,28 +220,18 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 			options: "Fiscal Year",
 			placeholder: __("Select Year"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "from_date",
 			label: __("From Date"),
 			fieldtype: "Date",
 			placeholder: __("Start Date"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "to_date",
 			label: __("To Date"),
 			fieldtype: "Date",
 			placeholder: __("End Date"),
 		},
-		{ fieldtype: "Column Break" },
-		{
-			fieldname: "to_date",
-			label: __("To Date"),
-			fieldtype: "Date",
-			placeholder: __("End Date"),
-		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "customer_group",
 			label: __("Customer Group"),
@@ -249,7 +239,6 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 			options: "Customer Group",
 			placeholder: __("Select Customer Group"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "customer",
 			label: __("Customer"),
@@ -257,7 +246,6 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 			options: "Customer",
 			placeholder: __("Select Customer"),
 		},
-		{ fieldtype: "Column Break" },
 		{
 			fieldname: "type",
 			label: __("Type"),
@@ -301,6 +289,51 @@ frappe.pages["margin_build_dashboard"].on_page_load = function (wrapper) {
 	$("<style>")
 		.text(
 			`
+		.dashboard-filter-area {
+			padding: 15px 20px 5px 20px !important;
+			background-color: #fff !important;
+			border-bottom: 1px solid #e2e8f0 !important;
+		}
+		.dashboard-filter-area .form-section .section-body,
+		.dashboard-filter-area .section-body,
+		.dashboard-filter-area .form-column {
+			display: block !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .form-column form {
+			display: flex !important;
+			flex-wrap: wrap !important;
+			gap: 15px !important;
+			align-items: flex-end !important;
+		}
+		.dashboard-filter-area .frappe-control[data-fieldtype="Column Break"],
+		.dashboard-filter-area .frappe-control[data-fieldtype="Section Break"] {
+			display: none !important;
+		}
+		.dashboard-filter-area .frappe-control {
+			margin-bottom: 10px !important;
+			width: calc(25% - 12px) !important;
+		}
+		.dashboard-filter-area .frappe-control .form-group {
+			margin-bottom: 0 !important;
+			width: 100% !important;
+		}
+		.dashboard-filter-area .control-input,
+		.dashboard-filter-area .awesomplete,
+		.dashboard-filter-area input,
+		.dashboard-filter-area select {
+			width: 100% !important;
+			max-width: 100% !important;
+		}
+		.dashboard-filter-area label,
+		.dashboard-filter-area .control-label {
+			font-size: 12px !important;
+			font-weight: 600 !important;
+			color: #475569 !important;
+			margin-bottom: 6px !important;
+			display: block !important;
+			white-space: nowrap !important;
+		}
             .sticky-total td { 
                 position: sticky; 
                 bottom: 0; 

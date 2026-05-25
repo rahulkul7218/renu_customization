@@ -259,11 +259,51 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		};
 	}
 
+	if (page.filter_group.fields_dict.item_group) {
+		page.filter_group.fields_dict.item_group.get_query = function () {
+			return {
+				filters: {
+					parent_item_group: "All Item Groups"
+				}
+			};
+		};
+
+		page.filter_group.fields_dict.item_group.on_change = function () {
+			let val = this.get_value();
+			if (val) {
+				frappe.db.get_value("Item Group", val, ["lft", "rgt"]).then((r) => {
+					if (r && r.message) {
+						frappe.db.get_list("Item Group", {
+							filters: [
+								["lft", ">=", r.message.lft],
+								["rgt", "<=", r.message.rgt]
+							],
+							fields: ["name"],
+							limit: 1000
+						}).then((list) => {
+							if (!page.filter_group._item_group_children) {
+								page.filter_group._item_group_children = {};
+							}
+							page.filter_group._item_group_children[val] = list.map(d => d.name);
+						});
+					}
+				});
+			}
+			page.refresh();
+		};
+	}
+
 	if (page.filter_group.fields_dict.item_code) {
 		page.filter_group.fields_dict.item_code.get_query = function () {
 			let filters = {};
 			let item_group = page.filter_group.get_value("item_group");
-			if (item_group) filters.item_group = item_group;
+			if (item_group) {
+				if (page.filter_group._item_group_children && page.filter_group._item_group_children[item_group]) {
+					filters.item_group = ["in", page.filter_group._item_group_children[item_group]];
+				} else {
+					filters.item_group = item_group;
+				}
+			}
 			let item_type = page.filter_group.get_value("item_type");
 			if (item_type) filters.item_type = item_type;
 			return { filters: filters };
