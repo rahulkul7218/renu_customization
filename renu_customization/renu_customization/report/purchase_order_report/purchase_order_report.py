@@ -212,7 +212,7 @@ def get_data(filters):
             poi.qty AS order_quantity,
             IFNULL(poi.received_qty, 0) AS delivered_qty,
             IFNULL(poi.returned_qty, 0) AS returned_qty,
-            (poi.qty - IFNULL(poi.received_qty, 0)) AS open_qty,
+            IFNULL(poi.open_qty, 0) AS open_qty,
             poi.rate AS item_rate,
             po.currency AS currency,
             po.conversion_rate AS exchange_rate,
