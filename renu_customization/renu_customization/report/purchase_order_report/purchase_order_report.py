@@ -233,7 +233,7 @@ def get_data(filters):
        
         WHERE 1 = 1
         AND po.docstatus = 1
-        AND po.status NOT IN ('Draft', 'Cancelled')
+        AND po.status NOT IN ('Draft', 'Cancelled', 'Closed')
         
         {conditions}
 
