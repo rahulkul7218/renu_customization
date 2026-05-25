@@ -22,37 +22,133 @@ def execute(filters=None):
 def get_columns():
     return [
         {"label": "name", "fieldname": "name", "fieldtype": "Data", "hidden": 1},
-        _("Supplier PO No.") + ":Link/Purchase Order:150",
-        _("Supplier PO Date") + ":Date:120",
+        {
+            "label": _("Supplier PO No."),
+            "fieldname": "supplier_po_no",
+            "fieldtype": "Link",
+            "options": "Purchase Order",
+            "width": 150
+        },
+        {
+            "label": _("Supplier PO Date"),
+            "fieldname": "supplier_po_date",
+            "fieldtype": "Date",
+            "width": 120
+        },
         {
             "label": _("Sr.No."),
             "fieldname": "sr_no",
             "fieldtype": "Int",
             "width": 70,
-            "disable_total": 1
+            "disable_total": True
         },
-        _("Linked SO No.") + ":Link/Sales Order:150",
-        _("SO Date") + ":Date:120",
-        _("Supplier Code") + ":Data:150",
-        _("Supplier Name") + ":Data:180",
-        _("Item Code") + ":Link/Item:120",
-        _("Item Name") + ":Data:180",
-        _("Order Quantity") + ":Float:130",
-        _("Delivered Qty") + ":Float:120",
-        _("Returned Qty") + ":Float:120",
-        _("Open Qty") + ":Float:120",
-        _("Item Rate") + ":Float:120",
-        _("Currency") + ":Link/Currency:100",
         {
-            "label": "Exchange Rate",
+            "label": _("Linked SO No."),
+            "fieldname": "linked_so_no",
+            "fieldtype": "Link",
+            "options": "Sales Order",
+            "width": 150
+        },
+        {
+            "label": _("SO Date"),
+            "fieldname": "so_date",
+            "fieldtype": "Date",
+            "width": 120
+        },
+        {
+            "label": _("Supplier Code"),
+            "fieldname": "supplier_code",
+            "fieldtype": "Data",
+            "width": 150
+        },
+        {
+            "label": _("Supplier Name"),
+            "fieldname": "supplier_name",
+            "fieldtype": "Data",
+            "width": 180
+        },
+        {
+            "label": _("Item Code"),
+            "fieldname": "item_code",
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 120
+        },
+        {
+            "label": _("Item Name"),
+            "fieldname": "item_name",
+            "fieldtype": "Data",
+            "width": 180
+        },
+        {
+            "label": _("Order Quantity"),
+            "fieldname": "order_quantity",
+            "fieldtype": "Float",
+            "width": 130
+        },
+        {
+            "label": _("Delivered Qty"),
+            "fieldname": "delivered_qty",
+            "fieldtype": "Float",
+            "width": 120
+        },
+        {
+            "label": _("Returned Qty"),
+            "fieldname": "returned_qty",
+            "fieldtype": "Float",
+            "width": 120
+        },
+        {
+            "label": _("Open Qty"),
+            "fieldname": "open_qty",
+            "fieldtype": "Float",
+            "width": 120
+        },
+        {
+            "label": _("Item Rate"),
+            "fieldname": "item_rate",
+            "fieldtype": "Float",
+            "width": 120,
+            "disable_total": True
+        },
+        {
+            "label": _("Currency"),
+            "fieldname": "currency",
+            "fieldtype": "Link",
+            "options": "Currency",
+            "width": 100
+        },
+        {
+            "label": _("Exchange Rate"),
             "fieldname": "exchange_rate",
             "fieldtype": "Float",
-            "disable_total": 1
+            "width": 120,
+            "disable_total": True
         },
-        _("Total Net Amount (INR)") + ":Float:180",
-        _("Delivered Net Total") + ":Float:180",
-        _("Balance Net Total") + ":Float:170",
-        _("Delivery Date") + ":Date:120",
+        {
+            "label": _("Total Net Amount (INR)"),
+            "fieldname": "total_net_amount_(inr)",
+            "fieldtype": "Float",
+            "width": 180
+        },
+        {
+            "label": _("Delivered Net Total"),
+            "fieldname": "delivered_net_total",
+            "fieldtype": "Float",
+            "width": 180
+        },
+        {
+            "label": _("Balance Net Total"),
+            "fieldname": "balance_net_total",
+            "fieldtype": "Float",
+            "width": 170
+        },
+        {
+            "label": _("Delivery Date"),
+            "fieldname": "delivery_date",
+            "fieldtype": "Data",
+            "width": 120
+        },
     ]
 
 
@@ -123,7 +219,13 @@ def get_data(filters):
             (poi.qty * poi.base_rate) AS `total_net_amount_(inr)`,
             (IFNULL(poi.received_qty, 0) * poi.base_rate) AS delivered_net_total,
             ((poi.qty - IFNULL(poi.received_qty, 0)) * poi.base_rate) AS balance_net_total,
-            poi.schedule_date AS delivery_date
+            (
+                SELECT GROUP_CONCAT(DISTINCT dn.posting_date ORDER BY dn.posting_date ASC SEPARATOR ', ')
+                FROM `tabDelivery Note` dn
+                JOIN `tabDelivery Note Item` dni ON dni.parent = dn.name
+                WHERE dni.against_sales_order = poi.sales_order
+                  AND dn.docstatus = 1
+            ) AS delivery_date
 
         FROM `tabPurchase Order` po
         INNER JOIN `tabPurchase Order Item` poi ON poi.parent = po.name
@@ -155,6 +257,9 @@ def download_xlsx(filters=None, include_filters=1):
     if not isinstance(filters, dict):
         filters = {}
 
+    import copy
+    original_filters = copy.deepcopy(filters)
+
     include_filters = frappe.utils.cint(filters.get("include_filters", include_filters))
 
     if include_filters:
@@ -179,21 +284,37 @@ def download_xlsx(filters=None, include_filters=1):
     full_name = frappe.db.get_value("User", frappe.session.user, "full_name")
     ws["B3"].value = full_name or frappe.session.user
 
-    row_idx = 4
-    if filters:
-        for key, val in filters.items():
-            if not val or key in ["include_filters", "report_name", "current_datetime"]:
-                continue
+    row_idx = 5
+    if original_filters:
+        valid_keys = ["status", "po_no", "from_date", "to_date", "supplier_name", "item_code", "currency"]
+        active_filters = {}
+        for key, val in original_filters.items():
+            if val and key in valid_keys:
+                active_filters[key] = val
+                
+        if active_filters:
+            cell_title = ws.cell(row=row_idx, column=1, value="Filters Applied")
+            cell_title.font = Font(bold=True, size=11, color="1F497D")
+            ws.cell(row=row_idx, column=2, value="")
             
-            label = frappe.unscrub(key)
-            if isinstance(val, (list, tuple)):
-                val = ", ".join([str(v) for v in val])
-            
-            ws.cell(row=row_idx, column=1, value=label).font = Font(bold=True)
-            ws.cell(row=row_idx, column=2, value=str(val))
+            fill_light_grey = PatternFill(start_color="F2F2F2", fill_type="solid")
+            cell_title.fill = fill_light_grey
+            ws.cell(row=row_idx, column=2).fill = fill_light_grey
             row_idx += 1
-    
-    row_idx += 1
+            
+            for key, val in active_filters.items():
+                label = frappe.unscrub(key)
+                if isinstance(val, (list, tuple)):
+                    val = ", ".join([str(v) for v in val])
+                
+                c_lbl = ws.cell(row=row_idx, column=1, value=f"  {label}:")
+                c_lbl.font = Font(bold=True, color="595959")
+                
+                c_val = ws.cell(row=row_idx, column=2, value=str(val))
+                c_val.font = Font(color="000000")
+                row_idx += 1
+            
+            row_idx += 1
 
     keep_indices = []
     filtered_columns = []
@@ -221,11 +342,15 @@ def download_xlsx(filters=None, include_filters=1):
     for i, col in enumerate(columns):
         label = col["label"] if isinstance(col, dict) else col.split(":")[0]
         f_type = col.get("fieldtype") if isinstance(col, dict) else (col.split(":")[1] if ":" in col else "")
+        fieldname = col.get("fieldname") if isinstance(col, dict) else ""
+        disable_total = col.get("disable_total") if isinstance(col, dict) else 0
         
         if f_type in ["Float", "Int", "Currency", "Percent"]:
             numeric_index_map[i] = True
             
-        if label in ["Supplier PO Date", "SO Date", "Delivery Date", "Item Rate", "Currency", "Exchange Rate"]:
+        if (fieldname in ["item_rate", "exchange_rate", "sr_no"] or 
+            disable_total or 
+            label in ["Supplier PO Date", "SO Date", "Delivery Date", "Item Rate", "Currency", "Exchange Rate"]):
             no_total_index_set.add(i)
 
     for row in data:

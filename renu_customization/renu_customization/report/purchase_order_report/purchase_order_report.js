@@ -136,4 +136,17 @@ frappe.dom.set_style(`
     [data-fieldname="balance_net_total"] {
         text-align: right !important;
     }
+
+    /* Hide totals for Item Rate and Exchange Rate */
+    .slick-footer-row [data-fieldname="item_rate"],
+    .slick-footer-row [data-fieldname="exchange_rate"],
+    .slick-footer-row .cell-item_rate,
+    .slick-footer-row .cell-exchange_rate,
+    .dt-row-total [data-fieldname="item_rate"],
+    .dt-row-total [data-fieldname="exchange_rate"],
+    .dt-total-row [data-fieldname="item_rate"],
+    .dt-total-row [data-fieldname="exchange_rate"] {
+        color: transparent !important;
+        font-size: 0 !important;
+    }
 `);
