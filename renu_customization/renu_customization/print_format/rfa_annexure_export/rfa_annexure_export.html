@@ -147,7 +147,7 @@
 
       <tr class="data-row">
 
-        <td class="label-col">6. (a) Name of Commissionerate/Division/Range<br><br />(b) Location Code</td>
+        <td class="label-col">6. (a) Name of Commissionerate/Division/Range<br>(b) Location Code</td>
         <td class="val-col">{{ doc.commissionerate_detail or "Customs Pune / Pune Customs Div. / Customs Facilitation
           Range Jejuri" }}<br>{{""}}</td>
 
@@ -157,12 +157,13 @@
       <tr class="data-row">
 
         <td class="label-col">
-          7. Particulars of Export Invoice<br />
-          (a) Export Invoice No.<br /><br />
-          (b) Total No. of packages<br /><br />
+          7. Particulars of Export Invoice<br>
+          (a) Export Invoice No.<br>
+          (b) Total No. of packages<br>
           (c) Name and Address of the consignee abroad
         </td>
         <td class="val-col">
+          <br>
           {{ doc.name }} &nbsp;&nbsp;&nbsp;{{ frappe.utils.formatdate(doc.posting_date) }}<br>
           {{ ns.total_boxes or doc.total_packages or doc.total_qty or 0 }}<br>
           {{ doc.shipping_address }}
@@ -212,7 +213,7 @@
     <table class="footer-table">
       <tr>
         <td class="footer-left">
-          <strong>For {{ company.company_name }}</strong><br><br><br>
+          <strong>For {{ company.company_name }}</strong><br><br>
           Authorised Signature of Exporter<br><br>
           <!-- <strong>{{ frappe.db.get_value("User", frappe.session.user, "full_name") or ""}}</strong><br>
           {{ doc.signatory_designation or "" }}<br> -->
