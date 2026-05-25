@@ -8,14 +8,13 @@ frappe.query_reports["Purchase Order Report"] = {
             fieldtype: "MultiSelectList",
             get_data: function (txt) {
                 const status_list = [
-                    "Draft",
                     "On Hold",
                     "To Receive and Bill",
                     "To Bill",
                     "To Receive",
                     "Completed",
-                    "Cancelled",
                     "Closed",
+                    "Delivered"
                 ];
 
                 return status_list
@@ -94,7 +93,7 @@ frappe.query_reports["Purchase Order Report"] = {
                 primary_action_label: __('Download'),
                 primary_action(values) {
                     frappe.call({
-                        method: "renu_customization.renu_customization.report.pending_po_report.pending_po_report.download_xlsx",
+                        method: "renu_customization.renu_customization.report.purchase_order_report.purchase_order_report.download_xlsx",
                         args: { filters },
                         callback(r) {
                             if (r.message) {
