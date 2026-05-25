@@ -220,11 +220,12 @@ def get_data(filters):
             (IFNULL(poi.received_qty, 0) * poi.base_rate) AS delivered_net_total,
             ((poi.qty - IFNULL(poi.received_qty, 0)) * poi.base_rate) AS balance_net_total,
             (
-                SELECT GROUP_CONCAT(DISTINCT dn.posting_date ORDER BY dn.posting_date ASC SEPARATOR ', ')
-                FROM `tabDelivery Note` dn
-                JOIN `tabDelivery Note Item` dni ON dni.parent = dn.name
-                WHERE dni.against_sales_order = poi.sales_order
-                  AND dn.docstatus = 1
+                SELECT GROUP_CONCAT(DISTINCT pr.posting_date ORDER BY pr.posting_date ASC SEPARATOR ', ')
+                FROM `tabPurchase Receipt` pr
+                JOIN `tabPurchase Receipt Item` pri ON pri.parent = pr.name
+                WHERE pri.purchase_order = po.name
+                  AND pri.item_code = poi.item_code
+                  AND pr.docstatus = 1
             ) AS delivery_date
 
         FROM `tabPurchase Order` po
