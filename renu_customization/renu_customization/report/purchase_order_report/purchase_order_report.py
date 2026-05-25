@@ -218,7 +218,7 @@ def get_data(filters):
             po.conversion_rate AS exchange_rate,
             (poi.qty * poi.base_rate) AS `total_net_amount_(inr)`,
             (IFNULL(poi.received_qty, 0) * poi.base_rate) AS delivered_net_total,
-            ((poi.qty - IFNULL(poi.received_qty, 0)) * poi.base_rate) AS balance_net_total,
+            (IFNULL(poi.open_qty, 0) * poi.rate * po.conversion_rate) AS balance_net_total,
             (
                 SELECT GROUP_CONCAT(DISTINCT pr.posting_date ORDER BY pr.posting_date ASC SEPARATOR ', ')
                 FROM `tabPurchase Receipt` pr
