@@ -642,6 +642,60 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
     </style>`).appendTo(page.main);
 
+	const PDF_EXPORT_TABLE_CSS = `
+		table.pdf-export-table {
+			width: 100%; border-collapse: collapse; font-size: 6.5px;
+			table-layout: fixed; page-break-inside: auto; margin-top: 10px;
+		}
+		table.pdf-export-table th, table.pdf-export-table td {
+			border: 1px solid #cbd5e1; padding: 3px 4px; word-wrap: break-word;
+			overflow-wrap: break-word; vertical-align: top;
+			position: static !important; bottom: auto !important; top: auto !important;
+			left: auto !important; right: auto !important; box-shadow: none !important;
+		}
+		table.pdf-export-table thead { display: table-header-group; }
+		table.pdf-export-table thead th { background: #f1f5f9 !important; font-weight: 700; }
+		table.pdf-export-table tbody tr { page-break-inside: auto !important; }
+		table.pdf-export-table tr.sticky-total { page-break-inside: avoid !important; }
+		table.pdf-export-table tr.sticky-total td { background: #f8fafc !important; font-weight: 700; }
+		table.pdf-export-table .month-col, table.pdf-export-table .total-col,
+		table.pdf-export-table .col-amt, table.pdf-export-table .total-net-col,
+		table.pdf-export-table .grand-total-col, table.pdf-export-table .lifecycle-total-col {
+			text-align: right !important; white-space: nowrap;
+		}
+	`;
+
+	const prepare_table_html_for_pdf = ($table) => {
+		if (!$table || !$table.length) {
+			return "";
+		}
+		const $clone = $table.first().clone();
+		$clone.addClass("pdf-export-table").removeAttr("style").css({ width: "100%" });
+		$clone.find("colgroup").remove();
+		$clone.find("a").each(function () {
+			$(this).replaceWith(document.createTextNode($(this).text()));
+		});
+		$clone.find("i.fa").remove();
+		$clone.find(".indicator-pill, .pct-badge").each(function () {
+			$(this).replaceWith($(this).text());
+		});
+		$clone.find("th, td").each(function () {
+			const $el = $(this);
+			let style = ($el.attr("style") || "")
+				.replace(/position\s*:\s*(sticky|relative|fixed|absolute)[^;]*/gi, "")
+				.replace(/\b(bottom|top|left|right)\s*:\s*[^;]*/gi, "")
+				.replace(/z-index\s*:\s*[^;]*/gi, "")
+				.replace(/box-shadow\s*:\s*[^;]*/gi, "");
+			style = style.replace(/;\s*;/g, ";").trim();
+			if (style) {
+				$el.attr("style", style);
+			} else {
+				$el.removeAttr("style");
+			}
+		});
+		return $clone[0].outerHTML;
+	};
+
 	function render_dashboard(data) {
 		page.container.empty();
 		page.clear_menu();
@@ -1314,32 +1368,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
                         
-                        table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 7px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto; }
-                        tr { page-break-inside: avoid !important; page-break-after: auto !important; }
-                        td, th { page-break-inside: avoid !important; border: 1px solid #e2e8f0; padding: 3px 4px; text-align: left; vertical-align: top; word-wrap: break-word; position: static !important; }
-                        thead { display: table-header-group; }
-                        tfoot { display: table-footer-group; }
-                        thead th { background: #f1f5f9 !important; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; position: static !important; }
-                        tr.sticky-total td { position: static !important; background: #f8fafc !important; font-weight: 700; }
+                        ${PDF_EXPORT_TABLE_CSS}
                         
                         .text-right { text-align: right; }
                         .text-center { text-align: center; }
                         .font-weight-bold { font-weight: 700; }
                         .page-break { page-break-after: always; }
-
-                        /* Column Widths (Reduced for PDF to fit landscape) */
-                        .col-sno { width: 25px; text-align: center; }
-                        .col-id { width: 70px; }
-                        .col-date { width: 60px; }
-                        .col-status { width: 70px; text-align: center; }
-                        .col-customer, .col-supplier { width: 110px; }
-                        .col-sp { width: 85px; }
-                        .col-prod { width: 120px; }
-                        .col-amt { width: 65px; text-align: right; white-space: nowrap !important; }
-                        .col-po { width: 75px; }
-                        .col-deliv-date { width: 60px; }
-                        .col-category { width: 95px; font-weight: 700; background: #f8fafc !important; }
-                        .total-net-col, .grand-total-col, .lifecycle-total-col { width: 75px; text-align: right; font-weight: 700; white-space: nowrap !important; }
 
                         .pdf-legend { display: block; margin-top: 15px; text-align: left; padding: 15px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
                         .pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 12px; vertical-align: top; margin-right: 2%; }
@@ -1389,33 +1423,29 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					${chart_t("top_10_products", "Top Products Data")}
 					<div class="page-break"></div>
 					<h3>Month-Wise Booking Breakdown (M)</h3>
-					<table>
-						${tables_container.find(".month-table").html()}
-					</table>
+					${prepare_table_html_for_pdf(tables_container.find(".month-table")) || "<p>No data</p>"}
 					<div class="page-break"></div>
 					<h3>Monthly Lifecycle Summary (M)</h3>
-					<table>
-						${tables_container.find(".lifecycle-table").html()}
-					</table>
+					${prepare_table_html_for_pdf(tables_container.find(".lifecycle-table")) || "<p>No data</p>"}
 					<div class="page-break"></div>
 					<h3>Detailed Sales Orders List (M)</h3>
-					<table>
-						${tables_container.find(".table-card:last table").html()}
-					</table>
+					${prepare_table_html_for_pdf(tables_container.find(".table-card:last table")) || "<p>No data</p>"}
 				</body>
 				</html>
 			`;
 
 			const method_url =
 				"/api/method/renu_customization.renu_customization.page.sales_order_booking_dashboard.sales_order_booking_dashboard.export_to_pdf";
-			const $form =
-				$(`<form action="${method_url}" method="POST" target="_blank" style="display:none;">
+			const iframe_name = `so_booking_pdf_${Date.now()}`;
+			$(`<iframe name="${iframe_name}" style="display:none;"></iframe>`).appendTo("body");
+			const $form = $(`<form action="${method_url}" method="POST" target="${iframe_name}" style="display:none;">
                 <input type="hidden" name="html" value="">
                 <input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
             </form>`).appendTo("body");
 			$form.find('input[name="html"]').val(html);
-			$form.submit();
-			$form.remove();
+			$form[0].submit();
+			setTimeout(() => $form.remove(), 5000);
+			frappe.show_alert({ message: __("PDF download started"), indicator: "green" });
 		};
 
 		// Hybrid Filter Logic

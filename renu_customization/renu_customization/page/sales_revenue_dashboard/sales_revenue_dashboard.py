@@ -1,6 +1,6 @@
 import frappe
 from frappe import _
-from frappe.utils import flt, getdate
+from frappe.utils import flt, getdate, nowdate
 import openpyxl
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -10,9 +10,23 @@ import json
 
 @frappe.whitelist()
 def export_to_pdf(html):
-	frappe.response.filename = "sales_revenue_dashboard.pdf"
-	frappe.response.type = "download"
-	frappe.response.filecontent = frappe.utils.pdf.get_pdf(html, {"orientation": "Landscape"})
+	if not html:
+		frappe.throw(_("PDF content is empty"))
+
+	pdf_options = {
+		"page-size": "A4",
+		"orientation": "Landscape",
+		"margin-top": "8mm",
+		"margin-right": "8mm",
+		"margin-bottom": "8mm",
+		"margin-left": "8mm",
+		"encoding": "UTF-8",
+		"no-outline": None,
+	}
+
+	frappe.local.response.filename = f"Sales_Revenue_Dashboard_{nowdate()}.pdf"
+	frappe.local.response.type = "download"
+	frappe.local.response.filecontent = frappe.utils.pdf.get_pdf(html, pdf_options)
 
 
 def prepare_filters(filters):
@@ -631,8 +645,7 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Status", "fieldname": "status", "width": 14},
             {"label": "Customer", "fieldname": "customer_name", "width": 25},
             {"label": "Customer Group", "fieldname": "customer_group", "width": 20},
-            {"label": "Business Region", "fieldname": "business_region_name", "width": 20},
-            {"label": "Item", "fieldname": "item_code", "width": 20},
+            {"label": "Item", "fieldname": "item_display", "width": 28},
             {"label": "Sales Person", "fieldname": "sales_person", "width": 20},
             {"label": "Item Group", "fieldname": "item_group", "width": 20},
             {"label": "Qty", "fieldname": "qty", "width": 10},
@@ -656,6 +669,10 @@ def export_to_excel(filters=None, export_type="all"):
                 
                 if fname == "sr_no_idx":
                     val = r_idx + 1
+                elif fname == "item_display":
+                    code = row.get("item_code") or ""
+                    name = row.get("item_name") or ""
+                    val = f"{code} - {name}".strip(" -") if name else code
                 elif fname == "invoice_date":
                     val = row.get("delivery_date") or row.get("invoice_date") or row.get("posting_date")
                 
@@ -678,20 +695,32 @@ def export_to_excel(filters=None, export_type="all"):
             row_idx += 1
         
         # -------------------------------------------------------------------------
-        # Add Total Row for Detailed Invoice List
+        # Add Total Row for Detailed Invoice List (13 columns — matches UI table)
         # -------------------------------------------------------------------------
-        ws_list.cell(row=row_idx, column=1, value="Grand Total").font = header_font
-        ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=13)
-        for c in range(1, 14):
-            ws_list.cell(row=row_idx, column=c).fill = header_fill
-            ws_list.cell(row=row_idx, column=c).border = table_border
-    
-        # Calculate Total Amount for the list
+        total_list_qty = 0
         total_list_amt = 0
         for row in data:
-            total_list_amt += (row.get("amt_allocated") or 0)
-    
-        cell_total = ws_list.cell(row=row_idx, column=14, value=total_list_amt)
+            total_list_qty += flt(row.get("qty"))
+            total_list_amt += flt(row.get("amt_allocated") or 0)
+
+        label_col = 10  # Sales Person column — "Total" label
+        qty_col = 12
+        amt_col = 13
+
+        ws_list.cell(row=row_idx, column=label_col, value=_("Total")).font = header_font
+        ws_list.cell(row=row_idx, column=label_col).alignment = Alignment(horizontal="right")
+        for c in range(1, amt_col + 1):
+            ws_list.cell(row=row_idx, column=c).fill = header_fill
+            ws_list.cell(row=row_idx, column=c).border = table_border
+
+        cell_qty = ws_list.cell(row=row_idx, column=qty_col, value=total_list_qty)
+        cell_qty.font = header_font
+        cell_qty.fill = header_fill
+        cell_qty.number_format = "#,##0.00"
+        cell_qty.alignment = Alignment(horizontal="right")
+        cell_qty.border = table_border
+
+        cell_total = ws_list.cell(row=row_idx, column=amt_col, value=total_list_amt)
         cell_total.font = header_font
         cell_total.fill = header_fill
         cell_total.number_format = '"₹ "#,##0.00" M"'
