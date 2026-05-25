@@ -35,7 +35,7 @@ def prepare_filters(filters):
         filters = {}
     elif isinstance(filters, str):
         filters = frappe.parse_json(filters)
-    
+
     filters = frappe._dict(filters)
 
     # Handle DateRange from JS (Legacy/Compatibility)
@@ -54,12 +54,12 @@ def prepare_filters(filters):
                 filters["from_date"] = fy.year_start_date
             if not filters.get("to_date"):
                 filters["to_date"] = fy.year_end_date
-            
+
             # 2. If dates ARE provided, constrain them to the FY bounds
             # This ensures "Fiscal Year" acts as a hard filter boundary
             if filters.get("from_date") and getdate(filters.from_date) < getdate(fy.year_start_date):
                 filters["from_date"] = fy.year_start_date
-            
+
             if filters.get("to_date") and getdate(filters.to_date) > getdate(fy.year_end_date):
                 filters["to_date"] = fy.year_end_date
 
@@ -73,10 +73,10 @@ def prepare_filters(filters):
 @frappe.whitelist()
 def get_dashboard_data(filters=None):
     filters = prepare_filters(filters)
-    
+
     # Base SQL conditions
     conditions = "WHERE so.docstatus = 1"
-    
+
     # Build dynamic filters for SQL performance
     if filters.get("from_date"):
         conditions += " AND so.transaction_date >= %(from_date)s"
@@ -97,7 +97,7 @@ def get_dashboard_data(filters=None):
                 conditions += " AND c.customer_group = %(customer_group)s"
         except Exception:
             conditions += " AND c.customer_group = %(customer_group)s"
-            
+
     if filters.get("item_group"):
         try:
             lft, rgt = frappe.db.get_value("Item Group", filters.item_group, ["lft", "rgt"])
@@ -122,7 +122,7 @@ def get_dashboard_data(filters=None):
             conditions += " AND IFNULL(a.country, '') = 'India'"
         elif filters.dom_exp == "Export":
             conditions += " AND IFNULL(a.country, '') != 'India'"
-    
+
     has_inv_type = frappe.get_meta("Sales Order").has_field("invoice_type")
     if has_inv_type and filters.get("invoice_type"):
         conditions += " AND so.invoice_type = %(invoice_type)s"
@@ -163,17 +163,17 @@ def get_dashboard_data(filters=None):
             so.base_grand_total AS si_grand_total,
             so.per_billed AS per_billed,
             soi.delivery_date AS delivery_date,
-            
+
             -- Picked Qty from Pick List
-            (SELECT IFNULL(SUM(pli.picked_qty), 0) 
-             FROM `tabPick List Item` pli 
+            (SELECT IFNULL(SUM(pli.picked_qty), 0)
+             FROM `tabPick List Item` pli
              WHERE pli.sales_order_item = soi.name AND pli.docstatus = 1) AS picked_qty_val,
-            
+
             -- Calculated values to match report logic
             ((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) AS `total_net_amount_(inr)`,
             (soi.delivered_qty * soi.rate * so.conversion_rate) AS delivery_amount,
             (((soi.qty - IFNULL(soi.total_short_close_qty, 0)) * soi.base_rate) - ((soi.delivered_qty - IFNULL(soi.returned_qty, 0)) * soi.base_rate)) AS balance_net_total,
-            
+
             -- Enrichment fields
             c.customer_group,
             c.business_region_name,
@@ -187,14 +187,15 @@ def get_dashboard_data(filters=None):
         LEFT JOIN `tabCustomer` c ON so.customer = c.name
         LEFT JOIN `tabItem` i ON i.name = soi.item_code
         LEFT JOIN `tabAddress` a ON a.name = so.customer_address
+        LEFT JOIN `tabBusiness Region Code` brc ON c.business_regions_code = brc.name AND brc.enable = 1
         {conditions}
         AND IFNULL(i.custom_is_freight_item, 0) = 0
         AND soi.item_name != 'Freight'
         ORDER BY so.transaction_date ASC, so.name ASC, soi.idx ASC
     """
-    
+
     data = frappe.db.sql(sql, filters, as_dict=1)
-    
+
     if not data:
         return { "summary": [], "charts": {}, "results": [], "columns": [] }
 
@@ -223,14 +224,14 @@ def get_dashboard_data(filters=None):
     # Initialize KPI/Chart totals
     booked_rev = cancelled_rev = short_close_rev = delivered_rev = 0
     total_rev = total_gross = cp_active_rev = picked_rev = returned_rev = overdue_rev = balance_rev = 0
-    
+
     # Regional/CP Breakdowns
     dom_booked = dom_cancelled = dom_short_close = dom_delivered = dom_picked = dom_returned = dom_overdue = 0
     exp_booked = exp_cancelled = exp_short_close = exp_delivered = exp_picked = exp_returned = exp_overdue = 0
     cp_booked = cp_cancelled = cp_short_close = cp_delivered = cp_picked = cp_returned = cp_overdue = 0
-    
+
     today = frappe.utils.getdate()
-    
+
     for row in data:
         status = row.get("status")
         # 1. Base amount calculations (Calculated in-place for every row)
@@ -242,7 +243,7 @@ def get_dashboard_data(filters=None):
         gross_booked = base_net + sc_amt
         # total_booked_value is the ACTUAL amount we expect to deliver (Net)
         net_booked = base_net if status != "Cancelled" else 0
-        
+
         # 2. Update row with consistent fields for tables and charts
         row["sc_value"] = sc_amt
         row["booked_net_total"] = gross_booked # For "Booked" column (Gross)
@@ -251,23 +252,23 @@ def get_dashboard_data(filters=None):
         row["delivered_net_total_inr"] = flt(row.get("delivery_amount", 0))
         row["picked_net_total_inr"] = flt(row.get("picked_qty_val", 0)) * flt(row.get("base_rate", 0))
         row["pending_value"] = max(0, net_booked - row["delivered_net_total_inr"] - row["returned_val"])
-        
+
         # Overdue logic
         row["overdue_value"] = 0
         if row.get("delivery_date") and row["pending_value"] > 0:
             if frappe.utils.getdate(row["delivery_date"]) < today:
                 row["overdue_value"] = row["pending_value"]
-        
+
         # Gross Total (with taxes/extras percentage if available)
         si_net = flt(row.get("si_net_total") or 1)
         si_grand = flt(row.get("si_grand_total") or si_net)
         row["gross_total"] = gross_booked * (si_grand / si_net) if si_net else gross_booked
-        
+
         # 3. Aggregate KPI Values (Excludes Drafts usually, following existing pattern)
         d_e = row.get("dom_exp")
         cg = (row.get("customer_group") or "").lower()
         is_cp = any(x in cg for x in ["system integrator", "distributor", "partner", "reseller"])
-        
+
         if status not in ("Cancelled", "Draft"):
             booked_rev += net_booked # Using Net for Booked Rev KPI
             delivered_rev += row["delivered_net_total_inr"]
@@ -278,7 +279,7 @@ def get_dashboard_data(filters=None):
             total_rev += net_booked
             total_gross += row["gross_total"]
             if is_cp: cp_active_rev += net_booked
-            
+
             # Breakdowns
             if d_e == "Domestic":
                 dom_booked += net_booked; dom_delivered += row["delivered_net_total_inr"]
@@ -291,7 +292,7 @@ def get_dashboard_data(filters=None):
                 cp_picked += row["picked_net_total_inr"]; cp_returned += row["returned_val"]; cp_overdue += row["overdue_value"]
 
         elif status == "Cancelled":
-            # For Cancelled, we track the Gross amount lost? or Net? 
+            # For Cancelled, we track the Gross amount lost? or Net?
             # Existing code used 'amt' which could be Gross. Let's use Gross for cancelled tracking.
             cancelled_rev += gross_booked
             if d_e == "Domestic": dom_cancelled += gross_booked
@@ -318,17 +319,17 @@ def get_dashboard_data(filters=None):
         so_id = row.get("so_no")
         cg = (row.get("customer_group") or "").lower()
         is_cp = any(x in cg for x in ["system integrator", "distributor", "partner", "reseller"])
-        
+
         if status not in ("Cancelled", "Draft") and so_id:
             booked_so_ids.add(so_id)
             if is_cp:
                 cp_so_ids.add(so_id)
-            
+
             # Pending check
             balance = row.get("pending_value", 0)
             if balance > 1: # Greater than 1 INR to avoid rounding noise
                 pending_so_ids.add(so_id)
-            
+
             deliv_amt = row.get("delivered_net_total_inr", 0)
             if deliv_amt > 1:
                 delivered_so_ids.add(so_id)
@@ -349,18 +350,18 @@ def get_dashboard_data(filters=None):
         {"label": _("Total Overdue"), "value": overdue_rev, "count": len(overdue_so_ids), "indicator": "purple", "fieldtype": "Currency", "currency": "INR"},
         {"label": _("Channel Partner"), "value": cp_active_rev, "count": len(cp_so_ids), "indicator": "red", "fieldtype": "Currency", "currency": "INR"},
     ]
-    
+
 
 
     sp_rev_dict = {}
     cust_rev_dict = {}
     prod_rev_dict = {}
-    
+
     # 3. Final Pass: Summarize and Chart (Consolidated)
     for row in data:
         status = row.get("status")
         so_id = row.get("so_no")
-        
+
         # Identification for regional/CP logic (already done in main loop, but here we need counts)
         if status not in ("Cancelled", "Draft") and so_id:
             booked_so_ids.add(so_id)
@@ -371,21 +372,21 @@ def get_dashboard_data(filters=None):
         # Skip chart processing for Cancelled/Draft
         if status in ("Cancelled", "Draft"):
             continue
-            
+
         actual_val = row["total_booked_value"]
-        
+
         # Sales Person split
         sp_raw = str(row.get("sales_person") or "Unassigned")
         sp_list = [s.strip() for s in sp_raw.split(",") if s.strip()]
         if not sp_list: sp_list = ["Unassigned"]
         split_amt = actual_val / len(sp_list)
-        
+
         for sp in sp_list:
             sp_rev_dict[sp] = sp_rev_dict.get(sp, 0) + split_amt
-        
+
         cust = row.get("customer_name") or "Unknown"
         cust_rev_dict[cust] = cust_rev_dict.get(cust, 0) + actual_val
-        
+
         prod = row.get("item_name") or row.get("item_code") or "Unknown"
         prod_rev_dict[prod] = prod_rev_dict.get(prod, 0) + actual_val
 
@@ -423,12 +424,12 @@ def export_to_excel(filters=None, export_type="all"):
     data = dashboard_data.get("results")
     summary = dashboard_data.get("summary")
     charts = dashboard_data.get("charts")
-    
+
     if not data:
         return None
 
     wb = openpyxl.Workbook()
-    
+
     # Conditionally create sheets based on export_type
     if export_type == "all":
         ws_overview = wb.active
@@ -448,7 +449,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_overview = wb.create_sheet("Dummy1")
         ws_months = wb.create_sheet("Dummy2")
         ws_lifecycle = wb.create_sheet("Dummy3")
-    
+
     # Premium Styling
     header_fill = PatternFill(start_color="2c3e50", fill_type="solid")
     header_font = Font(bold=True, color="FFFFFF")
@@ -463,27 +464,27 @@ def export_to_excel(filters=None, export_type="all"):
     if export_type == "all":
         ws_overview.cell(row=1, column=1, value="Sales Order Booking Dashboard").font = title_font
         ws_overview.cell(row=1, column=5, value="Report Generated: " + frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M"))
-        
+
         # Summary Cards on Overview
         ws_overview.cell(row=3, column=1, value="Booking Metrics Summary (Million INR)").font = section_font
-        
+
         colors = {"blue": "3b82f6", "green": "10b981", "orange": "f59e0b", "purple": "8b5cf6", "red": "ef4444", "cyan": "06b6d4"}
-        
+
         for i, s in enumerate(summary):
             r = 5 + (i // 4) * 3
             c = 1 + (i % 4) * 2
             bg_color = colors.get(s.get('indicator', 'blue').lower(), "3b82f6")
-            
+
             # Clean label (remove 'Global ')
             clean_label = s.get('label', '').replace('Global ', '').strip()
             label_text = clean_label
-            
+
             cell_l = ws_overview.cell(row=r, column=c, value=label_text)
             cell_l.font = Font(bold=True, color="FFFFFF")
             cell_l.fill = PatternFill(start_color=bg_color, fill_type="solid")
             cell_l.alignment = Alignment(horizontal="center")
             ws_overview.merge_cells(start_row=r, start_column=c, end_row=r, end_column=c+1)
-            
+
             val = flt(s.get('value')) / 1000000
             cell_v = ws_overview.cell(row=r+1, column=c, value=val)
             cell_v.font = Font(bold=True, size=11)
@@ -491,17 +492,17 @@ def export_to_excel(filters=None, export_type="all"):
             cell_v.alignment = Alignment(horizontal="center")
             cell_v.border = Border(bottom=Side(style='medium', color=bg_color))
             ws_overview.merge_cells(start_row=r+1, start_column=c, end_row=r+1, end_column=c+1)
-    
+
         # Chart Tables on Overview
         # Calculate row_idx dynamically based on summary cards (4 per row, each taking 3 rows)
         row_idx = 5 + ((len(summary) - 1) // 4 + 1) * 3 + 2
         for chart_id in ["top_10_salesperson", "top_10_customers", "top_10_products"]:
             c_data = charts.get(chart_id, {})
             if not c_data.get("data", {}).get("labels"): continue
-            
+
             ws_overview.cell(row=row_idx, column=1, value=c_data.get("title") + " (M)").font = section_font
             row_idx += 1
-            
+
             for idx, h in enumerate(["Category", "Net Value", "Share %"], start=1):
                 cell = ws_overview.cell(row=row_idx, column=idx, value=h)
                 cell.font = Font(bold=True, color="FFFFFF")
@@ -509,7 +510,7 @@ def export_to_excel(filters=None, export_type="all"):
                 cell.alignment = Alignment(horizontal="center")
                 cell.border = table_border
             row_idx += 1
-            
+
             labels = c_data["data"]["labels"]
             values = c_data["data"]["datasets"][0]["values"]
             total_v = sum(values) or 1
@@ -529,7 +530,7 @@ def export_to_excel(filters=None, export_type="all"):
         row_idx = 1
         ws_months.cell(row=row_idx, column=1, value="Month-Wise Booking Breakdown (Million INR)").font = section_font
         row_idx += 2
-        
+
         merged_data = {}
         months_set = set()
         for row in data:
@@ -537,7 +538,7 @@ def export_to_excel(filters=None, export_type="all"):
             amt = flt(row.get("total_booked_value") if row.get("status") != "Cancelled" else 0)
             if amt == 0 and row.get("status") != "Cancelled":
                  amt = flt(row.get("total_net_amount_(inr)") or 0)
-            
+
             g_amt = flt(row.get("gross_total") or amt)
             try:
                 d = frappe.utils.getdate(row.get("so_date"))
@@ -550,7 +551,7 @@ def export_to_excel(filters=None, export_type="all"):
                 merged_data[key]["months"][m_key] = merged_data[key]["months"].get(m_key, 0) + amt
                 merged_data[key]["total"] += amt
                 merged_data[key]["total_gross"] += g_amt
-            
+
         sorted_months = [x[1] for x in sorted(list(months_set), key=lambda x: x[0])]
         headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_months + ["Total (Net)", "Grand Total (Gross)"]
         for idx, h in enumerate(headers, start=1):
@@ -560,7 +561,7 @@ def export_to_excel(filters=None, export_type="all"):
             cell.alignment = Alignment(horizontal="center")
             cell.border = table_border
         row_idx += 1
-            
+
         for r_idx, row in enumerate(sorted(merged_data.values(), key=lambda x: x["total"], reverse=True)):
             fill = zebra_fill if r_idx % 2 == 0 else None
             ws_months.cell(row=row_idx, column=1, value=r_idx + 1).border = table_border
@@ -584,7 +585,7 @@ def export_to_excel(filters=None, export_type="all"):
             c_g.fill = PatternFill(start_color="f1f5f9", fill_type="solid")
             c_g.border = table_border
             row_idx += 1
-    
+
         # Add Footer Rows in Excel
         ws_months.cell(row=row_idx, column=1, value="Grand Total (Net)").font = header_font
         ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
@@ -592,7 +593,7 @@ def export_to_excel(filters=None, export_type="all"):
             ws_months.cell(row=row_idx, column=c).fill = header_fill
             ws_months.cell(row=row_idx, column=c).border = table_border
         m_totals_net, m_totals_gross, g_total_net, g_total_gross = {}, {}, sum(r["total"] for r in merged_data.values()), sum(r["total_gross"] for r in merged_data.values())
-        
+
         # Monthly totals calculation
         for r in merged_data.values():
             for mk, mv in r["months"].items(): m_totals_net[mk] = m_totals_net.get(mk, 0) + mv
@@ -602,7 +603,7 @@ def export_to_excel(filters=None, export_type="all"):
                 if row_r.get("status") != "Cancelled":
                     m_totals_gross[m_key] = m_totals_gross.get(m_key, 0) + flt(row_r.get("gross_total") or row_r.get("po_total"))
             except: pass
-    
+
         col_idx = 5
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_net.get(m_key, 0))/1000000)
@@ -610,24 +611,24 @@ def export_to_excel(filters=None, export_type="all"):
             c.font, c.fill, c.border = header_font, header_fill, table_border
             c.alignment = Alignment(horizontal="right")
             col_idx += 1
-            
+
         c_gn = ws_months.cell(row=row_idx, column=col_idx, value=g_total_net / 1000000)
         c_gn.number_format = '"₹ "#,##0.00" M"'
         c_gn.font, c_gn.fill, c_gn.border = header_font, header_fill, table_border
         c_gn.alignment = Alignment(horizontal="right")
         col_idx += 1
-        
+
         c_sep = ws_months.cell(row=row_idx, column=col_idx, value="-")
         c_sep.font, c_sep.fill, c_sep.border = header_font, header_fill, table_border
         c_sep.alignment = Alignment(horizontal="center")
         row_idx += 1
-        
+
         ws_months.cell(row=row_idx, column=1, value="Grand Total (Gross)").font = header_font
         ws_months.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
         for c in range(1, 5):
             ws_months.cell(row=row_idx, column=c).fill = header_fill
             ws_months.cell(row=row_idx, column=c).border = table_border
-            
+
         col_idx = 5
         for m_key in sorted_months:
             c = ws_months.cell(row=row_idx, column=col_idx, value=flt(m_totals_gross.get(m_key, 0))/1000000)
@@ -635,12 +636,12 @@ def export_to_excel(filters=None, export_type="all"):
             c.font, c.fill, c.border = header_font, header_fill, table_border
             c.alignment = Alignment(horizontal="right")
             col_idx += 1
-            
+
         c_sep2 = ws_months.cell(row=row_idx, column=col_idx, value="-")
         c_sep2.font, c_sep2.fill, c_sep2.border = header_font, header_fill, table_border
         c_sep2.alignment = Alignment(horizontal="center")
         col_idx += 1
-        
+
         c_gg = ws_months.cell(row=row_idx, column=col_idx, value=g_total_gross / 1000000)
         c_gg.number_format = '"₹ "#,##0.00" M"'
         c_gg.font, c_gg.fill, c_gg.border = header_font, header_fill, table_border
@@ -716,7 +717,7 @@ def export_to_excel(filters=None, export_type="all"):
             c_tot.number_format, c_tot.border = '"₹ "#,##0.00" M"', table_border
             c_tot.font = Font(bold=True)
             row_idx_l += 1
-    
+
     if export_type in ["all", "detail"]:
         # 3. Sales Orders List Sheet
         row_idx = 1
@@ -777,24 +778,24 @@ def export_to_excel(filters=None, export_type="all"):
                 else:
                     cell.value, cell.alignment = str(val) if val else "", Alignment(horizontal="left")
             row_idx += 1
-        
+
         ws_list.cell(row=row_idx, column=1, value="GRAND TOTAL").font = header_font
         ws_list.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=11)
-        for c in range(1, 12): 
+        for c in range(1, 12):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
-        
+
         # Fill the rest of the columns in the footer (Columns 12-18)
         total_list_values = [
-            total_list_amt, 
-            total_list_actual, 
-            total_list_sc, 
-            total_list_picked, 
-            total_list_delivered, 
-            total_list_pending, 
+            total_list_amt,
+            total_list_actual,
+            total_list_sc,
+            total_list_picked,
+            total_list_delivered,
+            total_list_pending,
             total_list_overdue
         ]
-        
+
         for i, val in enumerate(total_list_values):
             col = 12 + i
             c_f = ws_list.cell(row=row_idx, column=col, value=flt(val) / 1000000)
@@ -819,7 +820,7 @@ def export_to_excel(filters=None, export_type="all"):
     output = BytesIO()
     wb.save(output)
     output.seek(0)
-    
+
     filename = f"Sales_Order_Dashboard_{frappe.utils.nowdate()}.xlsx"
     if export_type == "summary":
         filename = f"Month_Wise_Consolidated_Booking_{frappe.utils.nowdate()}.xlsx"

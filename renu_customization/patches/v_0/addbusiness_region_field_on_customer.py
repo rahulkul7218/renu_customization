@@ -10,7 +10,9 @@ def execute():
                 fieldtype="Link",
                 options="Business Region Code",
                 insert_after="customer_group",
-                reqd=1
+                reqd=1,
+				in_list_view=1,
+                filters=[["Business Region Code", "enable", "=", 1]]
             )
         ]
     }
