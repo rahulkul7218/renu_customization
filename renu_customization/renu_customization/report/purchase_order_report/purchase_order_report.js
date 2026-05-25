@@ -127,6 +127,7 @@ frappe.query_reports["Purchase Order Report"] = {
 frappe.dom.set_style(`
     [data-fieldname="order_quantity"],
     [data-fieldname="delivered_qty"],
+    [data-fieldname="returned_qty"],
     [data-fieldname="open_qty"],
     [data-fieldname="item_rate"],
     [data-fieldname="exchange_rate"],
