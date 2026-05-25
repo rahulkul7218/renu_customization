@@ -33,7 +33,7 @@ def get_columns():
         },
         _("Linked SO No.") + ":Link/Sales Order:150",
         _("SO Date") + ":Date:120",
-        _("Supplier Code") + ":Link/Supplier:150",
+        _("Supplier Code") + ":Data:150",
         _("Supplier Name") + ":Data:180",
         _("Item Code") + ":Link/Item:120",
         _("Item Name") + ":Data:180",
@@ -109,7 +109,7 @@ def get_data(filters):
             ROW_NUMBER() OVER (PARTITION BY po.name ORDER BY poi.idx) AS sr_no,
             poi.sales_order AS linked_so_no,
             (SELECT transaction_date FROM `tabSales Order` WHERE name = poi.sales_order LIMIT 1) AS so_date,
-            po.supplier AS supplier_code,
+            s.supplier_code AS supplier_code,
             po.supplier_name AS supplier_name,
             poi.item_code AS item_code,
             poi.item_name AS item_name,
@@ -127,6 +127,7 @@ def get_data(filters):
 
         FROM `tabPurchase Order` po
         INNER JOIN `tabPurchase Order Item` poi ON poi.parent = po.name
+        LEFT JOIN `tabSupplier` s ON s.name = po.supplier
        
         WHERE 1 = 1
         AND po.docstatus = 1
