@@ -114,15 +114,15 @@ def get_data(filters):
             poi.item_code AS item_code,
             poi.item_name AS item_name,
             poi.qty AS order_quantity,
-            (IFNULL(poi.received_qty, 0) - IFNULL(poi.returned_qty, 0)) AS delivered_qty,
+            IFNULL(poi.received_qty, 0) AS delivered_qty,
             IFNULL(poi.returned_qty, 0) AS returned_qty,
-            (poi.qty - (IFNULL(poi.received_qty, 0) - IFNULL(poi.returned_qty, 0))) AS open_qty,
+            (poi.qty - IFNULL(poi.received_qty, 0)) AS open_qty,
             poi.rate AS item_rate,
             po.currency AS currency,
             po.conversion_rate AS exchange_rate,
             (poi.qty * poi.base_rate) AS `total_net_amount_(inr)`,
-            ((IFNULL(poi.received_qty, 0) - IFNULL(poi.returned_qty, 0)) * poi.base_rate) AS delivered_net_total,
-            ((poi.qty - (IFNULL(poi.received_qty, 0) - IFNULL(poi.returned_qty, 0))) * poi.base_rate) AS balance_net_total,
+            (IFNULL(poi.received_qty, 0) * poi.base_rate) AS delivered_net_total,
+            ((poi.qty - IFNULL(poi.received_qty, 0)) * poi.base_rate) AS balance_net_total,
             poi.schedule_date AS delivery_date
 
         FROM `tabPurchase Order` po
