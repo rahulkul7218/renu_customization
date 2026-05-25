@@ -13,7 +13,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         .layout-main-section { background-color: transparent !important; }
         .page-container { background-color: transparent !important; }
         .dashboard-content { padding: 20px; background: transparent !important; min-height: 100vh; font-family: 'Inter', sans-serif; color: #1e293b; width: 100% !important; }
-        
+
         .dashboard-filter-area {
             padding: 10px 10px 10px 10px !important;
             background-color: #fff !important;
@@ -70,12 +70,12 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         }
 
         /* Dashboard Cards */
-        .summary-wrapper { 
-            display: grid !important; 
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important; 
-            gap: 16px; 
-            margin-bottom: 24px; 
-            width: 100% !important; 
+        .summary-wrapper {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+            gap: 16px;
+            margin-bottom: 24px;
+            width: 100% !important;
         }
         .summary-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); border-left: 5px solid #cbd5e1; transition: all 0.3s ease; position: relative; }
         .summary-card:hover { transform: translateY(-4px); box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); }
@@ -114,12 +114,12 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
         .dashboard-table th { background: #f8fafc; padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: #64748b; position: sticky; top: 0; z-index: 10; border-bottom: 1px solid #e2e8f0; text-transform: uppercase; white-space: nowrap; }
         .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; }
         .dashboard-table tr:hover td { background: #f8fafc; }
-        
+
         tr.sticky-total td { position: sticky; bottom: 0; z-index: 30; background: #f8fafc !important; font-weight: 700; border-top: 2px solid #e2e8f0 !important; color: #0f172a; }
 
         .export-btn { font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; padding: 6px 14px; border-radius: 6px; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; background: #fff; border: 1px solid #e2e8f0; }
         .export-btn:hover { color: #2563eb !important; background: #eff6ff !important; border-color: #bfdbfe !important; }
-        
+
         /* Indicators */
         .indicator-pill { padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; }
         .indicator-pill.Export { background: #ecfdf5; color: #065f46; }
@@ -179,7 +179,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 
 	function render_dashboard(data) {
 		page.container.empty();
-		
+
         const get_slug = (dt) => (dt || "").toLowerCase().replace(/ /g, "-");
 
 		// KPI Cards
@@ -487,7 +487,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			filtered.forEach((row) => {
 				let type_label = row.is_export ? "Export" : "Domestic";
 				total_amt += flt(row.allocated_amount);
-				
+
 				let voucher_link = `/app/${get_slug(row.voucher_type)}/${row.payment_entry}`;
 				let ref_link = row.name ? `/app/sales-invoice/${row.name}` : "#";
 				if (row.name && row.name.startsWith("SO")) ref_link = `/app/sales-order/${row.name}`;
@@ -496,8 +496,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					<tr>
 						<td style="white-space: nowrap;"><a href="${voucher_link}" style="font-weight: 600; color: #4338ca;">${row.payment_entry}</a> <div style="font-size: 10px; color: #94a3b8;">${row.voucher_type}</div></td>
 						<td style="white-space: nowrap;">
-							${row.name 
-								? `<a href="${ref_link}" style="font-weight: 500; color: #64748b;">${row.name}</a>` 
+							${row.name
+								? `<a href="${ref_link}" style="font-weight: 500; color: #64748b;">${row.name}</a>`
 								: `<span class="text-muted">-</span>`}
 						</td>
 						<td style="white-space: nowrap;">${row.posting_date ? frappe.datetime.str_to_user(row.posting_date) : "-"}</td>
@@ -548,7 +548,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			const table_type = $(this).data("table");
 			const field = $(this).data("field");
 			const current_asc = $(this).hasClass("sorted-asc");
-			
+
 			// Reset other headers' sort classes and icons
 			page.container.find(`.sortable-header[data-table="${table_type}"]`).removeClass("sorted-asc sorted-desc");
 			page.container.find(`.sortable-header[data-table="${table_type}"] i`).removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
@@ -648,7 +648,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			fieldname: "dom_exp",
 			label: __("Domestic/Export"),
 			fieldtype: "Select",
-			options: ["", "All", "Domestic", "Export"],
+			options: ["All", "Domestic", "Export"],
 			default: "All",
 			placeholder: __("Select"),
 		},
@@ -806,21 +806,21 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				<style>
 					body { font-family: 'Inter', sans-serif; padding: 15px; color: #1e293b; background: #fff; line-height: 1.4; font-size: 10px; }
 					@page { size: landscape; margin: 8mm; }
-					
+
 					.report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
 					.header-title { margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase; letter-spacing: 1px; }
-					
+
 					.kpi-wrapper { width: 100%; clear: both; margin-bottom: 20px; display: block; overflow: hidden; }
 					.kpi-card { float: left; width: 23.5%; border: 1px solid #e2e8f0; padding: 12px 6px; margin: 0.5%; border-radius: 8px; background: #f8fafc; text-align: center; border-left: 4px solid #3b82f6; box-sizing: border-box; }
 					.kpi-label { font-size: 9px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 4px; }
 					.kpi-value { font-size: 14px; font-weight: 800; color: #0f172a; }
-					
+
 					.pdf-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }
 					.card-title { margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
-					
+
 					.chart-content { text-align: center; }
 					.chart-img { width: 60%; max-height: 280px; object-fit: contain; margin-bottom: 15px; }
-					
+
 					.pdf-legend { display: block; text-align: left; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; margin-top: 10px; overflow: hidden; }
 					.pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 8px; vertical-align: top; margin-right: 2%; }
 					.pdf-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
@@ -834,7 +834,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					.text-right { text-align: right; }
 					.text-center { text-align: center; }
 					.bold { font-weight: 700; }
-					
+
 					.section-title { font-size: 13px; font-weight: 700; color: #3b82f6; margin-top: 25px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; text-transform: uppercase; }
 					.page-break { page-break-after: always; }
 				</style>
@@ -953,7 +953,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						</tr>
 					</tfoot>
 				</table>
-				
+
 				<div style="margin-top: 30px; font-size: 8px; color: #94a3b8; text-align: center;">
 					Printed on: ${frappe.datetime.now_datetime()} | renu_customization - Collection Analysis Report
 				</div>
