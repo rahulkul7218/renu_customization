@@ -1,0 +1,429 @@
+import frappe
+from frappe import _
+from frappe.utils import flt
+import json
+import base64
+from io import BytesIO
+import openpyxl
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+
+
+def execute(filters=None):
+    if not filters:
+        filters = {}
+
+    columns = get_columns()
+    data = get_data(filters)
+
+    return columns, data
+
+
+def get_columns():
+    return [
+        {"label": "name", "fieldname": "name", "fieldtype": "Data", "hidden": 1},
+        {
+            "label": _("Supplier PO No."),
+            "fieldname": "supplier_po_no",
+            "fieldtype": "Link",
+            "options": "Purchase Order",
+            "width": 150
+        },
+        {
+            "label": _("Supplier PO Date"),
+            "fieldname": "supplier_po_date",
+            "fieldtype": "Date",
+            "width": 120
+        },
+        {
+            "label": _("Sr.No."),
+            "fieldname": "sr_no",
+            "fieldtype": "Int",
+            "width": 70,
+            "disable_total": True
+        },
+        {
+            "label": _("Linked SO No."),
+            "fieldname": "linked_so_no",
+            "fieldtype": "Link",
+            "options": "Sales Order",
+            "width": 150
+        },
+        {
+            "label": _("SO Date"),
+            "fieldname": "so_date",
+            "fieldtype": "Date",
+            "width": 120
+        },
+        {
+            "label": _("Supplier Code"),
+            "fieldname": "supplier_code",
+            "fieldtype": "Data",
+            "width": 150
+        },
+        {
+            "label": _("Supplier Name"),
+            "fieldname": "supplier_name",
+            "fieldtype": "Data",
+            "width": 180
+        },
+        {
+            "label": _("Item Code"),
+            "fieldname": "item_code",
+            "fieldtype": "Link",
+            "options": "Item",
+            "width": 120
+        },
+        {
+            "label": _("Item Name"),
+            "fieldname": "item_name",
+            "fieldtype": "Data",
+            "width": 180
+        },
+        {
+            "label": _("Order Quantity"),
+            "fieldname": "order_quantity",
+            "fieldtype": "Float",
+            "width": 130
+        },
+        {
+            "label": _("Delivered Qty"),
+            "fieldname": "delivered_qty",
+            "fieldtype": "Float",
+            "width": 120
+        },
+        {
+            "label": _("Returned Qty"),
+            "fieldname": "returned_qty",
+            "fieldtype": "Float",
+            "width": 120
+        },
+        {
+            "label": _("Open Qty"),
+            "fieldname": "open_qty",
+            "fieldtype": "Float",
+            "width": 120
+        },
+        {
+            "label": _("Item Rate"),
+            "fieldname": "item_rate",
+            "fieldtype": "Float",
+            "width": 120,
+            "disable_total": True
+        },
+        {
+            "label": _("Currency"),
+            "fieldname": "currency",
+            "fieldtype": "Link",
+            "options": "Currency",
+            "width": 100
+        },
+        {
+            "label": _("Exchange Rate"),
+            "fieldname": "exchange_rate",
+            "fieldtype": "Float",
+            "width": 120,
+            "disable_total": True
+        },
+        {
+            "label": _("Total Net Amount (INR)"),
+            "fieldname": "total_net_amount_(inr)",
+            "fieldtype": "Float",
+            "width": 180
+        },
+        {
+            "label": _("Delivered Net Total"),
+            "fieldname": "delivered_net_total",
+            "fieldtype": "Float",
+            "width": 180
+        },
+        {
+            "label": _("Balance Net Total"),
+            "fieldname": "balance_net_total",
+            "fieldtype": "Float",
+            "width": 170
+        },
+        {
+            "label": _("Delivery Date"),
+            "fieldname": "delivery_date",
+            "fieldtype": "Data",
+            "width": 120
+        },
+    ]
+
+
+def get_conditions(filters):
+    if not filters:
+        filters = {}
+    conditions = ""
+
+    # -------- Status filter (multiple selection) --------
+    status = filters.get("status")
+    if status:
+        if isinstance(status, str):
+            status_list = [s.strip() for s in status.split(",") if s.strip()]
+        else:
+            status_list = status
+
+        if status_list:
+            filters["status"] = tuple(status_list)
+            conditions += " AND po.status IN %(status)s"
+
+    # -------- Other filters --------
+    if filters.get("po_no"):
+        conditions += " AND po.name = %(po_no)s"
+
+    if filters.get("supplier_name"):
+        filters["supplier_name"] = f"%{filters['supplier_name']}%"
+        conditions += " AND po.supplier_name LIKE %(supplier_name)s"
+
+    if filters.get("item_code"):
+        conditions += " AND poi.item_code = %(item_code)s"
+
+    if filters.get("currency"):
+        conditions += " AND po.currency = %(currency)s"
+
+    if filters.get("from_date"):
+        conditions += " AND po.transaction_date >= %(from_date)s"
+
+    if filters.get("to_date"):
+        conditions += " AND po.transaction_date <= %(to_date)s"
+
+    return conditions
+
+
+def get_data(filters):
+    if not filters:
+        filters = {}
+    conditions = get_conditions(filters)
+
+    sql = f"""
+        SELECT
+            poi.name AS name,
+            po.name AS supplier_po_no,
+            po.transaction_date AS supplier_po_date,
+            ROW_NUMBER() OVER (PARTITION BY po.name ORDER BY poi.idx) AS sr_no,
+            poi.sales_order AS linked_so_no,
+            (SELECT transaction_date FROM `tabSales Order` WHERE name = poi.sales_order LIMIT 1) AS so_date,
+            s.supplier_code AS supplier_code,
+            po.supplier_name AS supplier_name,
+            poi.item_code AS item_code,
+            poi.item_name AS item_name,
+            poi.qty AS order_quantity,
+            IFNULL(poi.received_qty, 0) AS delivered_qty,
+            IFNULL(poi.returned_qty, 0) AS returned_qty,
+            IFNULL(poi.open_qty, 0) AS open_qty,
+            poi.rate AS item_rate,
+            po.currency AS currency,
+            po.conversion_rate AS exchange_rate,
+            (poi.qty * poi.base_rate) AS `total_net_amount_(inr)`,
+            (IFNULL(poi.received_qty, 0) * poi.base_rate) AS delivered_net_total,
+            (IFNULL(poi.open_qty, 0) * poi.rate * po.conversion_rate) AS balance_net_total,
+            (
+                SELECT GROUP_CONCAT(DISTINCT pr.posting_date ORDER BY pr.posting_date ASC SEPARATOR ', ')
+                FROM `tabPurchase Receipt` pr
+                JOIN `tabPurchase Receipt Item` pri ON pri.parent = pr.name
+                WHERE pri.purchase_order = po.name
+                  AND pri.item_code = poi.item_code
+                  AND pr.docstatus = 1
+            ) AS delivery_date
+
+        FROM `tabPurchase Order` po
+        INNER JOIN `tabPurchase Order Item` poi ON poi.parent = po.name
+        LEFT JOIN `tabSupplier` s ON s.name = po.supplier
+       
+        WHERE 1 = 1
+        AND po.docstatus = 1
+        AND po.status NOT IN ('Draft', 'Cancelled', 'Closed')
+        
+        {conditions}
+
+        ORDER BY
+         po.transaction_date ASC,
+         po.name ASC,
+         poi.idx ASC
+    """
+
+    return frappe.db.sql(sql, filters, as_list=True)
+
+
+@frappe.whitelist()
+def download_xlsx(filters=None, include_filters=1):
+    if isinstance(filters, str):
+        try:
+            filters = frappe.parse_json(filters)
+        except Exception:
+            filters = json.loads(filters)
+
+    if not isinstance(filters, dict):
+        filters = {}
+
+    import copy
+    original_filters = copy.deepcopy(filters)
+
+    include_filters = frappe.utils.cint(filters.get("include_filters", include_filters))
+
+    if include_filters:
+        columns, data = execute(filters)
+    else:
+        columns, data = execute({})
+        
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Purchase Order Report"
+
+    ws["A1"].value = "Company"
+    ws["A1"].font = Font(bold=True)
+    company_name = frappe.defaults.get_user_default("Company") or frappe.db.get_default("company") or ""
+    ws["B1"].value = company_name
+
+    ws["A2"].value = "Report Name"
+    ws["A2"].font = Font(bold=True)
+    ws["B2"].value = "Purchase Order Report"
+
+    ws["A3"].value = "Generated On"
+    ws["A3"].font = Font(bold=True)
+    ws["B3"].value = frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+
+    ws["A4"].value = "Generated By"
+    ws["A4"].font = Font(bold=True)
+    full_name = frappe.db.get_value("User", frappe.session.user, "full_name")
+    ws["B4"].value = full_name or frappe.session.user
+
+    row_idx = 6
+    if original_filters:
+        valid_keys = ["status", "po_no", "from_date", "to_date", "supplier_name", "item_code", "currency"]
+        active_filters = {}
+        for key, val in original_filters.items():
+            if val and key in valid_keys:
+                active_filters[key] = val
+                
+        if active_filters:
+            cell_title = ws.cell(row=row_idx, column=1, value="Filters Applied")
+            cell_title.font = Font(bold=True, size=11, color="1F497D")
+            ws.cell(row=row_idx, column=2, value="")
+            
+            fill_light_grey = PatternFill(start_color="F2F2F2", fill_type="solid")
+            cell_title.fill = fill_light_grey
+            ws.cell(row=row_idx, column=2).fill = fill_light_grey
+            row_idx += 1
+            
+            for key, val in active_filters.items():
+                label = frappe.unscrub(key)
+                if isinstance(val, (list, tuple)):
+                    val = ", ".join([str(v) for v in val])
+                
+                c_lbl = ws.cell(row=row_idx, column=1, value=f"  {label}:")
+                c_lbl.font = Font(bold=True, color="595959")
+                
+                c_val = ws.cell(row=row_idx, column=2, value=str(val))
+                c_val.font = Font(color="000000")
+                row_idx += 1
+            
+            row_idx += 1
+
+    keep_indices = []
+    filtered_columns = []
+    for i, col in enumerate(columns):
+        if isinstance(col, dict) and col.get("hidden"):
+            continue
+        keep_indices.append(i)
+        filtered_columns.append(col)
+    
+    columns = filtered_columns
+    data = [[row[i] for i in keep_indices] for row in data]
+
+    thin_border = Border(
+        left=Side(style="thin", color="B0B0B0"),
+        right=Side(style="thin", color="B0B0B0"),
+        top=Side(style="thin", color="B0B0B0"),
+        bottom=Side(style="thin", color="B0B0B0")
+    )
+
+    header_row = row_idx
+    for idx, col in enumerate(columns, start=1):
+        label = col["label"] if isinstance(col, dict) else col.split(":")[0]
+        c = ws.cell(row=header_row, column=idx, value=label)
+        c.font = Font(bold=True)
+        c.alignment = Alignment(horizontal="center")
+        c.border = thin_border
+
+    row_idx += 1
+
+    numeric_index_map = {}
+    no_total_index_set = set()
+    
+    for i, col in enumerate(columns):
+        label = col["label"] if isinstance(col, dict) else col.split(":")[0]
+        f_type = col.get("fieldtype") if isinstance(col, dict) else (col.split(":")[1] if ":" in col else "")
+        fieldname = col.get("fieldname") if isinstance(col, dict) else ""
+        disable_total = col.get("disable_total") if isinstance(col, dict) else 0
+        
+        if f_type in ["Float", "Int", "Currency", "Percent"]:
+            numeric_index_map[i] = True
+            
+        if (fieldname in ["item_rate", "exchange_rate", "sr_no"] or 
+            disable_total or 
+            label in ["Supplier PO Date", "SO Date", "Delivery Date", "Item Rate", "Currency", "Exchange Rate"]):
+            no_total_index_set.add(i)
+
+    for row in data:
+        for col_idx, value in enumerate(row, start=1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.border = thin_border
+            
+            col_def = columns[col_idx - 1]
+            label = col_def["label"] if isinstance(col_def, dict) else col_def.split(":")[0]
+            fieldname = label.lower().replace(" ", "_")
+
+            if fieldname in ("sr.no.", "sr_no", "sr_no.", "sr.no"):
+                cell.value = int(value) if value else 0
+                cell.number_format = "0"
+                cell.alignment = Alignment(horizontal="center")
+                continue
+
+            if (col_idx - 1) in numeric_index_map and value not in (None, ""):
+                try:
+                    cell.value = float(value)
+                    cell.number_format = "#,##0.00"
+                except:
+                    cell.value = value
+                cell.alignment = Alignment(horizontal="right")
+            else:
+                cell.value = value
+                cell.alignment = Alignment(horizontal="left")
+
+        row_idx += 1
+
+    total_row = row_idx
+    for col_idx in range(1, len(columns) + 1):
+        cell = ws.cell(row=total_row, column=col_idx)
+        cell.fill = PatternFill(start_color="D3D3D3", fill_type="solid")
+        cell.font = Font(bold=True)
+        cell.border = thin_border
+
+        if col_idx == 1:
+            cell.value = "Total"
+            cell.alignment = Alignment(horizontal="left")
+            continue
+
+        field_idx = col_idx - 1
+        if field_idx in numeric_index_map and field_idx not in no_total_index_set:
+            try:
+                total_val = sum(flt(r[field_idx]) for r in data)
+            except:
+                total_val = 0
+            cell.value = total_val
+            cell.number_format = "#,##0.00"
+            cell.alignment = Alignment(horizontal="right")
+        else:
+            cell.value = ""
+
+    for i in range(1, len(columns) + 1):
+        ws.column_dimensions[get_column_letter(i)].width = 22
+
+    out = BytesIO()
+    wb.save(out)
+    out.seek(0)
+
+    return base64.b64encode(out.read()).decode()
