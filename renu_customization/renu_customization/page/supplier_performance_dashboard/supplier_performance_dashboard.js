@@ -729,6 +729,49 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
 		let due_tbody = due_table_card.find("#due_body");
 		
+		// OVERDUE ORDERS Table
+		let overdue_table_card = $(`
+            <div class="table-card" style="margin-top: 24px; border-left: 4px solid #ef4444;">
+                <div class="header">
+					<span style="color: #ef4444;">&#9888; ${__("Overdue Orders")}</span>
+					<div class="export-options">
+						<button class="export-btn" id="export_overdue_excel_btn">
+							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
+						</button>
+					</div>
+				</div>
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table orders-table due-table" id="overdue_orders_table" style="width:1997px;">
+                        ${ORDERS_COLGROUP_16}
+                        <thead>
+                            <tr>
+                                <th class="col-sno">S.No.</th>
+                                <th class="col-id sortable-header" data-table="overdue" data-field="name" style="cursor: pointer; user-select: none;">${ORDER_COL.po_no} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-supplier sortable-header" data-table="overdue" data-field="supplier" style="cursor: pointer; user-select: none;">${ORDER_COL.supplier} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-code sortable-header" data-table="overdue" data-field="item_code" style="cursor: pointer; user-select: none;">${ORDER_COL.item_code} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-name sortable-header" data-table="overdue" data-field="item_name" style="cursor: pointer; user-select: none;">${ORDER_COL.item_name} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="overdue" data-field="transaction_date" style="cursor: pointer; user-select: none;">${ORDER_COL.po_date} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="overdue" data-field="schedule_date" style="cursor: pointer; user-select: none;">${ORDER_COL.expected_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date-actual sortable-header" data-table="overdue" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${ORDER_COL.actual_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-days sortable-header" data-table="overdue" data-field="due_days" style="cursor: pointer; user-select: none;">${__("Days Overdue")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="overdue" data-field="status" style="cursor: pointer; user-select: none;">${ORDER_COL.status} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="overdue" data-field="per_delivered" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_received} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="overdue" data-field="per_billed" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_billed} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="overdue" data-field="qty" style="cursor: pointer; user-select: none;">${ORDER_COL.order_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="overdue" data-field="received_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.received_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="overdue" data-field="pending_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.pending_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="overdue" data-field="net_total" style="cursor: pointer; user-select: none;">${ORDER_COL.amount} <i class="fa fa-sort text-muted ml-1"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="overdue_body"></tbody>
+                        ${build_orders_footer_16(__("TOTAL OVERDUE VALUE"), "total_overdue_value")}
+                    </table>
+                </div>
+            </div>
+        `).appendTo(page.container);
+
+		let overdue_tbody = overdue_table_card.find("#overdue_body");
+		
 		// 3. Detailed Supplier Orders List Table
 		let table_card = $(`
             <div class="table-card" style="margin-top: 24px;">
@@ -774,12 +817,14 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		page.export_tables = {
 			month: month_table_card.find("table"),
 			due: due_table_card.find("table"),
+			overdue: overdue_table_card.find("table"),
 			detailed: table_card.find("table"),
 		};
 
 		// State variables for sorting
 		let month_sort = { field: "total", asc: false };
 		let due_sort = { field: "due_days", asc: true };
+		let overdue_sort = { field: "due_days", asc: false };
 		let detailed_sort = { field: "transaction_date", asc: false };
 
 		const render_month_table = () => {
@@ -889,6 +934,66 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 			due_table_card.find("#total_due_value").text(`₹ ${(due_total_val / 1000000).toFixed(2)} M`);
 		};
 
+		const render_overdue_table = () => {
+			let sorted_data = [...(data.results || [])].filter(r => r.is_overdue);
+			sorted_data.sort((a, b) => {
+				let val_a = a[overdue_sort.field];
+				let val_b = b[overdue_sort.field];
+				
+				if (["name", "supplier", "status", "item_code", "item_name"].includes(overdue_sort.field)) {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return overdue_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (overdue_sort.field === "transaction_date") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else if (overdue_sort.field === "schedule_date") {
+					val_a = a.schedule_date ? new Date(a.schedule_date) : new Date(0);
+					val_b = b.schedule_date ? new Date(b.schedule_date) : new Date(0);
+				} else if (overdue_sort.field === "actual_delivery_time") {
+					val_a = get_actual_sort_date(a);
+					val_b = get_actual_sort_date(b);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return overdue_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			overdue_tbody.empty();
+			let overdue_total_val = 0;
+
+			sorted_data.forEach((row, idx) => {
+				overdue_total_val += flt(row.net_total);
+				let rec_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
+				let status_slug = (row.status || '').toLowerCase().replace(/ /g, '-');
+				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.received_qty)));
+
+				overdue_tbody.append(`
+					<tr style="background: rgba(239,68,68,0.05);">
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-id"><a href="/app/purchase-order/${row.name}">${row.name}</a></td>
+						<td class="col-supplier" title="${row.supplier}">${row.supplier}</td>
+						<td class="col-item-code">${row.item_code || '-'}</td>
+						<td class="col-item-name" title="${row.item_name}">${row.item_name || '-'}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+						<td class="col-date" style="font-weight: 600; color: #ef4444;">${format_expected_cell(row)}</td>
+						<td class="col-date-actual">${format_actual_cell(row)}</td>
+						<td class="col-days text-danger font-weight-bold">${row.due_days} ${__("Days")}</td>
+						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
+						<td class="col-pct"><span class="pct-badge ${rec_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
+						<td class="col-qty">${format_qty(row.qty)}</td>
+						<td class="col-qty">${format_qty(row.received_qty)}</td>
+						<td class="col-qty" style="font-weight: 600;">${format_qty(pending_qty)}</td>
+						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toFixed(2)} M</td>
+					</tr>
+				`);
+			});
+			overdue_table_card.find("#total_overdue_value").text(`₹ ${(overdue_total_val / 1000000).toFixed(2)} M`);
+		};
+
 		const render_detailed_table = () => {
 			let sorted_data = [...(data.results || [])];
 			sorted_data.sort((a, b) => {
@@ -946,6 +1051,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		// Initial render of all tables
 		render_month_table();
 		render_due_table();
+		render_overdue_table();
 		render_detailed_table();
 
 		// Header clicks for real-time sort toggling
@@ -1019,11 +1125,34 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				}
 				
 				render_detailed_table();
+			} else if (table_type === "overdue") {
+				if (overdue_sort.field === field) {
+					overdue_sort.asc = !overdue_sort.asc;
+				} else {
+					overdue_sort.field = field;
+					overdue_sort.asc = true;
+				}
+				
+				// Reset icons
+				overdue_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				overdue_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
+				
+				// Update active
+				if (overdue_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+				
+				render_overdue_table();
 			}
 		});
 
 		month_table_card.find("#export_month_excel_btn").on("click", () => export_data_excel("summary"));
 		due_table_card.find("#export_due_excel_btn").on("click", () => export_data_excel("due"));
+		overdue_table_card.find("#export_overdue_excel_btn").on("click", () => export_data_excel("overdue"));
 		table_card.find("#export_excel_btn").on("click", () => export_data_excel("detail"));
 		table_card.find("#export_pdf_btn").on("click", () => export_pdf_full());
 	}
@@ -1057,6 +1186,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 
         const month_table_html = clone_table_html_for_pdf(page.export_tables?.month);
         const due_table_html = clone_table_html_for_pdf(page.export_tables?.due);
+        const overdue_table_html = clone_table_html_for_pdf(page.export_tables?.overdue);
         const detailed_table_html = clone_table_html_for_pdf(page.export_tables?.detailed);
 
         let html = `
@@ -1132,6 +1262,10 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                 <div class="page-break"></div>
                 <h3 class="section-title">Orders Due in Next 15 Days </h3>
                 ${due_table_html || "<p>No data</p>"}
+
+                <div class="page-break"></div>
+                <h3 class="section-title" style="color: #ef4444;">Overdue Orders</h3>
+                ${overdue_table_html || "<p>No data</p>"}
 
                 <div class="page-break"></div>
                 <h3 class="section-title">Detailed Orders List </h3>
