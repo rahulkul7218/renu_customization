@@ -1,15 +1,15 @@
 frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("Customer Performance Dashboard "),
+		title: __("RFA Performance Dashboard "),
 		single_column: true,
 	});
 
 	window.cur_page = page;
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
-    page.add_menu_item(__("Export to Excel"), () => export_data_excel("all"));
-    page.add_menu_item(__("Export to PDF"), () => page.export_pdf_full && page.export_pdf_full());
+	page.add_menu_item(__("Export to Excel"), () => export_data_excel("all"));
+	page.add_menu_item(__("Export to PDF"), () => page.export_pdf_full && page.export_pdf_full());
 
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
 
@@ -23,11 +23,11 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 
 	function perform_refresh() {
 		let filters = page.filter_group.get_values();
-		
+
 		// Show loading indicator
 		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
 			page.container.html(
-				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Customer Performance Data...</div></div>'
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading RFA Performance Data...</div></div>'
 			);
 		} else {
 			page.container.css("opacity", "0.6");
@@ -71,7 +71,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 	});
 	page.filter_group.make();
 
-	page.filter_group.fields_dict.customer.get_query = function() {
+	page.filter_group.fields_dict.customer.get_query = function () {
 		let customer_group = page.filter_group.get_value("customer_group");
 		if (customer_group) {
 			return {
@@ -82,7 +82,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		}
 	};
 
-	page.filter_group.fields_dict.sales_order.get_query = function() {
+	page.filter_group.fields_dict.sales_order.get_query = function () {
 		return {
 			filters: {
 				docstatus: 1,
@@ -91,23 +91,23 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		};
 	};
 
-    let fy_field = page.filter_group.get_field("fiscal_year");
-    fy_field.df.on_change = () => {
-        let fy = fy_field.get_value();
-        if (fy) {
-            frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
-                if (r) {
-                    page.filter_group.set_values({ from_date: r.year_start_date, to_date: r.year_end_date });
-                    page.refresh();
-                }
-            });
-        }
-    };
+	let fy_field = page.filter_group.get_field("fiscal_year");
+	fy_field.df.on_change = () => {
+		let fy = fy_field.get_value();
+		if (fy) {
+			frappe.db.get_value("Fiscal Year", fy, ["year_start_date", "year_end_date"], (r) => {
+				if (r) {
+					page.filter_group.set_values({ from_date: r.year_start_date, to_date: r.year_end_date });
+					page.refresh();
+				}
+			});
+		}
+	};
 
-    Object.keys(page.filter_group.fields_dict).forEach(key => {
-        let f = page.filter_group.fields_dict[key];
-        if (f.$input) f.$input.on("change input blur", () => page.refresh());
-    });
+	Object.keys(page.filter_group.fields_dict).forEach(key => {
+		let f = page.filter_group.fields_dict[key];
+		if (f.$input) f.$input.on("change input blur", () => page.refresh());
+	});
 
 	page.container = $('<div class="dashboard-content"></div>').appendTo(page.main);
 
@@ -572,8 +572,8 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						<div class="chart-title">${title}</div>
 						<div class="chart-img-wrap">
 							${img_src
-								? `<img src="${img_src}" class="chart-img" alt="${title}">`
-								: "<p class=\"chart-missing\">Chart unavailable</p>"}
+						? `<img src="${img_src}" class="chart-img" alt="${title}">`
+						: "<p class=\"chart-missing\">Chart unavailable</p>"}
 						</div>
 						${build_pdf_chart_legend_html(c_obj)}
 					</div>`;
@@ -614,9 +614,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
 		data.summary.forEach((m) => {
 			let indicator = (m.indicator || "blue").toLowerCase();
-			let val = m.fieldtype === "Currency" 
-                ? "₹ " + (flt(m.value) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
-                : m.value;
+			let val = m.fieldtype === "Currency"
+				? "₹ " + (flt(m.value) / 1000000).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " M"
+				: m.value;
 			$(`
                 <div class="summary-card ${indicator}">
                     <div class="label">${m.label}</div>
@@ -626,10 +626,10 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		});
 
 		let charts_row = $('<div class="charts-row"></div>').appendTo(page.container);
-        page.chart_instances = {};
+		page.chart_instances = {};
 		Object.keys(data.charts).forEach((chart_id) => {
 			let chart_obj = data.charts[chart_id];
-            let title = chart_obj.title || chart_id.replace(/_/g, " ").toUpperCase();
+			let title = chart_obj.title || chart_id.replace(/_/g, " ").toUpperCase();
 			$(`
 				<div class="chart-card">
 					<div class="title">${title}</div>
@@ -690,7 +690,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         `).appendTo(page.container);
 
 		let month_tbody = month_table_card.find("#month_wise_body");
-		
+
 		// DUE IN NEXT 15 DAYS Table
 		let due_table_card = $(`
             <div class="table-card" style="margin-top: 24px;">
@@ -733,7 +733,50 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
         `).appendTo(page.container);
 
 		let due_tbody = due_table_card.find("#due_body");
-		
+
+		// OVERDUE ORDERS Table
+		let overdue_table_card = $(`
+            <div class="table-card" style="margin-top: 24px; border-left: 4px solid #ef4444;">
+                <div class="header">
+					<span style="color: #ef4444;">&#9888; ${__("Overdue Orders")}</span>
+					<div class="export-options">
+						<button class="export-btn" id="export_overdue_excel_btn">
+							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
+						</button>
+					</div>
+				</div>
+                <div class="dashboard-table-scroll">
+                    <table class="dashboard-table orders-table due-table" id="overdue_orders_table" style="width:2058px;">
+                        ${ORDERS_COLGROUP_16}
+                        <thead>
+                            <tr>
+                                <th class="col-sno">S.No.</th>
+                                <th class="col-id sortable-header" data-table="overdue" data-field="name" style="cursor: pointer; user-select: none;">${ORDER_COL.so_no} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer sortable-header" data-table="overdue" data-field="customer" style="cursor: pointer; user-select: none;">${ORDER_COL.customer} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-code sortable-header" data-table="overdue" data-field="item_code" style="cursor: pointer; user-select: none;">${ORDER_COL.item_code} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-name sortable-header" data-table="overdue" data-field="item_name" style="cursor: pointer; user-select: none;">${ORDER_COL.item_name} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="overdue" data-field="transaction_date" style="cursor: pointer; user-select: none;">${ORDER_COL.order_date} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-table="overdue" data-field="schedule_date" style="cursor: pointer; user-select: none;">${ORDER_COL.expected_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date-actual sortable-header" data-table="overdue" data-field="actual_delivery_time" style="cursor: pointer; user-select: none;">${ORDER_COL.actual_delivery} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-days sortable-header" data-table="overdue" data-field="due_days" style="cursor: pointer; user-select: none;">${__("Days Overdue")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-status sortable-header" data-table="overdue" data-field="status" style="cursor: pointer; user-select: none;">${ORDER_COL.status} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="overdue" data-field="per_delivered" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_delivered} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-pct sortable-header" data-table="overdue" data-field="per_billed" style="cursor: pointer; user-select: none;">${ORDER_COL.pct_billed} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="overdue" data-field="qty" style="cursor: pointer; user-select: none;">${ORDER_COL.order_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="overdue" data-field="delivered_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.delivered_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-table="overdue" data-field="pending_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.pending_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header" data-table="overdue" data-field="net_total" style="cursor: pointer; user-select: none;">${ORDER_COL.net_total} <i class="fa fa-sort text-muted ml-1"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="overdue_body"></tbody>
+                        ${build_orders_footer_16(__("TOTAL OVERDUE VALUE"), "total_overdue_value")}
+                    </table>
+                </div>
+            </div>
+        `).appendTo(page.container);
+
+		let overdue_tbody = overdue_table_card.find("#overdue_body");
+
 		// Detailed Customer Orders List Table
 		let table_card = $(`
             <div class="table-card" style="margin-top: 24px;">
@@ -782,12 +825,14 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		page.export_tables = {
 			month: month_table_card.find("table"),
 			due: due_table_card.find("table"),
+			overdue: overdue_table_card.find("table"),
 			detailed: table_card.find("table"),
 		};
 
 		// State variables for sorting
 		let month_sort = { field: "customer", asc: true };
 		let due_sort = { field: "due_days", asc: true };
+		let overdue_sort = { field: "due_days", asc: false };
 		let detailed_sort = { field: "transaction_date", asc: false };
 
 		const render_month_table = () => {
@@ -820,10 +865,10 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-sno">${idx + 1}</td>
 						<td class="col-customer" title="${row.customer}">${row.customer}</td>
 						${months.map(m => {
-							let val = row.months[m.key] || 0;
-							month_totals[m.sort] = (month_totals[m.sort] || 0) + val;
-							return `<td class="col-amt">₹ ${(val / 1000000).toFixed(2)} M</td>`;
-						}).join("")}
+					let val = row.months[m.key] || 0;
+					month_totals[m.sort] = (month_totals[m.sort] || 0) + val;
+					return `<td class="col-amt">₹ ${(val / 1000000).toFixed(2)} M</td>`;
+				}).join("")}
 						<td class="col-amt" style="font-weight: 700;">₹ ${(row_total / 1000000).toFixed(2)} M</td>
 					</tr>
 				`;
@@ -831,7 +876,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 			});
 
 			months.forEach(m => {
-				month_table_card.find(`#total_${m.sort}`).text(`₹ ${( (month_totals[m.sort] || 0) / 1000000).toFixed(2)} M`);
+				month_table_card.find(`#total_${m.sort}`).text(`₹ ${((month_totals[m.sort] || 0) / 1000000).toFixed(2)} M`);
 			});
 			month_table_card.find("#grand_total_all").text(`₹ ${(grand_total_all / 1000000).toFixed(2)} M`);
 		};
@@ -841,7 +886,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 			sorted_data.sort((a, b) => {
 				let val_a = a[due_sort.field];
 				let val_b = b[due_sort.field];
-				
+
 				if (["name", "customer", "status", "item_code", "item_name"].includes(due_sort.field)) {
 					val_a = val_a || "";
 					val_b = val_b || "";
@@ -897,12 +942,72 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 			due_table_card.find("#total_due_value").text(`₹ ${(due_total_val / 1000000).toFixed(2)} M`);
 		};
 
+		const render_overdue_table = () => {
+			let sorted_data = [...(data.results || [])].filter(r => r.is_overdue && is_open_order_line(r));
+			sorted_data.sort((a, b) => {
+				let val_a = a[overdue_sort.field];
+				let val_b = b[overdue_sort.field];
+
+				if (["name", "customer", "status", "item_code", "item_name"].includes(overdue_sort.field)) {
+					val_a = val_a || "";
+					val_b = val_b || "";
+					return overdue_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (overdue_sort.field === "transaction_date") {
+					val_a = val_a ? new Date(val_a) : new Date(0);
+					val_b = val_b ? new Date(val_b) : new Date(0);
+				} else if (overdue_sort.field === "schedule_date") {
+					val_a = a.schedule_date ? new Date(a.schedule_date) : new Date(0);
+					val_b = b.schedule_date ? new Date(b.schedule_date) : new Date(0);
+				} else if (overdue_sort.field === "actual_delivery_time") {
+					val_a = get_actual_sort_date(a);
+					val_b = get_actual_sort_date(b);
+				} else {
+					val_a = flt(val_a);
+					val_b = flt(val_b);
+				}
+				return overdue_sort.asc ? val_a - val_b : val_b - val_a;
+			});
+
+			overdue_tbody.empty();
+			let overdue_total_val = 0;
+
+			sorted_data.forEach((row, idx) => {
+				overdue_total_val += flt(row.net_total);
+				let del_class = row.per_delivered >= 100 ? "full" : (row.per_delivered > 0 ? "partial" : "none");
+				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
+				let status_slug = (row.status || "").toLowerCase().replace(/ /g, "-");
+				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.delivered_qty)));
+
+				overdue_tbody.append(`
+					<tr style="background: rgba(239,68,68,0.05);">
+						<td class="col-sno">${idx + 1}</td>
+						<td class="col-id"><a href="/app/sales-order/${row.name}">${row.name}</a></td>
+						<td class="col-customer" title="${row.customer}">${row.customer}</td>
+						<td class="col-item-code">${row.item_code || "-"}</td>
+						<td class="col-item-name" title="${row.item_name}">${row.item_name || "-"}</td>
+						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
+						<td class="col-date" style="font-weight: 600; color: #ef4444;">${format_expected_cell(row)}</td>
+						<td class="col-date-actual">${format_actual_cell(row)}</td>
+						<td class="col-days text-danger font-weight-bold">${row.due_days} ${__("Days")}</td>
+						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
+						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
+						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
+						<td class="col-qty">${format_qty(row.qty)}</td>
+						<td class="col-qty">${format_qty(row.delivered_qty)}</td>
+						<td class="col-qty" style="font-weight: 600;">${format_qty(pending_qty)}</td>
+						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toFixed(2)} M</td>
+					</tr>
+				`);
+			});
+			overdue_table_card.find("#total_overdue_value").text(`₹ ${(overdue_total_val / 1000000).toFixed(2)} M`);
+		};
+
 		const render_detailed_table = () => {
 			let sorted_data = [...(data.results || [])].filter(is_open_order_line);
 			sorted_data.sort((a, b) => {
 				let val_a = a[detailed_sort.field];
 				let val_b = b[detailed_sort.field];
-				
+
 				if (["name", "customer", "status", "item_code", "item_name"].includes(detailed_sort.field)) {
 					val_a = val_a || "";
 					val_b = val_b || "";
@@ -958,13 +1063,14 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		// Initial render of all tables
 		render_month_table();
 		render_due_table();
+		render_overdue_table();
 		render_detailed_table();
 
 		// Header clicks for real-time sort toggling
 		page.container.on("click", ".sortable-header", function () {
 			const table_type = $(this).data("table");
 			const field = $(this).data("field");
-			
+
 			if (table_type === "month") {
 				if (month_sort.field === field) {
 					month_sort.asc = !month_sort.asc;
@@ -972,11 +1078,11 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					month_sort.field = field;
 					month_sort.asc = true;
 				}
-				
+
 				// Reset icons
 				month_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
 				month_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
-				
+
 				// Update active
 				if (month_sort.asc) {
 					$(this).addClass("sorted-asc");
@@ -985,7 +1091,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					$(this).addClass("sorted-desc");
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
 				}
-				
+
 				render_month_table();
 			} else if (table_type === "due") {
 				if (due_sort.field === field) {
@@ -994,11 +1100,11 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					due_sort.field = field;
 					due_sort.asc = true;
 				}
-				
+
 				// Reset icons
 				due_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
 				due_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
-				
+
 				// Update active
 				if (due_sort.asc) {
 					$(this).addClass("sorted-asc");
@@ -1007,7 +1113,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					$(this).addClass("sorted-desc");
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
 				}
-				
+
 				render_due_table();
 			} else if (table_type === "detailed") {
 				if (detailed_sort.field === field) {
@@ -1016,11 +1122,11 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					detailed_sort.field = field;
 					detailed_sort.asc = true;
 				}
-				
+
 				// Reset icons
 				table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
 				table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
-				
+
 				// Update active
 				if (detailed_sort.asc) {
 					$(this).addClass("sorted-asc");
@@ -1029,49 +1135,73 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 					$(this).addClass("sorted-desc");
 					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
 				}
-				
+
 				render_detailed_table();
+			} else if (table_type === "overdue") {
+				if (overdue_sort.field === field) {
+					overdue_sort.asc = !overdue_sort.asc;
+				} else {
+					overdue_sort.field = field;
+					overdue_sort.asc = true;
+				}
+
+				// Reset icons
+				overdue_table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+				overdue_table_card.find(".sortable-header").removeClass("sorted-asc sorted-desc");
+
+				// Update active
+				if (overdue_sort.asc) {
+					$(this).addClass("sorted-asc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+				} else {
+					$(this).addClass("sorted-desc");
+					$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+				}
+
+				render_overdue_table();
 			}
 		});
 
 		month_table_card.find("#export_month_excel_btn").on("click", () => export_data_excel("summary"));
 		due_table_card.find("#export_due_excel_btn").on("click", () => export_data_excel("due"));
+		overdue_table_card.find("#export_overdue_excel_btn").on("click", () => export_data_excel("overdue"));
 		table_card.find("#export_excel_btn").on("click", () => export_data_excel("detail"));
 		table_card.find("#export_pdf_btn").on("click", () => export_pdf_full());
 	}
 
-    async function export_pdf_full() {
-        frappe.show_alert({ message: __("Preparing PDF export..."), indicator: "blue" });
+	async function export_pdf_full() {
+		frappe.show_alert({ message: __("Preparing PDF export..."), indicator: "blue" });
 
-        const data = page.dashboard_data;
-        if (
-            !data ||
-            (
-                !(data.results || []).length &&
-                !(data.due_next_15_days || []).length &&
-                !(data.month_wise_customer || []).length
-            )
-        ) {
-            frappe.msgprint(__("No data to export. Refresh the dashboard and try again."));
-            return;
-        }
+		const data = page.dashboard_data;
+		if (
+			!data ||
+			(
+				!(data.results || []).length &&
+				!(data.due_next_15_days || []).length &&
+				!(data.month_wise_customer || []).length
+			)
+		) {
+			frappe.msgprint(__("No data to export. Refresh the dashboard and try again."));
+			return;
+		}
 
-        const chart_images = await capture_charts_for_pdf(data.charts);
+		const chart_images = await capture_charts_for_pdf(data.charts);
 
-        const report_date = frappe.datetime.global_date_format(frappe.datetime.now_date());
-        const filters = page.filter_group.get_values();
-        const period = `${frappe.datetime.str_to_user(filters.from_date || "")} to ${frappe.datetime.str_to_user(filters.to_date || "")}`;
+		const report_date = frappe.datetime.global_date_format(frappe.datetime.now_date());
+		const filters = page.filter_group.get_values();
+		const period = `${frappe.datetime.str_to_user(filters.from_date || "")} to ${frappe.datetime.str_to_user(filters.to_date || "")}`;
 
-        const kpi_border_color = (indicator) => {
-            const colors = { green: "#10b981", red: "#ef4444", orange: "#f59e0b", blue: "#3b82f6" };
-            return colors[(indicator || "blue").toLowerCase()] || colors.blue;
-        };
+		const kpi_border_color = (indicator) => {
+			const colors = { green: "#10b981", red: "#ef4444", orange: "#f59e0b", blue: "#3b82f6" };
+			return colors[(indicator || "blue").toLowerCase()] || colors.blue;
+		};
 
-        const month_table_html = clone_table_html_for_pdf(page.export_tables?.month);
-        const due_table_html = clone_table_html_for_pdf(page.export_tables?.due);
-        const detailed_table_html = clone_table_html_for_pdf(page.export_tables?.detailed);
+		const month_table_html = clone_table_html_for_pdf(page.export_tables?.month);
+		const due_table_html = clone_table_html_for_pdf(page.export_tables?.due);
+		const overdue_table_html = clone_table_html_for_pdf(page.export_tables?.overdue);
+		const detailed_table_html = clone_table_html_for_pdf(page.export_tables?.detailed);
 
-        const html = `
+		const html = `
             <html>
             <head>
                 <style>
@@ -1119,7 +1249,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
             </head>
             <body>
                 <div class="report-header">
-                    <h1 class="report-title">Customer Performance Report</h1>
+                    <h1 class="report-title">RFA Performance Report</h1>
                     <p style="font-size: 12px; color: #64748b;">Period: ${period} | Generated: ${report_date}</p>
                 </div>
 
@@ -1146,16 +1276,20 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
                 ${due_table_html || "<p>No data</p>"}
 
                 <div class="page-break"></div>
+                <h3 class="section-title" style="color: #ef4444;">Overdue Orders</h3>
+                ${overdue_table_html || "<p>No data</p>"}
+
+                <div class="page-break"></div>
                 <h3 class="section-title">Detailed Orders List</h3>
                 ${detailed_table_html || "<p>No data</p>"}
             </body>
             </html>
         `;
 
-        const iframe_name = `customer_pdf_export_${Date.now()}`;
-        $(`<iframe name="${iframe_name}" style="display:none;"></iframe>`).appendTo("body");
+		const iframe_name = `customer_pdf_export_${Date.now()}`;
+		$(`<iframe name="${iframe_name}" style="display:none;"></iframe>`).appendTo("body");
 
-        const $form = $(`
+		const $form = $(`
             <form method="POST"
                 action="/api/method/renu_customization.renu_customization.page.customer_performance_dashboard.customer_performance_dashboard.export_to_pdf"
                 target="${iframe_name}"
@@ -1165,14 +1299,14 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
             </form>
         `).appendTo("body");
 
-        $form.find('input[name="html"]').val(html);
-        $form[0].submit();
+		$form.find('input[name="html"]').val(html);
+		$form[0].submit();
 
-        setTimeout(() => $form.remove(), 5000);
-        frappe.show_alert({ message: __("PDF download started"), indicator: "green" });
-    }
+		setTimeout(() => $form.remove(), 5000);
+		frappe.show_alert({ message: __("PDF download started"), indicator: "green" });
+	}
 
-    page.export_pdf_full = export_pdf_full;
+	page.export_pdf_full = export_pdf_full;
 
 	frappe.call({
 		method: "frappe.client.get_value",
@@ -1184,7 +1318,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		callback: function (r) {
 			if (r.message) page.filter_group.set_value("fiscal_year", r.message.name);
 		},
-		always: function() { 
+		always: function () {
 			setTimeout(() => {
 				page.refresh();
 				setTimeout(() => page.refresh(), 500);

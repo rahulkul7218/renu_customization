@@ -21,7 +21,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	function perform_refresh() {
 		let filters = page.filter_group.get_values();
-		
+
 		// Show loading indicator
 		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
 			page.container.html(
@@ -156,6 +156,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		args: {
 			doctype: "Business Region Code",
 			fields: ["business_region_name"],
+			filters: [["Business Region Code", "enable", "=", 1]],
 			order_by: "business_region_name asc",
 			limit_page_length: 500,
 		},
@@ -371,11 +372,11 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	$(`<style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        
-        .dashboard-content { 
-            padding: 24px; 
-            background: #ffffff; 
-            min-height: 100vh; 
+
+        .dashboard-content {
+            padding: 24px;
+            background: #ffffff;
+            min-height: 100vh;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             color: #1e293b;
             width: 100% !important;
@@ -414,18 +415,18 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             height: 1px;
             background: #e2e8f0;
         }
-        .summary-wrapper { 
-            display: grid !important; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; 
-            gap: 16px; 
-            margin-bottom: 24px; 
+        .summary-wrapper {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+            gap: 16px;
+            margin-bottom: 24px;
             width: 100% !important;
         }
-        .summary-card { 
+        .summary-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 12px; 
-            padding: 16px; 
+            border-radius: 12px;
+            padding: 16px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             border-left: 5px solid #cbd5e1;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -438,11 +439,11 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
 
         .lifecycle-total-col {
-            position: sticky !important; 
-            right: 0; 
-            position: sticky; top: 0; z-index: 2; 
-            background: #f8fafc !important; 
-            font-weight: 800; 
+            position: sticky !important;
+            right: 0;
+            position: sticky; top: 0; z-index: 2;
+            background: #f8fafc !important;
+            font-weight: 800;
             color: #0f172a !important;
             text-align: right !important;
             border-left: 2px solid #cbd5e1;
@@ -451,11 +452,11 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             white-space: nowrap !important;
         }
         th.lifecycle-total-col { z-index: 2 !important; background: #f1f5f9 !important; }
-        .summary-card:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
+        .summary-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
         }
-        
+
         /* Consistent Border Colors */
         .summary-card.blue { border-left-color: #3b82f6; }
         .summary-card.green { border-left-color: #10b981; }
@@ -464,26 +465,26 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .summary-card.purple { border-left-color: #8b5cf6; }
         .summary-card.red { border-left-color: #ef4444; }
 
-        .summary-card .label { 
-            font-size: 11px; 
-            color: #64748b; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            margin-bottom: 4px; 
-            display: flex; 
-            align-items: center; 
+        .summary-card .label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
             gap: 8px;
         }
-        .summary-card .value { 
-            font-size: 18px; 
-            font-weight: 800; 
-            color: #0f172a; 
+        .summary-card .value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
             white-space: nowrap;
             display: block;
         }
         .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-        
+
         .bg-blue { background-color: #3b82f6; }
         .bg-green { background-color: #10b981; }
         .bg-orange { background-color: #f59e0b; }
@@ -492,29 +493,29 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .bg-red { background-color: #ef4444; }
 
         /* Charts Row Styling */
-        .charts-row { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 24px; 
-            margin-bottom: 24px; 
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
             width: 100%;
         }
-        .chart-card { 
-            background: #fff; border-radius: 12px; padding: 24px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        .chart-card {
+            background: #fff; border-radius: 12px; padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border: 1px solid #e2e8f0;
         }
-        .chart-card .title { 
-            font-size: 15px; font-weight: 700; color: #1e293b; 
+        .chart-card .title {
+            font-size: 15px; font-weight: 700; color: #1e293b;
             margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.025em;
         }
 
-        .custom-legend { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-            gap: 16px; 
-            margin-top: 30px; 
-            padding: 20px; 
+        .custom-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 30px;
+            padding: 20px;
             border-top: 1px solid #f1f5f9;
             background: #fafafa;
             border-radius: 8px;
@@ -527,57 +528,57 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
         /* Hard hide internal chart legend */
         .frappe-chart .chart-legend, .frappe-chart .legend { display: none !important; visibility: hidden !important; opacity: 0 !important; height: 0 !important; overflow: hidden !important; }
-        
+
         /* Standard chart text */
         .frappe-chart text { font-size: 11px !important; }
         .chart-actions, .table-actions { display: flex; gap: 12px; align-items: center; }
-        .chart-card .export-btn, .table-card .header .export-btn, .table-card .header .pdf-btn, .export-btn { 
-            font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; 
+        .chart-card .export-btn, .table-card .header .export-btn, .table-card .header .pdf-btn, .export-btn {
+            font-size: 12px; cursor: pointer; color: #475569; font-weight: 600;
             padding: 6px 14px; border-radius: 6px; transition: all 0.2s;
             display: inline-flex; align-items: center; gap: 6px;
             background: #fff; border: 1px solid #e2e8f0;
             white-space: nowrap;
         }
-        .export-btn:hover { 
-            color: #2563eb !important; background: #eff6ff !important; border-color: #bfdbfe !important; 
+        .export-btn:hover {
+            color: #2563eb !important; background: #eff6ff !important; border-color: #bfdbfe !important;
             box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
         }
         .export-btn i { font-size: 14px; }
-        
+
         /* Modern Table Styling */
-        .table-card { 
-            background: #fff; border-radius: 12px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        .table-card {
+            background: #fff; border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             margin-bottom: 24px; overflow: hidden;
             border: 1px solid #e2e8f0;
             width: 100%;
         }
-        .table-card .header { 
+        .table-card .header {
             padding: 15px 24px; background: #fff;
-            border-bottom: 1px solid #f1f5f9; font-weight: 700; 
+            border-bottom: 1px solid #f1f5f9; font-weight: 700;
             color: #0f172a; display: flex; justify-content: space-between; align-items: center;
             flex-wrap: nowrap; gap: 16px;
         }
-        
-        .table-container { 
-            overflow: auto; width: 100%; max-height: 800px; 
+
+        .table-container {
+            overflow: auto; width: 100%; max-height: 800px;
             position: relative;
             border-top: 1px solid #e2e8f0;
         }
         .dashboard-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-        
-        .dashboard-table th { 
-            background: #f8fafc; padding: 12px 16px; text-align: left; 
-            font-size: 11px; font-weight: 700; color: #64748b; 
-            position: sticky; top: 0; z-index: 2; 
+
+        .dashboard-table th {
+            background: #f8fafc; padding: 12px 16px; text-align: left;
+            font-size: 11px; font-weight: 700; color: #64748b;
+            position: sticky; top: 0; z-index: 2;
             border-bottom: 1px solid #e2e8f0;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             white-space: nowrap !important;
         }
-        
-        .dashboard-table td { 
-            padding: 12px 14px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #334155; 
+
+        .dashboard-table td {
+            padding: 12px 14px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #334155;
             background: #fff; line-height: 1.4; vertical-align: top;
         }
 
@@ -588,20 +589,20 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .col-item-group { width: 160px !important; min-width: 160px !important; }
         .col-sp { width: 180px !important; min-width: 180px !important; }
         .col-prod { width: 350px !important; min-width: 350px !important; }
-        .col-amt { 
-            width: 130px !important; min-width: 130px !important; 
-            text-align: right !important; 
+        .col-amt {
+            width: 130px !important; min-width: 130px !important;
+            text-align: right !important;
             white-space: nowrap !important;
         }
         .col-qty { width: 80px !important; min-width: 80px !important; text-align: right !important; }
         .col-date { width: 110px !important; min-width: 110px !important; }
         .col-id { width: 140px !important; min-width: 140px !important; }
         .col-status { width: 120px !important; min-width: 120px !important; }
-        
+
         /* Table Sticky Columns - Table 1 (Booking Breakdown) */
         .month-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 50px !important; text-align: center !important; background: #f8fafc !important; }
         .month-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; width: 220px !important; min-width: 220px !important; }
-        
+
         /* Table Sticky Columns - Table 2 (Detailed List) */
         .detailed-list-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 50px !important; text-align: center !important; background: #f8fafc !important; }
         .detailed-list-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; }
@@ -611,30 +612,30 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 
 
-        .total-net-col { 
-            position: relative !important; 
-            background: #f1f5f9 !important; font-weight: 800; color: #0f172a !important; 
+        .total-net-col {
+            position: relative !important;
+            background: #f1f5f9 !important; font-weight: 800; color: #0f172a !important;
             text-align: right !important; border-left: 1px solid #cbd5e1;
             width: 150px !important; min-width: 150px !important;
         }
-        .grand-total-col { 
-            position: relative !important; 
-            background: #f0f4ff !important; font-weight: 800; color: #4338ca !important; 
+        .grand-total-col {
+            position: relative !important;
+            background: #f0f4ff !important; font-weight: 800; color: #4338ca !important;
             text-align: right !important; border-left: 2px solid #cbd5e1;
             width: 150px !important; min-width: 150px !important;
         }
         th.total-net-col, th.grand-total-col { z-index: 2 !important; background: #f1f3f5 !important; }
 
         /* Sticky Footer */
-        .dashboard-table tr.sticky-total td { 
-            position: sticky !important; background: #f8fafc !important; 
+        .dashboard-table tr.sticky-total td {
+            position: sticky !important; background: #f8fafc !important;
             border-top: 2px solid #cbd5e1 !important; z-index: 2 !important; font-weight: 700; color: #0f172a;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
             height: 40px !important;
             padding: 8px 14px !important;
             line-height: 1.2 !important;
         }
-        
+
         /* Stacked Sticky Footers (Table 1 has two) */
         .dashboard-table tr.sticky-total:nth-last-child(2) td { bottom: 40px !important; z-index: 2 !important; }
         .dashboard-table tr.sticky-total:nth-last-child(1) td { bottom: 0 !important; z-index: 2 !important; }
@@ -655,7 +656,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             white-space: nowrap !important;
         }
 
-        .indicator-pill { 
+        .indicator-pill {
             padding: 4px 12px; border-radius: 9999px; font-size: 11px; font-weight: 600;
             text-transform: uppercase; letter-spacing: 0.025em;
         }
@@ -665,8 +666,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .indicator-pill.red { background: #fee2e2; color: #991b1b; }
         .indicator-pill.gray { background: #f1f5f9; color: #475569; }
 
-        .export-btn { 
-            background: #fff; border: 1px solid #e2e8f0; padding: 6px 14px; 
+        .export-btn {
+            background: #fff; border: 1px solid #e2e8f0; padding: 6px 14px;
             border-radius: 8px; font-size: 12px; font-weight: 600; color: #475569;
             cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
             width: fit-content !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
@@ -676,8 +677,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         /* Hybrid Filters Styling */
         .hybrid-filter-container { display: flex; gap: 16px; align-items: center; }
         .hybrid-filter-container .frappe-control { width: 220px !important; }
-        .hybrid-filter-container input { 
-            height: 38px !important; border-radius: 10px !important; 
+        .hybrid-filter-container input {
+            height: 38px !important; border-radius: 10px !important;
             background: #f8fafc !important; border: 1px solid #e2e8f0 !important;
             font-size: 13px !important;
         }
@@ -977,7 +978,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 			filtered_data.forEach((row) => {
 				let m_key = moment(row.so_date).format("MMM YYYY");
-				
+
 				// Use pre-calculated fields from Python get_dashboard_data
 				let tbv = flt(row.total_booked_value || 0);
 				let deliv = flt(row.delivered_net_total_inr || row.dashboard_net_delivered || 0);
@@ -1159,7 +1160,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let val_a, val_b;
 				let field = page.detail_sort.field;
 				let asc = page.detail_sort.asc;
-                
+
                 let num_fields = ["total_booked_value", "total_net_amount_inr", "cancelled_val", "picked_value", "dashboard_net_delivered", "pending_value", "overdue_value"];
 				if (num_fields.includes(field)) {
 					val_a = flt(a[field] || (field === 'dashboard_net_delivered' ? a.delivered_net_total_inr : 0) || (field === 'total_booked_value' ? a['total_net_amount_(inr)'] : 0));
@@ -1272,7 +1273,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                     </tr>
                 `);
 			}
-			
+
 			// Restore/Update active sort icon in DOM
 			if (page.summary_sort) {
 				let th = tables_container.find(`.month-table .sortable-header[data-field="${page.summary_sort.field}"]`);
@@ -1399,18 +1400,18 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
                         @page { size: landscape; margin: 10mm; }
                         .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
-                        
+
                         .kpi-section-title { font-size: 13px; font-weight: 700; color: #3b82f6; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; text-transform: uppercase; }
                         .kpi-container { width: 100%; clear: both; margin-bottom: 5px; display: block; }
                         .kpi-card { float: left; width: 23.5%; border: 1px solid #e2e8f0; padding: 6px 4px; margin: 0.5%; border-radius: 6px; background: #f8fafc; text-align: center; height: 45px; box-sizing: border-box; }
                         .kpi-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
                         .kpi-label { font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                         .kpi-value { font-size: 11px; font-weight: 800; color: #0f172a; line-height: 1.1; }
-                        
+
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
-                        
+
                         ${PDF_EXPORT_TABLE_CSS}
-                        
+
                         .text-right { text-align: right; }
                         .text-center { text-align: center; }
                         .font-weight-bold { font-weight: 700; }
@@ -1440,7 +1441,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 								if (m.indicator === "orange") color = "#e67e22";
 								if (m.indicator === "purple") color = "#9b59b6";
 								if (m.indicator === "red") color = "#e74c3c";
-								
+
 								return `
 									<div class="kpi-card">
 										<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>

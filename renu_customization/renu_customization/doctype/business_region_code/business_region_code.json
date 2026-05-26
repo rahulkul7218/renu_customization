@@ -8,9 +8,9 @@
  "engine": "InnoDB",
  "field_order": [
   "business_region_code",
-  "business_region_name"
+  "business_region_name",
+  "enable"
  ],
- "title_field": "business_region_name",
  "fields": [
   {
    "fieldname": "business_region_code",
@@ -22,12 +22,18 @@
    "fieldname": "business_region_name",
    "fieldtype": "Data",
    "label": "Business Region Name"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable",
+   "fieldtype": "Check",
+   "label": "Enable"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-09-12 09:42:42.479798",
+ "modified": "2026-05-25 18:27:06.089054",
  "modified_by": "Administrator",
  "module": "Renu Customization",
  "name": "Business Region Code",
@@ -50,5 +56,6 @@
  "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": []
+ "states": [],
+ "title_field": "business_region_name"
 }
