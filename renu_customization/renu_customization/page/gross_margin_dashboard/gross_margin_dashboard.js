@@ -154,12 +154,14 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 		args: {
 			doctype: "Business Region Code",
 			fields: ["business_region_name"],
+			filters: [["Business Region Code", "enable", "=", 1]],
 			order_by: "business_region_name asc",
 			limit_page_length: 500,
 		},
 		callback: function (r) {
 			if (r.message) {
-				let options = ["All"].concat(r.message.map((d) => d.business_region_name));
+				const names = [...new Set(r.message.map((d) => d.business_region_name))].filter(Boolean).sort();
+				let options = ["All"].concat(names);
 				page.filter_group.set_df_property("business_region_name", "options", options);
 			}
 		},

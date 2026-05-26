@@ -156,6 +156,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		args: {
 			doctype: "Business Region Code",
 			fields: ["business_region_name"],
+			filters: [["Business Region Code", "enable", "=", 1]],
 			order_by: "business_region_name asc",
 			limit_page_length: 500
 		},
