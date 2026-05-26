@@ -44,7 +44,7 @@ def get_dashboard_data(filters=None):
     # Standard Accounts Receivable report filters
     ar_filters = frappe._dict({
         "company": filters.get("company"),
-        "report_date": filters.get("to_date") or nowdate(),
+        "report_date": nowdate(),
         "customer": [filters.get("customer")] if filters.get("customer") else None,
         "customer_group": [filters.get("customer_group")] if filters.get("customer_group") else None,
         "sales_person": filters.get("sales_person"),
@@ -163,9 +163,14 @@ def get_dashboard_data(filters=None):
 
         # Overdue Check & Min Days Filter
         due_date = getdate(row.get("due_date"))
+        # Due-date range filter – aligns with fiscal-year selection
+        if filters.get("from_date") and due_date and due_date < getdate(filters.get("from_date")): continue
+        if filters.get("to_date") and due_date and due_date > getdate(filters.get("to_date")): continue
         # Calculate Age (Days) based on Due Date
-        if due_date:
-            days_overdue = date_diff(report_date, due_date)
+        if v_type in ["Payment Entry", "Journal Entry"] and posting_date:
+            days_overdue = date_diff(nowdate(), posting_date)
+        elif due_date:
+            days_overdue = date_diff(nowdate(), due_date)
         else:
             # Fallback to report's age if due_date is missing (e.g., On Account)
             days_overdue = row.get("age_days")
@@ -326,7 +331,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_list.cell(row=row_idx, column=1, value="Detailed Overdue List").font = section_font
         row_idx += 2
         
-        headers = ["S.No.", "Invoice ID", "Date", "Customer", "Sales Person", "Type", "Outstanding (M)", "Due Date", "Days Overdue"]
+        headers = ["S.No.", "Invoice ID", "Date", "Customer", "Sales Person", "Type", "Overdue (M)", "Due Date", "Days Overdue"]
         for idx, h in enumerate(headers, start=1):
             cell = ws_list.cell(row=row_idx, column=idx, value=h)
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border

@@ -527,7 +527,7 @@ def _autofit_customer_sheet(ws):
 
 def _write_customer_overview_sheet(ws, dashboard_data, styles, results=None, due_rows=None):
     summary = dashboard_data.get("summary") or []
-    ws.cell(row=1, column=1, value="Customer Performance Dashboard Overview").font = styles["title_font"]
+    ws.cell(row=1, column=1, value="RFA Performance Dashboard Overview").font = styles["title_font"]
     ws.cell(row=1, column=4, value="Generated On: " + str(nowdate()))
     row_idx = 3
     row_idx = _write_customer_section_title(ws, row_idx, "Operational Summary (Million INR)", styles)
@@ -672,7 +672,7 @@ def _customer_detail_row_values(row, serial_no):
     return _customer_order_row_values(row, serial_no, include_days_left=False)
 
 
-def _write_customer_due_table(ws, rows, styles, start_row=1):
+def _write_customer_due_table(ws, rows, styles, start_row=1, total_label="TOTAL DUE VALUE"):
     _write_customer_headers(ws, CUSTOMER_DUE_HEADERS, styles, row_idx=start_row)
     data_rows = rows or []
     data_start = start_row + 1
@@ -683,7 +683,7 @@ def _write_customer_due_table(ws, rows, styles, start_row=1):
         )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
     _write_customer_total_row(
-        ws, data_start + len(data_rows), "TOTAL DUE VALUE", len(CUSTOMER_DUE_HEADERS), total_amount, styles,
+        ws, data_start + len(data_rows), total_label, len(CUSTOMER_DUE_HEADERS), total_amount, styles,
     )
     if start_row == 1:
         _autofit_customer_sheet(ws)
@@ -692,6 +692,10 @@ def _write_customer_due_table(ws, rows, styles, start_row=1):
 
 def _write_customer_due_sheet(ws, rows, styles):
     _write_customer_due_table(ws, rows, styles, start_row=1)
+
+
+def _write_customer_overdue_sheet(ws, rows, styles):
+    _write_customer_due_table(ws, rows, styles, start_row=1, total_label="TOTAL OVERDUE VALUE")
 
 
 def _write_customer_detail_table(ws, rows, styles, start_row=1):
@@ -722,6 +726,7 @@ def export_to_excel(filters=None, export_type="all"):
     dashboard_data = get_dashboard_data(filters)
     results = dashboard_data.get("results") or []
     due_rows = dashboard_data.get("due_next_15_days") or []
+    overdue_rows = [r for r in results if r.get("is_overdue")]
 
     if not results and not dashboard_data.get("month_wise_customer"):
         frappe.throw(_("No data to export"))
@@ -740,6 +745,9 @@ def export_to_excel(filters=None, export_type="all"):
         ws_due = wb.create_sheet("Due in 15 Days")
         _write_customer_due_sheet(ws_due, due_rows, styles)
 
+        ws_overdue = wb.create_sheet("Overdue Orders")
+        _write_customer_overdue_sheet(ws_overdue, overdue_rows, styles)
+
         ws_list = wb.create_sheet("Detailed Orders")
         _write_customer_detail_sheet(ws_list, results, styles)
     elif export_type == "summary":
@@ -750,6 +758,10 @@ def export_to_excel(filters=None, export_type="all"):
         ws_due = wb.active
         ws_due.title = "Due in 15 Days"
         _write_customer_due_sheet(ws_due, due_rows, styles)
+    elif export_type == "overdue":
+        ws_overdue = wb.active
+        ws_overdue.title = "Overdue Orders"
+        _write_customer_overdue_sheet(ws_overdue, overdue_rows, styles)
     elif export_type == "detail":
         ws_list = wb.active
         ws_list.title = "Detailed Orders"
@@ -765,6 +777,7 @@ def export_to_excel(filters=None, export_type="all"):
         "all": f"Customer_Performance_{nowdate()}.xlsx",
         "summary": f"Customer_Performance_Month_Wise_{nowdate()}.xlsx",
         "due": f"Customer_Performance_Due_15_Days_{nowdate()}.xlsx",
+        "overdue": f"Customer_Performance_Overdue_{nowdate()}.xlsx",
         "detail": f"Customer_Performance_Detailed_{nowdate()}.xlsx",
     }
 
