@@ -181,7 +181,7 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
                             <th>Customer</th>
                             <th>Sales Person</th>
                             <th class="text-center">Type</th>
-                            <th class="text-right">Outstanding (M)</th>
+                            <th class="text-right">Overdue (M)</th>
                             <th class="text-right">Due Date</th>
                             <th class="text-right">Days</th>
                         </tr>
@@ -737,7 +737,7 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
                                 <th class="customer-col sortable-header" data-field="customer" style="cursor: pointer; user-select: none;">${__("Customer")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="sp-col sortable-header" data-field="sales_person" style="cursor: pointer; user-select: none;">${__("Sales Person")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="type-col sortable-header" data-field="type" style="cursor: pointer; user-select: none;">${__("Type")} <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="amount-col sortable-header" data-field="outstanding" style="cursor: pointer; user-select: none;">${__("Outstanding (M)")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="amount-col sortable-header" data-field="outstanding" style="cursor: pointer; user-select: none;">${__("Overdue (M)")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="date-col text-right sortable-header" data-field="due_date" style="cursor: pointer; user-select: none;">${__("Due Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="overdue-col sortable-header" data-field="days" style="cursor: pointer; user-select: none;">${__("Days")} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
