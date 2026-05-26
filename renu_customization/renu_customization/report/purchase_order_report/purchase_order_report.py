@@ -230,11 +230,13 @@ def get_data(filters):
 
         FROM `tabPurchase Order` po
         INNER JOIN `tabPurchase Order Item` poi ON poi.parent = po.name
+        LEFT JOIN `tabItem` i ON i.name = poi.item_code
         LEFT JOIN `tabSupplier` s ON s.name = po.supplier
        
         WHERE 1 = 1
         AND po.docstatus = 1
         AND po.status NOT IN ('Draft', 'Cancelled', 'Closed')
+        AND IFNULL(i.custom_is_freight_item, 0) = 0
         
         {conditions}
 
