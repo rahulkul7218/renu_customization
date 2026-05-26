@@ -527,7 +527,7 @@ def _autofit_customer_sheet(ws):
 
 def _write_customer_overview_sheet(ws, dashboard_data, styles, results=None, due_rows=None):
     summary = dashboard_data.get("summary") or []
-    ws.cell(row=1, column=1, value="RFA Performance Dashboard Overview").font = styles["title_font"]
+    ws.cell(row=1, column=1, value="Customer Performance Dashboard Overview").font = styles["title_font"]
     ws.cell(row=1, column=4, value="Generated On: " + str(nowdate()))
     row_idx = 3
     row_idx = _write_customer_section_title(ws, row_idx, "Operational Summary (Million INR)", styles)

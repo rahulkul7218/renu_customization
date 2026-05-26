@@ -7,9 +7,9 @@
     "modified": "2026-05-13 12:30:00.000000",
     "modified_by": "Administrator",
     "module": "Renu Customization",
-    "name": "rfa_performance_dashboard",
+    "name": "customer_performance_dashboard",
     "owner": "Administrator",
-    "page_name": "rfa_performance_dashboard",
+    "page_name": "customer_performance_dashboard",
     "roles": [
         {
             "role": "System Manager"
@@ -18,5 +18,5 @@
     "standard": "Yes",
     "style": null,
     "system_page": 0,
-    "title": "RFA Performance Dashboard"
+    "title": "Customer Performance Dashboard"
 }

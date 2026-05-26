@@ -1,7 +1,7 @@
 frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper) {
 	var page = frappe.ui.make_app_page({
 		parent: wrapper,
-		title: __("RFA Performance Dashboard "),
+		title: __("Customer Performance Dashboard "),
 		single_column: true,
 	});
 
@@ -27,7 +27,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		// Show loading indicator
 		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
 			page.container.html(
-				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading RFA Performance Data...</div></div>'
+				'<div class="text-center" style="padding: 100px 0;"><i class="fa fa-refresh fa-spin fa-2x text-muted"></i><div class="mt-2 text-muted">Loading Customer Performance Data...</div></div>'
 			);
 		} else {
 			page.container.css("opacity", "0.6");
@@ -1119,7 +1119,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
             </head>
             <body>
                 <div class="report-header">
-                    <h1 class="report-title">RFA Performance Report</h1>
+                    <h1 class="report-title">Customer Performance Report</h1>
                     <p style="font-size: 12px; color: #64748b;">Period: ${period} | Generated: ${report_date}</p>
                 </div>
 
