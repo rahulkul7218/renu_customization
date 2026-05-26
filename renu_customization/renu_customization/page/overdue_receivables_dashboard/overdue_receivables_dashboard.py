@@ -167,7 +167,9 @@ def get_dashboard_data(filters=None):
         if filters.get("from_date") and due_date and due_date < getdate(filters.get("from_date")): continue
         if filters.get("to_date") and due_date and due_date > getdate(filters.get("to_date")): continue
         # Calculate Age (Days) based on Due Date
-        if due_date:
+        if v_type == "Payment Entry" and posting_date:
+            days_overdue = date_diff(nowdate(), posting_date)
+        elif due_date:
             days_overdue = date_diff(nowdate(), due_date)
         else:
             # Fallback to report's age if due_date is missing (e.g., On Account)
