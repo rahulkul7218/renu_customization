@@ -180,7 +180,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 	function render_dashboard(data) {
 		page.container.empty();
 
-        const get_slug = (dt) => (dt || "").toLowerCase().replace(/ /g, "-");
+		const get_slug = (dt) => (dt || "").toLowerCase().replace(/ /g, "-");
 
 		// KPI Cards
 		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
@@ -392,8 +392,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                             <option value="due_date_asc">${__("Due Date: Oldest")}</option>
                             <option value="amount_desc">${__("Amount: High to Low")}</option>
                             <option value="amount_asc">${__("Amount: Low to High")}</option>
-                            <option value="due_days_desc">${__("Days Diff: High to Low")}</option>
-                            <option value="due_days_asc">${__("Days Diff: Low to High")}</option>
+                           <!-- <option value="due_days_desc">${__("Days Diff: High to Low")}</option> -->
+                           <!-- <option value="due_days_asc">${__("Days Diff: Low to High")}</option> -->
                             <option value="payment_entry_asc">${__("Payment ID: A-Z")}</option>
                             <option value="payment_entry_desc">${__("Payment ID: Z-A")}</option>
                             <option value="name_asc">${__("Voucher: A-Z")}</option>
@@ -417,8 +417,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
                                 <th style="min-width: 150px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="payment_entry">${__("Payment ID")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 150px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="name">${__("Voucher")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="posting_date">${__("Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="due_date">${__("Due Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th style="min-width: 100px; text-align: center; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="due_days">${__("Days Diff")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <!-- <th style="min-width: 120px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="due_date">${__("Due Date")} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th style="min-width: 100px; text-align: center; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="due_days">${__("Days Diff")} <i class="fa fa-sort text-muted ml-1"></i></th> -->
                                 <th style="min-width: 350px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="customer">${__("Customer")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 150px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="customer_group">${__("Customer Group")} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th style="min-width: 200px; cursor: pointer; user-select: none;" class="sortable-header" data-table="collection" data-field="sales_person">${__("Sales Person")} <i class="fa fa-sort text-muted ml-1"></i></th>
@@ -497,12 +497,12 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						<td style="white-space: nowrap;"><a href="${voucher_link}" style="font-weight: 600; color: #4338ca;">${row.payment_entry}</a> <div style="font-size: 10px; color: #94a3b8;">${row.voucher_type}</div></td>
 						<td style="white-space: nowrap;">
 							${row.name
-								? `<a href="${ref_link}" style="font-weight: 500; color: #64748b;">${row.name}</a>`
-								: `<span class="text-muted">-</span>`}
+						? `<a href="${ref_link}" style="font-weight: 500; color: #64748b;">${row.name}</a>`
+						: `<span class="text-muted">-</span>`}
 						</td>
 						<td style="white-space: nowrap;">${row.posting_date ? frappe.datetime.str_to_user(row.posting_date) : "-"}</td>
-						<td style="white-space: nowrap; color: #64748b;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
-						<td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days || 0}</span></td>
+						<!-- <td style="white-space: nowrap; color: #64748b;">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"}</td>
+						<td style="text-align: center;"><span class="indicator-pill ${row.due_days > 0 ? "Domestic" : "Export"}">${row.due_days || 0}</span></td> -->
 						<td style="white-space: normal; min-width: 250px;">${row.customer || "-"}</td>
 						<td style="white-space: normal;">${row.customer_group || "-"}</td>
 						<td style="white-space: nowrap;">${row.sales_person || "-"}</td>
@@ -663,7 +663,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 		page.filter_group.make();
 
 		// Dependent Filter: Customer Group -> Customer
-		page.filter_group.fields_dict.customer.get_query = function() {
+		page.filter_group.fields_dict.customer.get_query = function () {
 			let group = page.filter_group.get_values().customer_group;
 			if (group) {
 				return { filters: { customer_group: group } };
@@ -848,15 +848,15 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 
 				<div class="kpi-wrapper">
 					${data.summary
-						.map(
-							(m) => `
+				.map(
+					(m) => `
 						<div class="kpi-card" style="border-left-color: ${m.indicator === "green" ? "#10b981" : m.indicator === "orange" ? "#f59e0b" : m.indicator === "red" ? "#ef4444" : m.indicator === "purple" ? "#8b5cf6" : m.indicator === "grey" ? "#94a3b8" : m.indicator === "cyan" ? "#06b6d4" : "#3b82f6"}">
 							<div class="kpi-label">${m.label}</div>
 							<div class="kpi-value">${format_million(m.value)}</div>
 						</div>
 					`,
-						)
-						.join("")}
+				)
+				.join("")}
 				</div>
 
 				<div class="pdf-card chart-section">
@@ -868,9 +868,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				</div>
 
 
-				${
-					data.due_results && data.due_results.length > 0
-						? `
+				${data.due_results && data.due_results.length > 0
+				? `
 					<div class="page-break"></div>
 					<h3 class="section-title" style="color: #ef4444; border-bottom-color: #ef4444;">Upcoming Payments Due (Next 15 Days)</h3>
 					<table>
@@ -887,8 +886,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						</thead>
 						<tbody>
 							${data.due_results
-								.map(
-									(row) => `
+					.map(
+						(row) => `
 								<tr>
 									<td class="bold">${row.name}</td>
 									<td>${row.customer}</td>
@@ -899,8 +898,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 									<td class="text-right bold" style="color: #ef4444;">${format_million(row.outstanding_amount)}</td>
 								</tr>
 							`,
-								)
-								.join("")}
+					)
+					.join("")}
 						</tbody>
 						<tfoot>
 							<tr style="background: #fef2f2; font-weight: bold; color: #ef4444;">
@@ -910,8 +909,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						</tfoot>
 					</table>
 				`
-						: ""
-				}
+				: ""
+			}
 
 				<div class="page-break"></div>
 				<h3 class="section-title">Detailed Collection List</h3>
@@ -930,8 +929,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					</thead>
 					<tbody>
 						${data.results
-							.map(
-								(row) => `
+				.map(
+					(row) => `
 							<tr>
 								<td class="bold">${row.payment_entry}</td>
 								<td style="color: #64748b;">${row.name}</td>
@@ -943,8 +942,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 								<td class="text-right bold">${format_million(row.allocated_amount)}</td>
 							</tr>
 						`,
-							)
-							.join("")}
+				)
+				.join("")}
 					</tbody>
 					<tfoot>
 						<tr style="background: #f8fafc; font-weight: bold;">
