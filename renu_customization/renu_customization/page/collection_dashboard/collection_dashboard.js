@@ -513,7 +513,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			});
 
 			if (filtered.length === 0) {
-				$(`<tr><td colspan="10" class="text-center text-muted" style="padding: 20px;">No matching detailed collection entries</td></tr>`).appendTo(tbody);
+				$(`<tr><td colspan="8" class="text-center text-muted" style="padding: 20px;">No matching detailed collection entries</td></tr>`).appendTo(tbody);
 			}
 
 			// Grand Total Footer
@@ -527,8 +527,7 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 						<td></td>
 						<td></td>
 						<td style="font-weight: 800; text-align: left; padding-left: 10px; letter-spacing: 0.03em;">GRAND TOTAL</td>
-						<td></td>
-						<td></td>
+						
 						<td style="text-align: right; font-weight: 800; border-left: 1px solid #e2e8f0; background: #f8fafc;">${format_million(total_amt)}</td>
 						<td></td>
 					</tr>
@@ -947,8 +946,8 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 					</tbody>
 					<tfoot>
 						<tr style="background: #f8fafc; font-weight: bold;">
-							<td colspan="7" class="text-right">GRAND TOTAL</td>
-							<td class="text-right">${format_million(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
+							<td colspan="6" class="text-right">GRAND TOTAL</td>
+							<td colspan="2" class="text-right">${format_million(data.results.reduce((a, b) => a + flt(b.allocated_amount), 0))}</td>
 						</tr>
 					</tfoot>
 				</table>
