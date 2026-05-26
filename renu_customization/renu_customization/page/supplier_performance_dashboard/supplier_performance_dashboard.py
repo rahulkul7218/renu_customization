@@ -790,7 +790,7 @@ def _write_detailed_orders_sheet(ws, rows, styles):
     _write_detailed_orders_table(ws, rows, styles, start_row=1)
 
 
-def _write_due_orders_table(ws, rows, styles, start_row=1):
+def _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL DUE VALUE"):
     _write_excel_headers(ws, DUE_ORDER_HEADERS, styles, row_idx=start_row)
     if start_row == 1:
         _apply_header_column_widths(ws, DUE_ORDER_HEADERS, ORDER_SHEET_WIDTHS)
@@ -806,7 +806,7 @@ def _write_due_orders_table(ws, rows, styles, start_row=1):
         )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
     _write_excel_total_row(
-        ws, data_start + len(data_rows), "TOTAL DUE VALUE", len(DUE_ORDER_HEADERS), total_amount, styles,
+        ws, data_start + len(data_rows), total_label, len(DUE_ORDER_HEADERS), total_amount, styles,
     )
     if start_row == 1:
         _autofit_columns(ws, min_widths=_min_widths_for_headers(DUE_ORDER_HEADERS, ORDER_SHEET_WIDTHS))
@@ -817,12 +817,17 @@ def _write_due_orders_sheet(ws, rows, styles):
     _write_due_orders_table(ws, rows, styles, start_row=1)
 
 
+def _write_overdue_orders_sheet(ws, rows, styles):
+    _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL OVERDUE VALUE")
+
+
 @frappe.whitelist()
 def export_to_excel(filters=None, export_type="all"):
     filters = prepare_filters(filters)
     dashboard_data = get_dashboard_data(filters)
     results = dashboard_data.get("results") or []
     due_rows = dashboard_data.get("due_next_15_days") or []
+    overdue_rows = [r for r in results if r.get("is_overdue")]
 
     if not results and not dashboard_data.get("month_wise_supplier"):
         frappe.throw(_("No data to export"))
@@ -841,6 +846,9 @@ def export_to_excel(filters=None, export_type="all"):
         ws_due = wb.create_sheet("Due in 15 Days")
         _write_due_orders_sheet(ws_due, due_rows, styles)
 
+        ws_overdue = wb.create_sheet("Overdue Orders")
+        _write_overdue_orders_sheet(ws_overdue, overdue_rows, styles)
+
         ws_list = wb.create_sheet("Detailed Orders")
         _write_detailed_orders_sheet(ws_list, results, styles)
     elif export_type == "summary":
@@ -851,6 +859,10 @@ def export_to_excel(filters=None, export_type="all"):
         ws_due = wb.active
         ws_due.title = "Due in 15 Days"
         _write_due_orders_sheet(ws_due, due_rows, styles)
+    elif export_type == "overdue":
+        ws_overdue = wb.active
+        ws_overdue.title = "Overdue Orders"
+        _write_overdue_orders_sheet(ws_overdue, overdue_rows, styles)
     elif export_type == "detail":
         ws_list = wb.active
         ws_list.title = "Detailed Orders"
@@ -866,6 +878,7 @@ def export_to_excel(filters=None, export_type="all"):
         "all": f"Supplier_Performance_{nowdate()}.xlsx",
         "summary": f"Supplier_Performance_Month_Wise_{nowdate()}.xlsx",
         "due": f"Supplier_Performance_Due_15_Days_{nowdate()}.xlsx",
+        "overdue": f"Supplier_Performance_Overdue_{nowdate()}.xlsx",
         "detail": f"Supplier_Performance_Detailed_{nowdate()}.xlsx",
     }
 
