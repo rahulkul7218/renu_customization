@@ -188,8 +188,8 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
                     </thead>
                     <tbody>
                         ${data.results
-							.map(
-								(row) => `
+				.map(
+					(row) => `
                             <tr>
                                 <td>${row.name}</td>
                                 <td>${frappe.datetime.str_to_user(row.posting_date)}</td>
@@ -197,19 +197,18 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
                                 <td>${row.sales_person || "-"}</td>
                                 <td class="text-center">${row.type}</td>
                                 <td class="text-right">${format_currency(row.outstanding_amount)}</td>
-                                <td class="text-right">${
-																	row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"
-																}</td>
+                                <td class="text-right">${row.due_date ? frappe.datetime.str_to_user(row.due_date) : "-"
+						}</td>
                                 <td class="text-right">${row.days_overdue}</td>
                             </tr>
                         `,
-							)
-							.join("")}
+				)
+				.join("")}
                         <tr style="background: #f8fafc; font-weight: bold;">
                             <td colspan="5" class="text-left" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">Grand Total</td>
                             <td class="text-right" style="border-top: 2px solid #e2e8f0; padding: 12px 8px;">${format_currency(
-															data.results.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0)
-														)}</td>
+					data.results.reduce((sum, r) => sum + (r.outstanding_amount || 0), 0)
+				)}</td>
                             <td colspan="2" style="border-top: 2px solid #e2e8f0;"></td>
                         </tr>
                     </tbody>
@@ -297,7 +296,24 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
 			fieldtype: "Int",
 			placeholder: __("Max Days"),
 		},
-		{
+		{ // Existing filters above
+			fieldname: "dom_exp",
+			label: __("Domestic/Export"),
+			fieldtype: "Select",
+			options: ["All", "Domestic", "Export"],
+			default: "All",
+			placeholder: __("Select Domestic/Export"),
+		},
+		{ // New Business Region Name filter
+			fieldname: "business_region_name",
+			label: __("Business Region Name"),
+			fieldtype: "Select",
+			options: ["All"],
+			default: "All",
+			placeholder: __("Select Business Region Name"),
+		},
+
+		{ // Type filter
 			fieldname: "type",
 			label: __("Domestic/Export"),
 			fieldtype: "Select",
@@ -305,6 +321,7 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
 			default: "All",
 			placeholder: __("Select Type"),
 		},
+
 	];
 
 	page.filter_group = new frappe.ui.FieldGroup({
@@ -312,35 +329,63 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
 		fields: filter_fields,
 	});
 	page.filter_group.make();
-
-	filter_area.css({
-		padding: "10px 20px",
-		"background-color": "#fff",
-		"border-bottom": "1px solid #f1f5f9",
+	// Hide specific filters
+	const fieldsToHide = ['fiscal_year', 'from_date', 'to_date', 'from_days', 'to_days'];
+	fieldsToHide.forEach(fn => {
+		if (page.filter_group.fields_dict[fn]) {
+			page.filter_group.fields_dict[fn].$wrapper.hide();
+		}
 	});
-
-	Object.keys(page.filter_group.fields_dict).forEach((key) => {
-		let field = page.filter_group.fields_dict[key];
-		field.on_change = () => page.refresh();
-		if (field.$input) {
-			field.$input.on("change input blur", () => {
-				setTimeout(() => page.refresh(), 50);
-			});
+	// Populate Business Region Name options
+	frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Business Region Code",
+			fields: ["business_region_name"],
+			filters: [["Business Region Code", "enable", "=", 1]],
+			order_by: "business_region_name asc",
+			limit_page_length: 500,
+		},
+		callback: function (r) {
+			if (r.message) {
+				const names = [...new Set(r.message.map(x => x.business_region_name))]
+					.filter(Boolean)
+					.sort();
+				page.filter_group.set_df_property("business_region_name", "options", ["All", ...names]);
+			}
 		}
 	});
 
-	if (page.filter_group.fields_dict.customer) {
-		page.filter_group.fields_dict.customer.get_query = function () {
-			let filters = {};
-			let customer_group = page.filter_group.get_value("customer_group");
-			if (customer_group) filters.customer_group = customer_group;
-			return { filters: filters };
-		};
-	}
 
-	$("<style>")
-		.text(
-			`
+
+filter_area.css({
+	padding: "10px 20px",
+	"background-color": "#fff",
+	"border-bottom": "1px solid #f1f5f9",
+});
+
+Object.keys(page.filter_group.fields_dict).forEach((key) => {
+	let field = page.filter_group.fields_dict[key];
+	field.on_change = () => page.refresh();
+	if (field.$input) {
+		field.$input.on("change input blur", () => {
+			setTimeout(() => page.refresh(), 50);
+		});
+	}
+});
+
+if (page.filter_group.fields_dict.customer) {
+	page.filter_group.fields_dict.customer.get_query = function () {
+		let filters = {};
+		let customer_group = page.filter_group.get_value("customer_group");
+		if (customer_group) filters.customer_group = customer_group;
+		return { filters: filters };
+	};
+}
+
+$("<style>")
+	.text(
+		`
 		.dashboard-filter-area {
 			padding: 15px 20px 5px 20px !important;
 			background-color: #fff !important;
@@ -414,29 +459,29 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
             .amount-col { min-width: 140px !important; width: 140px !important; text-align: right !important; }
             .overdue-col { min-width: 80px !important; width: 80px !important; text-align: right !important; }
 		`,
-		)
-		.appendTo(filter_area);
+	)
+	.appendTo(filter_area);
 
-	page.refresh = function () {
-		let filters = page.filter_group.get_values();
+page.refresh = function () {
+	let filters = page.filter_group.get_values();
 
-		frappe.call({
-			method: "renu_customization.renu_customization.page.overdue_receivables_dashboard.overdue_receivables_dashboard.get_dashboard_data",
-			args: { filters: filters },
-			callback: function (r) {
-				if (r.message) {
-					page.dashboard_data = r.message;
-					render_dashboard(r.message);
-				}
-			},
-		});
-	};
+	frappe.call({
+		method: "renu_customization.renu_customization.page.overdue_receivables_dashboard.overdue_receivables_dashboard.get_dashboard_data",
+		args: { filters: filters },
+		callback: function (r) {
+			if (r.message) {
+				page.dashboard_data = r.message;
+				render_dashboard(r.message);
+			}
+		},
+	});
+};
 
-	function render_dashboard(data) {
-		page.container.empty();
+function render_dashboard(data) {
+	page.container.empty();
 
-		if (!$("#overdue-dashboard-style").length) {
-			$(`<style id="overdue-dashboard-style">
+	if (!$("#overdue-dashboard-style").length) {
+		$(`<style id="overdue-dashboard-style">
                 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
                 
                 .dashboard-content { 
@@ -627,22 +672,22 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
                 
                 .frappe-chart text { font-size: 11px !important; }
 			</style>`).appendTo("head");
-		}
+	}
 
-		let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
-		data.summary.forEach((s) => {
-			let indicator = (s.indicator || "blue").toLowerCase();
-			$(`
+	let summary_row = $('<div class="summary-wrapper"></div>').appendTo(page.container);
+	data.summary.forEach((s) => {
+		let indicator = (s.indicator || "blue").toLowerCase();
+		$(`
 				<div class="summary-card ${indicator}">
 					<div class="label"><span class="indicator bg-${indicator}"></span>${s.label}</div>
 					<div class="value">${s.fieldtype === "Currency" ? format_currency(s.value) : s.value}</div>
 				</div>
 			`).appendTo(summary_row);
-		});
+	});
 
-		let charts_row = $('<div class="charts-wrapper"></div>').appendTo(page.container);
+	let charts_row = $('<div class="charts-wrapper"></div>').appendTo(page.container);
 
-		let breakdown_card = $(`
+	let breakdown_card = $(`
             <div class="chart-card">
                 <div class="title">${data.charts.overdue_breakdown.title}</div>
                 <div id="overdue-chart" style="height: 300px;"></div>
@@ -650,7 +695,7 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
             </div>
         `).appendTo(charts_row);
 
-		let ageing_card = $(`
+	let ageing_card = $(`
             <div class="chart-card">
                 <div class="title">${data.charts.ageing_breakdown.title}</div>
                 <div id="ageing-chart" style="height: 300px;"></div>
@@ -658,25 +703,25 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
             </div>
         `).appendTo(charts_row);
 
-		setTimeout(() => {
-			// Donut Chart: Export vs Domestic
-			new frappe.Chart("#overdue-chart", {
-				data: data.charts.overdue_breakdown.data,
-				type: "donut",
-				height: 300,
-				colors: data.charts.overdue_breakdown.colors,
-				legend: 0,
-				show_legend: 0,
-			});
+	setTimeout(() => {
+		// Donut Chart: Export vs Domestic
+		new frappe.Chart("#overdue-chart", {
+			data: data.charts.overdue_breakdown.data,
+			type: "donut",
+			height: 300,
+			colors: data.charts.overdue_breakdown.colors,
+			legend: 0,
+			show_legend: 0,
+		});
 
-			// Render Custom Legend for Breakdown
-			let breakdown_legend = breakdown_card.find("#overdue-legend");
-			let b_total = data.charts.overdue_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
-			data.charts.overdue_breakdown.data.labels.forEach((label, idx) => {
-				let val = data.charts.overdue_breakdown.data.datasets[0].values[idx];
-				let color = data.charts.overdue_breakdown.colors[idx % data.charts.overdue_breakdown.colors.length];
-				let share = b_total > 0 ? ((val / b_total) * 100).toFixed(1) + "%" : "0%";
-				breakdown_legend.append(`
+		// Render Custom Legend for Breakdown
+		let breakdown_legend = breakdown_card.find("#overdue-legend");
+		let b_total = data.charts.overdue_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
+		data.charts.overdue_breakdown.data.labels.forEach((label, idx) => {
+			let val = data.charts.overdue_breakdown.data.datasets[0].values[idx];
+			let color = data.charts.overdue_breakdown.colors[idx % data.charts.overdue_breakdown.colors.length];
+			let share = b_total > 0 ? ((val / b_total) * 100).toFixed(1) + "%" : "0%";
+			breakdown_legend.append(`
                     <div class="legend-item">
                         <span class="dot" style="background: ${color}"></span>
                         <div class="info">
@@ -686,26 +731,26 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
                         </div>
                     </div>
                 `);
-			});
+		});
 
-			// Bar Chart: Ageing
-			new frappe.Chart("#ageing-chart", {
-				data: data.charts.ageing_breakdown.data,
-				type: "bar",
-				height: 300,
-				colors: data.charts.ageing_breakdown.colors,
-				legend: 0,
-				show_legend: 0,
-			});
+		// Bar Chart: Ageing
+		new frappe.Chart("#ageing-chart", {
+			data: data.charts.ageing_breakdown.data,
+			type: "bar",
+			height: 300,
+			colors: data.charts.ageing_breakdown.colors,
+			legend: 0,
+			show_legend: 0,
+		});
 
-			// Render Custom Legend for Ageing
-			let ageing_legend = ageing_card.find("#ageing-legend");
-			let a_total = data.charts.ageing_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
-			data.charts.ageing_breakdown.data.labels.forEach((label, idx) => {
-				let val = data.charts.ageing_breakdown.data.datasets[0].values[idx];
-				let color = data.charts.ageing_breakdown.colors[idx % data.charts.ageing_breakdown.colors.length];
-				let share = a_total > 0 ? ((val / a_total) * 100).toFixed(1) + "%" : "0%";
-				ageing_legend.append(`
+		// Render Custom Legend for Ageing
+		let ageing_legend = ageing_card.find("#ageing-legend");
+		let a_total = data.charts.ageing_breakdown.data.datasets[0].values.reduce((a, b) => a + b, 0);
+		data.charts.ageing_breakdown.data.labels.forEach((label, idx) => {
+			let val = data.charts.ageing_breakdown.data.datasets[0].values[idx];
+			let color = data.charts.ageing_breakdown.colors[idx % data.charts.ageing_breakdown.colors.length];
+			let share = a_total > 0 ? ((val / a_total) * 100).toFixed(1) + "%" : "0%";
+			ageing_legend.append(`
                     <div class="legend-item">
                         <span class="dot" style="background: ${color}"></span>
                         <div class="info">
@@ -715,12 +760,12 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
                         </div>
                     </div>
                 `);
-			});
-		}, 100);
+		});
+	}, 100);
 
-		let detail_sort = { field: "days", asc: false };
+	let detail_sort = { field: "days", asc: false };
 
-		let table_card = $(`
+	let table_card = $(`
             <div class="table-card">
                 <div class="header">
                     <span>${__("Detailed Overdue List")}</span>
@@ -749,52 +794,52 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
             </div>
         `).appendTo(page.container);
 
-		const render_detail_table = () => {
-			let sorted_data = [...(data.results || [])];
-			sorted_data.sort((a, b) => {
-				let val_a, val_b;
-				if (detail_sort.field === "name" || detail_sort.field === "sales_person" || detail_sort.field === "type") {
-					val_a = a[detail_sort.field] || "";
-					val_b = b[detail_sort.field] || "";
-					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
-				} else if (detail_sort.field === "customer") {
-					val_a = a.customer_name || a.customer || "";
-					val_b = b.customer_name || b.customer || "";
-					return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
-				} else if (detail_sort.field === "posting_date") {
-					val_a = a.posting_date ? new Date(a.posting_date) : new Date(0);
-					val_b = b.posting_date ? new Date(b.posting_date) : new Date(0);
-				} else if (detail_sort.field === "due_date") {
-					val_a = a.due_date ? new Date(a.due_date) : new Date(0);
-					val_b = b.due_date ? new Date(b.due_date) : new Date(0);
-				} else if (detail_sort.field === "outstanding") {
-					val_a = flt(a.outstanding_amount);
-					val_b = flt(b.outstanding_amount);
-				} else if (detail_sort.field === "days") {
-					val_a = flt(a.days_overdue);
-					val_b = flt(b.days_overdue);
+	const render_detail_table = () => {
+		let sorted_data = [...(data.results || [])];
+		sorted_data.sort((a, b) => {
+			let val_a, val_b;
+			if (detail_sort.field === "name" || detail_sort.field === "sales_person" || detail_sort.field === "type") {
+				val_a = a[detail_sort.field] || "";
+				val_b = b[detail_sort.field] || "";
+				return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+			} else if (detail_sort.field === "customer") {
+				val_a = a.customer_name || a.customer || "";
+				val_b = b.customer_name || b.customer || "";
+				return detail_sort.asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+			} else if (detail_sort.field === "posting_date") {
+				val_a = a.posting_date ? new Date(a.posting_date) : new Date(0);
+				val_b = b.posting_date ? new Date(b.posting_date) : new Date(0);
+			} else if (detail_sort.field === "due_date") {
+				val_a = a.due_date ? new Date(a.due_date) : new Date(0);
+				val_b = b.due_date ? new Date(b.due_date) : new Date(0);
+			} else if (detail_sort.field === "outstanding") {
+				val_a = flt(a.outstanding_amount);
+				val_b = flt(b.outstanding_amount);
+			} else if (detail_sort.field === "days") {
+				val_a = flt(a.days_overdue);
+				val_b = flt(b.days_overdue);
+			}
+			return detail_sort.asc ? val_a - val_b : val_b - val_a;
+		});
+
+		let tbody = table_card.find("#detail_table_body");
+		tbody.empty();
+
+		let total_outstanding_raw = 0;
+		sorted_data.forEach((row) => {
+			total_outstanding_raw += flt(row.outstanding_amount);
+
+			let display_name = row.name;
+			let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
+
+			if (row.outstanding_amount < 0 && (row.name === __("On Account") || row.voucher_type === "Payment Entry")) {
+				display_name = row.name === __("On Account") ? __("On Account Advance") : row.name;
+				if (row.voucher_type === "Payment Entry") {
+					link_url = `/app/payment-entry/${row.name}`;
 				}
-				return detail_sort.asc ? val_a - val_b : val_b - val_a;
-			});
+			}
 
-			let tbody = table_card.find("#detail_table_body");
-			tbody.empty();
-
-			let total_outstanding_raw = 0;
-			sorted_data.forEach((row) => {
-				total_outstanding_raw += flt(row.outstanding_amount);
-
-				let display_name = row.name;
-				let link_url = row.voucher_type ? `/app/${frappe.router.slug(row.voucher_type)}/${row.name}` : "#";
-
-				if (row.outstanding_amount < 0 && (row.name === __("On Account") || row.voucher_type === "Payment Entry")) {
-					display_name = row.name === __("On Account") ? __("On Account Advance") : row.name;
-					if (row.voucher_type === "Payment Entry") {
-						link_url = `/app/payment-entry/${row.name}`;
-					}
-				}
-
-				tbody.append(`
+			tbody.append(`
 					<tr>
 						<td class="invoice-col"><a href="${link_url}" style="font-weight: 600; color: #4338ca;">${display_name}</a></td>
 						<td class="date-col">${frappe.datetime.str_to_user(row.posting_date)}</td>
@@ -808,64 +853,64 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
 						<td class="overdue-col overdue-days">${row.days_overdue || 0}</td>
 					</tr>
 				`);
-			});
+		});
 
-			// Format the total from the raw sum
-			let total_display = format_currency(total_outstanding_raw);
+		// Format the total from the raw sum
+		let total_display = format_currency(total_outstanding_raw);
 
-			let tfoot = table_card.find("tfoot");
-			tfoot.empty();
-			tfoot.append(`
+		let tfoot = table_card.find("tfoot");
+		tfoot.empty();
+		tfoot.append(`
 				<tr class="sticky-total">
 					<td colspan="5" class="text-left" style="padding-left: 20px; font-size: 11px; color: #64748b; font-weight: 600;">GRAND TOTAL</td>
 					<td class="amount-col" style="color: #0f172a; font-weight: 800;">${total_display}</td>
 					<td colspan="2"></td>
 				</tr>
 			`);
-		};
+	};
+
+	render_detail_table();
+
+	table_card.find(".sortable-header").on("click", function () {
+		const field = $(this).data("field");
+		if (detail_sort.field === field) {
+			detail_sort.asc = !detail_sort.asc;
+		} else {
+			detail_sort.field = field;
+			detail_sort.asc = true;
+		}
+
+		// Reset icons
+		table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+
+		// Update active icon
+		if (detail_sort.asc) {
+			$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
+		} else {
+			$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
+		}
 
 		render_detail_table();
+	});
 
-		table_card.find(".sortable-header").on("click", function () {
-			const field = $(this).data("field");
-			if (detail_sort.field === field) {
-				detail_sort.asc = !detail_sort.asc;
-			} else {
-				detail_sort.field = field;
-				detail_sort.asc = true;
-			}
+	table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
+}
 
-			// Reset icons
-			table_card.find(".sortable-header i").removeClass("fa-sort-asc fa-sort-desc").addClass("fa-sort text-muted");
+function format_currency(v, already_divided = false) {
+	if (!v && v !== 0) return "₹ 0.00 M";
 
-			// Update active icon
-			if (detail_sort.asc) {
-				$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-asc");
-			} else {
-				$(this).find("i").removeClass("fa-sort text-muted").addClass("fa-sort-desc");
-			}
+	// Convert to Million INR if not already divided
+	let value = already_divided ? flt(v) : flt(v) / 1000000;
 
-			render_detail_table();
-		});
+	return (
+		"₹ " +
+		value.toLocaleString("en-US", {
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		}) +
+		" M"
+	);
+}
 
-		table_card.find("#export_excel_table").click(() => export_to_excel("detail"));
-	}
-
-	function format_currency(v, already_divided = false) {
-		if (!v && v !== 0) return "₹ 0.00 M";
-
-		// Convert to Million INR if not already divided
-		let value = already_divided ? flt(v) : flt(v) / 1000000;
-
-		return (
-			"₹ " +
-			value.toLocaleString("en-US", {
-				minimumFractionDigits: 2,
-				maximumFractionDigits: 2,
-			}) +
-			" M"
-		);
-	}
-
-	page.refresh();
+page.refresh();
 };
