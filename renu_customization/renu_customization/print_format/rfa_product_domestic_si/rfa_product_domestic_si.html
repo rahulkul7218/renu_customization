@@ -11,6 +11,9 @@
 
 
 <div class="print-container">
+    {% if not doc.irn and not doc.custom_allow_print_without_irn %}
+    <div class="watermark-irn">IRN Not Generated</div>
+    {% endif %}
     <table class="outer-table">
         <!-- HEADER -->
         <tr>

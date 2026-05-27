@@ -24,6 +24,7 @@
     font-family: Arial, sans-serif;
     font-size: 12px !important;
     color: #000;
+    position: relative;
 }
 
 .outer-table {
@@ -312,3 +313,18 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
     margin: 0;
 }
 
+.watermark-irn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-size: 60px;
+    color: rgba(233, 30, 99, 0.6);
+    transform: translate(-50%, -50%) rotate(-45deg);
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-weight: bold;
+    border: 5px solid rgba(233, 30, 99, 0.6);
+    padding: 10px 20px;
+}
