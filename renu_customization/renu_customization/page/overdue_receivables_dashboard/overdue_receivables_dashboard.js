@@ -264,6 +264,12 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
 			default: frappe.defaults.get_user_default("Company"),
 		},
 		{
+			fieldname: "date",
+			label: __("Date"),
+			fieldtype: "Date",
+			default: frappe.datetime.now_date(),
+		},
+		{
 			fieldname: "customer_group",
 			label: __("Customer Group"),
 			fieldtype: "Link",

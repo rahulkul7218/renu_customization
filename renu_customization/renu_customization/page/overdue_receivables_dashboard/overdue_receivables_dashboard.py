@@ -28,6 +28,12 @@ def prepare_filters(filters):
             filters["from_date"] = dr[0]
             filters["to_date"] = dr[1]
 
+    # Handle single Date filter (defaults to today)
+    if filters.get("date"):
+        # Use the selected date as the upper bound (to_date) only.
+        # Leave from_date untouched so all past records are included.
+        filters["to_date"] = filters["date"]
+
     # Handle Fiscal Year
     if filters.get("fiscal_year") and (not filters.get("from_date") or not filters.get("to_date")):
         fy = frappe.get_doc("Fiscal Year", filters.get("fiscal_year"))
