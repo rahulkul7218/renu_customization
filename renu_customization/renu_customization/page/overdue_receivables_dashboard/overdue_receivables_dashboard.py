@@ -129,6 +129,14 @@ def get_dashboard_data(filters=None):
         # Manual Customer Filter (Defensive check)
         if filters.get("customer") and row.get("party") != filters.get("customer"):
             continue
+
+        # Business Region Filter (Custom)
+        if filters.get("business_region_name") and filters.get("business_region_name") != "All":
+            # Determine the customer identifier (prefer customer field, fallback to party)
+            cust_name = row.get("customer") or row.get("party")
+            business_region = frappe.get_value("Customer", cust_name, "business_region_name")
+            if business_region != filters.get("business_region_name"):
+                continue
             
         # Get Sales Person string
         row_sp_list = sales_persons_map.get(v_no, [])
