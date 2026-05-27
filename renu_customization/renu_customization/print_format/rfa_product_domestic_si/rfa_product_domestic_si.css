@@ -2,42 +2,68 @@
     size: Legal;
     margin: 3mm;
 }
+
 @media print {
-  body { margin: 0; }
-  .invoice-container { border: none; }
-  thead { display: table-header-group; }
-  table { page-break-inside: avoid; }
+    body {
+        margin: 0;
+    }
+
+    .invoice-container {
+        border: none;
+    }
+
+    thead {
+        display: table-header-group;
+    }
+
+    table {
+        page-break-inside: avoid;
+    }
 }
 
-.right { text-align: right; }
-.bold { font-weight: bold; }
+.right {
+    text-align: right;
+}
+
+.bold {
+    font-weight: bold;
+}
+
 .copies-border {
     /* keep a box around the 'Original' cell, but no left border */
     border-top: 1px solid #000 !important;
     border-right: 1px solid #000 !important;
     border-bottom: 1px solid #000 !important;
     border-left: none !important;
-    text-align: right; /* optional, if you want it aligned */
+    text-align: right;
+    /* optional, if you want it aligned */
 }
+
 .print-container {
     font-family: Arial, sans-serif;
     font-size: 12px !important;
     color: #000;
+    position: relative;
 }
+
 .outer-table {
     width: 100%;
     border-collapse: collapse;
     border: 1px solid #000;
 }
+
 .outer-table td {
     border: 1px solid #000;
     vertical-align: top;
-  
+
 }
-.outer-table tr:first-child .header-center { border-right: none !important;}
+
+.outer-table tr:first-child .header-center {
+    border-right: none !important;
+}
 
 .header-center h2 {
-   margin: 0;
+    margin: 0;
     text-align: center;
     text-decoration: none;
 }
@@ -47,27 +73,30 @@
     margin: 0;
     text-align: center;
 }
+
 .company-info {
     width: 60% !important;
     vertical-align: top;
     font-size: 12px;
 }
-.top-right-section{
+
+.top-right-section {
     width: 40% !important;
     vertical-align: top;
-    font-size: 12px;   
+    font-size: 12px;
 }
+
 .logo-placeholder {
     width: 90px;
     height: 50px;
     /* border: 1px solid #ccc; */
     display: inline-block;
     text-align: center;
-    padding:0;
-    margin:0;
+    padding: 0;
+    margin: 0;
     /* line-height: 40px; */
     font-size: 8px;
-    margin-bottom: 2px; 
+    margin-bottom: 2px;
 }
 
 .details-col {
@@ -79,7 +108,7 @@
     border-left: 1px solid #000;
     border-right: 1px solid #000;
     border-top: 1px solid #000;
-    border-bottom: none; 
+    border-bottom: none;
 }
 
 .details-col p {
@@ -89,15 +118,17 @@
 
 .details-col strong {
     display: inline-block;
-    width: 112px;         /* fixed width for labels */
+    width: 112px;
+    /* fixed width for labels */
 }
 
 .details-col .value {
-    margin-left: 2px;    /* space between label and value */
+    margin-left: 2px;
+    /* space between label and value */
 }
 
 .oa-section {
-   
+
     border-bottom: none;
 }
 
@@ -114,7 +145,7 @@
     flex-direction: column;
     gap: 1px;
     font-weight: bold;
-   width: 50%;
+    width: 50%;
 }
 
 .oa-values {
@@ -123,20 +154,24 @@
     gap: 1px;
     width: 50%;
 }
-.qrcode-section{
+
+.qrcode-section {
     width: 100%;
     margin: 0 auto;
     display: flex;
     justify-content: center;
     align-items: center;
 }
+
 .qrcode {
     width: 140px;
     height: 140px;
 }
-.address-section{
+
+.address-section {
     padding: 1px;
 }
+
 .address-block {
     font-family: Arial, sans-serif;
     font-size: 10px;
@@ -145,10 +180,11 @@
     border-right: 1px solid #000;
     border-top: none;
     border-bottom: 1px solid #000;
-    
+
 }
-.irn{
-   font-size: 10px; 
+
+.irn {
+    font-size: 10px;
 }
 
 .items-table {
@@ -156,7 +192,8 @@
     border-collapse: collapse;
 }
 
-.items-table th, .items-table td {
+.items-table th,
+.items-table td {
     border: 1px solid #000;
     padding: 2px;
     font-size: 10px;
@@ -207,13 +244,16 @@
 }
 
 .gst-table-wrapper table td:nth-child(1) {
-    text-align: left; /* HSN/SAC left-aligned */
+    text-align: left;
+    /* HSN/SAC left-aligned */
     margin: 0 !important;
 }
 
-.bank-details , .signature-block {
+.bank-details,
+.signature-block {
     font-size: 10px;
 }
+
 .bank-details p {
     margin: 2px;
     padding: 2px;
@@ -223,33 +263,35 @@
     font-size: 11px !important;
     font-weight: bold;
 }
+
 /*changing css of erpnext elements*/
-#taxes-section > .row > .col-xs-6:first-child {
+#taxes-section>.row>.col-xs-6:first-child {
     display: none;
 }
 
-#taxes-section > .row > .col-xs-6 {
+#taxes-section>.row>.col-xs-6 {
     width: 100%;
 }
 
-#taxes-section > .row > .col-xs-6 > .row {
-    padding-top:1px !important;
-    padding-bottom:3px !important;
-    line-height:1.5;
+#taxes-section>.row>.col-xs-6>.row {
+    padding-top: 1px !important;
+    padding-bottom: 3px !important;
+    line-height: 1.5;
 }
 
-#taxes-section > .row > .col-xs-6 > .row > .col-xs-5 > label {
-    margin:0px !important;
+#taxes-section>.row>.col-xs-6>.row>.col-xs-5>label {
+    margin: 0px !important;
 }
 
-div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
-    margin:0px !important;
+div[data-label="erpnext"]>div:nth-child(2)>.row>.col-xs-5>label {
+    margin: 0px !important;
 }
 
-.column-break > .row:first-child {
-    line-height:1;
-    padding-bottom:1px !important;
+.column-break>.row:first-child {
+    line-height: 1;
+    padding-bottom: 1px !important;
 }
+
 .payment_term {
     font-size: 10px;
     font-weight: bold;
@@ -267,14 +309,17 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
 .footer-line {
     text-align: center;
     font-size: 9px;
-    
+
 }
+
 .bottom-text {
-   height: 50px;           /* example */
-  display: flex;
-  align-items: flex-end;   /* aligns child (p) to bottom */
-  justify-content: center;
-  font-size: 11px;
+    height: 50px;
+    /* example */
+    display: flex;
+    align-items: flex-end;
+    /* aligns child (p) to bottom */
+    justify-content: center;
+    font-size: 11px;
 }
 
 .grid-row {
@@ -296,17 +341,35 @@ div[data-label="erpnext"] > div:nth-child(2) > .row > .col-xs-5 > label {
 }
 
 .col.right {
-   padding-bottom: 2px;
+    padding-bottom: 2px;
     text-align: left;
     word-break: break-word;
 }
+
 .bank-grid {
-  font-size: 11px;
+    font-size: 11px;
 }
 
 .bank-grid .grid-row {
     display: flex;
-    justify-content: flex-start; /* both left */
+    justify-content: flex-start;
+    /* both left */
     align-items: center;
     margin: 0;
+}
+
+.watermark-irn {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    font-size: 60px;
+    color: rgba(233, 30, 99, 0.6);
+    transform: translate(-50%, -50%) rotate(-45deg);
+    z-index: 1000;
+    pointer-events: none;
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-weight: bold;
+    border: 5px solid rgba(233, 30, 99, 0.6);
+    padding: 10px 20px;
 }
