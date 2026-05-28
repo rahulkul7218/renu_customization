@@ -938,6 +938,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
 				let status_slug = (row.status || "").toLowerCase().replace(/ /g, "-");
 				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.delivered_qty)));
+				let days_text = row.due_days === "-" || row.due_days == null ? "-" : (Math.abs(row.due_days) === 1 ? `1 ${__("Day")}` : `${row.due_days} ${__("Days")}`);
 
 				due_tbody.append(`
 					<tr>
@@ -949,7 +950,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
 						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
 						<td class="col-date-actual">${format_actual_cell(row)}</td>
-						<td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
+						<td class="col-days ${days_class}">${days_text}</td>
 						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
 						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
@@ -998,6 +999,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
 				let status_slug = (row.status || "").toLowerCase().replace(/ /g, "-");
 				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.delivered_qty)));
+				let days_text = row.due_days === "-" || row.due_days == null ? "-" : (Math.abs(row.due_days) === 1 ? `1 ${__("Day")}` : `${row.due_days} ${__("Days")}`);
 
 				overdue_tbody.append(`
 					<tr style="background: rgba(239,68,68,0.05);">
@@ -1009,7 +1011,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
 						<td class="col-date" style="font-weight: 600; color: #ef4444;">${format_expected_cell(row)}</td>
 						<td class="col-date-actual">${format_actual_cell(row)}</td>
-						<td class="col-days text-danger font-weight-bold">${row.due_days} ${__("Days")}</td>
+						<td class="col-days text-danger font-weight-bold">${days_text}</td>
 						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
 						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
