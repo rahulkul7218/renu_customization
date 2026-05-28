@@ -438,7 +438,14 @@ def _write_excel_row(ws, row_idx, values, styles, amount_col=None, date_cols=Non
         if c_idx in date_cols and val:
             cell.number_format = "DD-MM-YYYY"
         if c_idx in qty_cols:
-            cell.number_format = "#,##0.##"
+            try:
+                num_val = float(val)
+                if num_val % 1 == 0:
+                    cell.number_format = "#,##0"
+                else:
+                    cell.number_format = "#,##0.00"
+            except (ValueError, TypeError):
+                cell.number_format = "#,##0"
             cell.alignment = Alignment(horizontal="right")
         if c_idx in pct_cols:
             cell.number_format = "0"
@@ -721,7 +728,14 @@ def _order_row_values(row, serial_no, include_days_left=False):
     ]
     if include_days_left:
         due_days = row.get("due_days")
-        vals.append(f"{due_days} Days" if due_days != "-" else due_days)
+        if due_days == "-" or due_days is None or due_days == "":
+            vals.append("-")
+        else:
+            try:
+                days_int = int(due_days)
+                vals.append(f"{days_int} Day" if days_int == 1 else f"{days_int} Days")
+            except ValueError:
+                vals.append(f"{due_days} Days")
     vals.extend([
         row.get("status"),
         int(row.get("per_delivered") or 0),
@@ -743,6 +757,12 @@ DETAILED_ORDER_HEADERS = [
 DUE_ORDER_HEADERS = [
     "S.No.", "PO No", "Supplier", "Item Code", "Item Name", "Order Date",
     "Expected Delivery", "Actual Delivery", "Days Left", "Status", "% Received", "% Billed",
+    "Order Qty", "Received Qty", "Pending Qty", "Net Total (M)",
+]
+
+OVERDUE_ORDER_HEADERS = [
+    "S.No.", "PO No", "Supplier", "Item Code", "Item Name", "Order Date",
+    "Expected Delivery", "Actual Delivery", "Days Overdue", "Status", "% Received", "% Billed",
     "Order Qty", "Received Qty", "Pending Qty", "Net Total (M)",
 ]
 
@@ -790,26 +810,28 @@ def _write_detailed_orders_sheet(ws, rows, styles):
     _write_detailed_orders_table(ws, rows, styles, start_row=1)
 
 
-def _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL DUE VALUE"):
-    _write_excel_headers(ws, DUE_ORDER_HEADERS, styles, row_idx=start_row)
+def _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL DUE VALUE", headers=None):
+    if headers is None:
+        headers = DUE_ORDER_HEADERS
+    _write_excel_headers(ws, headers, styles, row_idx=start_row)
     if start_row == 1:
-        _apply_header_column_widths(ws, DUE_ORDER_HEADERS, ORDER_SHEET_WIDTHS)
-    date_cols, qty_cols, pct_cols = _order_sheet_col_sets(DUE_ORDER_HEADERS)
+        _apply_header_column_widths(ws, headers, ORDER_SHEET_WIDTHS)
+    date_cols, qty_cols, pct_cols = _order_sheet_col_sets(headers)
     data_rows = rows or []
     data_start = start_row + 1
     for i, row in enumerate(data_rows):
         r_idx = data_start + i
         _write_excel_row(
             ws, r_idx, _order_row_values(row, i + 1, include_days_left=True), styles,
-            amount_col=len(DUE_ORDER_HEADERS),
+            amount_col=len(headers),
             date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
         )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
     _write_excel_total_row(
-        ws, data_start + len(data_rows), total_label, len(DUE_ORDER_HEADERS), total_amount, styles,
+        ws, data_start + len(data_rows), total_label, len(headers), total_amount, styles,
     )
     if start_row == 1:
-        _autofit_columns(ws, min_widths=_min_widths_for_headers(DUE_ORDER_HEADERS, ORDER_SHEET_WIDTHS))
+        _autofit_columns(ws, min_widths=_min_widths_for_headers(headers, ORDER_SHEET_WIDTHS))
     return data_start + len(data_rows) + 1
 
 
@@ -818,7 +840,7 @@ def _write_due_orders_sheet(ws, rows, styles):
 
 
 def _write_overdue_orders_sheet(ws, rows, styles):
-    _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL OVERDUE VALUE")
+    _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL OVERDUE VALUE", headers=OVERDUE_ORDER_HEADERS)
 
 
 @frappe.whitelist()
