@@ -132,18 +132,18 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
             --ot-party: 228px;
             --ot-item-code: 142px;
             --ot-item-name: 228px;
-            --ot-date: 112px;
-            --ot-date-actual: 172px;
-            --ot-days: 92px;
-            --ot-status: 212px;
+            --ot-date: 130px;
+            --ot-date-actual: 180px;
+            --ot-days: 100px;
+            --ot-status: 200px;
             --ot-pct: 80px;
             --ot-qty: 98px;
-            --ot-amt: 138px;
+            --ot-amt: 148px;
             table-layout: fixed;
             min-width: 100%;
         }
-        .dashboard-table.orders-table.due-table { width: 1997px; }
-        .dashboard-table.orders-table.detailed-table { width: 1716px; }
+        .dashboard-table.orders-table.due-table { width: 2192px; }
+        .dashboard-table.orders-table.detailed-table { width: 1868px; }
         .dashboard-table th { background: var(--bg-color); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10; height: 42px; box-sizing: border-box; }
         .dashboard-table.orders-table th { text-transform: none; font-size: 12px; letter-spacing: 0; white-space: nowrap; }
         .dashboard-table td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 13px; color: var(--text-color); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; height: 48px; box-sizing: border-box; line-height: 22px; vertical-align: middle; }
@@ -184,14 +184,14 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
         .col-supplier { width: 228px; min-width: 228px; max-width: 228px; }
         .col-item-code { width: 142px; min-width: 142px; max-width: 142px; }
         .col-item-name { width: 228px; min-width: 228px; max-width: 228px; }
-        .col-date { width: 112px; min-width: 112px; max-width: 112px; }
-        .col-date-actual { width: 172px; min-width: 172px; max-width: 172px; }
+        .col-date { width: 130px; min-width: 130px; max-width: 130px; }
+        .col-date-actual { width: 180px; min-width: 180px; max-width: 180px; }
         .dashboard-table.orders-table td.col-date-actual { white-space: normal; line-height: 1.35; overflow: visible; text-overflow: clip; }
-        .col-days { width: 92px; min-width: 92px; max-width: 92px; text-align: center !important; }
-        .col-status { width: 212px; min-width: 212px; max-width: 212px; }
+        .col-days { width: 100px; min-width: 100px; max-width: 100px; text-align: center !important; }
+        .col-status { width: 200px; min-width: 200px; max-width: 200px; }
         .col-pct { width: 80px; min-width: 80px; max-width: 80px; text-align: center !important; }
         .col-qty { width: 98px; min-width: 98px; max-width: 98px; text-align: right !important; }
-        .col-amt { width: 138px; min-width: 138px; max-width: 138px; text-align: right !important; }
+        .col-amt { width: 148px; min-width: 148px; max-width: 148px; text-align: right !important; }
         th.col-qty, th.col-amt { text-align: right !important; }
         .dashboard-table.orders-table .col-status { overflow: visible; text-overflow: clip; }
         .dashboard-table.orders-table .col-status .indicator-pill { max-width: none; white-space: nowrap; overflow: visible; display: inline-block; vertical-align: middle; }
@@ -320,20 +320,20 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		<colgroup>
 			<col style="width:52px"><col style="width:172px"><col style="width:228px">
 			<col style="width:142px"><col style="width:228px">
-			<col style="width:112px"><col style="width:112px"><col style="width:172px">
-			<col style="width:92px"><col style="width:212px">
+			<col style="width:130px"><col style="width:130px"><col style="width:180px">
+			<col style="width:100px"><col style="width:200px">
 			<col style="width:80px"><col style="width:80px">
 			<col style="width:98px"><col style="width:98px"><col style="width:98px">
-			<col style="width:138px">
+			<col style="width:148px">
 		</colgroup>`;
 
 	const ORDERS_COLGROUP_12 = `
 		<colgroup>
 			<col style="width:52px"><col style="width:172px"><col style="width:228px">
 			<col style="width:142px"><col style="width:228px">
-			<col style="width:112px"><col style="width:112px"><col style="width:172px">
-			<col style="width:212px"><col style="width:80px"><col style="width:80px">
-			<col style="width:138px">
+			<col style="width:130px"><col style="width:130px"><col style="width:180px">
+			<col style="width:200px"><col style="width:80px"><col style="width:80px">
+			<col style="width:148px">
 		</colgroup>`;
 
 	const build_orders_footer_16 = (label, amount_cell_id) => `
@@ -781,9 +781,6 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 						<button class="export-btn" id="export_excel_btn">
 							<i class="fa fa-file-excel-o"></i> ${__("Excel")}
 						</button>
-						<button class="export-btn" id="export_pdf_btn">
-							<i class="fa fa-file-pdf-o"></i> ${__("PDF")}
-						</button>
 					</div>
 				</div>
                 <div class="dashboard-table-scroll">
@@ -910,6 +907,16 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                 let status_slug = (row.status || '').toLowerCase().replace(/ /g, '-');
 				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.received_qty)));
 
+				let due_days_display = "-";
+				if (row.due_days !== "-" && row.due_days !== undefined && row.due_days !== null && row.due_days !== "") {
+					const days_int = parseInt(row.due_days);
+					if (isNaN(days_int)) {
+						due_days_display = row.due_days + " " + __("Days");
+					} else {
+						due_days_display = days_int === 1 ? days_int + " " + __("Day") : days_int + " " + __("Days");
+					}
+				}
+
 				due_tbody.append(`
 					<tr>
 						<td class="col-sno">${idx + 1}</td>
@@ -920,7 +927,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
 						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
 						<td class="col-date-actual">${format_actual_cell(row)}</td>
-						<td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
+						<td class="col-days ${days_class}">${due_days_display}</td>
 						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${rec_class}">${Math.round(row.per_delivered)}%</span></td>
 						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
@@ -970,6 +977,16 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				let status_slug = (row.status || '').toLowerCase().replace(/ /g, '-');
 				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.received_qty)));
 
+				let due_days_display = "-";
+				if (row.due_days !== "-" && row.due_days !== undefined && row.due_days !== null && row.due_days !== "") {
+					const days_int = parseInt(row.due_days);
+					if (isNaN(days_int)) {
+						due_days_display = row.due_days + " " + __("Days");
+					} else {
+						due_days_display = days_int === 1 ? days_int + " " + __("Day") : days_int + " " + __("Days");
+					}
+				}
+
 				overdue_tbody.append(`
 					<tr style="background: rgba(239,68,68,0.05);">
 						<td class="col-sno">${idx + 1}</td>
@@ -980,7 +997,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
 						<td class="col-date" style="font-weight: 600; color: #ef4444;">${format_expected_cell(row)}</td>
 						<td class="col-date-actual">${format_actual_cell(row)}</td>
-						<td class="col-days text-danger font-weight-bold">${row.due_days} ${__("Days")}</td>
+						<td class="col-days text-danger font-weight-bold">${due_days_display}</td>
 						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${rec_class}">${Math.round(row.per_delivered)}%</span></td>
 						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>

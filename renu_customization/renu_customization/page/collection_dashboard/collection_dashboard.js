@@ -644,6 +644,14 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 			placeholder: __("Select Sales Person"),
 		},
 		{
+			fieldname: "business_region_name",
+			label: __("Business Region"),
+			fieldtype: "Select",
+			options: ["All"],
+			default: "All",
+			placeholder: __("Select Region"),
+		},
+		{
 			fieldname: "dom_exp",
 			label: __("Domestic/Export"),
 			fieldtype: "Select",
@@ -668,6 +676,24 @@ frappe.pages["collection_dashboard"].on_page_load = function (wrapper) {
 				return { filters: { customer_group: group } };
 			}
 		};
+
+		// Populate Business Region options dynamically from Business Region Code doctype
+		frappe.call({
+			method: "frappe.client.get_list",
+			args: {
+				doctype: "Business Region Code",
+				fields: ["business_region_name"],
+				filters: [["Business Region Code", "enable", "=", 1]],
+				order_by: "business_region_name asc",
+				limit_page_length: 500,
+			},
+			callback: function (r) {
+				if (r.message) {
+					const names = [...new Set(r.message.map((x) => x.business_region_name))].filter(Boolean).sort();
+					page.filter_group.set_df_property("business_region_name", "options", ["All", ...names]);
+				}
+			},
+		});
 
 		setup_filter_events();
 

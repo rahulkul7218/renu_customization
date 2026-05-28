@@ -25,7 +25,7 @@ def export_to_pdf(html=None, orientation="Landscape"):
 
     pdf_content = frappe.utils.pdf.get_pdf(html, options)
 
-    frappe.local.response.filename = f"Customer_Performance_{nowdate()}.pdf"
+    frappe.local.response.filename = f"RFA_Performance_{nowdate()}.pdf"
     frappe.local.response.filecontent = pdf_content
     frappe.local.response.type = "download"
 
@@ -132,53 +132,82 @@ def get_dashboard_data(filters=None):
 
     filters = prepare_filters(filters)
 
-    so_filters = {"docstatus": 1}
+    query_filters = {}
+    conditions = ["so.docstatus = 1"]
 
     if filters.get("company"):
-        so_filters["company"] = filters.get("company")
+        conditions.append("so.company = %(company)s")
+        query_filters["company"] = filters.get("company")
 
     if filters.get("from_date"):
-        so_filters["transaction_date"] = [">=", filters.get("from_date")]
+        conditions.append("so.transaction_date >= %(from_date)s")
+        query_filters["from_date"] = filters.get("from_date")
 
     if filters.get("to_date"):
-        if "transaction_date" in so_filters:
-            so_filters["transaction_date"] = ["between", [filters.get("from_date"), filters.get("to_date")]]
-        else:
-            so_filters["transaction_date"] = ["<=", filters.get("to_date")]
+        conditions.append("so.transaction_date <= %(to_date)s")
+        query_filters["to_date"] = filters.get("to_date")
 
     if filters.get("sales_order"):
-        so_filters["name"] = filters.get("sales_order")
+        conditions.append("so.name = %(sales_order)s")
+        query_filters["sales_order"] = filters.get("sales_order")
 
     if filters.get("customer"):
-        so_filters["customer"] = filters.get("customer")
+        conditions.append("so.customer = %(customer)s")
+        query_filters["customer"] = filters.get("customer")
     elif filters.get("customer_group"):
         try:
             lft, rgt = frappe.db.get_value("Customer Group", filters.customer_group, ["lft", "rgt"])
-            customers = frappe.db.sql_list(
-                "SELECT name FROM `tabCustomer` WHERE customer_group IN "
-                "(SELECT name FROM `tabCustomer Group` WHERE lft >= %s AND rgt <= %s)",
-                (lft, rgt),
+            cg_list = frappe.db.sql_list(
+                "SELECT name FROM `tabCustomer Group` WHERE lft >= %s AND rgt <= %s", (lft, rgt)
             )
+            if cg_list:
+                conditions.append("c.customer_group IN %(cg_list)s")
+                query_filters["cg_list"] = tuple(cg_list)
+            else:
+                conditions.append("c.customer_group = %(customer_group)s")
+                query_filters["customer_group"] = filters.customer_group
         except Exception:
-            customers = frappe.get_all(
-                "Customer", filters={"customer_group": filters.customer_group}, pluck="name"
-            )
-        so_filters["customer"] = ["in", customers] if customers else ["in", [""]]
+            conditions.append("c.customer_group = %(customer_group)s")
+            query_filters["customer_group"] = filters.customer_group
 
     if filters.get("status"):
         if filters.get("status") in EXCLUDED_SO_STATUSES:
             return {"summary": [], "results": []}
-        so_filters["status"] = filters.get("status")
+        conditions.append("so.status = %(status)s")
+        query_filters["status"] = filters.get("status")
     else:
-        so_filters["status"] = ["not in", list(EXCLUDED_SO_STATUSES)]
+        conditions.append("so.status NOT IN %(excluded_statuses)s")
+        query_filters["excluded_statuses"] = tuple(EXCLUDED_SO_STATUSES)
 
-    sales_orders = frappe.get_all(
-        "Sales Order",
-        filters=so_filters,
-        fields=["name", "customer", "customer_name", "transaction_date", "delivery_date", "status"],
-        order_by="transaction_date desc",
-        limit_page_length=0,
-    )
+    if filters.get("sales_person"):
+        conditions.append("EXISTS (SELECT 1 FROM `tabSales Team` WHERE parent = so.name AND sales_person = %(sales_person)s)")
+        query_filters["sales_person"] = filters.get("sales_person")
+
+    if filters.get("business_region_name") and filters.get("business_region_name") != "All":
+        conditions.append("c.business_region_name = %(business_region_name)s")
+        query_filters["business_region_name"] = filters.get("business_region_name")
+
+    if filters.get("dom_exp") and filters.get("dom_exp") != "All":
+        if filters.dom_exp == "Domestic":
+            conditions.append("IFNULL(a.country, '') = 'India'")
+        elif filters.dom_exp == "Export":
+            conditions.append("IFNULL(a.country, '') != 'India'")
+
+    sql_query = f"""
+        SELECT DISTINCT
+            so.name, so.customer, so.customer_name, so.transaction_date, so.delivery_date, so.status
+        FROM
+            `tabSales Order` so
+        LEFT JOIN
+            `tabCustomer` c ON so.customer = c.name
+        LEFT JOIN
+            `tabAddress` a ON so.customer_address = a.name
+        WHERE
+            {" AND ".join(conditions)}
+        ORDER BY
+            so.transaction_date DESC
+    """
+    sales_orders = frappe.db.sql(sql_query, query_filters, as_dict=True)
 
     if not sales_orders:
         return {"summary": [], "results": []}
@@ -438,14 +467,23 @@ def _write_customer_headers(ws, headers, styles, row_idx=1):
         cell.border = styles["table_border"]
 
 
-def _write_customer_row(ws, row_idx, values, styles, amount_col=None):
+def _write_customer_row(ws, row_idx, values, styles, amount_cols=None):
     row_fill = styles["zebra_fill"] if row_idx % 2 == 0 else None
+    
+    if amount_cols is not None:
+        if isinstance(amount_cols, int):
+            amount_cols = {amount_cols}
+        else:
+            amount_cols = set(amount_cols)
+    else:
+        amount_cols = set()
+
     for c_idx, val in enumerate(values, start=1):
         cell = ws.cell(row=row_idx, column=c_idx, value=val)
         cell.border = styles["table_border"]
         if row_fill:
             cell.fill = row_fill
-        if amount_col and c_idx == amount_col:
+        if c_idx in amount_cols:
             cell.number_format = "#,##0.00"
             cell.alignment = Alignment(horizontal="right")
 
@@ -491,12 +529,12 @@ def _write_customer_chart_tables(ws, dashboard_data, styles, start_row):
         for label, val in zip(labels, values):
             amount = flt(val) / 1000000 if is_currency else flt(val)
             pct = (flt(val) / chart_total * 100) if chart_total else 0
-            _write_customer_row(ws, row_idx, [label, amount, round(pct, 1)], styles, amount_col=2)
+            _write_customer_row(ws, row_idx, [label, amount, round(pct, 1)], styles, amount_cols=2)
             row_idx += 1
 
         _write_customer_row(
             ws, row_idx, ["TOTAL", chart_total / 1000000 if is_currency else chart_total, 100],
-            styles, amount_col=2,
+            styles, amount_cols=2,
         )
         for col in range(1, 4):
             cell = ws.cell(row=row_idx, column=col)
@@ -589,7 +627,7 @@ def _write_customer_month_table(ws, dashboard_data, styles, start_row=1):
         row_total = flt(row.get("total"))
         grand_total += row_total
         vals.append(row_total / 1000000)
-        _write_customer_row(ws, r_idx, vals, styles, amount_col=len(vals))
+        _write_customer_row(ws, r_idx, vals, styles, amount_cols=range(3, len(vals) + 1))
     total_row_idx = data_start + len(month_rows)
     ws.merge_cells(start_row=total_row_idx, start_column=1, end_row=total_row_idx, end_column=2)
     total_label = ws.cell(row=total_row_idx, column=1, value="GRAND TOTAL")
@@ -638,7 +676,17 @@ def _customer_order_row_values(row, serial_no, include_days_left=False):
     ]
     if include_days_left:
         due_days = row.get("due_days")
-        vals.append(f"{due_days} Days" if due_days != "-" else due_days)
+        if due_days == "-" or due_days is None:
+            vals.append("-")
+        else:
+            try:
+                days_int = int(flt(due_days))
+                if days_int == 1:
+                    vals.append("1 Day")
+                else:
+                    vals.append(f"{days_int} Days")
+            except ValueError:
+                vals.append(due_days)
     vals.extend([
         row.get("status"),
         int(row.get("per_delivered") or 0),
@@ -657,6 +705,12 @@ CUSTOMER_DUE_HEADERS = [
     "Order Qty", "Delivered Qty", "Pending Qty", "Net Total (M)",
 ]
 
+CUSTOMER_OVERDUE_HEADERS = [
+    "S.No.", "SO No", "Customer", "Item Code", "Item Name", "Order Date",
+    "Expected Del.", "Actual Del.", "Days Overdue", "Status", "% Del.", "% Bill.",
+    "Order Qty", "Delivered Qty", "Pending Qty", "Net Total (M)",
+]
+
 CUSTOMER_DETAIL_HEADERS = [
     "S.No.", "SO No", "Customer", "Item Code", "Item Name", "Order Date",
     "Expected Del.", "Actual Del.", "Status", "% Del.", "% Bill.",
@@ -672,18 +726,20 @@ def _customer_detail_row_values(row, serial_no):
     return _customer_order_row_values(row, serial_no, include_days_left=False)
 
 
-def _write_customer_due_table(ws, rows, styles, start_row=1, total_label="TOTAL DUE VALUE"):
-    _write_customer_headers(ws, CUSTOMER_DUE_HEADERS, styles, row_idx=start_row)
+def _write_customer_due_table(ws, rows, styles, start_row=1, total_label="TOTAL DUE VALUE", headers=None):
+    if headers is None:
+        headers = CUSTOMER_DUE_HEADERS
+    _write_customer_headers(ws, headers, styles, row_idx=start_row)
     data_rows = rows or []
     data_start = start_row + 1
     for i, row in enumerate(data_rows):
         r_idx = data_start + i
         _write_customer_row(
-            ws, r_idx, _customer_due_row_values(row, i + 1), styles, amount_col=len(CUSTOMER_DUE_HEADERS),
+            ws, r_idx, _customer_due_row_values(row, i + 1), styles, amount_cols=len(headers),
         )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
     _write_customer_total_row(
-        ws, data_start + len(data_rows), total_label, len(CUSTOMER_DUE_HEADERS), total_amount, styles,
+        ws, data_start + len(data_rows), total_label, len(headers), total_amount, styles,
     )
     if start_row == 1:
         _autofit_customer_sheet(ws)
@@ -695,7 +751,7 @@ def _write_customer_due_sheet(ws, rows, styles):
 
 
 def _write_customer_overdue_sheet(ws, rows, styles):
-    _write_customer_due_table(ws, rows, styles, start_row=1, total_label="TOTAL OVERDUE VALUE")
+    _write_customer_due_table(ws, rows, styles, start_row=1, total_label="TOTAL OVERDUE VALUE", headers=CUSTOMER_OVERDUE_HEADERS)
 
 
 def _write_customer_detail_table(ws, rows, styles, start_row=1):
@@ -705,7 +761,7 @@ def _write_customer_detail_table(ws, rows, styles, start_row=1):
     for i, row in enumerate(data_rows):
         r_idx = data_start + i
         _write_customer_row(
-            ws, r_idx, _customer_detail_row_values(row, i + 1), styles, amount_col=len(CUSTOMER_DETAIL_HEADERS),
+            ws, r_idx, _customer_detail_row_values(row, i + 1), styles, amount_cols=len(CUSTOMER_DETAIL_HEADERS),
         )
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
     _write_customer_total_row(
@@ -774,11 +830,11 @@ def export_to_excel(filters=None, export_type="all"):
     output.seek(0)
 
     filenames = {
-        "all": f"Customer_Performance_{nowdate()}.xlsx",
-        "summary": f"Customer_Performance_Month_Wise_{nowdate()}.xlsx",
-        "due": f"Customer_Performance_Due_15_Days_{nowdate()}.xlsx",
-        "overdue": f"Customer_Performance_Overdue_{nowdate()}.xlsx",
-        "detail": f"Customer_Performance_Detailed_{nowdate()}.xlsx",
+        "all": f"RFA_Performance_{nowdate()}.xlsx",
+        "summary": f"RFA_Performance_Month_Wise_{nowdate()}.xlsx",
+        "due": f"RFA_Performance_Due_15_Days_{nowdate()}.xlsx",
+        "overdue": f"RFA_Performance_Overdue_{nowdate()}.xlsx",
+        "detail": f"RFA_Performance_Detailed_{nowdate()}.xlsx",
     }
 
     return {
