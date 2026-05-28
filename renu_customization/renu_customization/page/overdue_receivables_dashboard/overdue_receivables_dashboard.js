@@ -336,7 +336,7 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
 	});
 	page.filter_group.make();
 	// Hide specific filters
-	const fieldsToHide = ['fiscal_year', 'from_date', 'to_date', 'from_days', 'to_days'];
+	const fieldsToHide = ['fiscal_year', 'from_date', 'to_date', 'from_days', 'to_days', 'date'];
 	fieldsToHide.forEach(fn => {
 		if (page.filter_group.fields_dict[fn]) {
 			page.filter_group.fields_dict[fn].$wrapper.hide();

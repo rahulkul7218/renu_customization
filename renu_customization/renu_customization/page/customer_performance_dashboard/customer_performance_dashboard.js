@@ -54,6 +54,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group", placeholder: __("Select Customer Group") },
 		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer", placeholder: __("Select Customer") },
 		{ fieldname: "sales_order", label: __("SO Details"), fieldtype: "Link", options: "Sales Order", placeholder: __("Select SO") },
+		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person", placeholder: __("Select Sales Person") },
+		{ fieldname: "business_region_name", label: __("Business Region"), fieldtype: "Select", options: ["All"], default: "All", placeholder: __("Select Region") },
+		{ fieldname: "dom_exp", label: __("Domestic/Export"), fieldtype: "Select", options: ["All", "Domestic", "Export"], default: "All", placeholder: __("Select") },
 	];
 
 	$("<style>")
@@ -70,6 +73,24 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		on_change: () => page.refresh()
 	});
 	page.filter_group.make();
+
+	// Populate Business Region options dynamically from Business Region Code doctype
+	frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Business Region Code",
+			fields: ["business_region_name"],
+			filters: [["Business Region Code", "enable", "=", 1]],
+			order_by: "business_region_name asc",
+			limit_page_length: 500,
+		},
+		callback: function (r) {
+			if (r.message) {
+				const names = [...new Set(r.message.map((x) => x.business_region_name))].filter(Boolean).sort();
+				page.filter_group.set_df_property("business_region_name", "options", ["All", ...names]);
+			}
+		},
+	});
 
 	page.filter_group.fields_dict.customer.get_query = function () {
 		let customer_group = page.filter_group.get_value("customer_group");
@@ -917,6 +938,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
 				let status_slug = (row.status || "").toLowerCase().replace(/ /g, "-");
 				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.delivered_qty)));
+				let days_text = row.due_days === "-" || row.due_days == null ? "-" : (Math.abs(row.due_days) === 1 ? `1 ${__("Day")}` : `${row.due_days} ${__("Days")}`);
 
 				due_tbody.append(`
 					<tr>
@@ -928,7 +950,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
 						<td class="col-date" style="font-weight: 600;">${format_expected_cell(row)}</td>
 						<td class="col-date-actual">${format_actual_cell(row)}</td>
-						<td class="col-days ${days_class}">${row.due_days} ${__("Days")}</td>
+						<td class="col-days ${days_class}">${days_text}</td>
 						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
 						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
@@ -977,6 +999,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 				let bill_class = row.per_billed >= 100 ? "full" : (row.per_billed > 0 ? "partial" : "none");
 				let status_slug = (row.status || "").toLowerCase().replace(/ /g, "-");
 				const pending_qty = flt(row.pending_qty != null ? row.pending_qty : (flt(row.qty) - flt(row.delivered_qty)));
+				let days_text = row.due_days === "-" || row.due_days == null ? "-" : (Math.abs(row.due_days) === 1 ? `1 ${__("Day")}` : `${row.due_days} ${__("Days")}`);
 
 				overdue_tbody.append(`
 					<tr style="background: rgba(239,68,68,0.05);">
@@ -988,7 +1011,7 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-date">${frappe.datetime.str_to_user(row.transaction_date)}</td>
 						<td class="col-date" style="font-weight: 600; color: #ef4444;">${format_expected_cell(row)}</td>
 						<td class="col-date-actual">${format_actual_cell(row)}</td>
-						<td class="col-days text-danger font-weight-bold">${row.due_days} ${__("Days")}</td>
+						<td class="col-days text-danger font-weight-bold">${days_text}</td>
 						<td class="col-status"><span class="indicator-pill ${status_slug}">${row.status}</span></td>
 						<td class="col-pct"><span class="pct-badge ${del_class}">${Math.round(row.per_delivered)}%</span></td>
 						<td class="col-pct"><span class="pct-badge ${bill_class}">${Math.round(row.per_billed)}%</span></td>
