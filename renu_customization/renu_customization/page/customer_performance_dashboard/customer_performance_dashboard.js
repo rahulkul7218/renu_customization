@@ -54,6 +54,9 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		{ fieldname: "customer_group", label: __("Customer Group"), fieldtype: "Link", options: "Customer Group", placeholder: __("Select Customer Group") },
 		{ fieldname: "customer", label: __("Customer"), fieldtype: "Link", options: "Customer", placeholder: __("Select Customer") },
 		{ fieldname: "sales_order", label: __("SO Details"), fieldtype: "Link", options: "Sales Order", placeholder: __("Select SO") },
+		{ fieldname: "sales_person", label: __("Sales Person"), fieldtype: "Link", options: "Sales Person", placeholder: __("Select Sales Person") },
+		{ fieldname: "business_region_name", label: __("Business Region"), fieldtype: "Select", options: ["All"], default: "All", placeholder: __("Select Region") },
+		{ fieldname: "dom_exp", label: __("Domestic/Export"), fieldtype: "Select", options: ["All", "Domestic", "Export"], default: "All", placeholder: __("Select") },
 	];
 
 	$("<style>")
@@ -70,6 +73,24 @@ frappe.pages["customer_performance_dashboard"].on_page_load = function (wrapper)
 		on_change: () => page.refresh()
 	});
 	page.filter_group.make();
+
+	// Populate Business Region options dynamically from Business Region Code doctype
+	frappe.call({
+		method: "frappe.client.get_list",
+		args: {
+			doctype: "Business Region Code",
+			fields: ["business_region_name"],
+			filters: [["Business Region Code", "enable", "=", 1]],
+			order_by: "business_region_name asc",
+			limit_page_length: 500,
+		},
+		callback: function (r) {
+			if (r.message) {
+				const names = [...new Set(r.message.map((x) => x.business_region_name))].filter(Boolean).sort();
+				page.filter_group.set_df_property("business_region_name", "options", ["All", ...names]);
+			}
+		},
+	});
 
 	page.filter_group.fields_dict.customer.get_query = function () {
 		let customer_group = page.filter_group.get_value("customer_group");

@@ -25,7 +25,7 @@ def export_to_pdf(html=None, orientation="Landscape"):
 
     pdf_content = frappe.utils.pdf.get_pdf(html, options)
 
-    frappe.local.response.filename = f"Customer_Performance_{nowdate()}.pdf"
+    frappe.local.response.filename = f"RFA_Performance_{nowdate()}.pdf"
     frappe.local.response.filecontent = pdf_content
     frappe.local.response.type = "download"
 
@@ -132,53 +132,82 @@ def get_dashboard_data(filters=None):
 
     filters = prepare_filters(filters)
 
-    so_filters = {"docstatus": 1}
+    query_filters = {}
+    conditions = ["so.docstatus = 1"]
 
     if filters.get("company"):
-        so_filters["company"] = filters.get("company")
+        conditions.append("so.company = %(company)s")
+        query_filters["company"] = filters.get("company")
 
     if filters.get("from_date"):
-        so_filters["transaction_date"] = [">=", filters.get("from_date")]
+        conditions.append("so.transaction_date >= %(from_date)s")
+        query_filters["from_date"] = filters.get("from_date")
 
     if filters.get("to_date"):
-        if "transaction_date" in so_filters:
-            so_filters["transaction_date"] = ["between", [filters.get("from_date"), filters.get("to_date")]]
-        else:
-            so_filters["transaction_date"] = ["<=", filters.get("to_date")]
+        conditions.append("so.transaction_date <= %(to_date)s")
+        query_filters["to_date"] = filters.get("to_date")
 
     if filters.get("sales_order"):
-        so_filters["name"] = filters.get("sales_order")
+        conditions.append("so.name = %(sales_order)s")
+        query_filters["sales_order"] = filters.get("sales_order")
 
     if filters.get("customer"):
-        so_filters["customer"] = filters.get("customer")
+        conditions.append("so.customer = %(customer)s")
+        query_filters["customer"] = filters.get("customer")
     elif filters.get("customer_group"):
         try:
             lft, rgt = frappe.db.get_value("Customer Group", filters.customer_group, ["lft", "rgt"])
-            customers = frappe.db.sql_list(
-                "SELECT name FROM `tabCustomer` WHERE customer_group IN "
-                "(SELECT name FROM `tabCustomer Group` WHERE lft >= %s AND rgt <= %s)",
-                (lft, rgt),
+            cg_list = frappe.db.sql_list(
+                "SELECT name FROM `tabCustomer Group` WHERE lft >= %s AND rgt <= %s", (lft, rgt)
             )
+            if cg_list:
+                conditions.append("c.customer_group IN %(cg_list)s")
+                query_filters["cg_list"] = tuple(cg_list)
+            else:
+                conditions.append("c.customer_group = %(customer_group)s")
+                query_filters["customer_group"] = filters.customer_group
         except Exception:
-            customers = frappe.get_all(
-                "Customer", filters={"customer_group": filters.customer_group}, pluck="name"
-            )
-        so_filters["customer"] = ["in", customers] if customers else ["in", [""]]
+            conditions.append("c.customer_group = %(customer_group)s")
+            query_filters["customer_group"] = filters.customer_group
 
     if filters.get("status"):
         if filters.get("status") in EXCLUDED_SO_STATUSES:
             return {"summary": [], "results": []}
-        so_filters["status"] = filters.get("status")
+        conditions.append("so.status = %(status)s")
+        query_filters["status"] = filters.get("status")
     else:
-        so_filters["status"] = ["not in", list(EXCLUDED_SO_STATUSES)]
+        conditions.append("so.status NOT IN %(excluded_statuses)s")
+        query_filters["excluded_statuses"] = tuple(EXCLUDED_SO_STATUSES)
 
-    sales_orders = frappe.get_all(
-        "Sales Order",
-        filters=so_filters,
-        fields=["name", "customer", "customer_name", "transaction_date", "delivery_date", "status"],
-        order_by="transaction_date desc",
-        limit_page_length=0,
-    )
+    if filters.get("sales_person"):
+        conditions.append("EXISTS (SELECT 1 FROM `tabSales Team` WHERE parent = so.name AND sales_person = %(sales_person)s)")
+        query_filters["sales_person"] = filters.get("sales_person")
+
+    if filters.get("business_region_name") and filters.get("business_region_name") != "All":
+        conditions.append("c.business_region_name = %(business_region_name)s")
+        query_filters["business_region_name"] = filters.get("business_region_name")
+
+    if filters.get("dom_exp") and filters.get("dom_exp") != "All":
+        if filters.dom_exp == "Domestic":
+            conditions.append("IFNULL(a.country, '') = 'India'")
+        elif filters.dom_exp == "Export":
+            conditions.append("IFNULL(a.country, '') != 'India'")
+
+    sql_query = f"""
+        SELECT DISTINCT
+            so.name, so.customer, so.customer_name, so.transaction_date, so.delivery_date, so.status
+        FROM
+            `tabSales Order` so
+        LEFT JOIN
+            `tabCustomer` c ON so.customer = c.name
+        LEFT JOIN
+            `tabAddress` a ON so.customer_address = a.name
+        WHERE
+            {" AND ".join(conditions)}
+        ORDER BY
+            so.transaction_date DESC
+    """
+    sales_orders = frappe.db.sql(sql_query, query_filters, as_dict=True)
 
     if not sales_orders:
         return {"summary": [], "results": []}
@@ -774,11 +803,11 @@ def export_to_excel(filters=None, export_type="all"):
     output.seek(0)
 
     filenames = {
-        "all": f"Customer_Performance_{nowdate()}.xlsx",
-        "summary": f"Customer_Performance_Month_Wise_{nowdate()}.xlsx",
-        "due": f"Customer_Performance_Due_15_Days_{nowdate()}.xlsx",
-        "overdue": f"Customer_Performance_Overdue_{nowdate()}.xlsx",
-        "detail": f"Customer_Performance_Detailed_{nowdate()}.xlsx",
+        "all": f"RFA_Performance_{nowdate()}.xlsx",
+        "summary": f"RFA_Performance_Month_Wise_{nowdate()}.xlsx",
+        "due": f"RFA_Performance_Due_15_Days_{nowdate()}.xlsx",
+        "overdue": f"RFA_Performance_Overdue_{nowdate()}.xlsx",
+        "detail": f"RFA_Performance_Detailed_{nowdate()}.xlsx",
     }
 
     return {
