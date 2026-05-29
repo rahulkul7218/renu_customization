@@ -23,7 +23,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
 	function perform_refresh() {
 		const filters = page.filter_group.get_values();
-		
+
 		// Show loading indicator
 		if (page.container.is(":empty") || page.container.find(".summary-wrapper").length === 0) {
 			page.container.html(
@@ -147,6 +147,10 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 		fields: filter_fields,
 	});
 	page.filter_group.make();
+
+	if (renu_customization.dashboard_fiscal_year && renu_customization.dashboard_fiscal_year.init) {
+		renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
+	}
 
 	// Populate Business Region Name options from database
 	frappe.call({
@@ -292,28 +296,28 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
 	$(`<style>
         .dashboard-content { padding: 24px; background: #fff; min-height: 100vh; }
-        .summary-wrapper { 
-            display: grid !important; 
-            grid-template-columns: repeat(4, 1fr) !important; 
-            gap: 16px; 
-            margin-bottom: 24px; 
-            width: 100% !important; 
+        .summary-wrapper {
+            display: grid !important;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 16px;
+            margin-bottom: 24px;
+            width: 100% !important;
         }
-        .summary-card { 
-            background: #ffffff; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 12px; 
-            padding: 16px; 
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); 
-            border-left: 5px solid #cbd5e1; 
+        .summary-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            border-left: 5px solid #cbd5e1;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
         }
-        .summary-card:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
+        .summary-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
         }
-        
+
         /* Consistent Border Colors */
         .summary-card.blue { border-left-color: #3b82f6; }
         .summary-card.green { border-left-color: #10b981; }
@@ -322,24 +326,24 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .summary-card.purple { border-left-color: #8b5cf6; }
         .summary-card.red { border-left-color: #ef4444; }
 
-        .summary-card .label { 
-            font-size: 11px; 
-            color: #64748b; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            margin-bottom: 8px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
+        .summary-card .label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
-        .summary-card .value { 
-            font-size: 20px; 
-            font-weight: 800; 
-            color: #0f172a; 
+        .summary-card .value {
+            font-size: 20px;
+            font-weight: 800;
+            color: #0f172a;
         }
         .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-        
+
         .bg-blue { background-color: #3b82f6; }
         .bg-green { background-color: #10b981; }
         .bg-orange { background-color: #f59e0b; }
@@ -352,7 +356,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .chart-card.full-width { grid-column: 1 / -1; }
         .chart-card .title { font-size: 15px; font-weight: 700; color: #1e293b; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.025em; display: flex; justify-content: space-between; align-items: center; }
         .reset-btn { font-size: 11px; color: #2563eb; cursor: pointer; text-transform: none; font-weight: 600; }
-        
+
         .custom-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-top: 30px; padding: 20px; border-top: 1px solid #f1f5f9; background: #fafafa; border-radius: 8px; }
         .legend-item { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
         .legend-item .dot { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; margin-top: 2px; }
@@ -360,15 +364,15 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .legend-item .label { font-size: 12px; font-weight: 600; color: #475569; text-decoration: none !important; }
         .legend-item .val { font-size: 11px; color: #94a3b8; }
 
-        .frappe-chart .chart-legend, 
-        .frappe-chart .legend, 
+        .frappe-chart .chart-legend,
+        .frappe-chart .legend,
         .frappe-chart .frappe-chart-legend,
-        .frappe-chart .legend-dataset-text { 
-            display: none !important; 
-            visibility: hidden !important; 
-            opacity: 0 !important; 
-            height: 0 !important; 
-            overflow: hidden !important; 
+        .frappe-chart .legend-dataset-text {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
         }
         .frappe-chart text { font-size: 11px !important; }
         .chart-actions, .table-actions { display: flex; gap: 12px; align-items: center; }
@@ -386,7 +390,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
         .indicator-pill { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
         .indicator-pill.green { background: #dcfce7; color: #166534; }
         .indicator-pill.red { background: #fee2e2; color: #991b1b; }
-        
+
         .month-col { min-width: 90px; width: 90px; white-space: nowrap !important; text-align: right !important; }
         .data-col { min-width: 120px; white-space: nowrap !important; text-align: right !important; }
         .date-col { min-width: 120px !important; width: 120px !important; white-space: nowrap !important; }
@@ -399,13 +403,13 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 
         /* Sticky Total Footer - sticks to bottom of the scrollable table-container */
         .table-container { overflow: auto; position: relative; }
-        tfoot tr.sticky-total td, tbody tr.sticky-total td { 
-            position: sticky; 
-            bottom: 0; 
-            z-index: 9; 
-            background: #f1f3f5 !important; 
-            font-weight: 700; 
-            border-top: 2px solid #ddd; 
+        tfoot tr.sticky-total td, tbody tr.sticky-total td {
+            position: sticky;
+            bottom: 0;
+            z-index: 9;
+            background: #f1f3f5 !important;
+            font-weight: 700;
+            border-top: 2px solid #ddd;
             box-shadow: 0 -2px 5px rgba(0,0,0,0.05);
         }
 
@@ -955,7 +959,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
 						const val = c_obj.data.datasets[0].values[i];
 						const share = ((val / total_val) * 100).toFixed(1);
 						let display_label = l;
-						
+
 						if (chart_id === "top_10_products" && l && l.includes(" ")) {
 							let parts = l.split(" ");
 							let code = parts[0];
@@ -978,15 +982,15 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
                         @page { size: landscape; margin: 10mm; }
                         .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
-                        
+
                         .kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 20px; table-layout: fixed; }
                         .kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; text-align: center; vertical-align: top; }
                         .kpi-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
                         .kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
                         .kpi-value { font-size: 16px; font-weight: 800; color: #0f172a; }
-                        
+
                         h3 { font-size: 16px; font-weight: 700; color: #1e293b; margin-top: 25px; border-left: 4px solid #3b82f6; padding-left: 12px; text-transform: uppercase; letter-spacing: 0.025em; }
-                        
+
                         table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 9px; border: 1px solid #e2e8f0; table-layout: auto; page-break-inside: auto !important; }
                         tr { page-break-inside: auto !important; page-break-after: auto !important; }
                         td, th { page-break-inside: avoid !important; }
@@ -994,7 +998,7 @@ frappe.pages["gross_margin_dashboard"].on_page_load = function (wrapper) {
                         thead { display: table-header-group; }
                         tfoot { display: table-row-group; }
                         th { background: #f1f5f9; font-weight: 700; color: #475569; text-transform: uppercase; border-bottom: 2px solid #3b82f6; }
-                        
+
                         .text-right { text-align: right; }
                         .text-center { text-align: center; }
                         .font-weight-bold { font-weight: 700; }
