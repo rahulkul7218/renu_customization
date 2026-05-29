@@ -253,6 +253,11 @@ def get_dashboard_data(filters=None):
         row["picked_net_total_inr"] = flt(row.get("picked_qty_val", 0)) * flt(row.get("base_rate", 0))
         row["pending_value"] = max(0, net_booked - row["delivered_net_total_inr"] - row["returned_val"])
 
+        # Explicitly set quantity fields for dashboard display
+        row["short_close_qty"] = flt(row.get("short_close_qty") or 0)  # Ensure it's preserved
+        row["delivered_qty"] = flt(row.get("delivered_qty") or 0)
+        row["pending_qty"] = flt(row.get("order_quantity", 0)) - flt(row.get("delivered_qty", 0)) - flt(row.get("returned_qty", 0)) - flt(row.get("short_close_qty", 0))
+
         # Overdue logic
         row["overdue_value"] = 0
         if row.get("delivery_date") and row["pending_value"] > 0:
@@ -735,11 +740,14 @@ def export_to_excel(filters=None, export_type="all"):
             {"label": "Item Group", "fieldname": "item_group", "width": 18},
             {"label": "Deliv. Date", "fieldname": "delivery_date", "width": 12},
             {"label": "Sales Person", "fieldname": "sales_person", "width": 18},
-            {"label": "Booked (M)", "fieldname": "booked_net_total", "width": 13},
+            {"label": "Order Qty", "fieldname": "order_quantity", "width": 12},
             {"label": "Total Booked (M)", "fieldname": "total_booked_value", "width": 13},
+            {"label": "Short Close Qty", "fieldname": "short_close_qty", "width": 12},
             {"label": "Short Close (M)", "fieldname": "sc_value", "width": 13},
             {"label": "Picked (M)", "fieldname": "picked_net_total_inr", "width": 13},
+            {"label": "Delivered Qty", "fieldname": "delivered_qty", "width": 12},
             {"label": "Delivered Amt (M)", "fieldname": "delivered_net_total_inr", "width": 13},
+            {"label": "Open Qty", "fieldname": "pending_qty", "width": 12},
             {"label": "Pending (M)", "fieldname": "pending_value", "width": 13},
             {"label": "Overdue (M)", "fieldname": "overdue_value", "width": 13}
         ]
@@ -748,7 +756,10 @@ def export_to_excel(filters=None, export_type="all"):
             cell.font, cell.fill, cell.alignment, cell.border = header_font, header_fill, Alignment(horizontal="center"), table_border
             ws_list.column_dimensions[get_column_letter(idx)].width = col["width"] + 5
         row_idx += 1
-        total_list_amt = 0
+        total_list_order_qty = 0
+        total_list_short_close_qty = 0
+        total_list_delivered_qty = 0
+        total_list_open_qty = 0
         total_list_actual = 0
         total_list_sc = 0
         total_list_picked = 0
@@ -761,19 +772,28 @@ def export_to_excel(filters=None, export_type="all"):
                 val = row.get(fname) if fname != "sr_no_idx" else r_idx + 1
                 if val is None:
                     if fname == "order_quantity": val = row.get("po_qty")
-                    if fname == "booked_net_total": val = row.get("po_total")
+                    if fname == "short_close_qty": val = row.get("short_close_qty", 0)
+                    if fname == "delivered_qty": val = row.get("delivered_qty", 0)
+                    if fname == "pending_qty": val = row.get("order_quantity", 0) - row.get("delivered_qty", 0) - row.get("returned_qty", 0) - row.get("short_close_qty", 0)
                 cell = ws_list.cell(row=row_idx, column=idx)
                 cell.border = table_border
-                if fname in ["booked_net_total", "total_booked_value", "sc_value", "picked_net_total_inr", "delivered_net_total_inr", "pending_value", "overdue_value"]:
+                if fname in ["total_booked_value", "sc_value", "picked_net_total_inr", "delivered_net_total_inr", "pending_value", "overdue_value"]:
                     cell.value = flt(val) / 1000000
                     cell.number_format = '"₹ "#,##0.00" M"'
-                    if fname == "booked_net_total": total_list_amt += flt(val)
                     if fname == "total_booked_value": total_list_actual += flt(val)
                     if fname == "sc_value": total_list_sc += flt(val)
                     if fname == "picked_net_total_inr": total_list_picked += flt(val)
                     if fname == "delivered_net_total_inr": total_list_delivered += flt(val)
                     if fname == "pending_value": total_list_pending += flt(val)
                     if fname == "overdue_value": total_list_overdue += flt(val)
+                    cell.alignment = Alignment(horizontal="right")
+                elif fname in ["order_quantity", "short_close_qty", "delivered_qty", "pending_qty"]:
+                    # Add quantity totals
+                    cell.value = flt(val)
+                    if fname == "order_quantity": total_list_order_qty += flt(val)
+                    if fname == "short_close_qty": total_list_short_close_qty += flt(val)
+                    if fname == "delivered_qty": total_list_delivered_qty += flt(val)
+                    if fname == "pending_qty": total_list_open_qty += flt(val)
                     cell.alignment = Alignment(horizontal="right")
                 else:
                     cell.value, cell.alignment = str(val) if val else "", Alignment(horizontal="left")
@@ -785,23 +805,29 @@ def export_to_excel(filters=None, export_type="all"):
             ws_list.cell(row=row_idx, column=c).fill = header_fill
             ws_list.cell(row=row_idx, column=c).border = table_border
 
-        # Fill the rest of the columns in the footer (Columns 12-18)
+        # Fill the rest of the columns in the footer (Columns 12-21)
         total_list_values = [
-            total_list_amt,
-            total_list_actual,
-            total_list_sc,
-            total_list_picked,
-            total_list_delivered,
-            total_list_pending,
-            total_list_overdue
+            (12, total_list_order_qty, "number"),           # Order Qty - show total
+            (13, total_list_actual, "money"),               # Total Booked (M)
+            (14, total_list_short_close_qty, "number"),     # Short Close Qty - show total
+            (15, total_list_sc, "money"),                   # Short Close (M)
+            (16, total_list_picked, "money"),               # Picked (M)
+            (17, total_list_delivered_qty, "number"),       # Delivered Qty - show total
+            (18, total_list_delivered, "money"),            # Delivered Amt (M)
+            (19, total_list_open_qty, "number"),            # Open Qty - show total
+            (20, total_list_pending, "money"),              # Pending (M)
+            (21, total_list_overdue, "money")               # Overdue (M)
         ]
 
-        for i, val in enumerate(total_list_values):
-            col = 12 + i
-            c_f = ws_list.cell(row=row_idx, column=col, value=flt(val) / 1000000)
+        for col, val, col_type in total_list_values:
+            c_f = ws_list.cell(row=row_idx, column=col, value=flt(val))
             c_f.font = header_font
             c_f.fill = header_fill
-            c_f.number_format = '"₹ "#,##0.00" M"'
+            if col_type == "money":
+                c_f.value = flt(val) / 1000000
+                c_f.number_format = '"₹ "#,##0.00" M"'
+            else:
+                c_f.number_format = "0"
             c_f.alignment = Alignment(horizontal="right")
             c_f.border = table_border
 

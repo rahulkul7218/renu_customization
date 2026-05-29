@@ -583,30 +583,32 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
 
         /* Column Widths & Alignment */
-        .col-sno { width: 60px !important; min-width: 60px !important; text-align: center !important; }
-        .col-customer { width: 280px !important; min-width: 280px !important; }
-        .col-customer-group { width: 160px !important; min-width: 160px !important; }
-        .col-item-group { width: 160px !important; min-width: 160px !important; }
-        .col-sp { width: 180px !important; min-width: 180px !important; }
-        .col-prod { width: 350px !important; min-width: 350px !important; }
+        .col-sno { width: 50px !important; min-width: 50px !important; text-align: center !important; }
+        .col-customer { width: 200px !important; min-width: 200px !important; }
+        .col-customer-group { width: 140px !important; min-width: 140px !important; }
+        .col-item-group { width: 140px !important; min-width: 140px !important; }
+        .col-sp { width: 150px !important; min-width: 150px !important; }
+        .col-prod { width: 250px !important; min-width: 250px !important; }
         .col-amt {
-            width: 130px !important; min-width: 130px !important;
+            width: 100px !important; min-width: 100px !important;
             text-align: right !important;
             white-space: nowrap !important;
         }
-        .col-qty { width: 80px !important; min-width: 80px !important; text-align: right !important; }
-        .col-date { width: 110px !important; min-width: 110px !important; }
-        .col-id { width: 140px !important; min-width: 140px !important; }
-        .col-status { width: 120px !important; min-width: 120px !important; }
+        .col-qty { width: 70px !important; min-width: 70px !important; text-align: right !important; }
+        .col-date { width: 90px !important; min-width: 90px !important; }
+        .col-id { width: 120px !important; min-width: 120px !important; }
+        .col-status { width: 100px !important; min-width: 100px !important; }
+        .col-po { width: 120px !important; min-width: 120px !important; }
+        .col-deliv-date { width: 90px !important; min-width: 90px !important; }
 
         /* Table Sticky Columns - Table 1 (Booking Breakdown) */
         .month-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 50px !important; text-align: center !important; background: #f8fafc !important; }
-        .month-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; width: 220px !important; min-width: 220px !important; }
+        .month-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; width: 170px !important; min-width: 170px !important; }
 
         /* Table Sticky Columns - Table 2 (Detailed List) */
         .detailed-list-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 50px !important; text-align: center !important; background: #f8fafc !important; }
         .detailed-list-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; }
-        .detailed-list-table .col-id { position: relative; width: 140px !important; min-width: 140px !important; }
+        .detailed-list-table .col-id { position: relative; width: 120px !important; min-width: 120px !important; }
 
 
 
@@ -682,29 +684,63 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
             background: #f8fafc !important; border: 1px solid #e2e8f0 !important;
             font-size: 13px !important;
         }
+
+        /* Hide columns marked for export exclusion */
+        .hidden-export { display: none !important; visibility: hidden !important; width: 0 !important; padding: 0 !important; }
+        @media print { .hidden-export { display: none !important; } }
     </style>`).appendTo(page.main);
 
 	const PDF_EXPORT_TABLE_CSS = `
 		table.pdf-export-table {
-			width: 100%; border-collapse: collapse; font-size: 6.5px;
-			table-layout: fixed; page-break-inside: auto; margin-top: 10px;
+			width: 100%; border-collapse: collapse; font-size: 7px;
+			table-layout: auto; page-break-inside: auto; margin-top: 10px;
+			border: 2px solid #334155;
 		}
 		table.pdf-export-table th, table.pdf-export-table td {
-			border: 1px solid #cbd5e1; padding: 3px 4px; word-wrap: break-word;
-			overflow-wrap: break-word; vertical-align: top;
+			border: 1px solid #cbd5e1; padding: 4px 5px; word-wrap: break-word;
+			overflow-wrap: break-word; vertical-align: middle;
 			position: static !important; bottom: auto !important; top: auto !important;
 			left: auto !important; right: auto !important; box-shadow: none !important;
+			min-height: 18px;
 		}
-		table.pdf-export-table thead { display: table-header-group; }
-		table.pdf-export-table thead th { background: #f1f5f9 !important; font-weight: 700; }
+		table.pdf-export-table thead { display: table-header-group; page-break-inside: avoid; }
+		table.pdf-export-table thead th {
+			background: #2c3e50 !important;
+			font-weight: 700 !important;
+			color: #fff !important;
+			border: 1px solid #1e293b !important;
+			text-align: left;
+			padding: 5px 6px;
+		}
 		table.pdf-export-table tbody tr { page-break-inside: auto !important; }
+		table.pdf-export-table tbody tr:nth-child(odd) { background: #f8fafc; }
+		table.pdf-export-table tbody tr:nth-child(even) { background: #fff; }
 		table.pdf-export-table tr.sticky-total { page-break-inside: avoid !important; }
-		table.pdf-export-table tr.sticky-total td { background: #f8fafc !important; font-weight: 700; }
-		table.pdf-export-table .month-col, table.pdf-export-table .total-col,
-		table.pdf-export-table .col-amt, table.pdf-export-table .total-net-col,
-		table.pdf-export-table .grand-total-col, table.pdf-export-table .lifecycle-total-col {
-			text-align: right !important; white-space: nowrap;
+		table.pdf-export-table tr.sticky-total td {
+			background: #e2e8f0 !important;
+			font-weight: 700 !important;
+			border: 1.5px solid #1e293b !important;
+			color: #0f172a;
 		}
+		table.pdf-export-table .col-sno { width: 3% !important; text-align: center !important; }
+		table.pdf-export-table .col-customer { width: 20% !important; text-align: left !important; }
+		table.pdf-export-table .col-customer-group { width: 15% !important; }
+		table.pdf-export-table .col-sp { width: 15% !important; }
+		table.pdf-export-table .col-prod { width: 20% !important; }
+		table.pdf-export-table .col-item-group { width: 15% !important; }
+		table.pdf-export-table .col-date { width: 6% !important; text-align: center !important; }
+		table.pdf-export-table .col-id { width: 6% !important; }
+		table.pdf-export-table .col-status { width: 6% !important; text-align: center !important; }
+		table.pdf-export-table .col-po { width: 6% !important; }
+		table.pdf-export-table .col-qty { width: 5% !important; text-align: right !important; }
+		table.pdf-export-table .col-amt { width: 6% !important; text-align: right !important; }
+		table.pdf-export-table .col-deliv-date { width: 6% !important; text-align: center !important; }
+		table.pdf-export-table .month-col { width: 5% !important; text-align: right !important; }
+		table.pdf-export-table .total-col { width: 6% !important; text-align: right !important; }
+		table.pdf-export-table .total-net-col { width: 6% !important; text-align: right !important; background: #f0f4ff !important; }
+		table.pdf-export-table .grand-total-col { width: 6% !important; text-align: right !important; background: #f0f4ff !important; }
+		table.pdf-export-table .col-category { width: 15% !important; }
+		table.pdf-export-table .lifecycle-total-col { width: 6% !important; text-align: right !important; background: #f0f4ff !important; }
 	`;
 
 	const prepare_table_html_for_pdf = ($table) => {
@@ -721,20 +757,33 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		$clone.find(".indicator-pill, .pct-badge").each(function () {
 			$(this).replaceWith($(this).text());
 		});
+
+		// Clean styles and preserve essential formatting
 		$clone.find("th, td").each(function () {
 			const $el = $(this);
 			let style = ($el.attr("style") || "")
 				.replace(/position\s*:\s*(sticky|relative|fixed|absolute)[^;]*/gi, "")
 				.replace(/\b(bottom|top|left|right)\s*:\s*[^;]*/gi, "")
 				.replace(/z-index\s*:\s*[^;]*/gi, "")
-				.replace(/box-shadow\s*:\s*[^;]*/gi, "");
+				.replace(/box-shadow\s*:\s*[^;]*/gi, "")
+				.replace(/width\s*:\s*[^;]*px[^;]*/gi, "")
+				.replace(/min-width\s*:\s*[^;]*px[^;]*/gi, "");
 			style = style.replace(/;\s*;/g, ";").trim();
 			if (style) {
 				$el.attr("style", style);
 			} else {
 				$el.removeAttr("style");
 			}
+
+			// Preserve column class for width styling via CSS
+			if (!$el.attr("class")) {
+				$el.removeAttr("class");
+			}
 		});
+
+		// Remove hidden export columns
+		$clone.find(".hidden-export").remove();
+
 		return $clone[0].outerHTML;
 	};
 
@@ -916,20 +965,24 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <tr>
                                 <th class="col-sno">S.No.</th>
                                 <th class="col-id sortable-header" data-field="name">Order ID <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-date sortable-header" data-field="so_date" style="white-space: nowrap;">Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-date sortable-header" data-field="so_date" style="white-space: nowrap;">Order Date <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-status sortable-header" data-field="status">Status <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-customer sortable-header" data-field="customer_name">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer sortable-header" data-field="customer_name">Customer Name <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-customer-group sortable-header" data-field="customer_group">Customer Group <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-po sortable-header" data-field="customer_po_no" style="width: 140px; white-space: nowrap;">Cust. PO No. <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-prod sortable-header" data-field="item_code">Item <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-po sortable-header" data-field="customer_po_no" style="width: 120px; white-space: nowrap;">Customer PO <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-prod sortable-header" data-field="item_code">Product/Item <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-item-group sortable-header" data-field="item_group">Item Group <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-deliv-date sortable-header" data-field="delivery_date" style="width: 110px; white-space: nowrap;">Deliv. Date <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-deliv-date sortable-header" data-field="delivery_date" style="width: 90px; white-space: nowrap;">Delivery Date <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-sp sortable-header" data-field="sales_person">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
-                                <th class="col-amt sortable-header" data-field="total_booked_value">Booked (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-field="order_quantity">Order Quantity <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-amt sortable-header hidden-export" data-field="total_booked_value" style="display: none;">Booked (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-amt sortable-header" data-field="total_net_amount_inr">Total Booked (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-field="short_close_qty">Short Close Qty <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-amt sortable-header" data-field="cancelled_val">Short Close (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-amt sortable-header" data-field="picked_value">Picked (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-field="delivered_qty">Delivered Qty <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-amt sortable-header" data-field="dashboard_net_delivered">Delivered (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-qty sortable-header" data-field="pending_qty">Open Qty <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-amt sortable-header" data-field="pending_value">Pending (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-amt sortable-header" data-field="overdue_value">Overdue (M) <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
@@ -1181,7 +1234,11 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				total_picked = 0,
 				total_deliv = 0,
 				total_pending = 0,
-				total_overdue = 0;
+				total_overdue = 0,
+				total_order_qty = 0,
+				total_short_close_qty = 0,
+				total_delivered_qty = 0,
+				total_open_qty = 0;
 
 			if (filtered_data.length === 0) {
 				tbody_list.append(
@@ -1221,6 +1278,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					total_pending += pending_val;
 					total_overdue += overdue_val;
 
+					// Calculate total quantities
+					total_order_qty += flt(row.order_quantity || 0);
+					total_short_close_qty += flt(row.short_close_qty || row.total_short_close_qty || 0);
+					total_delivered_qty += flt(row.delivered_qty || 0);
+					total_open_qty += flt((row.order_quantity || 0) - (row.delivered_qty || 0) - (row.returned_qty || 0) - (row.short_close_qty || row.total_short_close_qty || 0));
+
 					tbody_list.append(`
                         <tr>
                             <td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
@@ -1239,11 +1302,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <td class="col-item-group">${row.item_group || "-"}</td>
                             <td class="col-deliv-date" style="color: #475569; font-size: 11px; white-space: nowrap;">${deliv_date_str}</td>
                             <td class="col-sp">${row.sales_person || "-"}</td>
-                            <td class="col-amt" style="font-weight: 700; color: #1e293b;">${format_currency_short(original_amt)}</td>
+                            <td class="col-qty" style="font-weight: 600; color: #1e293b; text-align: center;">${flt(row.order_quantity || 0)}</td>
+                            <td class="col-amt" style="font-weight: 700; color: #1e293b; display: none;">${format_currency_short(original_amt)}</td>
                             <td class="col-amt" style="font-weight: 700; color: #059669;">${format_currency_short(actual_val)}</td>
+                            <td class="col-qty" style="font-weight: 600; color: #f59e0b; text-align: center;">${flt(row.short_close_qty || row.total_short_close_qty || 0)}</td>
                             <td class="col-amt" style="color: #f59e0b;">${format_currency_short(sc_value)}</td>
                             <td class="col-amt" style="color: #0f172a;">${format_currency_short(row.picked_net_total_inr || 0)}</td>
+                            <td class="col-qty" style="font-weight: 600; color: #06b6d4; text-align: center;">${flt(row.delivered_qty || 0)}</td>
                             <td class="col-amt" style="color: #06b6d4;">${format_currency_short(deliv_total)}</td>
+                            <td class="col-qty" style="font-weight: 600; color: #4338ca; text-align: center;">${flt((row.order_quantity || 0) - (row.delivered_qty || 0) - (row.returned_qty || 0) - (row.short_close_qty || row.total_short_close_qty || 0))}</td>
                             <td class="col-amt" style="font-weight: 700; color: #4338ca;">${format_currency_short(pending_val)}</td>
                             <td class="col-amt" style="font-weight: 700; color: #7c3aed;">${format_currency_short(overdue_val)}</td>
                         </tr>
@@ -1263,11 +1330,15 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                         <td class="col-item-group" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-deliv-date" style="border-top: 2px solid #cbd5e1;"></td>
                         <td class="col-sp" style="border-top: 2px solid #cbd5e1;"></td>
-                        <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_amt)}</td>
+                        <td class="col-qty" style="font-weight: 800; color: #1e293b; text-align: center; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">${flt(total_order_qty)}</td>
+                        <td class="col-amt" style="font-weight: 800; color: #1e293b; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1; display: none;">${format_currency_short(total_amt)}</td>
                         <td class="col-amt" style="font-weight: 800; color: #059669; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_actual)}</td>
+                        <td class="col-qty" style="font-weight: 800; color: #f59e0b; text-align: center; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">${flt(total_short_close_qty)}</td>
                         <td class="col-amt" style="color: #f59e0b; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_sc)}</td>
                         <td class="col-amt" style="color: #1e293b; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_picked)}</td>
+                        <td class="col-qty" style="font-weight: 800; color: #06b6d4; text-align: center; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">${flt(total_delivered_qty)}</td>
                         <td class="col-amt" style="color: #06b6d4; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_deliv)}</td>
+                        <td class="col-qty" style="font-weight: 800; color: #4338ca; text-align: center; background: #f1f5f9 !important; border-top: 2px solid #cbd5e1;">${flt(total_open_qty)}</td>
                         <td class="col-amt" style="font-weight: 800; color: #4338ca; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_pending)}</td>
                         <td class="col-amt" style="font-weight: 800; color: #7c3aed; background: #f1f5f9 !important; z-index: 2; border-top: 2px solid #cbd5e1;">${format_currency_short(total_overdue)}</td>
                     </tr>
