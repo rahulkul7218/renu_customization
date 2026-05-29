@@ -117,7 +117,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			label: __("Business Region Name"),
 			placeholder: __("Select Business Region Name"),
 			fieldtype: "Select",
-			options: ["All"], 
+			options: ["All"],
 			default: "All",
 		},
 		{
@@ -149,7 +149,11 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		fields: filter_fields,
 	});
 	page.filter_group.make();
-	
+
+	if (renu_customization.dashboard_fiscal_year && renu_customization.dashboard_fiscal_year.init) {
+		renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
+	}
+
 	// Populate Business Region Name options from database
 	frappe.call({
 		method: "frappe.client.get_list",
@@ -394,31 +398,31 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		.page-title{color: #000 !important; }
         .page-head { border-bottom: 1px solid #ddd !important; background: #fff !important; color: #000}
         .dashboard-content { padding: 24px; background: #fff; min-height: 100vh; }
-        
+
         /* KPI Cards Styling */
-        .summary-wrapper { 
-            display: grid !important; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important; 
-            gap: 16px; 
-            margin-bottom: 24px; 
+        .summary-wrapper {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)) !important;
+            gap: 16px;
+            margin-bottom: 24px;
             width: 100% !important;
         }
-        .summary-card { 
+        .summary-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 12px; 
-            padding: 16px 12px; 
+            border-radius: 12px;
+            padding: 16px 12px;
             box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
             border-left: 5px solid #cbd5e1;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             min-width: 190px;
         }
-        .summary-card:hover { 
-            transform: translateY(-4px); 
-            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1); 
+        .summary-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.1);
         }
-        
+
         /* Consistent Border Colors */
         .summary-card.blue { border-left-color: #3b82f6; }
         .summary-card.green { border-left-color: #10b981; }
@@ -427,26 +431,26 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .summary-card.purple { border-left-color: #8b5cf6; }
         .summary-card.red { border-left-color: #ef4444; }
 
-        .summary-card .label { 
-            font-size: 11px; 
-            color: #64748b; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            letter-spacing: 0.05em; 
-            margin-bottom: 8px; 
-            display: flex; 
-            align-items: center; 
+        .summary-card .label {
+            font-size: 11px;
+            color: #64748b;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
             gap: 8px;
         }
-        .summary-card .value { 
-            font-size: 18px; 
-            font-weight: 800; 
-            color: #0f172a; 
+        .summary-card .value {
+            font-size: 18px;
+            font-weight: 800;
+            color: #0f172a;
             white-space: nowrap;
             display: block;
         }
         .summary-card .indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-        
+
         .bg-blue { background-color: #3b82f6; }
         .bg-green { background-color: #10b981; }
         .bg-orange { background-color: #f59e0b; }
@@ -454,29 +458,29 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .bg-purple { background-color: #8b5cf6; }
         .bg-red { background-color: #ef4444; }
         /* Charts Row Styling */
-        .charts-row { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 24px; 
-            margin-bottom: 24px; 
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
             width: 100%;
         }
-        .chart-card { 
-            background: #fff; border-radius: 12px; padding: 24px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); 
+        .chart-card {
+            background: #fff; border-radius: 12px; padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             border: 1px solid #e2e8f0;
         }
-        .chart-card .title { 
-            font-size: 15px; font-weight: 700; color: #1e293b; 
+        .chart-card .title {
+            font-size: 15px; font-weight: 700; color: #1e293b;
             margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.025em;
         }
 
-        .custom-legend { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); 
-            gap: 16px; 
-            margin-top: 30px; 
-            padding: 20px; 
+        .custom-legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+            margin-top: 30px;
+            padding: 20px;
             border-top: 1px solid #f1f5f9;
             background: #fafafa;
             border-radius: 8px;
@@ -493,15 +497,15 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         /* Standard chart text */
         .frappe-chart text { font-size: 11px !important; }
         .chart-actions, .table-actions { display: flex; gap: 12px; align-items: center; }
-        .chart-card .export-btn, .table-card .header .export-btn, .table-card .header .pdf-btn, .export-btn { 
-            font-size: 12px; cursor: pointer; color: #475569; font-weight: 600; 
+        .chart-card .export-btn, .table-card .header .export-btn, .table-card .header .pdf-btn, .export-btn {
+            font-size: 12px; cursor: pointer; color: #475569; font-weight: 600;
             padding: 6px 14px; border-radius: 6px; transition: all 0.2s;
             display: inline-flex; align-items: center; gap: 6px;
             background: #fff; border: 1px solid #e2e8f0;
             white-space: nowrap;
         }
-        .export-btn:hover { 
-            color: #2563eb !important; background: #eff6ff !important; border-color: #bfdbfe !important; 
+        .export-btn:hover {
+            color: #2563eb !important; background: #eff6ff !important; border-color: #bfdbfe !important;
             box-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
         }
         .export-btn i { font-size: 14px; }
@@ -511,18 +515,18 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             @page { size: landscape; margin: 5mm; }
             * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             body { background: #fff !important; margin: 0 !important; padding: 0 !important; font-family: Inter, sans-serif !important; width: 100% !important; }
-            
+
             /* 2. Hide Dashboard UI Elements & Menu Overlap */
-            .dashboard-filter-area, .page-head, .refresh-btn, .btn, .chart-actions, .table-actions, 
+            .dashboard-filter-area, .page-head, .refresh-btn, .btn, .chart-actions, .table-actions,
             .pill-status, .indicator-pill.red, .reset-btn, .no-print, .table-filters, .export-btn, #table_export_btn,
-            .frappe-control, .card-header .d-flex, .menu-btn-group, .page-actions-menu, .standard-actions, 
+            .frappe-control, .card-header .d-flex, .menu-btn-group, .page-actions-menu, .standard-actions,
             .btn-group, [data-label="Menu"] { display: none !important; }
-            
+
             /* 3. Container Unwrapping */
-            html, body, .page-container, .layout-main-section, .layout-main, .dashboard-content, .table-card, .table-container { 
-                height: auto !important; 
-                overflow: visible !important; 
-                display: block !important; 
+            html, body, .page-container, .layout-main-section, .layout-main, .dashboard-content, .table-card, .table-container {
+                height: auto !important;
+                overflow: visible !important;
+                display: block !important;
                 max-height: none !important;
                 max-width: none !important;
                 width: 100% !important;
@@ -544,51 +548,51 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             .card-header { display: block !important; border-bottom: 1.5pt solid #000 !important; margin-bottom: 8px !important; padding: 5px 0 !important; }
             .card-header h6 { font-size: 14pt !important; font-weight: bold !important; color: #000 !important; margin: 0 !important; }
 
-            .dashboard-table { 
-                width: 100% !important; 
-                border: 0.5pt solid #000 !important; 
-                border-collapse: collapse !important; 
+            .dashboard-table {
+                width: 100% !important;
+                border: 0.5pt solid #000 !important;
+                border-collapse: collapse !important;
                 table-layout: auto !important;
                 margin: 0 !important;
             }
-            
+
             /* Scaling to fit all columns in Landscape */
             .table-container { overflow: visible !important; }
-            .dashboard-table { 
+            .dashboard-table {
                 table-layout: fixed !important;
                 width: 100% !important;
-                zoom: 0.8; 
+                zoom: 0.8;
             }
-            
-            .dashboard-table th, .dashboard-table td { 
-                border: 0.5pt solid #000 !important; 
-                padding: 2pt 4pt !important; 
-                font-size: 7.5pt !important; 
+
+            .dashboard-table th, .dashboard-table td {
+                border: 0.5pt solid #000 !important;
+                padding: 2pt 4pt !important;
+                font-size: 7.5pt !important;
                 color: #000 !important;
                 word-wrap: break-word !important;
                 overflow-wrap: break-word !important;
                 white-space: normal !important;
                 vertical-align: top !important;
             }
-            
+
             /* Column Widths to ensure fit in Landscape */
             .dashboard-table th:nth-child(1), .dashboard-table td:nth-child(1) { width: 40px !important; } /* S.No. */
             .dashboard-table th:nth-child(2), .dashboard-table td:nth-child(2) { width: 14% !important; } /* Customer */
             .dashboard-table th:nth-child(3), .dashboard-table td:nth-child(3) { width: 11% !important; } /* Sales Person */
             .dashboard-table th:nth-child(4), .dashboard-table td:nth-child(4) { width: 18% !important; } /* Product */
-            
+
             /* The remaining columns (Months + Totals) will automatically share the rest of the space */
-            
+
             .dashboard-table th { background-color: #f8f8f8 !important; font-weight: bold !important; position: static !important; }
             .total-col, .sticky-total, .sticky-total-header { background: #fff !important; position: static !important; font-weight: bold !important; }
             .month-col, .total-col { text-align: right !important; }
         }
 
-        .table-card { 
-            background: #fff; 
-            border: 1px solid var(--border-color); 
-            border-radius: 8px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05); 
+        .table-card {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
             margin-bottom: 30px;
             width: 100%;
             max-width: 100%;
@@ -598,21 +602,21 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
             position: relative;
             z-index: 1; /* Contain all internal sticky elements */
         }
-        .table-card .header { 
-            padding: 10px 15px; 
-            border-bottom: 1px solid var(--border-color); 
-            font-weight: 600; 
-            color: #1a1a1a; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
+        .table-card .header {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+            color: #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             background: #fff;
             flex-shrink: 0;
             z-index: 4;
         }
-        .table-container { 
-            overflow: auto !important; 
-            width: 100%; 
+        .table-container {
+            overflow: auto !important;
+            width: 100%;
             max-width: 100%;
             position: relative;
             background: #fff;
@@ -622,22 +626,22 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         }
         .table-container.month-revenue-container { max-height: 650px; }
         .table-container.invoice-list-container { max-height: 800px; }
-        .dashboard-table { 
-            width: 100%; 
-            border-collapse: separate; 
+        .dashboard-table {
+            width: 100%;
+            border-collapse: separate;
             border-spacing: 0;
-            table-layout: auto; 
+            table-layout: auto;
         }
-        .dashboard-table th { 
-            background: #f1f3f5; 
-            padding: 12px 14px; 
-            text-align: left; 
-            font-size: 11px; 
+        .dashboard-table th {
+            background: #f1f3f5;
+            padding: 12px 14px;
+            text-align: left;
+            font-size: 11px;
             color: #555 !important; /* Darken header text */
-            position: sticky; 
-            top: 0; 
-            z-index: 2; 
-            border-bottom: 1px solid #dee2e6; 
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            border-bottom: 1px solid #dee2e6;
             font-weight: 600;
         }
         .sortable-header {
@@ -651,44 +655,44 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .sortable-header i {
             transition: color 0.2s ease;
         }
-        .dashboard-table td { 
-            padding: 10px 12px; 
-            border-top: 1px solid var(--border-color); 
-            font-size: 12px; 
+        .dashboard-table td {
+            padding: 10px 12px;
+            border-top: 1px solid var(--border-color);
+            font-size: 12px;
             background: #fff;
             color: #333;
             line-height: 1.2;
             vertical-align: middle;
         }
         .month-col { text-align: right !important; min-width: 110px; width: 110px; white-space: nowrap !important; }
-        .total-col { 
-            text-align: right !important; 
-            font-weight: 700; 
-            min-width: 130px; 
-            background: #fff !important; 
+        .total-col {
+            text-align: right !important;
+            font-weight: 700;
+            min-width: 130px;
+            background: #fff !important;
         }
-        .dashboard-table th.total-col { 
+        .dashboard-table th.total-col {
             color: #333 !important;
             background: #f1f3f5 !important;
         }
         .dashboard-table tr:hover td { background: #f8faff; }
-        
+
         /* Special Gross Column Styling */
-        .gross-col { 
-            background: #f8faff !important; 
-            color: #4338ca !important; 
+        .gross-col {
+            background: #f8faff !important;
+            color: #4338ca !important;
         }
-        .dashboard-table th.gross-col { 
-            background: #eef2ff !important; 
-            color: #4338ca !important; 
+        .dashboard-table th.gross-col {
+            background: #eef2ff !important;
+            color: #4338ca !important;
         }
 
         /* Enhanced Sticky Total Footer */
-        tr.sticky-total td { 
-            position: sticky; 
-            background: #f8fafc !important; 
-            font-weight: 700; 
-            border-top: 1.5px solid #cbd5e1; 
+        tr.sticky-total td {
+            position: sticky;
+            background: #f8fafc !important;
+            font-weight: 700;
+            border-top: 1.5px solid #cbd5e1;
             color: #1e293b;
             box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
             z-index: 2;
@@ -696,20 +700,20 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
         /* Logic for stacking multiple sticky footer rows (e.g. Month-Wise Revenue table) */
         /* Row 3 from bottom */
-        tr.sticky-total:nth-last-child(3) td { 
-            bottom: 74px; 
+        tr.sticky-total:nth-last-child(3) td {
+            bottom: 74px;
             z-index: 2;
         }
-        
+
         /* Row 2 from bottom */
-        tr.sticky-total:nth-last-child(2) td { 
-            bottom: 37px; 
+        tr.sticky-total:nth-last-child(2) td {
+            bottom: 37px;
             z-index: 2;
         }
-        
+
         /* The very last row */
-        tr.sticky-total:last-child td { 
-            bottom: 0; 
+        tr.sticky-total:last-child td {
+            bottom: 0;
             z-index: 2;
         }
 
@@ -717,7 +721,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         #consolidated_table th:nth-child(1), #consolidated_table td:nth-child(1) { position: sticky; left: 0; z-index: 1; background: #fff !important; }
         #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { position: sticky; left: 40px; z-index: 1; background: #fff !important; width: 200px !important; min-width: 200px !important; }
 
-        
+
         #consolidated_table th:nth-child(1), #consolidated_table th:nth-child(2) { z-index: 3; background: #f1f3f5 !important; }
         #consolidated_table td:nth-child(1) { border-right: 1px solid #eee; }
         #consolidated_table td:nth-child(2), #consolidated_table th:nth-child(2) { border-right: 2px solid #cbd5e1; } /* Solid divider separating sticky columns from scrolling columns */
@@ -737,20 +741,20 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         @media (max-width: 991px) {
             .charts-row { grid-template-columns: 1fr; }
         }
-        
+
         /* Compact filtering for table header */
         .table-filters .frappe-control { margin-bottom: 0 !important; }
         .table-filters .frappe-control .label-area { display: none !important; }
         .table-filters .form-group { margin-bottom: 0 !important; }
         .table-filters .input-with-feedback { background-color: #f8f9fa; border-radius: 4px; }
-        
+
         /* Fixed Column Widths for Month Table */
         .month-col { min-width: 90px !important; width: 90px !important; text-align: right !important; white-space: nowrap; }
         .total-col { min-width: 130px !important; width: 130px !important; text-align: right !important; font-weight: 700; color: var(--primary); white-space: nowrap; }
         /* Base table cell padding and font adjustments */
         .dashboard-table th, .dashboard-table td { padding: 8px 10px; }
         .dashboard-table th:first-child, .dashboard-table td:first-child { min-width: 40px !important; width: 40px !important; text-align: center !important; }
-        
+
         /* Specific widths for primary info columns in Month Table */
         #consolidated_table th:nth-child(2), #consolidated_table td:nth-child(2) { min-width: 180px !important; width: 180px !important; } /* Customer */
         #consolidated_table th:nth-child(3), #consolidated_table td:nth-child(3) { min-width: 130px !important; width: 130px !important; } /* Sales Person */
@@ -770,15 +774,15 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
         .amount-col { min-width: 140px !important; width: 140px !important; text-align: right !important; }
 
         /* Hide Internal Chart Legend */
-        .frappe-chart .chart-legend, 
-        .frappe-chart .legend, 
+        .frappe-chart .chart-legend,
+        .frappe-chart .legend,
         .frappe-chart .frappe-chart-legend,
-        .frappe-chart .legend-dataset-text { 
-            display: none !important; 
-            visibility: hidden !important; 
-            opacity: 0 !important; 
-            height: 0 !important; 
-            overflow: hidden !important; 
+        .frappe-chart .legend-dataset-text {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            overflow: hidden !important;
         }
     </style>`).appendTo(page.main);
 
@@ -879,7 +883,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 			frappe.msgprint(__("Please wait for the dashboard to load data before exporting."));
 			return;
 		}
-		
+
 		let data = current_dashboard_data;
 		const report_date = frappe.datetime.now_datetime();
 		const filters = page.filter_group.get_values();
@@ -891,12 +895,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 		} else if (filters.to_date) {
 			period = `Up to ${frappe.datetime.str_to_user(filters.to_date)}`;
 		}
-		
+
 		// Helper to capture chart images
 		const get_chart_image = (chart_id) => {
 			const chart_svg = page.container.find(`#wrapper_${chart_id} svg`)[0];
 			if (!chart_svg) return null;
-			
+
 			// Clone and hide internal legend to avoid duplicates
 			const clone = chart_svg.cloneNode(true);
 			const internal_legend = clone.querySelector(".chart-legend, .legend, .frappe-chart-legend");
@@ -906,7 +910,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				const canvas = document.createElement("canvas");
 				const svg_data = new XMLSerializer().serializeToString(clone);
 				const img = new Image();
-				
+
 				const timeout = setTimeout(() => {
 					console.warn(`Chart capture timeout for ${chart_id}`);
 					resolve(null);
@@ -995,7 +999,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				}
 				return `<tr><td style="text-align:center;">${i+1}</td><td>${display_label}</td><td style="text-align:right;">${format_currency_short(val)}</td><td style="text-align:right;">${share}%</td></tr>`;
 			}).join("");
-			
+
 			return `
 				<div class="pdf-card table-section">
 					<h4 class="card-title">${title} Breakdown</h4>
@@ -1028,23 +1032,23 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				<style>
 					body { font-family: 'Inter', -apple-system, sans-serif; padding: 15px; color: #1e293b; background: #fff; line-height: 1.4; }
 					@page { size: landscape; margin: 8mm; }
-					
+
 					.report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 20px; }
 					.header-title { margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase; letter-spacing: 1px; }
-					
+
 					.kpi-wrapper { width: 100%; clear: both; margin-bottom: 15px; display: block; }
 					.kpi-card { float: left; width: 18.5%; border: 1px solid #e2e8f0; padding: 10px 6px; margin: 0.5%; border-radius: 8px; background: #f8fafc; text-align: center; border-left: 4px solid #3b82f6; box-sizing: border-box; height: 50px; }
 					.kpi-label { font-size: 8px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.05em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 					.kpi-value { font-size: 12px; font-weight: 800; color: #0f172a; white-space: nowrap; }
-					
+
 					h3.section-title { font-size: 13px; font-weight: 700; color: #3b82f6; margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
-					
+
 					.pdf-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 20px; page-break-inside: avoid; }
 					.card-title { margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; text-align: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
-					
+
 					.chart-content { text-align: center; }
 					.chart-img { width: 70%; max-height: 260px; object-fit: contain; margin-bottom: 15px; }
-					
+
 					.pdf-legend { display: block; text-align: left; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9; margin-top: 10px; }
 					.pdf-legend-item { display: inline-block; width: 31%; margin-bottom: 8px; vertical-align: top; margin-right: 2%; }
 					.pdf-dot { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
@@ -1053,7 +1057,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 					.pdf-legend-val { font-size: 8px; color: #64748b; }
 
 					${PDF_EXPORT_TABLE_CSS}
-					
+
 					.page-break { page-break-after: always; }
 					.clear { clear: both; }
 				</style>
@@ -1084,12 +1088,12 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				<div class="clear"></div>
 
 				<h3 class="section-title">Visual Analytics Breakdown</h3>
-				
+
 				${chart_block(png1, "top_10_salesperson", "Top 10 Salesperson Performance")}
 				${chart_t("top_10_salesperson", "Salesperson")}
-				
+
 				<div class="page-break"></div>
-				
+
 				${chart_block(png2, "top_10_customers", "Top 10 Customers Performance")}
 				${chart_t("top_10_customers", "Customer")}
 
@@ -1477,7 +1481,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 				let gross_amt = flt(row.gross_amount || amt);
 
 				total_month_gross_amts[m_key] = (total_month_gross_amts[m_key] || 0) + gross_amt;
-				
+
 				if (row.is_return) {
 					let ret_val = Math.abs(amt);
 					total_month_returned_amts[m_key] = (total_month_returned_amts[m_key] || 0) + ret_val;
@@ -1820,7 +1824,7 @@ frappe.pages["sales_revenue_dashboard"].on_page_load = function (wrapper) {
 
 		// 1. Primary Action: Refresh
 		page.set_primary_action(__("Refresh"), () => page.refresh());
-		
+
 		page.add_menu_item(__("Export to Excel"), () => export_to_excel());
 		page.add_menu_item(__("Export to PDF"), () => export_pdf());
 

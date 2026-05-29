@@ -150,6 +150,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 	});
 	page.filter_group.make();
 
+	if (renu_customization.dashboard_fiscal_year && renu_customization.dashboard_fiscal_year.init) {
+		renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
+	}
+
 	// Populate Business Region Name options from database
 	frappe.call({
 		method: "frappe.client.get_list",
