@@ -336,9 +336,9 @@ frappe.pages["overdue_receivables_dashboard"].on_page_load = function (wrapper) 
 	});
 	page.filter_group.make();
 
-	if (renu_customization.dashboard_fiscal_year && renu_customization.dashboard_fiscal_year.init) {
-		renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
-	}
+	// if (renu_customization.dashboard_fiscal_year && renu_customization.dashboard_fiscal_year.init) {
+	// 	renu_customization.dashboard_fiscal_year.init(page, { refresh_delay: 300 });
+	// }
 	// Hide specific filters
 	const fieldsToHide = ['fiscal_year', 'from_date', 'to_date', 'from_days', 'to_days', 'date'];
 	fieldsToHide.forEach(fn => {
