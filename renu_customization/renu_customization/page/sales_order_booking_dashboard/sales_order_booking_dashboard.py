@@ -153,6 +153,7 @@ def get_dashboard_data(filters=None):
             soi.item_name AS item_name,
             REGEXP_REPLACE(soi.description, '<[^>]*>', '') AS description,
             soi.qty AS order_quantity,
+            soi.custom_picked_but_not_delivered AS custom_picked_but_not_delivered,
             soi.delivered_qty AS delivered_qty, soi.returned_qty AS returned_qty,
             soi.total_short_close_qty AS short_close_qty,
             soi.rate AS item_rate,
@@ -256,7 +257,8 @@ def get_dashboard_data(filters=None):
         # Explicitly set quantity fields for dashboard display
         row["short_close_qty"] = flt(row.get("short_close_qty") or 0)  # Ensure it's preserved
         row["delivered_qty"] = flt(row.get("delivered_qty") or 0)
-        row["pending_qty"] = flt(row.get("order_quantity", 0)) - flt(row.get("delivered_qty", 0)) - flt(row.get("returned_qty", 0)) - flt(row.get("short_close_qty", 0))
+        # Use same open-qty formula as sales_order_report: subtract delivered, custom_picked_but_not_delivered and short-close
+        row["pending_qty"] = flt(row.get("order_quantity", 0)) - flt(row.get("delivered_qty", 0)) - flt(row.get("custom_picked_but_not_delivered", 0)) - flt(row.get("short_close_qty", 0))
 
         # Overdue logic
         row["overdue_value"] = 0
@@ -859,7 +861,8 @@ def export_to_excel(filters=None, export_type="all"):
                     if fname == "order_quantity": val = row.get("po_qty")
                     if fname == "short_close_qty": val = row.get("short_close_qty", 0)
                     if fname == "delivered_qty": val = row.get("delivered_qty", 0)
-                    if fname == "pending_qty": val = row.get("order_quantity", 0) - row.get("delivered_qty", 0) - row.get("returned_qty", 0) - row.get("short_close_qty", 0)
+                    # Match report formula for open qty (subtract delivered, custom_picked_but_not_delivered, short_close)
+                    if fname == "pending_qty": val = row.get("order_quantity", 0) - row.get("delivered_qty", 0) - row.get("custom_picked_but_not_delivered", 0) - row.get("short_close_qty", 0)
                 cell = ws_list.cell(row=row_idx, column=idx)
                 cell.border = table_border
                 if fname in ["total_booked_value", "sc_value", "picked_net_total_inr", "delivered_net_total_inr", "pending_value", "overdue_value"]:

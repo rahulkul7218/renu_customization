@@ -573,7 +573,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
         .dashboard-table th {
             background: #f8fafc; padding: 12px 16px; text-align: left;
-            font-size: 11px; font-weight: 700; color: #64748b;
+            font-size: 11px; font-weight: 700; color: #0f172a;
             position: sticky; top: 0; z-index: 2;
             border-bottom: 1px solid #e2e8f0;
             text-transform: uppercase;
@@ -588,18 +588,17 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
         /* Column Widths & Alignment */
         .col-sno { width: 50px !important; min-width: 50px !important; text-align: center !important; }
-        .col-customer { width: 200px !important; min-width: 200px !important; }
-        .col-customer-group { width: 140px !important; min-width: 140px !important; }
-        .col-item-group { width: 140px !important; min-width: 140px !important; }
-        .col-sp { width: 150px !important; min-width: 150px !important; }
-        .col-prod { width: 250px !important; min-width: 250px !important; }
-        .col-amt {
-            width: 100px !important; min-width: 100px !important;
+        .col-customer { width: 250px !important; min-width: 250px !important; }
+        .col-customer-group { width: 180px !important; min-width: 180px !important; }
+        .col-item-group { width: 180px !important; min-width: 180px !important; }
+        .col-sp { width: 180px !important; min-width: 180px !important; }
+        .col-prod { width: 300px !important; min-width: 300px !important; }
+        .col-amt { width: 120px !important; min-width: 120px !important;
             text-align: right !important;
             white-space: nowrap !important;
         }
         .col-qty { width: 70px !important; min-width: 70px !important; text-align: right !important; }
-        .col-date { width: 90px !important; min-width: 90px !important; }
+        .col-date { width: 110px !important; min-width: 110px !important; }
         .col-id { width: 120px !important; min-width: 120px !important; }
         .col-status { width: 100px !important; min-width: 100px !important; }
         .col-po { width: 120px !important; min-width: 120px !important; }
@@ -696,42 +695,43 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	const PDF_EXPORT_TABLE_CSS = `
 		table.pdf-export-table {
-			width: 100%; border-collapse: collapse; font-size: 7px;
-			table-layout: auto; page-break-inside: auto; margin-top: 10px;
-			border: 2px solid #334155;
+			width: 100%; border-collapse: collapse; font-size: 8px;
+			table-layout: fixed; page-break-inside: auto; margin-top: 8px;
+			border: 1px solid #e2e8f0; box-sizing: border-box;
 		}
 		table.pdf-export-table th, table.pdf-export-table td {
-			border: 1px solid #cbd5e1; padding: 4px 5px; word-wrap: break-word;
-			overflow-wrap: break-word; vertical-align: middle;
+			border: 1px solid #e2e8f0; padding: 6px 6px; word-wrap: break-word;
+			overflow-wrap: anywhere; vertical-align: middle; box-sizing: border-box;
 			position: static !important; bottom: auto !important; top: auto !important;
 			left: auto !important; right: auto !important; box-shadow: none !important;
-			min-height: 18px;
+			min-height: 18px; font-size: 9px;
 		}
 		table.pdf-export-table thead { display: table-header-group; page-break-inside: avoid; }
 		table.pdf-export-table thead th {
-			background: #2c3e50 !important;
+			background: #f8fafc !important;
 			font-weight: 700 !important;
-			color: #fff !important;
-			border: 1px solid #1e293b !important;
+			color: #0f172a !important;
+			border: 1px solid #e2e8f0 !important;
 			text-align: left;
-			padding: 5px 6px;
+			padding: 6px 8px;
 		}
 		table.pdf-export-table tbody tr { page-break-inside: auto !important; }
-		table.pdf-export-table tbody tr:nth-child(odd) { background: #f8fafc; }
-		table.pdf-export-table tbody tr:nth-child(even) { background: #fff; }
+		table.pdf-export-table tbody tr:nth-child(odd) { background: #fff; }
+		table.pdf-export-table tbody tr:nth-child(even) { background: #f8fafc; }
 		table.pdf-export-table tr.sticky-total { page-break-inside: avoid !important; }
 		table.pdf-export-table tr.sticky-total td {
 			background: #e2e8f0 !important;
 			font-weight: 700 !important;
-			border: 1.5px solid #1e293b !important;
+			border: 1px solid #cbd5e1 !important;
 			color: #0f172a;
 		}
-		table.pdf-export-table .col-sno { width: 3% !important; text-align: center !important; }
-		table.pdf-export-table .col-customer { width: 20% !important; text-align: left !important; }
-		table.pdf-export-table .col-customer-group { width: 15% !important; }
-		table.pdf-export-table .col-sp { width: 15% !important; }
+		/* Use relative column widths that work better in fixed layout */
+		table.pdf-export-table .col-sno { width: 4% !important; text-align: center !important; }
+		table.pdf-export-table .col-customer { width: 18% !important; text-align: left !important; }
+		table.pdf-export-table .col-customer-group { width: 12% !important; }
+		table.pdf-export-table .col-sp { width: 10% !important; }
 		table.pdf-export-table .col-prod { width: 20% !important; }
-		table.pdf-export-table .col-item-group { width: 15% !important; }
+		table.pdf-export-table .col-item-group { width: 10% !important; }
 		table.pdf-export-table .col-date { width: 6% !important; text-align: center !important; }
 		table.pdf-export-table .col-id { width: 6% !important; }
 		table.pdf-export-table .col-status { width: 6% !important; text-align: center !important; }
@@ -1390,7 +1390,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					total_order_qty += flt(row.order_quantity || 0);
 					total_short_close_qty += flt(row.short_close_qty || row.total_short_close_qty || 0);
 					total_delivered_qty += flt(row.delivered_qty || 0);
-					total_open_qty += flt((row.order_quantity || 0) - (row.delivered_qty || 0) - (row.returned_qty || 0) - (row.short_close_qty || row.total_short_close_qty || 0));
+					total_open_qty += flt((row.order_quantity || 0) - (row.delivered_qty || 0) - (row.custom_picked_but_not_delivered || 0) - (row.short_close_qty || row.total_short_close_qty || 0));
 
 					tbody_list.append(`
                         <tr>
@@ -1418,7 +1418,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                             <td class="col-amt" style="color: #0f172a;">${format_currency_short(row.picked_net_total_inr || 0)}</td>
                             <td class="col-qty" style="font-weight: 600; color: #06b6d4; text-align: center;">${flt(row.delivered_qty || 0)}</td>
                             <td class="col-amt" style="color: #06b6d4;">${format_currency_short(deliv_total)}</td>
-                            <td class="col-qty" style="font-weight: 600; color: #4338ca; text-align: center;">${flt((row.order_quantity || 0) - (row.delivered_qty || 0) - (row.returned_qty || 0) - (row.short_close_qty || row.total_short_close_qty || 0))}</td>
+							<td class="col-qty" style="font-weight: 600; color: #4338ca; text-align: center;">${flt((row.order_quantity || 0) - (row.delivered_qty || 0) - (row.custom_picked_but_not_delivered || 0) - (row.short_close_qty || row.total_short_close_qty || 0))}</td>
                             <td class="col-amt" style="font-weight: 700; color: #4338ca;">${format_currency_short(pending_val)}</td>
                             <td class="col-amt" style="font-weight: 700; color: #7c3aed;">${format_currency_short(overdue_val)}</td>
                         </tr>
@@ -1838,3 +1838,4 @@ function format_currency_short(num) {
 		" M"
 	);
 }
+
