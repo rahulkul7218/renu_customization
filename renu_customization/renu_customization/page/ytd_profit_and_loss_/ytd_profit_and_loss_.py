@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from frappe.utils.pdf import get_pdf
-from frappe.utils import getdate, add_days
+from frappe.utils import getdate, add_days, date_diff
 from datetime import datetime, timedelta
 
 @frappe.whitelist()
@@ -359,8 +359,8 @@ def get_dashboard_data(company, filters=None):
 		coga_ytd_total = get_cost_centers_balance_ytd(company, coga_cost_centers, current_fy, to_date=ytd_to_date)
 		coga_pyd_total = get_cost_centers_balance_ytd(company, coga_cost_centers, previous_fy, to_date=pyd_to_date) if previous_fy else 0.0
 		
-		coga_ytd_millions = convert_to_millions(coga_ytd_total)
-		coga_pyd_millions = convert_to_millions(coga_pyd_total)
+		coga_ytd_millions = round(convert_to_millions(coga_ytd_total), 2)
+		coga_pyd_millions = round(convert_to_millions(coga_pyd_total), 2)
 		coga_var_val = (coga_ytd_millions - coga_pyd_millions) * 1000000
 		coga_var_pct = calculate_variance_percentage(coga_ytd_millions, coga_pyd_millions)
 		coga_ytd_pct = round((coga_ytd_millions / ytd_millions) * 100, 2) if ytd_millions else 0.0
@@ -393,6 +393,10 @@ def get_dashboard_data(company, filters=None):
 		# Payables - Outstanding Amount
 		pay_ytd = get_outstanding_payables(company, ytd_to_date)
 		pay_pyd = get_outstanding_payables(company, pyd_to_date) if pyd_to_date else 0.0
+		# Purchase total from Direct Expenses account
+		purchase_accounts = ['32 - DIRECT EXPENSES - RFAPL']
+		purchase_ytd = sum(get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date) for acc in purchase_accounts)
+		purchase_pyd = sum(get_account_balance_ytd(company, acc, previous_fy, to_date=pyd_to_date) for acc in purchase_accounts) if previous_fy else 0.0
 		pay_ytd_millions = convert_to_millions(pay_ytd)
 		pay_pyd_millions = convert_to_millions(pay_pyd)
 		pay_var_val = (pay_ytd_millions - pay_pyd_millions) * 1000000
@@ -491,6 +495,13 @@ def get_dashboard_data(company, filters=None):
 				"pyd": wc_pyd_millions * 1000000,
 				"variance": wc_var_pct
 			},
+			# "dso" card removed - not displayed
+            "wcts": {
+                "ytd": ytd_millions / wc_ytd_millions if wc_ytd_millions else 0,
+                "pyd": pyd_millions / wc_pyd_millions if wc_pyd_millions else 0,
+                "variance": 0
+            },
+
 			"overall_pnl": {
 				"ytd": 0,
 				"pyd": 0,
@@ -518,7 +529,7 @@ def get_dashboard_data(company, filters=None):
 					{"name": "SGM (Standard GM)", "ytd_val": sgm_ytd * 1000000, "ytd_pct": 30.00, "pyd_val": sgm_pyd * 1000000, "pyd_pct": 30.00, "var_val": sgm_var_val, "var_pct": sgm_var_pct},
 					{"name": "%", "ytd_val": 30.00, "ytd_pct": None, "pyd_val": 30.00, "pyd_pct": None, "var_val": None, "var_pct": None},
 					{"name": "COST OF GOODS (Add Freight)", "ytd_val": cogs_ytd_millions * 1000000, "ytd_pct": cogs_ytd_pct, "pyd_val": cogs_pyd_millions * 1000000, "pyd_pct": cogs_pyd_pct, "var_val": cogs_var_val, "var_pct": cogs_var_pct},
-					{"name": "%", "ytd_val": 70.00, "ytd_pct": None, "pyd_val": 70.00, "pyd_pct": None, "var_val": None, "var_pct": None},
+					{"name": "%", "ytd_val": (cogs_ytd_millions / ytd_millions) * 100 if ytd_millions else 0, "ytd_pct": None, "pyd_val": (cogs_pyd_millions / pyd_millions) * 100 if pyd_millions else 0, "pyd_pct": None, "var_val": None, "var_pct": None},
 					{"name": "AGM (Actual GM)", "ytd_val": agm_ytd_millions * 1000000, "ytd_pct": agm_ytd_pct, "pyd_val": agm_pyd_millions * 1000000, "pyd_pct": agm_pyd_pct, "var_val": agm_var_val, "var_pct": agm_var_pct},
 					{"name": "%", "ytd_val": agm_ytd_pct, "ytd_pct": None, "pyd_val": agm_pyd_pct, "pyd_pct": None, "var_val": round(agm_ytd_pct - agm_pyd_pct, 2), "var_pct": round(agm_ytd_pct - agm_pyd_pct, 2)}
 				]
