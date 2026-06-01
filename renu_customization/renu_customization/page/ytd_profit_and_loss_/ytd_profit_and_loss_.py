@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from frappe.utils.pdf import get_pdf
-from frappe.utils import getdate, add_days
+from frappe.utils import getdate, add_days, date_diff
 from datetime import datetime, timedelta
 
 @frappe.whitelist()
@@ -393,6 +393,10 @@ def get_dashboard_data(company, filters=None):
 		# Payables - Outstanding Amount
 		pay_ytd = get_outstanding_payables(company, ytd_to_date)
 		pay_pyd = get_outstanding_payables(company, pyd_to_date) if pyd_to_date else 0.0
+		# Purchase total from Direct Expenses account
+		purchase_accounts = ['32 - DIRECT EXPENSES - RFAPL']
+		purchase_ytd = sum(get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date) for acc in purchase_accounts)
+		purchase_pyd = sum(get_account_balance_ytd(company, acc, previous_fy, to_date=pyd_to_date) for acc in purchase_accounts) if previous_fy else 0.0
 		pay_ytd_millions = convert_to_millions(pay_ytd)
 		pay_pyd_millions = convert_to_millions(pay_pyd)
 		pay_var_val = (pay_ytd_millions - pay_pyd_millions) * 1000000
@@ -491,6 +495,9 @@ def get_dashboard_data(company, filters=None):
 				"pyd": wc_pyd_millions * 1000000,
 				"variance": wc_var_pct
 			},
+			# "dso" card removed - not displayed
+            # "dpo" card removed - not displayed
+
 			"overall_pnl": {
 				"ytd": 0,
 				"pyd": 0,
