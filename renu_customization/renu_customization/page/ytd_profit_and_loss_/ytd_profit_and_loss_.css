@@ -252,18 +252,12 @@
 .col-trend { width: 14%; }
 
 /* Ensure left alignment for SOURCES OF PROFIT & LOSS column data cells */
-.detailed-table td.col-source,
-.detailed-table td:nth-child(2) {
+.detailed-table td.col-source {
     text-align: left !important;
     padding-left: 15px !important;
 }
 
-/* Bold left-side labels in table body */
-.detailed-table td:nth-child(1),
-.detailed-table td:nth-child(2) {
-    font-weight: 700;
-    color: #1e293b;
-}
+/* Labels in table body are handled by .col-source and .row-bucket classes */
 
 .row-bucket {
     font-weight: 700;

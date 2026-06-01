@@ -115,29 +115,47 @@ def get_cost_centers_balance_ytd(company, cost_centers, fiscal_year):
 
 def get_outstanding_receivables(company, as_of_date):
 	"""Get total outstanding receivables (Accounts Receivable report - Outstanding Amount total) as of a date"""
-	result = frappe.db.sql("""
-		SELECT COALESCE(SUM(outstanding_amount), 0) as total
-		FROM `tabSales Invoice`
-		WHERE
-			company = %s
-			AND docstatus = 1
-			AND posting_date <= %s
-			AND outstanding_amount > 0
-	""", (company, as_of_date), as_dict=True)
-	return result[0]['total'] if result else 0
+	try:
+		from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
+		filters = frappe._dict({
+			"company": company,
+			"report_date": as_of_date,
+			"ageing_based_on": "Due Date"
+		})
+		result = execute(filters)
+		data = result[1] if result and len(result) > 1 else []
+		total = 0.0
+		if data:
+			for row in data:
+				# Sum all rows except total/subtotal rows
+				if isinstance(row, dict) and not row.get("is_total_row") and "'" not in str(row.get('party', '')) and "Total" not in str(row.get('party', '')):
+					total += float(row.get("outstanding", 0.0) or 0.0)
+		return total
+	except Exception as e:
+		frappe.log_error(f"Error in get_outstanding_receivables: {str(e)}", "YTD Dashboard")
+		return 0.0
 
 def get_outstanding_payables(company, as_of_date):
 	"""Get total outstanding payables (Accounts Payable report - Outstanding Amount total) as of a date"""
-	result = frappe.db.sql("""
-		SELECT COALESCE(SUM(outstanding_amount), 0) as total
-		FROM `tabPurchase Invoice`
-		WHERE
-			company = %s
-			AND docstatus = 1
-			AND posting_date <= %s
-			AND outstanding_amount > 0
-	""", (company, as_of_date), as_dict=True)
-	return result[0]['total'] if result else 0
+	try:
+		from erpnext.accounts.report.accounts_payable.accounts_payable import execute
+		filters = frappe._dict({
+			"company": company,
+			"report_date": as_of_date,
+			"ageing_based_on": "Due Date"
+		})
+		result = execute(filters)
+		data = result[1] if result and len(result) > 1 else []
+		total = 0.0
+		if data:
+			for row in data:
+				# Sum all rows except total/subtotal rows
+				if isinstance(row, dict) and not row.get("is_total_row") and "'" not in str(row.get('party', '')) and "Total" not in str(row.get('party', '')):
+					total += float(row.get("outstanding", 0.0) or 0.0)
+		return total
+	except Exception as e:
+		frappe.log_error(f"Error in get_outstanding_payables: {str(e)}", "YTD Dashboard")
+		return 0.0
 
 def convert_to_millions(value):
 	"""Convert value to millions with 2 decimal places"""
