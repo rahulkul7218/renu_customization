@@ -565,7 +565,7 @@ def get_dashboard_data(company, filters=None):
 					{"name": "Payables", "ytd_val": pay_ytd_millions * 1000000, "ytd_pct": None, "pyd_val": pay_pyd_millions * 1000000, "pyd_pct": None, "var_val": pay_var_val, "var_pct": pay_var_pct, "is_indented": True},
 					{"name": "DPO (Days Payables Outstanding)", "ytd_val": ((pay_ytd_millions / cogs_ytd_millions) * number_of_days * 1000000) if cogs_ytd_millions else 0, "ytd_pct": None, "pyd_val": ((pay_pyd_millions / cogs_pyd_millions) * number_of_days * 1000000) if cogs_pyd_millions else 0, "pyd_pct": None, "var_val": (((pay_ytd_millions / cogs_ytd_millions * number_of_days) - (pay_pyd_millions / cogs_pyd_millions * number_of_days)) * 1000000) if cogs_ytd_millions and cogs_pyd_millions else 0, "var_pct": 0, "is_indented": True},
 					{"name": "Working Capital", "ytd_val": wc_ytd_millions * 1000000, "ytd_pct": None, "pyd_val": wc_pyd_millions * 1000000, "pyd_pct": None, "var_val": wc_var_val, "var_pct": wc_var_pct, "is_indented": True},
-					{"name": "WCTs (Working Capital Turns)", "ytd_val": 0, "ytd_pct": None, "pyd_val": 0, "pyd_pct": None, "var_val": 0, "var_pct": 0, "is_indented": True}
+					{"name": "WCTs (Working Capital Turns)", "ytd_val": ((ytd_millions / wc_ytd_millions) * 1000000) if wc_ytd_millions else 0, "ytd_pct": None, "pyd_val": ((pyd_millions / wc_pyd_millions) * 1000000) if wc_pyd_millions else 0, "pyd_pct": None, "var_val": (((ytd_millions / wc_ytd_millions) - (pyd_millions / wc_pyd_millions)) * 1000000) if wc_ytd_millions and wc_pyd_millions else 0, "var_pct": 0, "is_indented": True}
 				]
 			},
 		],
