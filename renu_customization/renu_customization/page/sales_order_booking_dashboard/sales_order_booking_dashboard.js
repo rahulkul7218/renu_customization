@@ -953,6 +953,14 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                 </div>
             </div>
 
+            <div class="table-card" style="margin-top: 32px; overflow: visible;">
+                <div class="header" style="overflow: visible;">
+                    <span style="font-size: 15px;">${__("Overdue Month-wise Breakdown")}</span>
+                </div>
+                <div class="table-container" id="overdue_breakdown_container">
+                </div>
+            </div>
+
             <div class="table-card" style="margin-top: 32px;">
                 <div class="header">
                     <span style="font-size: 15px;">${__("Detailed Sales Orders List")}</span>
@@ -1005,10 +1013,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			let tbody_month = tables_container.find("#booking_month_body");
 			let tbody_lifecycle = tables_container.find("#lifecycle_summary_body");
 			let tbody_list = tables_container.find("#so_list_body");
+			let overdue_container = tables_container.find("#overdue_breakdown_container");
 
 			tbody_month.empty();
 			tbody_lifecycle.empty();
 			tbody_list.empty();
+			overdue_container.empty();
 
 			// 3.0 Process Monthly Lifecycle Summary
 			let lifecycle_buckets = {
@@ -1077,6 +1087,100 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					</tr>
 				`);
 			});
+
+			// Process Overdue Month-wise Breakdown (by delivery date)
+			// Split into: past overdue (delivery_date < today) and future pending (delivery_date >= today)
+			const today_str = moment().startOf("day");
+			let past_overdue_by_month = {};
+			let future_pending_by_month = {};
+
+			filtered_data.forEach((row) => {
+				let pending = flt(row.pending_value || 0);
+				if (pending > 0 && row.delivery_date) {
+					let d_m = moment(row.delivery_date);
+					let m_key = d_m.format("MMM YYYY");
+					let m_sort = d_m.format("YYYYMM");
+
+					if (d_m.isBefore(today_str)) {
+						// Past - overdue
+						if (!past_overdue_by_month[m_key]) past_overdue_by_month[m_key] = { sort: m_sort, val: 0 };
+						past_overdue_by_month[m_key].val += pending;
+					} else {
+						// Future / current month - pending
+						if (!future_pending_by_month[m_key]) future_pending_by_month[m_key] = { sort: m_sort, val: 0 };
+						future_pending_by_month[m_key].val += pending;
+					}
+				}
+			});
+
+			// Merge all unique months from both, sorted chronologically
+			let all_overdue_month_keys = new Set([
+				...Object.keys(past_overdue_by_month),
+				...Object.keys(future_pending_by_month)
+			]);
+			let overdue_months = Array.from(all_overdue_month_keys).map(key => ({
+				key: key,
+				sort: (past_overdue_by_month[key] || future_pending_by_month[key]).sort
+			}));
+			overdue_months.sort((a, b) => a.sort.localeCompare(b.sort));
+
+			if (overdue_months.length === 0) {
+				overdue_container.html(
+					`<div class="text-center text-muted" style="padding: 40px;">No overdue/pending data found</div>`
+				);
+			} else {
+				const cat_style = "font-weight: 700; color: #475569; width: 220px; min-width: 220px; white-space: nowrap; background: #f8fafc; position: sticky; left: 0; z-index: 5; border-right: 1px solid #e2e8f0;";
+				const th_cat_style = "width: 220px; min-width: 220px; white-space: nowrap; background: #f8fafc; position: sticky; left: 0; z-index: 5; border-right: 1px solid #e2e8f0;";
+
+				let th_html = overdue_months.map(m => `<th class="col-amt">${m.key}</th>`).join("");
+
+				// Past overdue row
+				let past_total = 0;
+				let past_td_html = overdue_months.map(m => {
+					let v = (past_overdue_by_month[m.key] || { val: 0 }).val;
+					past_total += v;
+					return `<td class="col-amt" style="color: #dc2626;">${v > 0 ? format_currency_short(v) : "-"}</td>`;
+				}).join("");
+
+				// Future pending row
+				let future_total = 0;
+				let future_td_html = overdue_months.map(m => {
+					let v = (future_pending_by_month[m.key] || { val: 0 }).val;
+					future_total += v;
+					return `<td class="col-amt" style="color: #7c3aed;">${v > 0 ? format_currency_short(v) : "-"}</td>`;
+				}).join("");
+
+				let table_html = `
+					<table class="dashboard-table lifecycle-table overdue-table">
+						<thead>
+							<tr>
+								<th class="col-category" style="${th_cat_style}">Category</th>
+								${th_html}
+								<th class="lifecycle-total-col">Total (M)</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr>
+								<td class="col-category" style="${cat_style}">
+									<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #dc2626; margin-right: 8px; vertical-align: middle;"></span>
+									Past Overdue
+								</td>
+								${past_td_html}
+								<td class="lifecycle-total-col" style="color: #dc2626;">${format_currency_short(past_total)}</td>
+							</tr>
+							<tr>
+								<td class="col-category" style="${cat_style}">
+									<span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #7c3aed; margin-right: 8px; vertical-align: middle;"></span>
+									Future Pending
+								</td>
+								${future_td_html}
+								<td class="lifecycle-total-col" style="color: #7c3aed;">${format_currency_short(future_total)}</td>
+							</tr>
+						</tbody>
+					</table>
+				`;
+				overdue_container.html(table_html);
+			}
 
 			// 3.1 Process Month-Wise Booking Breakdown
 			let merged_data = {};
@@ -1218,7 +1322,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let field = page.detail_sort.field;
 				let asc = page.detail_sort.asc;
 
-                let num_fields = ["total_booked_value", "total_net_amount_inr", "cancelled_val", "picked_value", "dashboard_net_delivered", "pending_value", "overdue_value"];
+				let num_fields = ["total_booked_value", "total_net_amount_inr", "cancelled_val", "picked_value", "dashboard_net_delivered", "pending_value", "overdue_value"];
 				if (num_fields.includes(field)) {
 					val_a = flt(a[field] || (field === 'dashboard_net_delivered' ? a.delivered_net_total_inr : 0) || (field === 'total_booked_value' ? a['total_net_amount_(inr)'] : 0));
 					val_b = flt(b[field] || (field === 'dashboard_net_delivered' ? b.delivered_net_total_inr : 0) || (field === 'total_booked_value' ? b['total_net_amount_(inr)'] : 0));
@@ -1508,23 +1612,23 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					</div>
 					<div class="kpi-container">
 						${data.summary
-							.map((m) => {
-								let color = "#3498db";
-								if (m.indicator === "blue") color = "#3b82f6";
-								if (m.indicator === "green") color = "#2ecc71";
-								if (m.indicator === "cyan") color = "#06b6d4";
-								if (m.indicator === "orange") color = "#e67e22";
-								if (m.indicator === "purple") color = "#9b59b6";
-								if (m.indicator === "red") color = "#e74c3c";
+					.map((m) => {
+						let color = "#3498db";
+						if (m.indicator === "blue") color = "#3b82f6";
+						if (m.indicator === "green") color = "#2ecc71";
+						if (m.indicator === "cyan") color = "#06b6d4";
+						if (m.indicator === "orange") color = "#e67e22";
+						if (m.indicator === "purple") color = "#9b59b6";
+						if (m.indicator === "red") color = "#e74c3c";
 
-								return `
+						return `
 									<div class="kpi-card">
 										<div class="kpi-label"><span class="kpi-dot" style="background: ${color};"></span>${m.label}</div>
 										<div class="kpi-value">${format_currency_short(m.value)}</div>
 									</div>
 								`;
-							})
-							.join("")}
+					})
+					.join("")}
 					</div>
 					<div style="clear: both; margin-bottom: 20px;"></div>
 					<h3>Visual Analytics</h3>
@@ -1544,6 +1648,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					<div class="page-break"></div>
 					<h3>Monthly Lifecycle Summary (M)</h3>
 					${prepare_table_html_for_pdf(tables_container.find(".lifecycle-table")) || "<p>No data</p>"}
+					<div class="page-break"></div>
+					<h3>Overdue Month-Wise Breakdown (M)</h3>
+					${prepare_table_html_for_pdf(tables_container.find(".overdue-table")) || "<p>No data</p>"}
 					<div class="page-break"></div>
 					<h3>Detailed Sales Orders List (M)</h3>
 					${prepare_table_html_for_pdf(tables_container.find(".table-card:last table")) || "<p>No data</p>"}
