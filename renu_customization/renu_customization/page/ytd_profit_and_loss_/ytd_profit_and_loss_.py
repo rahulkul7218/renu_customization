@@ -268,6 +268,19 @@ def get_dashboard_data(company, filters=None):
 			else:
 				pyd_to_date = prev_fy_end
 		
+		# Determine number of days for DSO/DPO calculations
+		number_of_days = 365
+		if isinstance(filters, dict):
+			if filters.get("from_date") and filters.get("to_date"):
+				from frappe.utils import date_diff
+				number_of_days = max(1, date_diff(filters.get("to_date"), filters.get("from_date")) + 1)
+			elif filters.get("month"):
+				number_of_days = 30
+			elif filters.get("quarter"):
+				number_of_days = 90
+			elif filters.get("fiscal_year"):
+				number_of_days = 365
+
 		# Get YTD and PYD values for Sales from specific accounts
 		sales_accounts = [
 			'41 - REVENUE FROM OPERATIONS - RFAPL',
@@ -548,7 +561,7 @@ def get_dashboard_data(company, filters=None):
 				"bucket": "4. WORKING CAPITAL",
 				"sources": [
 					{"name": "Receivables", "ytd_val": rec_ytd_millions * 1000000, "ytd_pct": None, "pyd_val": rec_pyd_millions * 1000000, "pyd_pct": None, "var_val": rec_var_val, "var_pct": rec_var_pct, "is_indented": True},
-					{"name": "DSO (Days Sales Outstanding)", "ytd_val": 0, "ytd_pct": None, "pyd_val": 0, "pyd_pct": None, "var_val": 0, "var_pct": 0, "is_indented": True},
+					{"name": "DSO (Days Sales Outstanding)", "ytd_val": ((rec_ytd_millions / ytd_millions) * number_of_days * 1000000) if ytd_millions else 0, "ytd_pct": None, "pyd_val": ((rec_pyd_millions / pyd_millions) * number_of_days * 1000000) if pyd_millions else 0, "pyd_pct": None, "var_val": (((rec_ytd_millions / ytd_millions * number_of_days) - (rec_pyd_millions / pyd_millions * number_of_days)) * 1000000) if ytd_millions and pyd_millions else 0, "var_pct": 0, "is_indented": True},
 					{"name": "Payables", "ytd_val": pay_ytd_millions * 1000000, "ytd_pct": None, "pyd_val": pay_pyd_millions * 1000000, "pyd_pct": None, "var_val": pay_var_val, "var_pct": pay_var_pct, "is_indented": True},
 					{"name": "DPO (Days Payables Outstanding)", "ytd_val": 0, "ytd_pct": None, "pyd_val": 0, "pyd_pct": None, "var_val": 0, "var_pct": 0, "is_indented": True},
 					{"name": "Working Capital", "ytd_val": wc_ytd_millions * 1000000, "ytd_pct": None, "pyd_val": wc_pyd_millions * 1000000, "pyd_pct": None, "var_val": wc_var_val, "var_pct": wc_var_pct, "is_indented": True},
