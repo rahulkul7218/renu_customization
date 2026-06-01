@@ -189,8 +189,8 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			{ key: 'gross_margin', title: '2. GROSS MARGIN', icon: 'fa-pie-chart', theme: 'card-theme-green' },
 			{ key: 'operating_margin', title: '3. OPERATING MARGIN', icon: 'fa-briefcase', theme: 'card-theme-purple' },
 			{ key: 'working_capital', title: '4. WORKING CAPITAL', icon: 'fa-university', theme: 'card-theme-orange' },
-			{ key: 'dso', title: '5. DAYS SALES OUTSTANDING', icon: 'fa-clock', theme: 'card-theme-red' },
-			{ key: 'dpo', title: '6. DAYS PAYABLES OUTSTANDING', icon: 'fa-clock', theme: 'card-theme-yellow' },
+			// { key: 'dso', title: '5. DAYS SALES OUTSTANDING', icon: 'fa-clock', theme: 'card-theme-red' },
+			// { key: 'dpo', title: '6. DAYS PAYABLES OUTSTANDING', icon: 'fa-clock', theme: 'card-theme-yellow' },
 			// Hidden for now - uncomment to re-enable
 			// { key: 'overall_pnl', title: 'OVERALL P&L', icon: 'fa-line-chart', theme: 'card-theme-dark' },
 		];

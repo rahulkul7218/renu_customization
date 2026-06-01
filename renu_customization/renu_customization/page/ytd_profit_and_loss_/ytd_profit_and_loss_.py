@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from frappe.utils.pdf import get_pdf
-from frappe.utils import getdate, add_days
+from frappe.utils import getdate, add_days, date_diff
 from datetime import datetime, timedelta
 
 @frappe.whitelist()
@@ -495,32 +495,9 @@ def get_dashboard_data(company, filters=None):
 				"pyd": wc_pyd_millions * 1000000,
 				"variance": wc_var_pct
 			},
-			"dso": {
-                "ytd": (rec_ytd / (ytd_millions * 1000000)) * (
-                    filters.get('quarter') and 90 or
-                    filters.get('month') and 30 or
-                    (frappe.datetime.get_date_diff(filters.get('to_date') or ytd_to_date, filters.get('from_date') or ytd_to_date) + 1)
-                ) if rec_ytd and ytd_millions > 0 else 0,
-                "pyd": (rec_pyd / (pyd_millions * 1000000)) * (
-                    filters.get('quarter') and 90 or
-                    filters.get('month') and 30 or
-                    (frappe.datetime.get_date_diff(filters.get('to_date') or pyd_to_date, filters.get('from_date') or pyd_to_date) + 1)
-                ) if rec_pyd and pyd_millions > 0 else 0,
-                "variance": 0
-            },
-            "dpo": {
-                "ytd": (pay_ytd / (purchase_ytd if purchase_ytd != 0 else 1)) * (
-                    filters.get('quarter') and 90 or
-                    filters.get('month') and 30 or
-                    (frappe.datetime.get_date_diff(filters.get('to_date') or ytd_to_date, filters.get('from_date') or ytd_to_date) + 1)
-                ) if pay_ytd else 0,
-                "pyd": (pay_pyd / (purchase_pyd if purchase_pyd != 0 else 1)) * (
-                    filters.get('quarter') and 90 or
-                    filters.get('month') and 30 or
-                    (frappe.datetime.get_date_diff(filters.get('to_date') or pyd_to_date, filters.get('from_date') or pyd_to_date) + 1)
-                ) if pay_pyd else 0,
-                "variance": 0
-            },
+			# "dso" card removed - not displayed
+            # "dpo" card removed - not displayed
+
 			"overall_pnl": {
 				"ytd": 0,
 				"pyd": 0,
