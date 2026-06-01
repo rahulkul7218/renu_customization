@@ -243,7 +243,7 @@ app_license = "mit"
 
 after_migrate = [
     "renu_customization.patches.v_0.add_business_fields_to_item.execute",
-    
+
     "renu_customization.patches.v_0.addbusiness_region_field_on_customer.execute",
     "renu_customization.patches.v_0.add_supplier_code_field_on_supplier.execute",
     "renu_customization.patches.v_0.add_business_unit_field_on_sales_invoice_item.execute",
@@ -270,7 +270,7 @@ after_migrate = [
     "renu_customization.patches.v_0.add_invoice_type_field_fetched_from_sales_order.execute",
     "renu_customization.patches.v_0.add_invoice_type_fetched_from_picklist.execute",
     "renu_customization.patches.v_0.add_invoice_type_field_salesinvoice_fetched_from_delivery_note.execute",
-    
+
     "renu_customization.patches.v_0.hide_fields_on_sales_invoice.execute",
     "renu_customization.patches.v_0.hide_field_on_delivery_note.execute",
     "renu_customization.patches.v_0.hide_fields_on_picklist.execute",
@@ -284,7 +284,7 @@ after_migrate = [
     "renu_customization.patches.v_0.create_old_customer_code_field_on_customer.execute",
     # "renu_customization.patches.v_0.shot_close_field_on_sales_order.execute",
     # "renu_customization.patches.v_0.add_picked_but_not_delivered_fiels_on_soi.execute",
-    
+
     "renu_customization.patches.v_0.remove_read_only_old_customer_code.execute",
     "renu_customization.patches.v_0.add_purchase_receipt_on_purchase_invoice.execute",
     "renu_customization.patches.v_0.add_party_item_code_on_salesorderitem.execute",
@@ -293,9 +293,9 @@ after_migrate = [
     "renu_customization.patches.v_0.add_fields_invoice_and_delivery_note_on_serial_no.execute",
     "renu_customization.patches.v_0.add_warranty_start_date_on_serial_no.execute",
     "renu_customization.patches.v_0.add_important_note_on_sales_invoice.execute",
-    
-    
-    
+
+
+
     "renu_customization.patches.v_0.add_serial_no_filed_on_sales_invouce_item.execute",
     "renu_customization.patches.v_0.add_sales_warranty_and_noofdays_on_item.execute",
     "renu_customization.patches.v_0.add_purchase_warranty_and_noofdays_on_item.execute",
@@ -331,9 +331,9 @@ after_migrate = [
     # "renu_customization.patches.v_0.add_email_field_on_purchase_order.execute",
     # "renu_customization.patches.v_0.send_email_mrp.execute",
     # "renu_customization.patches.v_0.manually_send_email_to_supplier.execute",
-  
 
-    
+
+
     #print format fields
     "renu_customization.patches.v_0.add_fields_in_company_for_pf.execute",
     "renu_customization.patches.v_0.add_fields_sales_invoice_pf.execute",
@@ -348,8 +348,8 @@ after_migrate = [
     "renu_customization.patches.v_0.add_is_domestic_and_is_export_on_sales_order.execute",
     "renu_customization.patches.v_0.add_is_domestic_and_is_export_on_invoice.execute",
     "renu_customization.patches.v_0.add_item_type_field.execute",
-    
-    
+
+
    #Naming series
     # "renu_customization.patches.v_0.create_document_naming_rule_on_salesinvoice_if_invoice_is_productdomestic.execute",
     # "renu_customization.patches.v_0.document_series_rule_if_invoice_type_is_productexport.execute",
@@ -366,14 +366,14 @@ after_migrate = [
 #  "renu_customization.patches.v_0.allow_data_import_for_all_doctypes.execute",
 
 doctype_js = {
-    
+
 
     "Customer": ["public/js/fetched_from_business_code.js",
     "public/js/make_fields_mandatory.js"],
     "Item":["public/js/when_under_development_check_disable_checkbox_checked.js","public/js/onlyshow_purchase_warranty.js","public/js/only_show_sales_warranty.js",
     "public/js/show_purchase_warranty_only_serialno_and_allow_purchase_checked.js",
     "public/js/show_sale_warranty_only_serialno_and_allow_sale_checked.js","public/js/fetched_warrantydays_of_purchase.js",
-    "public/js/fetched_warrantydays_of_sales.js"],
+    "public/js/fetched_warrantydays_of_sales.js", "public/js/show_item_group_with_parent_all_item_group.js"],
     "Address":"public/js/make_mandatory_fields_on_address.js",
     "Purchase Receipt":"public/js/upload_bulk_serial_no.js",
     "Delivery Note":["public/js/add_logic_fetched_id_and_invoicetype_of_pick_on_delivery_note.js",
@@ -383,11 +383,11 @@ doctype_js = {
     "public/js/on_sales_invoice_freight_prepared_by_field_data_fetced_from_sales_order.js","public/js/read_only_currency_exchange_rate_on_sales_invoice.js",
     "public/js/fetched_freight_charges_from_sales_order_to_sales_invoice.js","public/js/if_customer_gst_category_overseas_sez_check_gst_payment_checkbox_on_sales_invoice.js",
     "public/js/relevent_print_format_show.js","public/js/lut_no_validate_between_invoice_range_automatcally_check_is_export_with_gst.js",
-    "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js", 
+    "public/js/fetched_warrantydate_on_salesinvoiceitem_if_date_of_invoice.js","public/js/calculate_package_wait.js", "public/js/calculate_warranty_end_date.js",
     "public/js/update_serial_no_on_sales_invoice_while_submitting.js", "public/js/set_by_default_value_of_delivery_terms_on_sales_invoice.js", "public/js/set_domestic_or_export_on_sales_invoice.js"],
 
     "Purchase Invoice":"public/js/unmandatory_supplier_invoice_no_on_purchaseinvoice.js",
-    
+
     "Sales Order": ["public/js/fetched_warranty_on_selecteditem_and_warrantdays_warrantybegins.js",
     "public/js/show_relevent_print_format_on_sales_order.js","public/js/read_only_currency_exchange_rate_sales_order.js","public/js/bydefault_set_store_warehouse_on_sales_order.js",
     "public/js/set_bydefalut_value_of_deliveryterms_packing_and_insurance_on_sales_order.js", "public/js/concatenate_warranty_name_andwarranty_description_on_sales_order.js",
@@ -402,8 +402,8 @@ doctype_js = {
     ],
     "Company": ["public/js/only_show_enable_lut_number.js","public/js/only_show_enable_epcg_no.js"],
     "GST Settings": "public/js/if_enable_overseas_transactions_checked_show_lut_expiry_date.js"
-   
-    
+
+
 
 }
 
@@ -430,7 +430,7 @@ doc_events = {
     },
     "Sales Invoice Item": {
         "before_insert": "renu_customization.api.fetched_partitemcode_from_deliverynote_to_salesinvoice.get_party_item_code_from_dn"
-        
+
     },
     "Pick List": {
         "before_save": "renu_customization.api.pick_list_serial_handler.distribute_serial_nos"
@@ -451,8 +451,8 @@ doc_events = {
     #         "renu_customization.api.sales_order_utils.sync_short_close_qty"
     #     ]
     # }
-    
-    
+
+
 
 
 }
