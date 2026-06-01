@@ -587,31 +587,31 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         }
 
         /* Column Widths & Alignment */
-        .col-sno { width: 50px !important; min-width: 50px !important; text-align: center !important; }
-        .col-customer { width: 250px !important; min-width: 250px !important; }
-        .col-customer-group { width: 180px !important; min-width: 180px !important; }
-        .col-item-group { width: 180px !important; min-width: 180px !important; }
-        .col-sp { width: 180px !important; min-width: 180px !important; }
-        .col-prod { width: 300px !important; min-width: 300px !important; }
-        .col-amt { width: 120px !important; min-width: 120px !important;
+        .col-sno { width: 45px !important; min-width: 45px !important; text-align: center !important; }
+        .col-customer { width: 150px !important; min-width: 140px !important; }
+        .col-customer-group { width: 110px !important; min-width: 100px !important; }
+        .col-item-group { width: 110px !important; min-width: 100px !important; }
+        .col-sp { width: 110px !important; min-width: 100px !important; }
+        .col-prod { width: 180px !important; min-width: 160px !important; }
+        .col-amt { width: 90px !important; min-width: 90px !important;
             text-align: right !important;
             white-space: nowrap !important;
         }
-        .col-qty { width: 70px !important; min-width: 70px !important; text-align: right !important; }
-        .col-date { width: 110px !important; min-width: 110px !important; }
-        .col-id { width: 120px !important; min-width: 120px !important; }
-        .col-status { width: 100px !important; min-width: 100px !important; }
-        .col-po { width: 120px !important; min-width: 120px !important; }
-        .col-deliv-date { width: 90px !important; min-width: 90px !important; }
+        .col-qty { width: 55px !important; min-width: 55px !important; text-align: right !important; }
+        .col-date { width: 80px !important; min-width: 80px !important; }
+        .col-id { width: 80px !important; min-width: 80px !important; }
+        .col-status { width: 80px !important; min-width: 80px !important; }
+        .col-po { width: 90px !important; min-width: 90px !important; }
+        .col-deliv-date { width: 70px !important; min-width: 70px !important; }
 
         /* Table Sticky Columns - Table 1 (Booking Breakdown) */
-        .month-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 50px !important; text-align: center !important; background: #f8fafc !important; }
-        .month-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; width: 170px !important; min-width: 170px !important; }
+        .month-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 45px !important; text-align: center !important; background: #f8fafc !important; }
+        .month-table .col-customer { position: sticky !important; left: 45px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; width: 140px !important; min-width: 140px !important; }
 
         /* Table Sticky Columns - Table 2 (Detailed List) */
-        .detailed-list-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 50px !important; text-align: center !important; background: #f8fafc !important; }
-        .detailed-list-table .col-customer { position: sticky !important; left: 50px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; }
-        .detailed-list-table .col-id { position: relative; width: 120px !important; min-width: 120px !important; }
+        .detailed-list-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 45px !important; text-align: center !important; background: #f8fafc !important; }
+        .detailed-list-table .col-customer { position: sticky !important; left: 45px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; }
+        .detailed-list-table .col-id { position: relative; width: 100px !important; min-width: 100px !important; }
 
 
 
@@ -695,16 +695,18 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	const PDF_EXPORT_TABLE_CSS = `
 		table.pdf-export-table {
-			width: 100%; border-collapse: collapse; font-size: 8px;
-			table-layout: fixed; page-break-inside: auto; margin-top: 8px;
+			width: 100%; max-width: 100%; border-collapse: collapse; font-size: 8px;
+			table-layout: fixed; page-break-inside: auto; page-break-after: auto; margin-top: 8px;
 			border: 1px solid #e2e8f0; box-sizing: border-box;
 		}
 		table.pdf-export-table th, table.pdf-export-table td {
 			border: 1px solid #e2e8f0; padding: 6px 6px; word-wrap: break-word;
-			overflow-wrap: anywhere; vertical-align: middle; box-sizing: border-box;
+			overflow-wrap: anywhere; word-break: break-word; white-space: normal !important;
+			vertical-align: middle; box-sizing: border-box;
 			position: static !important; bottom: auto !important; top: auto !important;
 			left: auto !important; right: auto !important; box-shadow: none !important;
-			min-height: 18px; font-size: 9px;
+			min-height: 18px; font-size: 8px;
+			page-break-inside: avoid !important; break-inside: avoid !important;
 		}
 		table.pdf-export-table thead { display: table-header-group; page-break-inside: avoid; }
 		table.pdf-export-table thead th {
@@ -715,7 +717,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			text-align: left;
 			padding: 6px 8px;
 		}
-		table.pdf-export-table tbody tr { page-break-inside: auto !important; }
+		table.pdf-export-table tbody tr { page-break-inside: avoid !important; break-inside: avoid !important; page-break-after: auto !important; display: table-row !important; }
+		table.pdf-export-table tbody td { page-break-inside: avoid !important; break-inside: avoid !important; }
 		table.pdf-export-table tbody tr:nth-child(odd) { background: #fff; }
 		table.pdf-export-table tbody tr:nth-child(even) { background: #f8fafc; }
 		table.pdf-export-table tr.sticky-total { page-break-inside: avoid !important; }
@@ -726,25 +729,25 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			color: #0f172a;
 		}
 		/* Use relative column widths that work better in fixed layout */
-		table.pdf-export-table .col-sno { width: 4% !important; text-align: center !important; }
-		table.pdf-export-table .col-customer { width: 18% !important; text-align: left !important; }
-		table.pdf-export-table .col-customer-group { width: 12% !important; }
-		table.pdf-export-table .col-sp { width: 10% !important; }
-		table.pdf-export-table .col-prod { width: 20% !important; }
-		table.pdf-export-table .col-item-group { width: 10% !important; }
-		table.pdf-export-table .col-date { width: 6% !important; text-align: center !important; }
-		table.pdf-export-table .col-id { width: 6% !important; }
-		table.pdf-export-table .col-status { width: 6% !important; text-align: center !important; }
-		table.pdf-export-table .col-po { width: 6% !important; }
-		table.pdf-export-table .col-qty { width: 5% !important; text-align: right !important; }
-		table.pdf-export-table .col-amt { width: 6% !important; text-align: right !important; }
-		table.pdf-export-table .col-deliv-date { width: 6% !important; text-align: center !important; }
-		table.pdf-export-table .month-col { width: 5% !important; text-align: right !important; }
-		table.pdf-export-table .total-col { width: 6% !important; text-align: right !important; }
-		table.pdf-export-table .total-net-col { width: 6% !important; text-align: right !important; background: #f0f4ff !important; }
-		table.pdf-export-table .grand-total-col { width: 6% !important; text-align: right !important; background: #f0f4ff !important; }
-		table.pdf-export-table .col-category { width: 15% !important; }
-		table.pdf-export-table .lifecycle-total-col { width: 6% !important; text-align: right !important; background: #f0f4ff !important; }
+		table.pdf-export-table .col-sno { width: 3% !important; text-align: center !important; }
+		table.pdf-export-table .col-customer { width: 12% !important; text-align: left !important; }
+		table.pdf-export-table .col-customer-group { width: 8% !important; }
+		table.pdf-export-table .col-sp { width: 7% !important; }
+		table.pdf-export-table .col-prod { width: 14% !important; }
+		table.pdf-export-table .col-item-group { width: 7% !important; }
+		table.pdf-export-table .col-date { width: 4.5% !important; text-align: center !important; }
+		table.pdf-export-table .col-id { width: 4.5% !important; }
+		table.pdf-export-table .col-status { width: 4.5% !important; text-align: center !important; }
+		table.pdf-export-table .col-po { width: 4.5% !important; }
+		table.pdf-export-table .col-qty { width: 3.5% !important; text-align: right !important; }
+		table.pdf-export-table .col-amt { width: 4.5% !important; text-align: right !important; }
+		table.pdf-export-table .col-deliv-date { width: 4.5% !important; text-align: center !important; }
+		table.pdf-export-table .month-col { width: 4% !important; text-align: right !important; }
+		table.pdf-export-table .total-col { width: 5% !important; text-align: right !important; }
+		table.pdf-export-table .total-net-col { width: 5% !important; text-align: right !important; background: #f0f4ff !important; }
+		table.pdf-export-table .grand-total-col { width: 5% !important; text-align: right !important; background: #f0f4ff !important; }
+		table.pdf-export-table .col-category { width: 10% !important; }
+		table.pdf-export-table .lifecycle-total-col { width: 5% !important; text-align: right !important; background: #f0f4ff !important; }
 	`;
 
 	const prepare_table_html_for_pdf = ($table) => {
@@ -1577,7 +1580,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				<head>
 					<style>
                         body { font-family: 'Helvetica', 'Arial', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; line-height: 1.2; }
-                        @page { size: landscape; margin: 10mm; }
+                        @page { size: A3 landscape; margin: 5mm; }
                         .report-header { text-align: center; border-bottom: 3px solid #3b82f6; padding-bottom: 15px; margin-bottom: 25px; }
 
                         .kpi-section-title { font-size: 13px; font-weight: 700; color: #3b82f6; margin-top: 15px; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; text-transform: uppercase; }
