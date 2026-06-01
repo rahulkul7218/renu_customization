@@ -1,0 +1,91 @@
+<div class="ytd-dashboard-container">
+    <div class="dashboard-header">
+        <div class="header-title">
+            <h1>PROFIT & LOSS DASHBOARD</h1>
+
+        </div>
+    </div>
+
+    <div class="summary-cards" id="summary-cards-container">
+        <!-- Cards will be populated by JS -->
+    </div>
+
+    <div class="table-section">
+        <table class="detailed-table" id="detailed-table">
+            <thead>
+                <tr>
+                    <th rowspan="2" class="col-bucket">BUCKET</th>
+                    <th rowspan="2" class="col-source">SOURCES OF PROFIT & LOSS</th>
+                    <th colspan="1" class="col-ytd-header">YTD</th>
+                    <th colspan="1" class="col-pyd-header">PYD</th>
+                    <th colspan="1" class="col-var-header">VARIANCE (YTD vs PYD)</th>
+                    <th rowspan="2" class="col-trend">TREND (YTD vs PYD)</th>
+                </tr>
+            </thead>
+            <tbody id="detailed-table-body">
+                <!-- Rows will be populated by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="charts-section">
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>REVENUE (SALES) TREND</h3>
+                <p>All amounts in Millions</p>
+            </div>
+            <div id="chart-revenue-trend" class="chart-container"></div>
+        </div>
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>GROSS MARGIN TREND (%)</h3>
+            </div>
+            <div id="chart-gross-margin" class="chart-container"></div>
+        </div>
+
+        <!-- Hidden for now - uncomment to re-enable
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>P&L WATERFALL (YTD vs PYD)</h3>
+                <p>All amounts in Millions</p>
+            </div>
+            <div id="chart-waterfall" class="chart-container"></div>
+        </div>
+        -->
+
+        <div class="chart-card">
+            <div class="chart-header">
+                <h3>WORKING CAPITAL ANALYSIS</h3>
+                <p>All amounts in Millions</p>
+            </div>
+            <div id="chart-working-capital" class="chart-container"></div>
+        </div>
+    </div>
+
+    <div class="dashboard-footer">
+        <div class="key-insights">
+            <div class="insight-icon">
+                <i class="fa fa-lightbulb-o"></i>
+            </div>
+            <div class="insight-content">
+                <h4>KEY INSIGHTS</h4>
+                <ul>
+                    <li>Sales decreased by 11.79% compared to PY.</li>
+                    <li>Gross Margin decreased by 8.55% compared to PY.</li>
+                    <li>Operating Margin and Working Capital metrics to be reviewed.</li>
+                </ul>
+            </div>
+        </div>
+        <div class="variance-legend">
+            <h4>VARIANCE LEGEND</h4>
+            <div class="legend-items">
+                <span class="legend-item"><span class="color-box fav"></span> Favourable (Increase)</span>
+                <span class="legend-item"><span class="color-box unfav"></span> Unfavourable (Decrease)</span>
+                <span class="legend-item"><span class="color-box none"></span> No Change</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
