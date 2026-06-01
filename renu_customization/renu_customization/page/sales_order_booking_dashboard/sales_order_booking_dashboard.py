@@ -723,6 +723,91 @@ def export_to_excel(filters=None, export_type="all"):
             c_tot.font = Font(bold=True)
             row_idx_l += 1
 
+        # Overdue Month-wise Breakdown (Past Overdue + Future Pending)
+        row_idx_l += 3
+        ws_lifecycle.cell(
+            row=row_idx_l, column=1, value="Overdue Month-wise Breakdown (Million INR)"
+        ).font = section_font
+        row_idx_l += 2
+
+        today_date = frappe.utils.getdate()
+        past_overdue_by_month = {}
+        future_pending_by_month = {}
+
+        for r_item in data:
+            pending_val = flt(r_item.get("pending_value") or 0)
+            if pending_val > 0 and r_item.get("delivery_date"):
+                try:
+                    d_obj = frappe.utils.getdate(r_item.get("delivery_date"))
+                    m_k, m_s = d_obj.strftime("%b %Y"), d_obj.strftime("%Y%m")
+                except:
+                    continue
+                if d_obj < today_date:
+                    if m_k not in past_overdue_by_month:
+                        past_overdue_by_month[m_k] = {"sort": m_s, "val": 0}
+                    past_overdue_by_month[m_k]["val"] += pending_val
+                else:
+                    if m_k not in future_pending_by_month:
+                        future_pending_by_month[m_k] = {"sort": m_s, "val": 0}
+                    future_pending_by_month[m_k]["val"] += pending_val
+
+        all_month_keys = set(list(past_overdue_by_month.keys()) + list(future_pending_by_month.keys()))
+        sorted_overdue_months = sorted(
+            all_month_keys,
+            key=lambda k: (past_overdue_by_month.get(k) or future_pending_by_month.get(k))["sort"]
+        )
+
+        if sorted_overdue_months:
+            headers_o = ["Category"] + sorted_overdue_months + ["Total"]
+            for idx, h in enumerate(headers_o, start=1):
+                cell = ws_lifecycle.cell(row=row_idx_l, column=idx, value=h)
+                cell.font, cell.fill, cell.alignment, cell.border = (
+                    header_font,
+                    header_fill,
+                    Alignment(horizontal="center"),
+                    table_border,
+                )
+            row_idx_l += 1
+
+            # Row 1: Past Overdue (red)
+            past_fill = PatternFill(start_color="fee2e2", fill_type="solid")
+            past_font = Font(bold=True, color="991b1b")
+            ws_lifecycle.cell(row=row_idx_l, column=1, value="Past Overdue").font = past_font
+            ws_lifecycle.cell(row=row_idx_l, column=1).border = table_border
+            col_idx = 2
+            past_total = 0
+            for m_key in sorted_overdue_months:
+                val = past_overdue_by_month.get(m_key, {}).get("val", 0)
+                past_total += val
+                c = ws_lifecycle.cell(row=row_idx_l, column=col_idx, value=flt(val) / 1000000 if val else None)
+                c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
+                if val > 0:
+                    c.font = Font(color="991b1b")
+                col_idx += 1
+            c_tot = ws_lifecycle.cell(row=row_idx_l, column=col_idx, value=flt(past_total) / 1000000)
+            c_tot.number_format, c_tot.border = '"₹ "#,##0.00" M"', table_border
+            c_tot.font = Font(bold=True, color="991b1b")
+            row_idx_l += 1
+
+            # Row 2: Future Pending (purple)
+            future_font = Font(bold=True, color="6d28d9")
+            ws_lifecycle.cell(row=row_idx_l, column=1, value="Future Pending").font = future_font
+            ws_lifecycle.cell(row=row_idx_l, column=1).border = table_border
+            col_idx = 2
+            future_total = 0
+            for m_key in sorted_overdue_months:
+                val = future_pending_by_month.get(m_key, {}).get("val", 0)
+                future_total += val
+                c = ws_lifecycle.cell(row=row_idx_l, column=col_idx, value=flt(val) / 1000000 if val else None)
+                c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
+                if val > 0:
+                    c.font = Font(color="6d28d9")
+                col_idx += 1
+            c_tot = ws_lifecycle.cell(row=row_idx_l, column=col_idx, value=flt(future_total) / 1000000)
+            c_tot.number_format, c_tot.border = '"₹ "#,##0.00" M"', table_border
+            c_tot.font = Font(bold=True, color="6d28d9")
+            row_idx_l += 1
+
     if export_type in ["all", "detail"]:
         # 3. Sales Orders List Sheet
         row_idx = 1
