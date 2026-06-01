@@ -189,7 +189,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			{ key: 'gross_margin', title: '2. GROSS MARGIN', icon: 'fa-pie-chart', theme: 'card-theme-green' },
 			{ key: 'operating_margin', title: '3. OPERATING MARGIN', icon: 'fa-briefcase', theme: 'card-theme-purple' },
 			{ key: 'working_capital', title: '4. WORKING CAPITAL', icon: 'fa-university', theme: 'card-theme-orange' },
-			{ key: 'wcts', title: '5. WORKING CAPITAL TURNS (WCTs)', icon: 'fa-repeat', theme: 'card-theme-teal' },
+			//{ key: 'wcts', title: '5. WORKING CAPITAL TURNS (WCTs)', icon: 'fa-repeat', theme: 'card-theme-teal' },
 			// { key: 'dso', title: '5. DAYS SALES OUTSTANDING', icon: 'fa-clock', theme: 'card-theme-red' },
 			// { key: 'dpo', title: '6. DAYS PAYABLES OUTSTANDING', icon: 'fa-clock', theme: 'card-theme-yellow' },
 			// Hidden for now - uncomment to re-enable
@@ -274,12 +274,12 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				const sourceDisplay = source.name;
 
 				tr.append(`<td class="${sourceClass}">${sourceDisplay}</td>`);
-				
+
 				if (isPercentageRow) {
 					// For percentage rows, display the percentage values
-					tr.append(`<td class="text-center">${source.ytd_val}%</td>`);
-					tr.append(`<td class="text-center">${source.pyd_val}%</td>`);
-					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${source.var_val !== null ? source.var_val + '%' : '-'}</td>`);
+					tr.append(`<td class="text-center">${Number(source.ytd_val).toFixed(2)}%</td>`);
+					tr.append(`<td class="text-center">${Number(source.pyd_val).toFixed(2)}%</td>`);
+					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${source.var_val !== null ? Number(source.var_val).toFixed(2) + '%' : '-'}</td>`);
 				} else {
 					// For regular rows, display formatted numbers
 					tr.append(`<td class="text-center">${ytdVal}</td>`);
@@ -306,7 +306,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		// Revenue Trend Chart
 		new ApexCharts(document.querySelector("#chart-revenue-trend"), {
 			series: [
-				{ name: 'YTD', data: chartsData.revenue_trend.ytd.map(v => v / 1000000) }, 
+				{ name: 'YTD', data: chartsData.revenue_trend.ytd.map(v => v / 1000000) },
 				{ name: 'PYD', data: chartsData.revenue_trend.pyd.map(v => v / 1000000) }
 			],
 			chart: { type: 'bar', height: 180, toolbar: { show: false } },
@@ -343,7 +343,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		// Working Capital Chart
 		new ApexCharts(document.querySelector("#chart-working-capital"), {
 			series: [
-				{ name: 'YTD', data: chartsData.working_capital.ytd.map(v => v / 1000000) }, 
+				{ name: 'YTD', data: chartsData.working_capital.ytd.map(v => v / 1000000) },
 				{ name: 'PYD', data: chartsData.working_capital.pyd.map(v => v / 1000000) }
 			],
 			chart: { type: 'bar', height: 180, toolbar: { show: false } },
@@ -355,80 +355,80 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		}).render();
 	};
 
-// Export to PDF Function
-const export_pdf = async () => {
-	if (!page.dashboard_data) {
-		frappe.show_alert({message: __("No data available for PDF export"), indicator: "red"});
-		return;
-	}
+	// Export to PDF Function
+	const export_pdf = async () => {
+		if (!page.dashboard_data) {
+			frappe.show_alert({ message: __("No data available for PDF export"), indicator: "red" });
+			return;
+		}
 
-	frappe.show_alert({message: __("Generating PDF Report..."), indicator: "blue"});
-	
-	const report_date = moment().format('YYYY-MM-DD HH:mm');
-	const data = page.dashboard_data;
+		frappe.show_alert({ message: __("Generating PDF Report..."), indicator: "blue" });
 
-	// Convert chart to PNG
-	const get_chart_png = (selector) => {
-		const container = document.querySelector(selector);
-		if (!container) return null;
-		const svg = container.querySelector('svg');
-		if (!svg) return null;
+		const report_date = moment().format('YYYY-MM-DD HH:mm');
+		const data = page.dashboard_data;
 
-		const canvas = document.createElement('canvas');
-		const context = canvas.getContext('2d');
-		const svg_data = new XMLSerializer().serializeToString(svg);
-		const img = new Image();
+		// Convert chart to PNG
+		const get_chart_png = (selector) => {
+			const container = document.querySelector(selector);
+			if (!container) return null;
+			const svg = container.querySelector('svg');
+			if (!svg) return null;
 
-		return new Promise((resolve) => {
-			img.onload = () => {
-				canvas.width = img.width * 2;
-				canvas.height = img.height * 2;
-				context.fillStyle = 'white';
-				context.fillRect(0, 0, canvas.width, canvas.height);
-				context.drawImage(img, 0, 0, canvas.width, canvas.height);
-				resolve(canvas.toDataURL('image/png'));
-			};
-			img.onerror = () => resolve(null);
-			img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg_data)));
-		});
-	};
+			const canvas = document.createElement('canvas');
+			const context = canvas.getContext('2d');
+			const svg_data = new XMLSerializer().serializeToString(svg);
+			const img = new Image();
 
-	// Get chart images
-	const revenue_png = await get_chart_png('#chart-revenue-trend');
-	const gm_png = await get_chart_png('#chart-gross-margin');
-	const wc_png = await get_chart_png('#chart-working-capital');
+			return new Promise((resolve) => {
+				img.onload = () => {
+					canvas.width = img.width * 2;
+					canvas.height = img.height * 2;
+					context.fillStyle = 'white';
+					context.fillRect(0, 0, canvas.width, canvas.height);
+					context.drawImage(img, 0, 0, canvas.width, canvas.height);
+					resolve(canvas.toDataURL('image/png'));
+				};
+				img.onerror = () => resolve(null);
+				img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg_data)));
+			});
+		};
 
-	// Build KPI cards HTML
-	const kpi_html = Object.entries(data.summary_cards).map(([key, card]) => {
-		const label = key.replace(/_/g, ' ').toUpperCase();
-		const value = formatNumber(card.ytd);
-		const variance = card.variance.toFixed(2);
-		const varClass = card.variance < 0 ? 'color: #dc2626;' : 'color: #16a34a;';
-		return `<div class="kpi-card">
+		// Get chart images
+		const revenue_png = await get_chart_png('#chart-revenue-trend');
+		const gm_png = await get_chart_png('#chart-gross-margin');
+		const wc_png = await get_chart_png('#chart-working-capital');
+
+		// Build KPI cards HTML
+		const kpi_html = Object.entries(data.summary_cards).map(([key, card]) => {
+			const label = key.replace(/_/g, ' ').toUpperCase();
+			const value = formatNumber(card.ytd);
+			const variance = card.variance.toFixed(2);
+			const varClass = card.variance < 0 ? 'color: #dc2626;' : 'color: #16a34a;';
+			return `<div class="kpi-card">
 			<div class="kpi-label">${label}</div>
 			<div class="kpi-value">${value}</div>
 			<div style="font-size: 11px; ${varClass} margin-top: 5px;">${variance}%</div>
 		</div>`;
-	}).join('');
+		}).join('');
 
-	// Build table rows
-	const table_rows = data.table_data.map(group => {
-		const rowCount = group.sources.length;
-		return group.sources.map((src, i) => {
-			const ytdVal = formatNumber(src.ytd_val);
-			const ytdPct = src.ytd_pct ? formatPct(src.ytd_pct) : '-';
-			const pydVal = formatNumber(src.pyd_val);
-			const pydPct = src.pyd_pct ? formatPct(src.pyd_pct) : '-';
-			
-			let varVal = '-';
-			if (src.var_val !== null) {
-				varVal = src.var_val > 0 ? src.var_val.toFixed(2) : src.var_val === 0 ? '0.00' : `(${Math.abs(src.var_val).toFixed(2)})`;
-			}
-			const varPct = src.var_pct ? formatPct(src.var_pct) : '-';
+		// Build table rows
+		const table_rows = data.table_data.map(group => {
+			const rowCount = group.sources.length;
+			return group.sources.map((src, i) => {
+				const ytdVal = formatNumber(src.ytd_val);
+				const ytdPct = src.ytd_pct ? formatPct(src.ytd_pct) : '-';
+				const pydVal = formatNumber(src.pyd_val);
+				const pydPct = src.pyd_pct ? formatPct(src.pyd_pct) : '-';
 
-			const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: bold; background: #f1f5f9;">${group.bucket}</td>` : '';
-			
-			return `<tr>
+				let varVal = '-';
+				if (src.var_val !== null) {
+					varVal = src.var_val > 0 ? src.var_val.toFixed(2) : src.var_val === 0 ? '0.00' : `(${Math.abs(src.var_val).toFixed(2)})`;
+				}
+				const varPct = src.var_pct ? formatPct(src.var_pct) : '-';
+
+				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: bold; background: #f1f5f9;">${group.bucket}</td>` : '';
+
+				return `<tr>
 				${bucket_cell}
 				<td>${src.name}</td>
 				<td style="text-align: right;">${ytdVal}</td>
@@ -438,11 +438,11 @@ const export_pdf = async () => {
 				<td style="text-align: right;">${varVal}</td>
 				<td style="text-align: right;">${varPct}</td>
 			</tr>`;
+			}).join('');
 		}).join('');
-	}).join('');
 
-	// Chart images HTML
-	const charts_html = `
+		// Chart images HTML
+		const charts_html = `
 		<div style="display: table; width: 100%; margin: 30px 0;">
 			<div style="display: table-cell; width: 50%; padding-right: 15px;">
 				<h4 style="text-align: center; margin: 0 0 10px; font-size: 12px;">REVENUE (SALES) TREND</h4>
@@ -462,7 +462,7 @@ const export_pdf = async () => {
 		</div>
 	`;
 
-	const html = `
+		const html = `
 		<html>
 		<head>
 			<style>
@@ -510,22 +510,22 @@ const export_pdf = async () => {
 		</html>
 	`;
 
-	const method_url = '/api/method/renu_customization.renu_customization.page.ytd_profit_and_loss_.ytd_profit_and_loss_.export_to_pdf';
-	const $form = $(`
+		const method_url = '/api/method/renu_customization.renu_customization.page.ytd_profit_and_loss_.ytd_profit_and_loss_.export_to_pdf';
+		const $form = $(`
 		<form action="${method_url}" method="POST" target="_blank" style="display:none;">
 			<input type="hidden" name="html" value="">
 			<input type="hidden" name="csrf_token" value="${frappe.csrf_token}">
 		</form>`).appendTo('body');
 
-	$form.find('input[name="html"]').val(html);
-	$form.submit();
-	$form.remove();
+		$form.find('input[name="html"]').val(html);
+		$form.submit();
+		$form.remove();
 
-	frappe.show_alert({message: __("PDF generated successfully!"), indicator: "green"});
-};
+		frappe.show_alert({ message: __("PDF generated successfully!"), indicator: "green" });
+	};
 
-page.add_menu_item(__('Export to PDF'), () => export_pdf());
-console.log('Export to PDF menu added');
+	page.add_menu_item(__('Export to PDF'), () => export_pdf());
+	console.log('Export to PDF menu added');
 
 
 	const loadData = () => {
@@ -540,7 +540,7 @@ console.log('Export to PDF menu added');
 				if (r.message) {
 					// Store data for PDF export
 					page.dashboard_data = r.message;
-					
+
 					renderCards(r.message.summary_cards);
 					renderTable(r.message.table_data);
 
@@ -558,7 +558,7 @@ console.log('Export to PDF menu added');
 	};
 
 	loadData();
-    // Add Export to PDF menu after data is loaded
-    page.add_menu_item(__('Export to PDF'), () => export_pdf());
-    console.log('Export to PDF menu added after loadData');
+	// Add Export to PDF menu after data is loaded
+	page.add_menu_item(__('Export to PDF'), () => export_pdf());
+	console.log('Export to PDF menu added after loadData');
 };
