@@ -1,7 +1,7 @@
 import frappe
 from frappe import _
 from frappe.utils.pdf import get_pdf
-from frappe.utils import getdate, add_days
+from frappe.utils import getdate, add_days, date_diff
 from datetime import datetime, timedelta
 
 @frappe.whitelist()
@@ -16,23 +16,34 @@ def get_fiscal_year_dates(company, fiscal_year):
 	fy = frappe.get_doc('Fiscal Year', fiscal_year)
 	return fy.year_start_date, fy.year_end_date
 
-def get_current_and_previous_fiscal_years(company):
+def get_current_and_previous_fiscal_years(company, selected_fy=None):
 	"""Get current and previous fiscal year"""
 	today = getdate()
 	
-	# Get current fiscal year
-	current_fy = frappe.db.get_value(
-		'Fiscal Year',
-		{
-			'company': company,
-			'year_start_date': ['<=', today],
-			'year_end_date': ['>=', today]
-		},
-		'name'
-	)
+	if selected_fy:
+		current_fy = selected_fy
+	else:
+		# Get current fiscal year (without company filter since Fiscal Year is global)
+		current_fy = frappe.db.get_value(
+			'Fiscal Year',
+			{
+				'year_start_date': ['<=', today],
+				'year_end_date': ['>=', today]
+			},
+			'name'
+		)
 	
 	if not current_fy:
-		frappe.throw(_("No Fiscal Year found for today's date"))
+		# Fallback to the latest fiscal year if none found for today
+		current_fy = frappe.db.get_value(
+			'Fiscal Year',
+			{},
+			'name',
+			order_by='year_start_date desc'
+		)
+	
+	if not current_fy:
+		frappe.throw(_("No Fiscal Year found"))
 	
 	# Get previous fiscal year
 	current_fy_doc = frappe.get_doc('Fiscal Year', current_fy)
@@ -41,22 +52,31 @@ def get_current_and_previous_fiscal_years(company):
 	previous_fy = frappe.db.get_value(
 		'Fiscal Year',
 		{
-			'company': company,
 			'year_end_date': prev_fy_end
 		},
 		'name'
 	)
 	
+	if not previous_fy:
+		# Fallback if no exact year_end_date match
+		previous_fy = frappe.db.get_value(
+			'Fiscal Year',
+			{
+				'year_start_date': ['<', current_fy_doc.year_start_date]
+			},
+			'name',
+			order_by='year_start_date desc'
+		)
+	
 	return current_fy, previous_fy
 
-def get_account_balance_ytd(company, account, fiscal_year):
+def get_account_balance_ytd(company, account, fiscal_year, to_date=None):
 	"""Get the balance for an account for the fiscal year to date"""
 	fy_start, fy_end = get_fiscal_year_dates(company, fiscal_year)
-	today = getdate()
 	
-	# For YTD, use from fiscal year start to today
-	# For PYD, use from previous fiscal year start to same date as today (but in previous year)
-	to_date = min(today, fy_end)
+	if not to_date:
+		today = getdate()
+		to_date = min(today, fy_end)
 	
 	acc_details = frappe.db.get_value("Account", account, ["lft", "rgt", "root_type"])
 	if not acc_details:
@@ -84,12 +104,13 @@ def get_account_balance_ytd(company, account, fiscal_year):
 	
 	return 0
 
-def get_cost_centers_balance_ytd(company, cost_centers, fiscal_year):
+def get_cost_centers_balance_ytd(company, cost_centers, fiscal_year, to_date=None):
 	"""Get the balance for specific cost centers for the fiscal year to date"""
 	fy_start, fy_end = get_fiscal_year_dates(company, fiscal_year)
-	today = getdate()
 	
-	to_date = min(today, fy_end)
+	if not to_date:
+		today = getdate()
+		to_date = min(today, fy_end)
 	
 	if not cost_centers:
 		return 0
@@ -105,13 +126,49 @@ def get_cost_centers_balance_ytd(company, cost_centers, fiscal_year):
 			AND posting_date >= %s
 			AND posting_date <= %s
 			AND docstatus = 1
-			AND account IN (SELECT name FROM `tabAccount` WHERE root_type IN ('Expense', 'Income'))
+			AND account IN (SELECT name FROM `tabAccount` WHERE root_type = 'Expense')
 	""", tuple([company] + cost_centers + [fy_start, to_date]), as_dict=True)
 	
 	if gl_entries and len(gl_entries) > 0:
 		return gl_entries[0]['balance']
 	
 	return 0
+
+def get_pnl_account_balance(company, account_name, fiscal_year, to_date=None):
+	"""Get balance for a specific account name from Profit and Loss statement"""
+	try:
+		from erpnext.accounts.report.profit_and_loss_statement.profit_and_loss_statement import execute as execute_pnl
+		
+		# Get fiscal year dates
+		fy_start, fy_end = get_fiscal_year_dates(company, fiscal_year)
+		if not to_date:
+			today = getdate()
+			to_date = min(today, fy_end)
+		
+		filters = frappe._dict({
+			"company": company,
+			"filter_based_on": "Date Range",
+			"period_start_date": fy_start,
+			"period_end_date": to_date,
+			"periodicity": "Yearly"
+		})
+		
+		result = execute_pnl(filters)
+		data = result[1] if result and len(result) > 1 else []
+		
+		for row in data:
+			if isinstance(row, dict) and row.get("account_name") == account_name:
+				return float(row.get("total", 0.0) or 0.0)
+				
+		# Fallback to case-insensitive and partial match
+		for row in data:
+			if isinstance(row, dict) and row.get("account_name") and account_name.lower() in str(row.get("account_name")).lower():
+				return float(row.get("total", 0.0) or 0.0)
+				
+		return 0.0
+	except Exception as e:
+		frappe.log_error(frappe.get_traceback(), f"Error in get_pnl_account_balance for {account_name}")
+		return 0.0
 
 def get_outstanding_receivables(company, as_of_date):
 	"""Get total outstanding receivables (Accounts Receivable report - Outstanding Amount total) as of a date"""
@@ -174,31 +231,65 @@ def get_dashboard_data(company, filters=None):
 	if not company:
 		frappe.throw(_("Company is required"))
 	
-	# List of accounts to fetch
-	accounts = [
-		'41 - REVENUE FROM OPERATIONS - RFAPL',
-		'42 - BRANCH SALES CONTROL ACCOUNT - RFAPL',
-		'43 - FREIGHT OUTWARD - RFAPL',
-		'Direct Income - RFAPL'
-	]
+	# Parse filters if it's a string
+	if filters and isinstance(filters, str):
+		try:
+			import json
+			filters = json.loads(filters)
+		except Exception:
+			pass
+			
+	selected_fy = None
+	if isinstance(filters, dict):
+		selected_fy = filters.get("fiscal_year")
 	
 	try:
 		# Get current and previous fiscal years
-		current_fy, previous_fy = get_current_and_previous_fiscal_years(company)
+		current_fy, previous_fy = get_current_and_previous_fiscal_years(company, selected_fy)
 		
-		# Get YTD and PYD values for all accounts
-		ytd_total = 0
-		pyd_total = 0
+		# Compute YTD to_date limit based on selected/current fiscal year
+		today = getdate()
+		current_fy_start, current_fy_end = get_fiscal_year_dates(company, current_fy)
 		
-		for account_name in accounts:
-			# Get YTD value (current fiscal year to date)
-			ytd_value = get_account_balance_ytd(company, account_name, current_fy)
+		if current_fy_start <= today <= current_fy_end:
+			# The selected fiscal year is the active/current one
+			ytd_to_date = today
+		else:
+			# A past or future fiscal year is selected, run for the full range of those years
+			ytd_to_date = current_fy_end
 			
-			# Get PYD value (previous fiscal year to same date)
-			pyd_value = get_account_balance_ytd(company, account_name, previous_fy)
-			
-			ytd_total += ytd_value
-			pyd_total += pyd_value
+		# Compute PYD to_date limit if previous fiscal year exists
+		pyd_to_date = None
+		if previous_fy:
+			prev_fy_start, prev_fy_end = get_fiscal_year_dates(company, previous_fy)
+			if current_fy_start <= today <= current_fy_end:
+				days_elapsed = (today - current_fy_start).days
+				pyd_to_date = min(getdate(prev_fy_start) + timedelta(days=days_elapsed), prev_fy_end)
+			else:
+				pyd_to_date = prev_fy_end
+		
+		# Determine number of days for DSO/DPO calculations
+		number_of_days = 365
+		if isinstance(filters, dict):
+			if filters.get("from_date") and filters.get("to_date"):
+				from frappe.utils import date_diff
+				number_of_days = max(1, date_diff(filters.get("to_date"), filters.get("from_date")) + 1)
+			elif filters.get("month"):
+				number_of_days = 30
+			elif filters.get("quarter"):
+				number_of_days = 90
+			elif filters.get("fiscal_year"):
+				number_of_days = 365
+
+		# Get YTD and PYD values for Sales from specific accounts
+		sales_accounts = [
+			'41 - REVENUE FROM OPERATIONS - RFAPL',
+			'42 - BRANCH SALES CONTROL ACCOUNT - RFAPL',
+			'43 - FREIGHT OUTWARD - RFAPL',
+			'Direct Income - RFAPL'
+		]
+		ytd_total = sum(get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date) for acc in sales_accounts)
+		pyd_total = sum(get_account_balance_ytd(company, acc, previous_fy, to_date=pyd_to_date) for acc in sales_accounts) if previous_fy else 0.0
 		
 		# Convert to millions
 		ytd_millions = convert_to_millions(ytd_total)
@@ -221,8 +312,9 @@ def get_dashboard_data(company, filters=None):
 		cogs_ytd_total = 0
 		cogs_pyd_total = 0
 		for acc in cogs_accounts:
-			cogs_ytd_total += get_account_balance_ytd(company, acc, current_fy)
-			cogs_pyd_total += get_account_balance_ytd(company, acc, previous_fy)
+			cogs_ytd_total += get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date)
+			if previous_fy:
+				cogs_pyd_total += get_account_balance_ytd(company, acc, previous_fy, to_date=pyd_to_date)
 		
 		cogs_ytd_millions = convert_to_millions(cogs_ytd_total)
 		cogs_pyd_millions = convert_to_millions(cogs_pyd_total)
@@ -247,8 +339,8 @@ def get_dashboard_data(company, filters=None):
 			'10007 - Sales - RFAPL',
 			'10005 - Product Management - RFAPL'
 		]
-		cos_ytd_total = get_cost_centers_balance_ytd(company, cos_cost_centers, current_fy)
-		cos_pyd_total = get_cost_centers_balance_ytd(company, cos_cost_centers, previous_fy)
+		cos_ytd_total = get_cost_centers_balance_ytd(company, cos_cost_centers, current_fy, to_date=ytd_to_date)
+		cos_pyd_total = get_cost_centers_balance_ytd(company, cos_cost_centers, previous_fy, to_date=pyd_to_date) if previous_fy else 0.0
 		
 		cos_ytd_millions = convert_to_millions(cos_ytd_total)
 		cos_pyd_millions = convert_to_millions(cos_pyd_total)
@@ -262,8 +354,8 @@ def get_dashboard_data(company, filters=None):
 			'100001 - Engineering Cost - RFAPL',
 			'10006 - Research and Development - R&D - RFAPL'
 		]
-		coe_ytd_total = get_cost_centers_balance_ytd(company, coe_cost_centers, current_fy)
-		coe_pyd_total = get_cost_centers_balance_ytd(company, coe_cost_centers, previous_fy)
+		coe_ytd_total = get_cost_centers_balance_ytd(company, coe_cost_centers, current_fy, to_date=ytd_to_date)
+		coe_pyd_total = get_cost_centers_balance_ytd(company, coe_cost_centers, previous_fy, to_date=pyd_to_date) if previous_fy else 0.0
 		
 		coe_ytd_millions = convert_to_millions(coe_ytd_total)
 		coe_pyd_millions = convert_to_millions(coe_pyd_total)
@@ -277,11 +369,11 @@ def get_dashboard_data(company, filters=None):
 			'Main - RFAPL',
 			'10009 - Administration Cost - RFAPL'
 		]
-		coga_ytd_total = get_cost_centers_balance_ytd(company, coga_cost_centers, current_fy)
-		coga_pyd_total = get_cost_centers_balance_ytd(company, coga_cost_centers, previous_fy)
+		coga_ytd_total = get_cost_centers_balance_ytd(company, coga_cost_centers, current_fy, to_date=ytd_to_date)
+		coga_pyd_total = get_cost_centers_balance_ytd(company, coga_cost_centers, previous_fy, to_date=pyd_to_date) if previous_fy else 0.0
 		
-		coga_ytd_millions = convert_to_millions(coga_ytd_total)
-		coga_pyd_millions = convert_to_millions(coga_pyd_total)
+		coga_ytd_millions = round(convert_to_millions(coga_ytd_total), 2)
+		coga_pyd_millions = round(convert_to_millions(coga_pyd_total), 2)
 		coga_var_val = (coga_ytd_millions - coga_pyd_millions) * 1000000
 		coga_var_pct = calculate_variance_percentage(coga_ytd_millions, coga_pyd_millions)
 		coga_ytd_pct = round((coga_ytd_millions / ytd_millions) * 100, 2) if ytd_millions else 0.0
@@ -303,20 +395,21 @@ def get_dashboard_data(company, filters=None):
 		om_ytd_pct = round((om_ytd_millions / ytd_millions) * 100, 2) if ytd_millions else 0.0
 		om_pyd_pct = round((om_pyd_millions / pyd_millions) * 100, 2) if pyd_millions else 0.0
 		
-		# Receivables - Outstanding Amount as of today vs same date last year
-		today = getdate()
-		pyd_date = add_days(today, -365)
-		
-		rec_ytd = get_outstanding_receivables(company, today)
-		rec_pyd = get_outstanding_receivables(company, pyd_date)
+		# Receivables - Outstanding Amount
+		rec_ytd = get_outstanding_receivables(company, ytd_to_date)
+		rec_pyd = get_outstanding_receivables(company, pyd_to_date) if pyd_to_date else 0.0
 		rec_ytd_millions = convert_to_millions(rec_ytd)
 		rec_pyd_millions = convert_to_millions(rec_pyd)
 		rec_var_val = (rec_ytd_millions - rec_pyd_millions) * 1000000
 		rec_var_pct = calculate_variance_percentage(rec_ytd_millions, rec_pyd_millions)
 		
-		# Payables - Outstanding Amount as of today vs same date last year
-		pay_ytd = get_outstanding_payables(company, today)
-		pay_pyd = get_outstanding_payables(company, pyd_date)
+		# Payables - Outstanding Amount
+		pay_ytd = get_outstanding_payables(company, ytd_to_date)
+		pay_pyd = get_outstanding_payables(company, pyd_to_date) if pyd_to_date else 0.0
+		# Purchase total from Direct Expenses account
+		purchase_accounts = ['32 - DIRECT EXPENSES - RFAPL']
+		purchase_ytd = sum(get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date) for acc in purchase_accounts)
+		purchase_pyd = sum(get_account_balance_ytd(company, acc, previous_fy, to_date=pyd_to_date) for acc in purchase_accounts) if previous_fy else 0.0
 		pay_ytd_millions = convert_to_millions(pay_ytd)
 		pay_pyd_millions = convert_to_millions(pay_pyd)
 		pay_var_val = (pay_ytd_millions - pay_pyd_millions) * 1000000
@@ -401,20 +494,27 @@ def get_dashboard_data(company, filters=None):
 				"variance": variance_pct
 			},
 			"gross_margin": {
-				"ytd": 1.29 * 1000000,
-				"pyd": 1.41 * 1000000,
-				"variance": -8.55
+				"ytd": agm_ytd_millions * 1000000,
+				"pyd": agm_pyd_millions * 1000000,
+				"variance": agm_var_pct
 			},
 			"operating_margin": {
-				"ytd": 0,
-				"pyd": 0,
-				"variance": 0
+				"ytd": om_ytd_millions * 1000000,
+				"pyd": om_pyd_millions * 1000000,
+				"variance": om_var_pct
 			},
 			"working_capital": {
-				"ytd": 0,
-				"pyd": 0,
-				"variance": 0
+				"ytd": wc_ytd_millions * 1000000,
+				"pyd": wc_pyd_millions * 1000000,
+				"variance": wc_var_pct
 			},
+			# "dso" card removed - not displayed
+            "wcts": {
+                "ytd": (ytd_millions / wc_ytd_millions) * 1000000 if wc_ytd_millions else 0,
+                "pyd": (pyd_millions / wc_pyd_millions) * 1000000 if wc_pyd_millions else 0,
+                "variance": 0
+            },
+
 			"overall_pnl": {
 				"ytd": 0,
 				"pyd": 0,
@@ -442,7 +542,7 @@ def get_dashboard_data(company, filters=None):
 					{"name": "SGM (Standard GM)", "ytd_val": sgm_ytd * 1000000, "ytd_pct": 30.00, "pyd_val": sgm_pyd * 1000000, "pyd_pct": 30.00, "var_val": sgm_var_val, "var_pct": sgm_var_pct},
 					{"name": "%", "ytd_val": 30.00, "ytd_pct": None, "pyd_val": 30.00, "pyd_pct": None, "var_val": None, "var_pct": None},
 					{"name": "COST OF GOODS (Add Freight)", "ytd_val": cogs_ytd_millions * 1000000, "ytd_pct": cogs_ytd_pct, "pyd_val": cogs_pyd_millions * 1000000, "pyd_pct": cogs_pyd_pct, "var_val": cogs_var_val, "var_pct": cogs_var_pct},
-					{"name": "%", "ytd_val": 70.00, "ytd_pct": None, "pyd_val": 70.00, "pyd_pct": None, "var_val": None, "var_pct": None},
+					{"name": "%", "ytd_val": (cogs_ytd_millions / ytd_millions) * 100 if ytd_millions else 0, "ytd_pct": None, "pyd_val": (cogs_pyd_millions / pyd_millions) * 100 if pyd_millions else 0, "pyd_pct": None, "var_val": None, "var_pct": None},
 					{"name": "AGM (Actual GM)", "ytd_val": agm_ytd_millions * 1000000, "ytd_pct": agm_ytd_pct, "pyd_val": agm_pyd_millions * 1000000, "pyd_pct": agm_pyd_pct, "var_val": agm_var_val, "var_pct": agm_var_pct},
 					{"name": "%", "ytd_val": agm_ytd_pct, "ytd_pct": None, "pyd_val": agm_pyd_pct, "pyd_pct": None, "var_val": round(agm_ytd_pct - agm_pyd_pct, 2), "var_pct": round(agm_ytd_pct - agm_pyd_pct, 2)}
 				]
@@ -461,11 +561,11 @@ def get_dashboard_data(company, filters=None):
 				"bucket": "4. WORKING CAPITAL",
 				"sources": [
 					{"name": "Receivables", "ytd_val": rec_ytd_millions * 1000000, "ytd_pct": None, "pyd_val": rec_pyd_millions * 1000000, "pyd_pct": None, "var_val": rec_var_val, "var_pct": rec_var_pct, "is_indented": True},
-					{"name": "DSO (Days Sales Outstanding)", "ytd_val": 0, "ytd_pct": None, "pyd_val": 0, "pyd_pct": None, "var_val": 0, "var_pct": 0, "is_indented": True},
+					{"name": "DSO (Days Sales Outstanding)", "ytd_val": ((rec_ytd_millions / ytd_millions) * number_of_days * 1000000) if ytd_millions else 0, "ytd_pct": None, "pyd_val": ((rec_pyd_millions / pyd_millions) * number_of_days * 1000000) if pyd_millions else 0, "pyd_pct": None, "var_val": (((rec_ytd_millions / ytd_millions * number_of_days) - (rec_pyd_millions / pyd_millions * number_of_days)) * 1000000) if ytd_millions and pyd_millions else 0, "var_pct": 0, "is_indented": True},
 					{"name": "Payables", "ytd_val": pay_ytd_millions * 1000000, "ytd_pct": None, "pyd_val": pay_pyd_millions * 1000000, "pyd_pct": None, "var_val": pay_var_val, "var_pct": pay_var_pct, "is_indented": True},
-					{"name": "DPO (Days Payables Outstanding)", "ytd_val": 0, "ytd_pct": None, "pyd_val": 0, "pyd_pct": None, "var_val": 0, "var_pct": 0, "is_indented": True},
+					{"name": "DPO (Days Payables Outstanding)", "ytd_val": ((pay_ytd_millions / cogs_ytd_millions) * number_of_days * 1000000) if cogs_ytd_millions else 0, "ytd_pct": None, "pyd_val": ((pay_pyd_millions / cogs_pyd_millions) * number_of_days * 1000000) if cogs_pyd_millions else 0, "pyd_pct": None, "var_val": (((pay_ytd_millions / cogs_ytd_millions * number_of_days) - (pay_pyd_millions / cogs_pyd_millions * number_of_days)) * 1000000) if cogs_ytd_millions and cogs_pyd_millions else 0, "var_pct": 0, "is_indented": True},
 					{"name": "Working Capital", "ytd_val": wc_ytd_millions * 1000000, "ytd_pct": None, "pyd_val": wc_pyd_millions * 1000000, "pyd_pct": None, "var_val": wc_var_val, "var_pct": wc_var_pct, "is_indented": True},
-					{"name": "WCTs (Working Capital Turns)", "ytd_val": 0, "ytd_pct": None, "pyd_val": 0, "pyd_pct": None, "var_val": 0, "var_pct": 0, "is_indented": True}
+					{"name": "WCTs (Working Capital Turns)", "ytd_val": ((ytd_millions / wc_ytd_millions) * 1000000) if wc_ytd_millions else 0, "ytd_pct": None, "pyd_val": ((pyd_millions / wc_pyd_millions) * 1000000) if wc_pyd_millions else 0, "pyd_pct": None, "var_val": (((ytd_millions / wc_ytd_millions) - (pyd_millions / wc_pyd_millions)) * 1000000) if wc_ytd_millions and wc_pyd_millions else 0, "var_pct": 0, "is_indented": True}
 				]
 			},
 		],
