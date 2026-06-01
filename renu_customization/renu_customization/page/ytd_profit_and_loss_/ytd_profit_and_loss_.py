@@ -126,7 +126,7 @@ def get_cost_centers_balance_ytd(company, cost_centers, fiscal_year, to_date=Non
 			AND posting_date >= %s
 			AND posting_date <= %s
 			AND docstatus = 1
-			AND account IN (SELECT name FROM `tabAccount` WHERE root_type IN ('Expense', 'Income'))
+			AND account IN (SELECT name FROM `tabAccount` WHERE root_type = 'Expense')
 	""", tuple([company] + cost_centers + [fy_start, to_date]), as_dict=True)
 	
 	if gl_entries and len(gl_entries) > 0:
@@ -497,8 +497,8 @@ def get_dashboard_data(company, filters=None):
 			},
 			# "dso" card removed - not displayed
             "wcts": {
-                "ytd": ytd_millions / wc_ytd_millions if wc_ytd_millions else 0,
-                "pyd": pyd_millions / wc_pyd_millions if wc_pyd_millions else 0,
+                "ytd": (ytd_millions / wc_ytd_millions) * 1000000 if wc_ytd_millions else 0,
+                "pyd": (pyd_millions / wc_pyd_millions) * 1000000 if wc_pyd_millions else 0,
                 "variance": 0
             },
 
