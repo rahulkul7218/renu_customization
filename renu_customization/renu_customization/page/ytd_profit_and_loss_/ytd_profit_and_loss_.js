@@ -189,6 +189,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			{ key: 'gross_margin', title: '2. GROSS MARGIN', icon: 'fa-pie-chart', theme: 'card-theme-green' },
 			{ key: 'operating_margin', title: '3. OPERATING MARGIN', icon: 'fa-briefcase', theme: 'card-theme-purple' },
 			{ key: 'working_capital', title: '4. WORKING CAPITAL', icon: 'fa-university', theme: 'card-theme-orange' },
+			{ key: 'wcts', title: '5. WORKING CAPITAL TURNS (WCTs)', icon: 'fa-repeat', theme: 'card-theme-teal' },
 			// { key: 'dso', title: '5. DAYS SALES OUTSTANDING', icon: 'fa-clock', theme: 'card-theme-red' },
 			// { key: 'dpo', title: '6. DAYS PAYABLES OUTSTANDING', icon: 'fa-clock', theme: 'card-theme-yellow' },
 			// Hidden for now - uncomment to re-enable
