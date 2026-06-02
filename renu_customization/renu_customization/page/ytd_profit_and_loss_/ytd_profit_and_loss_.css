@@ -116,25 +116,25 @@
     overflow: hidden;
     position: relative;
     border: 1px solid #e2e8f0;
-    min-height: 160px;
+    min-height: 130px;
     display: flex;
     flex-direction: column;
 }
 
 .card-header {
-    padding: 12px 16px;
+    padding: 8px 16px;
     display: flex;
     align-items: center;
     color: white;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
     letter-spacing: 0.5px;
     flex-shrink: 0;
 }
 
 .card-icon {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     background: white;
     border-radius: 50%;
     display: flex;
@@ -142,7 +142,7 @@
     justify-content: center;
     margin-right: 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    font-size: 20px;
+    font-size: 16px;
     position: relative;
     border: 2px solid;
     flex-shrink: 0;
@@ -169,7 +169,7 @@
 .card-theme-dark .card-icon { color: #1e3a8a; border-color: #1e3a8a; }
 
 .card-body {
-    padding: 15px 12px;
+    padding: 10px 12px;
     flex: 1;
     display: flex;
     align-items: center;
@@ -193,7 +193,7 @@
 }
 
 .metric-main {
-    font-size: clamp(18px, 2.5vw, 26px);
+    font-size: clamp(14px, 1.8vw, 18px);
     font-weight: 800;
     color: #0f172a;
     white-space: nowrap;
@@ -208,7 +208,7 @@
 }
 
 .metric-label {
-    font-size: 10px;
+    font-size: 9px;
     color: #64748b;
     font-weight: 700;
     margin-bottom: 2px;
@@ -217,7 +217,7 @@
 }
 
 .metric-value {
-    font-size: clamp(12px, 1.8vw, 18px);
+    font-size: clamp(11px, 1.6vw, 15px);
     font-weight: 700;
     color: #334155;
     white-space: nowrap;
