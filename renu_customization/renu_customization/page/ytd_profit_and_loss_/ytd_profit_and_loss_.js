@@ -312,10 +312,15 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${varVal}</td>`);
 				}
 
-				// Trend column
-				if (sIndex === 0) {
-					tr.append(`<td rowspan="${rowCount}" class="text-center"><div class="trend-bar-container"><div class="trend-bar-pos" style="width: 50%"></div></div></td>`);
+				// Trend column - Dynamic based on YTD vs PYD variance
+				let trendHtml = '-';
+				if (source.var_pct !== null && source.var_pct !== undefined) {
+					const vPct = parseFloat(source.var_pct);
+					const trendClass = vPct >= 0 ? 'trend-bar-pos' : 'trend-bar-neg';
+					const trendWidth = Math.min(Math.abs(vPct), 100);
+					trendHtml = `<div class="trend-bar-container"><div class="${trendClass}" style="width: ${trendWidth}%"></div></div>`;
 				}
+				tr.append(`<td class="text-center">${trendHtml}</td>`);
 
 				tbody.append(tr);
 			});
@@ -474,6 +479,17 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				}
 				const varPct = src.var_pct ? formatPct(src.var_pct) : '-';
 
+				// Trend bar for PDF
+				let trendHtmlPdf = '-';
+				if (src.var_pct !== null && src.var_pct !== undefined) {
+					const vPct = parseFloat(src.var_pct);
+					const color = vPct >= 0 ? '#16a34a' : '#dc2626';
+					const width = Math.min(Math.abs(vPct), 100);
+					trendHtmlPdf = `<div style="width: 60px; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 0 auto;">
+						<div style="width: ${width}%; height: 100%; background: ${color};"></div>
+					</div>`;
+				}
+
 				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: bold; background: #f1f5f9;">${group.bucket}</td>` : '';
 
 				return `<tr>
@@ -485,6 +501,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				<td style="text-align: right;">${pydPct}</td>
 				<td style="text-align: right;">${varVal}</td>
 				<td style="text-align: right;">${varPct}</td>
+				<td style="text-align: center;">${trendHtmlPdf}</td>
 			</tr>`;
 			}).join('');
 		}).join('');
@@ -522,7 +539,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				.kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
 				.kpi-value { font-size: 18px; font-weight: 800; }
 				table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; }
-				th, td { padding: 8px; border: 2px solid #334155; text-align: left; }
+				th, td { padding: 8px; border: 1px solid #cbd5e1; text-align: left; }
 				th { background: #1e3a8a; color: white; font-weight: 700; text-transform: uppercase; }
 				h4 { margin: 0; font-size: 12px; font-weight: 700; }
 			</style>
@@ -548,6 +565,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 						<th>PYD %</th>
 						<th>Δ Value</th>
 						<th>Δ %</th>
+						<th>Trend</th>
 					</tr>
 				</thead>
 				<tbody>
