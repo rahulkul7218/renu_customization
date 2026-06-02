@@ -309,7 +309,13 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 					// For regular rows, display formatted numbers
 					tr.append(`<td class="text-center">${ytdVal}</td>`);
 					tr.append(`<td class="text-center">${pydVal}</td>`);
-					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${varVal}</td>`);
+					
+					// For Sales row, display variance percentage instead of absolute value
+					let displayVar = varVal;
+					if (source.name === 'Sales' && source.var_pct !== null) {
+						displayVar = source.var_pct.toFixed(2) + '%';
+					}
+					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${displayVar}</td>`);
 				}
 
 				// Trend column - Dynamic based on YTD vs PYD variance
@@ -474,8 +480,12 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 
 				let varVal = '-';
 				if (src.var_val !== null) {
-					const varMilPdf = parseFloat(src.var_val) / 1000000;
-					varVal = varMilPdf > 0 ? varMilPdf.toFixed(2) : varMilPdf === 0 ? '0.00' : '(' + Math.abs(varMilPdf).toFixed(2) + ')';
+					if (src.name === 'Sales' && src.var_pct !== null) {
+						varVal = src.var_pct.toFixed(2) + '%';
+					} else {
+						const varMilPdf = parseFloat(src.var_val) / 1000000;
+						varVal = varMilPdf > 0 ? varMilPdf.toFixed(2) : varMilPdf === 0 ? '0.00' : '(' + Math.abs(varMilPdf).toFixed(2) + ')';
+					}
 				}
 				const varPct = src.var_pct ? formatPct(src.var_pct) : '-';
 
