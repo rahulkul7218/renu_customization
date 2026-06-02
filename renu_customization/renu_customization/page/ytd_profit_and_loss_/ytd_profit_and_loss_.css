@@ -193,7 +193,7 @@
 }
 
 .metric-main {
-    font-size: clamp(20px, 3vw, 32px);
+    font-size: clamp(18px, 2.5vw, 26px);
     font-weight: 800;
     color: #0f172a;
     white-space: nowrap;
