@@ -116,6 +116,9 @@
     overflow: hidden;
     position: relative;
     border: 1px solid #e2e8f0;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
 }
 
 .card-header {
@@ -126,11 +129,12 @@
     font-weight: 700;
     font-size: 14px;
     letter-spacing: 0.5px;
+    flex-shrink: 0;
 }
 
 .card-icon {
-    width: 48px;
-    height: 48px;
+    width: 40px;
+    height: 40px;
     background: white;
     border-radius: 50%;
     display: flex;
@@ -138,14 +142,15 @@
     justify-content: center;
     margin-right: 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    font-size: 24px;
+    font-size: 20px;
     position: relative;
-    border: 3px solid;
+    border: 2px solid;
     flex-shrink: 0;
 }
 
 .card-title {
     margin-left: 0;
+    line-height: 1.2;
 }
 
 .card-theme-blue .card-header { background: linear-gradient(90deg, #1d4ed8, #2563eb); }
@@ -164,31 +169,36 @@
 .card-theme-dark .card-icon { color: #1e3a8a; border-color: #1e3a8a; }
 
 .card-body {
-    padding: 20px 16px 15px;
+    padding: 15px 12px;
+    flex: 1;
+    display: flex;
+    align-items: center;
 }
 
 .card-metrics {
     display: flex;
     justify-content: space-between;
-    align-items: flex-end;
-    flex-wrap: wrap;
-    gap: 10px;
+    align-items: baseline;
+    flex-wrap: nowrap;
+    gap: 5px;
+    width: 100%;
 }
 
 .metric-group {
     flex: 1;
-    min-width: 100px;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
+    justify-content: center;
+    min-width: 0;
 }
 
 .metric-main {
-    font-size: clamp(24px, 3.5vw, 36px);
+    font-size: clamp(20px, 3vw, 32px);
     font-weight: 800;
     color: #0f172a;
-    word-break: break-all;
+    word-break: break-word;
     line-height: 1.1;
+    margin-bottom: 5px;
 }
 
 .metric-sub {
@@ -196,17 +206,18 @@
 }
 
 .metric-label {
-    font-size: 12px;
+    font-size: 10px;
     color: #64748b;
     font-weight: 700;
     margin-bottom: 2px;
+    text-transform: uppercase;
 }
 
 .metric-value {
-    font-size: clamp(14px, 2vw, 20px);
+    font-size: clamp(12px, 1.8vw, 18px);
     font-weight: 700;
     color: #334155;
-    word-break: break-all;
+    word-break: break-word;
 }
 
 .metric-var.negative { color: #dc2626; }
@@ -230,7 +241,7 @@
 .detailed-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 13px;
     border: 1px solid #cbd5e1;
 }
 
@@ -238,7 +249,7 @@
     background-color: #1e3a8a;
     color: white;
     text-align: center;
-    padding: 12px 8px;
+    padding: 8px 6px;
     font-weight: 600;
     border: 1px solid #cbd5e1;
     text-transform: uppercase;
@@ -249,7 +260,7 @@
 }
 
 .detailed-table td {
-    padding: 10px 12px;
+    padding: 6px 10px;
     border: 1px solid #cbd5e1;
     color: #334155;
     font-weight: 500;
@@ -259,8 +270,8 @@
     background-color: #f8fafc;
 }
 
-.col-bucket { width: 12%; text-align: left !important; font-weight: 700; }
-.col-source { width: 20%; text-align: left !important; font-weight: 700; }
+.col-bucket { width: 18%; text-align: left !important; font-weight: 700; white-space: nowrap; }
+.col-source { width: 22%; text-align: left !important; font-weight: 700; }
 .col-ytd-header, .col-pyd-header, .col-var-header { width: 12%; }
 .col-trend { width: 14%; }
 
