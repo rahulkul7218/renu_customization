@@ -8,6 +8,15 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 	// Hide default header to use our custom dashboard header
 	page.wrapper.find('.page-head .title').hide();
 
+	// Initialize auto-refresh functionality
+	frappe.require('/assets/renu_customization/js/dashboard_auto_refresh.js', () => {
+		page.auto_refresh = new DashboardAutoRefresh(page, {
+			storage_key: 'ytd_profit_and_loss_dashboard',
+			default_interval: 300
+		});
+		page.auto_refresh.init();
+	});
+
 	// Load our HTML template
 	page.main.html(frappe.render_template('ytd_profit_and_loss_'));
 
@@ -303,8 +312,22 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			return;
 		}
 
+		// Destroy existing chart instances to prevent overlap
+		if (page._charts) {
+			page._charts.forEach(c => {
+				try { c.destroy(); } catch (e) { /* ignore */ }
+			});
+		}
+		page._charts = [];
+
+		// Clear chart containers
+		['#chart-revenue-trend', '#chart-gross-margin', '#chart-working-capital'].forEach(sel => {
+			const el = document.querySelector(sel);
+			if (el) el.innerHTML = '';
+		});
+
 		// Revenue Trend Chart
-		new ApexCharts(document.querySelector("#chart-revenue-trend"), {
+		const revenueChart = new ApexCharts(document.querySelector("#chart-revenue-trend"), {
 			series: [
 				{ name: 'YTD', data: chartsData.revenue_trend.ytd.map(v => v / 1000000) },
 				{ name: 'PYD', data: chartsData.revenue_trend.pyd.map(v => v / 1000000) }
@@ -317,10 +340,12 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			fill: { opacity: 1 },
 			colors: ['#1d4ed8', '#94a3b8'],
 			legend: { position: 'top', horizontalAlign: 'right' }
-		}).render();
+		});
+		revenueChart.render();
+		page._charts.push(revenueChart);
 
 		// Gross Margin Trend Chart
-		new ApexCharts(document.querySelector("#chart-gross-margin"), {
+		const gmChart = new ApexCharts(document.querySelector("#chart-gross-margin"), {
 			series: [{ name: 'YTD GM %', data: chartsData.gross_margin_trend.ytd_gm }, { name: 'PYD GM %', data: chartsData.gross_margin_trend.pyd_gm }],
 			chart: { type: 'line', height: 180, toolbar: { show: false } },
 			stroke: { width: [3, 3], curve: 'straight' },
@@ -328,20 +353,24 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			colors: ['#10b981', '#64748b'],
 			markers: { size: 4 },
 			legend: { position: 'top', horizontalAlign: 'left' }
-		}).render();
+		});
+		gmChart.render();
+		page._charts.push(gmChart);
 
 		// Hidden for now - uncomment to re-enable
 		// Waterfall Chart
-		// new ApexCharts(document.querySelector("#chart-waterfall"), {
+		// const waterfallChart = new ApexCharts(document.querySelector("#chart-waterfall"), {
 		// 	series: [{ name: 'Waterfall', data: chartsData.waterfall.values.map((v, i) => ({ x: chartsData.waterfall.labels[i], y: v / 1000000 })) }],
 		// 	chart: { type: 'bar', height: 180, toolbar: { show: false } },
 		// 	plotOptions: { bar: { colors: { ranges: [{ from: -1000, to: -0.01, color: '#dc2626' }, { from: 0.01, to: 1000, color: '#1d4ed8' }] } } },
 		// 	dataLabels: { enabled: true, formatter: function (val) { return parseFloat(val).toFixed(2); }, offsetY: -20, style: { fontSize: '10px', colors: ["#304758"] } },
 		// 	xaxis: { type: 'category' },
-		// }).render();
+		// });
+		// waterfallChart.render();
+		// page._charts.push(waterfallChart);
 
 		// Working Capital Chart
-		new ApexCharts(document.querySelector("#chart-working-capital"), {
+		const wcChart = new ApexCharts(document.querySelector("#chart-working-capital"), {
 			series: [
 				{ name: 'YTD', data: chartsData.working_capital.ytd.map(v => v / 1000000) },
 				{ name: 'PYD', data: chartsData.working_capital.pyd.map(v => v / 1000000) }
@@ -352,7 +381,9 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			xaxis: { categories: chartsData.working_capital.labels },
 			colors: ['#f97316', '#94a3b8'],
 			legend: { position: 'top', horizontalAlign: 'right' }
-		}).render();
+		});
+		wcChart.render();
+		page._charts.push(wcChart);
 	};
 
 	// Export to PDF Function
