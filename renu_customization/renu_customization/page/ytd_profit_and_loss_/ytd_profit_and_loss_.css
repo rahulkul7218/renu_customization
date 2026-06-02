@@ -314,6 +314,9 @@
     grid-template-columns: repeat(3, 1fr);
     gap: 15px;
     margin-bottom: 20px;
+    position: relative;
+    z-index: 1;
+    overflow: visible;
 }
 
 .chart-card {
@@ -322,6 +325,8 @@
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     padding: 15px;
     border: 1px solid #e2e8f0;
+    overflow: hidden;
+    position: relative;
 }
 
 .chart-header h3 {
@@ -341,6 +346,8 @@
 .chart-container {
     height: 180px;
     width: 100%;
+    overflow: hidden;
+    position: relative;
 }
 
 /* Footer Section */
@@ -349,6 +356,10 @@
     justify-content: space-between;
     align-items: flex-start;
     gap: 20px;
+    position: relative;
+    z-index: 2;
+    clear: both;
+    margin-top: 10px;
 }
 
 .key-insights {
