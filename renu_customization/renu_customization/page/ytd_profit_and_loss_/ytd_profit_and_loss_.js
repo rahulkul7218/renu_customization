@@ -304,19 +304,27 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 					// For percentage rows, display the percentage values
 					tr.append(`<td class="text-center">${Number(source.ytd_val).toFixed(2)}%</td>`);
 					tr.append(`<td class="text-center">${Number(source.pyd_val).toFixed(2)}%</td>`);
-					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${source.var_val !== null ? Number(source.var_val).toFixed(2) + '%' : '-'}</td>`);
 				} else {
 					// For regular rows, display formatted numbers
 					tr.append(`<td class="text-center">${ytdVal}</td>`);
 					tr.append(`<td class="text-center">${pydVal}</td>`);
-					
-					// For Sales row, display variance percentage instead of absolute value
-					let displayVar = varVal;
-					if (source.name === 'Sales' && source.var_pct !== null) {
-						displayVar = source.var_pct.toFixed(2) + '%';
-					}
-					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${displayVar}</td>`);
 				}
+
+				// Calculate variance percentage for all rows: (YTD-PYD)/PYD*100
+				let displayVar = '-';
+				const yVal = parseFloat(source.ytd_val) || 0;
+				const pVal = parseFloat(source.pyd_val) || 0;
+				
+				if (pVal !== 0) {
+					const vPct = ((yVal - pVal) / Math.abs(pVal)) * 100;
+					displayVar = vPct.toFixed(2) + '%';
+				} else if (yVal !== 0) {
+					displayVar = '100.00%';
+				} else {
+					displayVar = '0.00%';
+				}
+				
+				tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${displayVar}</td>`);
 
 				// Trend column - Dynamic based on YTD vs PYD variance
 				let trendHtml = '-';
@@ -478,15 +486,20 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				const pydVal = formatNumber(src.pyd_val);
 				const pydPct = src.pyd_pct ? formatPct(src.pyd_pct) : '-';
 
+				// Calculate variance percentage for all rows: (YTD-PYD)/PYD*100
 				let varVal = '-';
-				if (src.var_val !== null) {
-					if (src.name === 'Sales' && src.var_pct !== null) {
-						varVal = src.var_pct.toFixed(2) + '%';
-					} else {
-						const varMilPdf = parseFloat(src.var_val) / 1000000;
-						varVal = varMilPdf > 0 ? varMilPdf.toFixed(2) : varMilPdf === 0 ? '0.00' : '(' + Math.abs(varMilPdf).toFixed(2) + ')';
-					}
+				const yValPdf = parseFloat(src.ytd_val) || 0;
+				const pValPdf = parseFloat(src.pyd_val) || 0;
+				
+				if (pValPdf !== 0) {
+					const vPctPdf = ((yValPdf - pValPdf) / Math.abs(pValPdf)) * 100;
+					varVal = vPctPdf.toFixed(2) + '%';
+				} else if (yValPdf !== 0) {
+					varVal = '100.00%';
+				} else {
+					varVal = '0.00%';
 				}
+				
 				const varPct = src.var_pct ? formatPct(src.var_pct) : '-';
 
 				// Trend bar for PDF
