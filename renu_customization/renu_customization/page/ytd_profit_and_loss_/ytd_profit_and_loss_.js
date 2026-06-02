@@ -240,6 +240,18 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		});
 	};
 
+	const renderInsights = (insights) => {
+		const container = $('#key-insights-list');
+		container.empty();
+		if (insights && insights.length > 0) {
+			insights.forEach(insight => {
+				container.append(`<li>${insight}</li>`);
+			});
+		} else {
+			container.append(`<li>No insights available.</li>`);
+		}
+	};
+
 	const renderTable = (tableData) => {
 		const tbody = $('#detailed-table-body');
 		tbody.empty();
@@ -270,9 +282,13 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				const pydVal = formatNumber(source.pyd_val);
 				const pydPct = formatPct(source.pyd_pct);
 
-				let varVal = source.var_val !== null ? `(${Math.abs(source.var_val).toFixed(2)})` : '-';
-				if (source.var_val > 0) varVal = source.var_val.toFixed(2);
-				if (source.var_val === 0) varVal = '0.00';
+				let varVal = '-';
+				if (source.var_val !== null && source.var_val !== undefined) {
+					const varMil = parseFloat(source.var_val) / 1000000;
+					if (varMil > 0) varVal = varMil.toFixed(2);
+					else if (varMil === 0) varVal = '0.00';
+					else varVal = '(' + Math.abs(varMil).toFixed(2) + ')';
+				}
 
 				const varPct = formatPct(source.var_pct);
 
@@ -453,7 +469,8 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 
 				let varVal = '-';
 				if (src.var_val !== null) {
-					varVal = src.var_val > 0 ? src.var_val.toFixed(2) : src.var_val === 0 ? '0.00' : `(${Math.abs(src.var_val).toFixed(2)})`;
+					const varMilPdf = parseFloat(src.var_val) / 1000000;
+					varVal = varMilPdf > 0 ? varMilPdf.toFixed(2) : varMilPdf === 0 ? '0.00' : '(' + Math.abs(varMilPdf).toFixed(2) + ')';
 				}
 				const varPct = src.var_pct ? formatPct(src.var_pct) : '-';
 
@@ -574,6 +591,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 
 					renderCards(r.message.summary_cards);
 					renderTable(r.message.table_data);
+					renderInsights(r.message.insights);
 
 					// Load apex charts script if not loaded
 					if (typeof ApexCharts === 'undefined') {
