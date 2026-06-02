@@ -263,11 +263,8 @@ def get_dashboard_data(company, filters=None):
 		prev_fy_end = None
 		if previous_fy:
 			prev_fy_start, prev_fy_end = get_fiscal_year_dates(company, previous_fy)
-			if current_fy_start <= today <= current_fy_end:
-				days_elapsed = (today - current_fy_start).days
-				pyd_to_date = min(getdate(prev_fy_start) + timedelta(days=days_elapsed), prev_fy_end)
-			else:
-				pyd_to_date = prev_fy_end
+			# For PYD, use the FULL previous fiscal year for all metrics
+			pyd_to_date = prev_fy_end
 		
 		# Determine number of days for DSO/DPO calculations
 		number_of_days = 365
@@ -398,8 +395,7 @@ def get_dashboard_data(company, filters=None):
 		
 		# Receivables - Outstanding Amount
 		rec_ytd = get_outstanding_receivables(company, ytd_to_date)
-		# For PYD, use the previous fiscal year end date to get outstanding as of end of previous FY
-		rec_pyd = get_outstanding_receivables(company, prev_fy_end) if prev_fy_end else 0.0
+		rec_pyd = get_outstanding_receivables(company, pyd_to_date) if pyd_to_date else 0.0
 		rec_ytd_millions = convert_to_millions(rec_ytd)
 		rec_pyd_millions = convert_to_millions(rec_pyd)
 		rec_var_val = (rec_ytd_millions - rec_pyd_millions) * 1000000
@@ -407,8 +403,7 @@ def get_dashboard_data(company, filters=None):
 		
 		# Payables - Outstanding Amount
 		pay_ytd = get_outstanding_payables(company, ytd_to_date)
-		# For PYD, use the previous fiscal year end date to get outstanding as of end of previous FY
-		pay_pyd = get_outstanding_payables(company, prev_fy_end) if prev_fy_end else 0.0
+		pay_pyd = get_outstanding_payables(company, pyd_to_date) if pyd_to_date else 0.0
 		# Purchase total from Direct Expenses account
 		purchase_accounts = ['32 - DIRECT EXPENSES - RFAPL']
 		purchase_ytd = sum(get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date) for acc in purchase_accounts)
