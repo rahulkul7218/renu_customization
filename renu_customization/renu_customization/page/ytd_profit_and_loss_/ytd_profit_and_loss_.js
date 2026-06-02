@@ -257,11 +257,19 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		tbody.empty();
 
 		const icons = {
-			'1. SALES GROWTH': 'fa-bar-chart text-blue-800',
-			'2. GROSS MARGIN': 'fa-pie-chart text-green-800',
-			'3. OPERATING MARGIN': 'fa-briefcase text-purple-800',
-			'4. WORKING CAPITAL': 'fa-university text-orange-800',
-			'OVERALL P&L': 'fa-line-chart text-blue-800'
+			'1. SALES GROWTH': 'fa-bar-chart',
+			'2. GROSS MARGIN': 'fa-pie-chart',
+			'3. OPERATING MARGIN': 'fa-briefcase',
+			'4. WORKING CAPITAL': 'fa-university',
+			'OVERALL P&L': 'fa-line-chart'
+		};
+
+		const bucket_colors = {
+			'1. SALES GROWTH': '#1d4ed8',
+			'2. GROSS MARGIN': '#047857',
+			'3. OPERATING MARGIN': '#6d28d9',
+			'4. WORKING CAPITAL': '#c2410c',
+			'OVERALL P&L': '#1e3a8a'
 		};
 
 		tableData.forEach((group, index) => {
@@ -272,7 +280,8 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				const tr = $('<tr></tr>');
 
 				if (sIndex === 0) {
-					tr.append(`<td rowspan="${rowCount}" class="row-bucket">
+					const color = bucket_colors[group.bucket] || '#1e3a8a';
+					tr.append(`<td rowspan="${rowCount}" class="row-bucket" style="color: ${color} !important; font-weight: 800 !important;">
 						<i class="fa ${icons[group.bucket]} bucket-icon"></i> ${group.bucket}
 					</td>`);
 				}
@@ -478,6 +487,14 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		}).join('');
 
 		// Build table rows
+		const bucket_colors_pdf = {
+			'1. SALES GROWTH': '#1d4ed8',
+			'2. GROSS MARGIN': '#047857',
+			'3. OPERATING MARGIN': '#6d28d9',
+			'4. WORKING CAPITAL': '#c2410c',
+			'OVERALL P&L': '#1e3a8a'
+		};
+
 		const table_rows = data.table_data.map(group => {
 			const rowCount = group.sources.length;
 			return group.sources.map((src, i) => {
@@ -513,7 +530,8 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 					</div>`;
 				}
 
-				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: bold; background: #f1f5f9;">${group.bucket}</td>` : '';
+				const bucket_color = bucket_colors_pdf[group.bucket] || '#1e3a8a';
+				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: 800; color: ${bucket_color}; background: #f1f5f9;">${group.bucket}</td>` : '';
 
 				return `<tr>
 				${bucket_cell}
