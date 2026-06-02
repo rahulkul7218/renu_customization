@@ -383,6 +383,20 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			dataLabels: { enabled: false },
 			stroke: { show: true, width: 2, colors: ['transparent'] },
 			xaxis: { categories: chartsData.revenue_trend.labels },
+			yaxis: {
+				labels: {
+					formatter: function (val) {
+						return val.toFixed(2);
+					}
+				}
+			},
+			tooltip: {
+				y: {
+					formatter: function (val) {
+						return val.toFixed(2);
+					}
+				}
+			},
 			fill: { opacity: 1 },
 			colors: ['#1d4ed8', '#94a3b8'],
 			legend: { position: 'top', horizontalAlign: 'right' }
@@ -396,6 +410,20 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			chart: { type: 'line', height: 180, toolbar: { show: false } },
 			stroke: { width: [3, 3], curve: 'straight' },
 			xaxis: { categories: chartsData.gross_margin_trend.labels },
+			yaxis: {
+				labels: {
+					formatter: function (val) {
+						return val.toFixed(2) + '%';
+					}
+				}
+			},
+			tooltip: {
+				y: {
+					formatter: function (val) {
+						return val.toFixed(2) + '%';
+					}
+				}
+			},
 			colors: ['#10b981', '#64748b'],
 			markers: { size: 4 },
 			legend: { position: 'top', horizontalAlign: 'left' }
@@ -425,6 +453,20 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			plotOptions: { bar: { horizontal: false, columnWidth: '50%' } },
 			dataLabels: { enabled: false },
 			xaxis: { categories: chartsData.working_capital.labels },
+			yaxis: {
+				labels: {
+					formatter: function (val) {
+						return val.toFixed(2);
+					}
+				}
+			},
+			tooltip: {
+				y: {
+					formatter: function (val) {
+						return val.toFixed(2);
+					}
+				}
+			},
 			colors: ['#f97316', '#94a3b8'],
 			legend: { position: 'top', horizontalAlign: 'right' }
 		});
