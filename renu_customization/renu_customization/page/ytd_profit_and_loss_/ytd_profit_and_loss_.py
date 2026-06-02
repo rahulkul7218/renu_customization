@@ -134,6 +134,67 @@ def get_cost_centers_balance_ytd(company, cost_centers, fiscal_year, to_date=Non
 	
 	return 0
 
+def get_monthly_balances(company, accounts, fiscal_year):
+	"""
+	Returns a list of 12 values, one for each month of the fiscal year.
+	And a list of 12 labels (month abbreviations).
+	"""
+	fy_start, fy_end = get_fiscal_year_dates(company, fiscal_year)
+	fy_start = getdate(fy_start)
+	
+	import calendar
+	months = []
+	current_date = fy_start
+	for i in range(12):
+		month_days = calendar.monthrange(current_date.year, current_date.month)[1]
+		month_start = current_date.replace(day=1)
+		month_end = current_date.replace(day=month_days)
+		months.append((month_start, month_end, month_start.strftime("%b")))
+		
+		# Move to next month
+		if current_date.month == 12:
+			current_date = current_date.replace(year=current_date.year + 1, month=1)
+		else:
+			current_date = current_date.replace(month=current_date.month + 1)
+
+	# Find all child accounts for the given parent accounts
+	account_names = []
+	for account in accounts:
+		acc_details = frappe.db.get_value("Account", account, ["lft", "rgt"])
+		if not acc_details:
+			continue
+		lft, rgt = acc_details
+		children = frappe.db.get_all("Account", filters={"lft": (">=", lft), "rgt": ("<=", rgt)}, pluck="name")
+		account_names.extend(children)
+		
+	if not account_names:
+		return [0.0] * 12, [m[2] for m in months]
+
+	# Build a single query to get the balance grouped by month
+	balances = []
+	labels = []
+	for month_start, month_end, label in months:
+		gl_entries = frappe.db.sql("""
+			SELECT 
+				SUM(CASE WHEN a.root_type = 'Income' THEN (credit - debit) ELSE (debit - credit) END) as balance
+			FROM `tabGL Entry` gle
+			JOIN `tabAccount` a ON gle.account = a.name
+			WHERE 
+				gle.company = %s
+				AND gle.account IN %s
+				AND gle.posting_date >= %s
+				AND gle.posting_date <= %s
+				AND gle.docstatus = 1
+		""", (company, tuple(account_names), month_start, month_end), as_dict=True)
+		
+		bal = 0.0
+		if gl_entries and gl_entries[0]['balance'] is not None:
+			bal = float(gl_entries[0]['balance'])
+		balances.append(bal)
+		labels.append(label)
+		
+	return balances, labels
+
 def get_pnl_account_balance(company, account_name, fiscal_year, to_date=None):
 	"""Get balance for a specific account name from Profit and Loss statement"""
 	try:
@@ -418,7 +479,59 @@ def get_dashboard_data(company, filters=None):
 		wc_pyd_millions = rec_pyd_millions - pay_pyd_millions
 		wc_var_val = (wc_ytd_millions - wc_pyd_millions) * 1000000
 		wc_var_pct = calculate_variance_percentage(wc_ytd_millions, wc_pyd_millions)
+		# Calculate monthly trends for Revenue & GM
+		sales_ytd_monthly, month_labels = get_monthly_balances(company, sales_accounts, current_fy)
+		cogs_ytd_monthly, _ = get_monthly_balances(company, cogs_accounts, current_fy)
 		
+		# Previous FY Monthly Values
+		if previous_fy:
+			sales_pyd_monthly, _ = get_monthly_balances(company, sales_accounts, previous_fy)
+			cogs_pyd_monthly, _ = get_monthly_balances(company, cogs_accounts, previous_fy)
+		else:
+			sales_pyd_monthly = [0.0] * 12
+			cogs_pyd_monthly = [0.0] * 12
+			
+		# Compute Gross Margin % trends
+		ytd_gm_trend = []
+		pyd_gm_trend = []
+		for s_ytd, c_ytd in zip(sales_ytd_monthly, cogs_ytd_monthly):
+			gm_pct = ((s_ytd - c_ytd) / s_ytd * 100) if s_ytd else 0.0
+			ytd_gm_trend.append(round(gm_pct, 2))
+			
+		for s_pyd, c_pyd in zip(sales_pyd_monthly, cogs_pyd_monthly):
+			gm_pct = ((s_pyd - c_pyd) / s_pyd * 100) if s_pyd else 0.0
+			pyd_gm_trend.append(round(gm_pct, 2))
+
+		# Generate Key Insights dynamically
+		insights = []
+		if previous_fy and pyd_millions:
+			sales_diff_pct = variance_pct
+			if sales_diff_pct > 0:
+				insights.append(f"Sales increased by {sales_diff_pct}% compared to PY.")
+			elif sales_diff_pct < 0:
+				insights.append(f"Sales decreased by {abs(sales_diff_pct)}% compared to PY.")
+			else:
+				insights.append("Sales remained unchanged compared to PY.")
+		else:
+			insights.append("Sales trend comparison not available.")
+
+		if previous_fy:
+			if agm_var_pct > 0:
+				insights.append(f"Gross Margin increased by {agm_var_pct}% compared to PY.")
+			elif agm_var_pct < 0:
+				insights.append(f"Gross Margin decreased by {abs(agm_var_pct)}% compared to PY.")
+			else:
+				insights.append("Gross Margin remained unchanged compared to PY.")
+		else:
+			insights.append("Gross Margin trend comparison not available.")
+
+		if previous_fy:
+			om_part = f"Operating Margin increased by {om_var_pct}%" if om_var_pct > 0 else (f"Operating Margin decreased by {abs(om_var_pct)}%" if om_var_pct < 0 else "Operating Margin remained unchanged")
+			wc_part = f"Working Capital increased by {wc_var_pct}%" if wc_var_pct > 0 else (f"Working Capital decreased by {abs(wc_var_pct)}%" if wc_var_pct < 0 else "Working Capital remained unchanged")
+			insights.append(f"{om_part} and {wc_part} compared to PY.")
+		else:
+			insights.append("Operating Margin and Working Capital metrics to be reviewed.")
+
 	except Exception as e:
 		frappe.log_error(frappe.get_traceback(), "YTD P&L Dashboard Data Error")
 		# Return default values if there's an error
@@ -483,6 +596,14 @@ def get_dashboard_data(company, filters=None):
 		wc_pyd_millions = 0.0
 		wc_var_val = 0.0
 		wc_var_pct = 0.0
+		month_labels = ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
+		sales_ytd_monthly = [0.0] * 12
+		sales_pyd_monthly = [0.0] * 12
+		ytd_gm_trend = [0.0] * 12
+		pyd_gm_trend = [0.0] * 12
+		cogs_var_val = 0.0
+		sga_var_val = 0.0
+		insights = ["Error loading data. Operating Margin and Working Capital metrics to be reviewed."]
 	
 	return {
 		"summary_cards": {
@@ -569,23 +690,24 @@ def get_dashboard_data(company, filters=None):
 		],
 		"charts": {
 			"revenue_trend": {
-				"labels": ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"],
-				"ytd": [40 * 1000000, 38 * 1000000, 42 * 1000000, 45 * 1000000, 48 * 1000000, 50 * 1000000, 47 * 1000000, 45 * 1000000, 46 * 1000000, 43 * 1000000, 44 * 1000000, 46 * 1000000],
-				"pyd": [45 * 1000000, 42 * 1000000, 48 * 1000000, 50 * 1000000, 52 * 1000000, 55 * 1000000, 50 * 1000000, 48 * 1000000, 49 * 1000000, 45 * 1000000, 47 * 1000000, 48 * 1000000]
+				"labels": month_labels,
+				"ytd": sales_ytd_monthly,
+				"pyd": sales_pyd_monthly
 			},
 			"gross_margin_trend": {
-				"labels": ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"],
-				"ytd_gm": [30, 28, 31, 32, 34, 35, 33, 31, 32, 30, 31, 32],
-				"pyd_gm": [45, 40, 42, 48, 46, 47, 42, 41, 40, 39, 40, 38]
+				"labels": month_labels,
+				"ytd_gm": ytd_gm_trend,
+				"pyd_gm": pyd_gm_trend
 			},
 			"waterfall": {
 				"labels": ["PYD Sales", "Δ Sales", "Δ COGS", "Δ Opex", "YTD Sales"],
-				"values": [47.11 * 1000000, -5.65 * 1000000, -3.96 * 1000000, 0, 41.46 * 1000000]
+				"values": [pyd_millions * 1000000, (ytd_millions - pyd_millions) * 1000000, -cogs_var_val, -sga_var_val, ytd_millions * 1000000]
 			},
 			"working_capital": {
 				"labels": ["Receivables", "Payables", "Working Capital"],
-				"ytd": [30 * 1000000, -15 * 1000000, -30 * 1000000],
-				"pyd": [15 * 1000000, 15 * 1000000, -20 * 1000000]
+				"ytd": [rec_ytd_millions * 1000000, -pay_ytd_millions * 1000000, wc_ytd_millions * 1000000],
+				"pyd": [rec_pyd_millions * 1000000, -pay_pyd_millions * 1000000, wc_pyd_millions * 1000000]
 			}
-		}
+		},
+		"insights": insights
 	}
