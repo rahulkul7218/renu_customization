@@ -70,17 +70,11 @@ def get_current_and_previous_fiscal_years(company, selected_fy=None):
 	
 	return current_fy, previous_fy
 
-def get_account_balance_ytd(company, account, fiscal_year, to_date=None):
-	"""Get the balance for an account for the fiscal year to date"""
-	fy_start, fy_end = get_fiscal_year_dates(company, fiscal_year)
-	
-	if not to_date:
-		today = getdate()
-		to_date = min(today, fy_end)
-	
+def get_account_balance(company, account, start_date, end_date):
+	"""Get the balance for an account for a specific date range"""
 	acc_details = frappe.db.get_value("Account", account, ["lft", "rgt", "root_type"])
 	if not acc_details:
-		return 0
+		return 0.0
 	
 	lft, rgt, root_type = acc_details
 	
@@ -94,26 +88,20 @@ def get_account_balance_ytd(company, account, fiscal_year, to_date=None):
 			AND posting_date >= %s
 			AND posting_date <= %s
 			AND docstatus = 1
-	""", (company, lft, rgt, fy_start, to_date), as_dict=True)
+	""", (company, lft, rgt, start_date, end_date), as_dict=True)
 	
 	if gl_entries and len(gl_entries) > 0:
 		balance = gl_entries[0]['balance']
 		if root_type == 'Income':
 			balance = -balance
-		return balance
+		return float(balance)
 	
-	return 0
+	return 0.0
 
-def get_cost_centers_balance_ytd(company, cost_centers, fiscal_year, to_date=None):
-	"""Get the balance for specific cost centers for the fiscal year to date"""
-	fy_start, fy_end = get_fiscal_year_dates(company, fiscal_year)
-	
-	if not to_date:
-		today = getdate()
-		to_date = min(today, fy_end)
-	
+def get_cost_centers_balance(company, cost_centers, start_date, end_date):
+	"""Get the balance for specific cost centers for a specific date range"""
 	if not cost_centers:
-		return 0
+		return 0.0
 		
 	format_strings = ', '.join(['%s'] * len(cost_centers))
 	
@@ -127,12 +115,82 @@ def get_cost_centers_balance_ytd(company, cost_centers, fiscal_year, to_date=Non
 			AND posting_date <= %s
 			AND docstatus = 1
 			AND account IN (SELECT name FROM `tabAccount` WHERE root_type = 'Expense')
-	""", tuple([company] + cost_centers + [fy_start, to_date]), as_dict=True)
+	""", tuple([company] + cost_centers + [start_date, end_date]), as_dict=True)
 	
 	if gl_entries and len(gl_entries) > 0:
-		return gl_entries[0]['balance']
+		return float(gl_entries[0]['balance'])
 	
-	return 0
+	return 0.0
+
+def get_period_dates(company, fiscal_year, filters=None, is_previous=False):
+	"""Calculate start and end dates based on filters"""
+	fy_start, fy_end = get_fiscal_year_dates(company, fiscal_year)
+	
+	start_date = fy_start
+	end_date = fy_end
+	
+	if not filters:
+		filters = {}
+
+	if filters.get("from_date") and filters.get("to_date"):
+		if is_previous:
+			# Offset by 1 year for previous period comparison
+			start_date = add_days(getdate(filters.get("from_date")), -365)
+			end_date = add_days(getdate(filters.get("to_date")), -365)
+		else:
+			start_date = getdate(filters.get("from_date"))
+			end_date = getdate(filters.get("to_date"))
+	elif filters.get("month"):
+		# Find month dates within fiscal year
+		current_date = getdate(fy_start)
+		target_month = filters.get("month")
+		for i in range(12):
+			if current_date.strftime("%B") == target_month:
+				start_date = current_date.replace(day=1)
+				import calendar
+				last_day = calendar.monthrange(start_date.year, start_date.month)[1]
+				end_date = start_date.replace(day=last_day)
+				break
+			# Move to next month
+			if current_date.month == 12:
+				current_date = current_date.replace(year=current_date.year + 1, month=1)
+			else:
+				current_date = current_date.replace(month=current_date.month + 1)
+	elif filters.get("quarter"):
+		# Find quarter dates within fiscal year
+		q_idx = int(filters.get("quarter")[-1]) # Qtr1 -> 1
+		current_date = getdate(fy_start)
+		for q in range(1, 5):
+			q_start = current_date
+			# Add 2 months to get to quarter end month
+			temp_date = current_date
+			for _ in range(2):
+				if temp_date.month == 12:
+					temp_date = temp_date.replace(year=temp_date.year + 1, month=1)
+				else:
+					temp_date = temp_date.replace(month=temp_date.month + 1)
+			import calendar
+			last_day = calendar.monthrange(temp_date.year, temp_date.month)[1]
+			q_end = temp_date.replace(day=last_day)
+			
+			if q == q_idx:
+				start_date = q_start
+				end_date = q_end
+				break
+			
+			# Next quarter start
+			if temp_date.month == 12:
+				current_date = temp_date.replace(year=temp_date.year + 1, month=1)
+			else:
+				current_date = temp_date.replace(month=temp_date.month + 1)
+
+	# Ensure end_date is not in future for current fiscal year
+	if not is_previous:
+		today = getdate()
+		if start_date <= today <= end_date:
+			end_date = today
+		
+	return start_date, end_date
 
 def get_monthly_balances(company, accounts, fiscal_year):
 	"""
@@ -195,44 +253,8 @@ def get_monthly_balances(company, accounts, fiscal_year):
 		
 	return balances, labels
 
-def get_pnl_account_balance(company, account_name, fiscal_year, to_date=None):
-	"""Get balance for a specific account name from Profit and Loss statement"""
-	try:
-		from erpnext.accounts.report.profit_and_loss_statement.profit_and_loss_statement import execute as execute_pnl
-		
-		# Get fiscal year dates
-		fy_start, fy_end = get_fiscal_year_dates(company, fiscal_year)
-		if not to_date:
-			today = getdate()
-			to_date = min(today, fy_end)
-		
-		filters = frappe._dict({
-			"company": company,
-			"filter_based_on": "Date Range",
-			"period_start_date": fy_start,
-			"period_end_date": to_date,
-			"periodicity": "Yearly"
-		})
-		
-		result = execute_pnl(filters)
-		data = result[1] if result and len(result) > 1 else []
-		
-		for row in data:
-			if isinstance(row, dict) and row.get("account_name") == account_name:
-				return float(row.get("total", 0.0) or 0.0)
-				
-		# Fallback to case-insensitive and partial match
-		for row in data:
-			if isinstance(row, dict) and row.get("account_name") and account_name.lower() in str(row.get("account_name")).lower():
-				return float(row.get("total", 0.0) or 0.0)
-				
-		return 0.0
-	except Exception as e:
-		frappe.log_error(frappe.get_traceback(), f"Error in get_pnl_account_balance for {account_name}")
-		return 0.0
-
 def get_outstanding_receivables(company, as_of_date):
-	"""Get total outstanding receivables (Accounts Receivable report - Outstanding Amount total) as of a date"""
+	"""Get total outstanding receivables as of a date"""
 	try:
 		from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
 		filters = frappe._dict({
@@ -254,7 +276,7 @@ def get_outstanding_receivables(company, as_of_date):
 		return 0.0
 
 def get_outstanding_payables(company, as_of_date):
-	"""Get total outstanding payables (Accounts Payable report - Outstanding Amount total) as of a date"""
+	"""Get total outstanding payables as of a date"""
 	try:
 		from erpnext.accounts.report.accounts_payable.accounts_payable import execute
 		filters = frappe._dict({
@@ -284,7 +306,7 @@ def convert_to_millions(value):
 def calculate_variance_percentage(ytd, pyd):
 	"""Calculate variance percentage: (YTD-PYD)/PYD*100"""
 	if pyd == 0:
-		return 0
+		return 0.0
 	return round(((ytd - pyd) / abs(pyd)) * 100, 2)
 
 @frappe.whitelist()
@@ -308,47 +330,27 @@ def get_dashboard_data(company, filters=None):
 		# Get current and previous fiscal years
 		current_fy, previous_fy = get_current_and_previous_fiscal_years(company, selected_fy)
 		
-		# Compute YTD to_date limit based on selected/current fiscal year
-		today = getdate()
-		current_fy_start, current_fy_end = get_fiscal_year_dates(company, current_fy)
+		# Current Period Dates
+		start_date, end_date = get_period_dates(company, current_fy, filters)
 		
-		if current_fy_start <= today <= current_fy_end:
-			# The selected fiscal year is the active/current one
-			ytd_to_date = today
-		else:
-			# A past or future fiscal year is selected, run for the full range of those years
-			ytd_to_date = current_fy_end
-			
-		# Compute PYD to_date limit if previous fiscal year exists
-		pyd_to_date = None
-		prev_fy_end = None
+		# Previous Period Dates
+		prev_start_date = None
+		prev_end_date = None
 		if previous_fy:
-			prev_fy_start, prev_fy_end = get_fiscal_year_dates(company, previous_fy)
-			# For PYD, use the FULL previous fiscal year for all metrics
-			pyd_to_date = prev_fy_end
+			prev_start_date, prev_end_date = get_period_dates(company, previous_fy, filters, is_previous=True)
 		
 		# Determine number of days for DSO/DPO calculations
-		number_of_days = 365
-		if isinstance(filters, dict):
-			if filters.get("from_date") and filters.get("to_date"):
-				from frappe.utils import date_diff
-				number_of_days = max(1, date_diff(filters.get("to_date"), filters.get("from_date")) + 1)
-			elif filters.get("month"):
-				number_of_days = 30
-			elif filters.get("quarter"):
-				number_of_days = 90
-			elif filters.get("fiscal_year"):
-				number_of_days = 365
+		number_of_days = date_diff(end_date, start_date) + 1
 
-		# Get YTD and PYD values for Sales from specific accounts
+		# Get values for Sales from specific accounts
 		sales_accounts = [
 			'41 - REVENUE FROM OPERATIONS - RFAPL',
 			'42 - BRANCH SALES CONTROL ACCOUNT - RFAPL',
 			'43 - FREIGHT OUTWARD - RFAPL',
 			'Direct Income - RFAPL'
 		]
-		ytd_total = sum(get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date) for acc in sales_accounts)
-		pyd_total = sum(get_account_balance_ytd(company, acc, previous_fy, to_date=pyd_to_date) for acc in sales_accounts) if previous_fy else 0.0
+		ytd_total = sum(get_account_balance(company, acc, start_date, end_date) for acc in sales_accounts)
+		pyd_total = sum(get_account_balance(company, acc, prev_start_date, prev_end_date) for acc in sales_accounts) if prev_start_date else 0.0
 		
 		# Convert to millions
 		ytd_millions = convert_to_millions(ytd_total)
@@ -371,9 +373,9 @@ def get_dashboard_data(company, filters=None):
 		cogs_ytd_total = 0
 		cogs_pyd_total = 0
 		for acc in cogs_accounts:
-			cogs_ytd_total += get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date)
-			if previous_fy:
-				cogs_pyd_total += get_account_balance_ytd(company, acc, previous_fy, to_date=pyd_to_date)
+			cogs_ytd_total += get_account_balance(company, acc, start_date, end_date)
+			if prev_start_date:
+				cogs_pyd_total += get_account_balance(company, acc, prev_start_date, prev_end_date)
 		
 		cogs_ytd_millions = convert_to_millions(cogs_ytd_total)
 		cogs_pyd_millions = convert_to_millions(cogs_pyd_total)
@@ -398,8 +400,8 @@ def get_dashboard_data(company, filters=None):
 			'10007 - Sales - RFAPL',
 			'10005 - Product Management - RFAPL'
 		]
-		cos_ytd_total = get_cost_centers_balance_ytd(company, cos_cost_centers, current_fy, to_date=ytd_to_date)
-		cos_pyd_total = get_cost_centers_balance_ytd(company, cos_cost_centers, previous_fy, to_date=pyd_to_date) if previous_fy else 0.0
+		cos_ytd_total = get_cost_centers_balance(company, cos_cost_centers, start_date, end_date)
+		cos_pyd_total = get_cost_centers_balance(company, cos_cost_centers, prev_start_date, prev_end_date) if prev_start_date else 0.0
 		
 		cos_ytd_millions = convert_to_millions(cos_ytd_total)
 		cos_pyd_millions = convert_to_millions(cos_pyd_total)
@@ -413,8 +415,8 @@ def get_dashboard_data(company, filters=None):
 			'100001 - Engineering Cost - RFAPL',
 			'10006 - Research and Development - R&D - RFAPL'
 		]
-		coe_ytd_total = get_cost_centers_balance_ytd(company, coe_cost_centers, current_fy, to_date=ytd_to_date)
-		coe_pyd_total = get_cost_centers_balance_ytd(company, coe_cost_centers, previous_fy, to_date=pyd_to_date) if previous_fy else 0.0
+		coe_ytd_total = get_cost_centers_balance(company, coe_cost_centers, start_date, end_date)
+		coe_pyd_total = get_cost_centers_balance(company, coe_cost_centers, prev_start_date, prev_end_date) if prev_start_date else 0.0
 		
 		coe_ytd_millions = convert_to_millions(coe_ytd_total)
 		coe_pyd_millions = convert_to_millions(coe_pyd_total)
@@ -428,8 +430,8 @@ def get_dashboard_data(company, filters=None):
 			'Main - RFAPL',
 			'10009 - Administration Cost - RFAPL'
 		]
-		coga_ytd_total = get_cost_centers_balance_ytd(company, coga_cost_centers, current_fy, to_date=ytd_to_date)
-		coga_pyd_total = get_cost_centers_balance_ytd(company, coga_cost_centers, previous_fy, to_date=pyd_to_date) if previous_fy else 0.0
+		coga_ytd_total = get_cost_centers_balance(company, coga_cost_centers, start_date, end_date)
+		coga_pyd_total = get_cost_centers_balance(company, coga_cost_centers, prev_start_date, prev_end_date) if prev_start_date else 0.0
 		
 		coga_ytd_millions = round(convert_to_millions(coga_ytd_total), 2)
 		coga_pyd_millions = round(convert_to_millions(coga_pyd_total), 2)
@@ -455,20 +457,21 @@ def get_dashboard_data(company, filters=None):
 		om_pyd_pct = round((om_pyd_millions / pyd_millions) * 100, 2) if pyd_millions else 0.0
 		
 		# Receivables - Outstanding Amount
-		rec_ytd = get_outstanding_receivables(company, ytd_to_date)
-		rec_pyd = get_outstanding_receivables(company, pyd_to_date) if pyd_to_date else 0.0
+		rec_ytd = get_outstanding_receivables(company, end_date)
+		rec_pyd = get_outstanding_receivables(company, prev_end_date) if prev_end_date else 0.0
 		rec_ytd_millions = convert_to_millions(rec_ytd)
 		rec_pyd_millions = convert_to_millions(rec_pyd)
 		rec_var_val = (rec_ytd_millions - rec_pyd_millions) * 1000000
 		rec_var_pct = calculate_variance_percentage(rec_ytd_millions, rec_pyd_millions)
 		
 		# Payables - Outstanding Amount
-		pay_ytd = get_outstanding_payables(company, ytd_to_date)
-		pay_pyd = get_outstanding_payables(company, pyd_to_date) if pyd_to_date else 0.0
-		# Purchase total from Direct Expenses account
+		pay_ytd = get_outstanding_payables(company, end_date)
+		pay_pyd = get_outstanding_payables(company, prev_end_date) if prev_end_date else 0.0
+		
+		# Purchase total for DPO
 		purchase_accounts = ['32 - DIRECT EXPENSES - RFAPL']
-		purchase_ytd = sum(get_account_balance_ytd(company, acc, current_fy, to_date=ytd_to_date) for acc in purchase_accounts)
-		purchase_pyd = sum(get_account_balance_ytd(company, acc, previous_fy, to_date=pyd_to_date) for acc in purchase_accounts) if previous_fy else 0.0
+		purchase_ytd = sum(get_account_balance(company, acc, start_date, end_date) for acc in purchase_accounts)
+		purchase_pyd = sum(get_account_balance(company, acc, prev_start_date, prev_end_date) for acc in purchase_accounts) if prev_start_date else 0.0
 		pay_ytd_millions = convert_to_millions(pay_ytd)
 		pay_pyd_millions = convert_to_millions(pay_pyd)
 		pay_var_val = (pay_ytd_millions - pay_pyd_millions) * 1000000
@@ -479,6 +482,7 @@ def get_dashboard_data(company, filters=None):
 		wc_pyd_millions = rec_pyd_millions - pay_pyd_millions
 		wc_var_val = (wc_ytd_millions - wc_pyd_millions) * 1000000
 		wc_var_pct = calculate_variance_percentage(wc_ytd_millions, wc_pyd_millions)
+		
 		# Calculate monthly trends for Revenue & GM
 		sales_ytd_monthly, month_labels = get_monthly_balances(company, sales_accounts, current_fy)
 		cogs_ytd_monthly, _ = get_monthly_balances(company, cogs_accounts, current_fy)
@@ -504,7 +508,7 @@ def get_dashboard_data(company, filters=None):
 
 		# Generate Key Insights dynamically
 		insights = []
-		if previous_fy and pyd_millions:
+		if prev_start_date and pyd_millions:
 			sales_diff_pct = variance_pct
 			if sales_diff_pct > 0:
 				insights.append(f"Sales increased by {sales_diff_pct}% compared to PY.")
@@ -515,7 +519,7 @@ def get_dashboard_data(company, filters=None):
 		else:
 			insights.append("Sales trend comparison not available.")
 
-		if previous_fy:
+		if prev_start_date:
 			if agm_var_pct > 0:
 				insights.append(f"Gross Margin increased by {agm_var_pct}% compared to PY.")
 			elif agm_var_pct < 0:
@@ -525,7 +529,7 @@ def get_dashboard_data(company, filters=None):
 		else:
 			insights.append("Gross Margin trend comparison not available.")
 
-		if previous_fy:
+		if prev_start_date:
 			om_part = f"Operating Margin increased by {om_var_pct}%" if om_var_pct > 0 else (f"Operating Margin decreased by {abs(om_var_pct)}%" if om_var_pct < 0 else "Operating Margin remained unchanged")
 			wc_part = f"Working Capital increased by {wc_var_pct}%" if wc_var_pct > 0 else (f"Working Capital decreased by {abs(wc_var_pct)}%" if wc_var_pct < 0 else "Working Capital remained unchanged")
 			insights.append(f"{om_part} and {wc_part} compared to PY.")
@@ -601,9 +605,7 @@ def get_dashboard_data(company, filters=None):
 		sales_pyd_monthly = [0.0] * 12
 		ytd_gm_trend = [0.0] * 12
 		pyd_gm_trend = [0.0] * 12
-		cogs_var_val = 0.0
-		sga_var_val = 0.0
-		insights = ["Error loading data. Operating Margin and Working Capital metrics to be reviewed."]
+		insights = ["Error loading data."]
 	
 	return {
 		"summary_cards": {
@@ -627,13 +629,11 @@ def get_dashboard_data(company, filters=None):
 				"pyd": wc_pyd_millions * 1000000,
 				"variance": wc_var_pct
 			},
-			# "dso" card removed - not displayed
             "wcts": {
-                "ytd": (ytd_millions / wc_ytd_millions) * 1000000 if wc_ytd_millions else 0,
-                "pyd": (pyd_millions / wc_pyd_millions) * 1000000 if wc_pyd_millions else 0,
+                "ytd": (ytd_millions / wc_ytd_millions) if wc_ytd_millions else 0,
+                "pyd": (pyd_millions / wc_pyd_millions) if wc_pyd_millions else 0,
                 "variance": 0
             },
-
 			"overall_pnl": {
 				"ytd": 0,
 				"pyd": 0,

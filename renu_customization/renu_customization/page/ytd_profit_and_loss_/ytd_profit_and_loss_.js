@@ -104,13 +104,15 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		}
 		.dashboard-filter-area .form-column form {
 			display: flex !important;
-			flex-wrap: wrap !important;
-			gap: 15px !important;
+			flex-wrap: nowrap !important;
+			gap: 10px !important;
 			align-items: flex-end !important;
+			width: 100% !important;
 		}
 		.dashboard-filter-area .frappe-control {
 			margin-bottom: 10px !important;
-			width: calc(20% - 12px) !important;
+			flex: 1 !important;
+			min-width: 120px !important;
 		}
 		.dashboard-filter-area .frappe-control .form-group {
 			margin-bottom: 0 !important;
@@ -281,7 +283,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 
 				if (sIndex === 0) {
 					const color = bucket_colors[group.bucket] || '#1e3a8a';
-					tr.append(`<td rowspan="${rowCount}" class="row-bucket" style="color: ${color} !important; font-weight: 800 !important;">
+					tr.append(`<td rowspan="${rowCount}" class="row-bucket" style="color: ${color} !important; font-weight: 900 !important; font-size: 16px !important;">
 						<i class="fa ${icons[group.bucket]} bucket-icon"></i> ${group.bucket}
 					</td>`);
 				}
@@ -531,7 +533,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				}
 
 				const bucket_color = bucket_colors_pdf[group.bucket] || '#1e3a8a';
-				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: 800; color: ${bucket_color}; background: #f1f5f9;">${group.bucket}</td>` : '';
+				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: 900; font-size: 12px; color: ${bucket_color}; background: #f1f5f9;">${group.bucket}</td>` : '';
 
 				return `<tr>
 				${bucket_cell}
