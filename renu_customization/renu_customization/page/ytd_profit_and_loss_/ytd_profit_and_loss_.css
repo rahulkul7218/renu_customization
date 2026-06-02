@@ -193,16 +193,18 @@
 }
 
 .metric-main {
-    font-size: clamp(20px, 3vw, 32px);
+    font-size: clamp(18px, 2.5vw, 26px);
     font-weight: 800;
     color: #0f172a;
-    word-break: break-word;
+    white-space: nowrap;
+    word-break: normal;
     line-height: 1.1;
     margin-bottom: 5px;
 }
 
 .metric-sub {
     text-align: center;
+    min-width: fit-content;
 }
 
 .metric-label {
@@ -211,13 +213,15 @@
     font-weight: 700;
     margin-bottom: 2px;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 
 .metric-value {
     font-size: clamp(12px, 1.8vw, 18px);
     font-weight: 700;
     color: #334155;
-    word-break: break-word;
+    white-space: nowrap;
+    word-break: normal;
 }
 
 .metric-var.negative { color: #dc2626; }
