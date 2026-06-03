@@ -356,13 +356,28 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				
 				tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${displayVar}</td>`);
 
-				// Trend column - Dynamic based on YTD vs PYD variance
+				// Trend column - Dynamic based on YTD vs PYD variance (Bi-directional)
 				let trendHtml = '-';
 				if (source.var_pct !== null && source.var_pct !== undefined) {
 					const vPct = parseFloat(source.var_pct);
-					const trendClass = vPct >= 0 ? 'trend-bar-pos' : 'trend-bar-neg';
 					const trendWidth = Math.min(Math.abs(vPct), 100);
-					trendHtml = `<div class="trend-bar-container"><div class="${trendClass}" style="width: ${trendWidth}%"></div></div>`;
+					if (vPct >= 0) {
+						trendHtml = `<div class="trend-bar-container">
+							<div class="trend-bar-half left-half">
+								<div class="trend-bar-fill pos" style="width: ${trendWidth}%;"></div>
+							</div>
+							<div class="trend-bar-divider"></div>
+							<div class="trend-bar-half right-half"></div>
+						</div>`;
+					} else {
+						trendHtml = `<div class="trend-bar-container">
+							<div class="trend-bar-half left-half"></div>
+							<div class="trend-bar-divider"></div>
+							<div class="trend-bar-half right-half">
+								<div class="trend-bar-fill neg" style="width: ${trendWidth}%;"></div>
+							</div>
+						</div>`;
+					}
 				}
 				tr.append(`<td class="text-center">${trendHtml}</td>`);
 
@@ -612,15 +627,28 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				const isNegativeVar = parseFloat(varVal) < 0;
 				const varColor = isNegativeVar ? '#dc2626' : '#16a34a';
 
-				// Trend bar for PDF
+				// Trend bar for PDF (Bi-directional)
 				let trendHtmlPdf = '-';
 				if (src.var_pct !== null && src.var_pct !== undefined) {
 					const vPct = parseFloat(src.var_pct);
-					const color = vPct >= 0 ? '#16a34a' : '#dc2626';
-					const width = Math.min(Math.abs(vPct), 100);
-					trendHtmlPdf = `<div style="width: 60px; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; margin: 0 auto;">
-						<div style="width: ${width}%; height: 100%; background: ${color};"></div>
-					</div>`;
+					const trendWidth = Math.min(Math.abs(vPct), 100);
+					if (vPct >= 0) {
+						trendHtmlPdf = `<div style="width: 60px; height: 10px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin: 0 auto; display: flex; position: relative;">
+							<div style="width: 50%; height: 100%; display: flex; justify-content: flex-end;">
+								<div style="width: ${trendWidth}%; height: 100%; background: #16a34a; border-radius: 2px 0 0 2px;"></div>
+							</div>
+							<div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #94a3b8; z-index: 2; transform: translateX(-50%);"></div>
+							<div style="width: 50%; height: 100%;"></div>
+						</div>`;
+					} else {
+						trendHtmlPdf = `<div style="width: 60px; height: 10px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin: 0 auto; display: flex; position: relative;">
+							<div style="width: 50%; height: 100%;"></div>
+							<div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #94a3b8; z-index: 2; transform: translateX(-50%);"></div>
+							<div style="width: 50%; height: 100%; display: flex; justify-content: flex-start;">
+								<div style="width: ${trendWidth}%; height: 100%; background: #dc2626; border-radius: 0 2px 2px 0;"></div>
+							</div>
+						</div>`;
+					}
 				}
 
 				const bucket_color = bucket_colors_pdf[group.bucket] || '#1e3a8a';
