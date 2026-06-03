@@ -253,7 +253,7 @@ def get_monthly_balances(company, accounts, fiscal_year):
 		
 	return balances, labels
 
-def get_outstanding_receivables(company, as_of_date):
+def get_outstanding_receivables(company, as_of_date, start_date=None):
 	"""Get total outstanding receivables as of a date"""
 	try:
 		from erpnext.accounts.report.accounts_receivable.accounts_receivable import execute
@@ -269,13 +269,17 @@ def get_outstanding_receivables(company, as_of_date):
 			for row in data:
 				# Sum all rows except total/subtotal rows
 				if isinstance(row, dict) and not row.get("is_total_row") and "'" not in str(row.get('party', '')) and "Total" not in str(row.get('party', '')):
+					if start_date:
+						row_date = row.get("posting_date")
+						if row_date and getdate(row_date) < getdate(start_date):
+							continue
 					total += float(row.get("outstanding", 0.0) or 0.0)
 		return total
 	except Exception as e:
 		frappe.log_error(f"Error in get_outstanding_receivables: {str(e)}", "YTD Dashboard")
 		return 0.0
 
-def get_outstanding_payables(company, as_of_date):
+def get_outstanding_payables(company, as_of_date, start_date=None):
 	"""Get total outstanding payables as of a date"""
 	try:
 		from erpnext.accounts.report.accounts_payable.accounts_payable import execute
@@ -291,6 +295,10 @@ def get_outstanding_payables(company, as_of_date):
 			for row in data:
 				# Sum all rows except total/subtotal rows
 				if isinstance(row, dict) and not row.get("is_total_row") and "'" not in str(row.get('party', '')) and "Total" not in str(row.get('party', '')):
+					if start_date:
+						row_date = row.get("posting_date")
+						if row_date and getdate(row_date) < getdate(start_date):
+							continue
 					total += float(row.get("outstanding", 0.0) or 0.0)
 		return total
 	except Exception as e:
@@ -457,16 +465,16 @@ def get_dashboard_data(company, filters=None):
 		om_pyd_pct = round((om_pyd_millions / pyd_millions) * 100, 2) if pyd_millions else 0.0
 		
 		# Receivables - Outstanding Amount
-		rec_ytd = get_outstanding_receivables(company, end_date)
-		rec_pyd = get_outstanding_receivables(company, prev_end_date) if prev_end_date else 0.0
+		rec_ytd = get_outstanding_receivables(company, end_date, start_date)
+		rec_pyd = get_outstanding_receivables(company, prev_end_date, prev_start_date) if prev_end_date else 0.0
 		rec_ytd_millions = convert_to_millions(rec_ytd)
 		rec_pyd_millions = convert_to_millions(rec_pyd)
 		rec_var_val = (rec_ytd_millions - rec_pyd_millions) * 1000000
 		rec_var_pct = calculate_variance_percentage(rec_ytd_millions, rec_pyd_millions)
 		
 		# Payables - Outstanding Amount
-		pay_ytd = get_outstanding_payables(company, end_date)
-		pay_pyd = get_outstanding_payables(company, prev_end_date) if prev_end_date else 0.0
+		pay_ytd = get_outstanding_payables(company, end_date, start_date)
+		pay_pyd = get_outstanding_payables(company, prev_end_date, prev_start_date) if prev_end_date else 0.0
 		
 		# Purchase total for DPO
 		purchase_accounts = ['32 - DIRECT EXPENSES - RFAPL']
