@@ -106,7 +106,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			display: flex !important;
 			flex-wrap: nowrap !important;
 			gap: 10px !important;
-			align-items: flex-start !important;
+			align-items: flex-end !important;
 			width: 100% !important;
 		}
 		.dashboard-filter-area .frappe-control {
@@ -119,7 +119,10 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			width: 100% !important;
 		}
 		.dashboard-filter-area .control-input,
-		.dashboard-filter-area .awesomplete,
+		.dashboard-filter-area .awesomplete {
+			width: 100% !important;
+			max-width: 100% !important;
+		}
 		.dashboard-filter-area input,
 		.dashboard-filter-area select {
 			width: 100% !important;
