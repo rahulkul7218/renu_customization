@@ -268,6 +268,8 @@ def get_dashboard_data(filters=None):
     total_amount = 0
     total_overdue = 0
     total_due_next_15_days = 0
+    total_delivered = 0
+    total_pending = 0
     unique_pos = set()
 
     today = getdate(nowdate())
@@ -303,8 +305,16 @@ def get_dashboard_data(filters=None):
 
         unique_pos.add(row.get("name"))
         total_amount += flt(row.get("net_total"))
+        
+        row_rate = flt(row.get("rate", 0))
+        delivered_val = flt(row.get("received_qty", 0)) * row_rate
+        pending_val = flt(row.get("pending_qty", 0)) * row_rate
+        total_delivered += delivered_val
+        total_pending += pending_val
+        
+        row["overdue_value"] = pending_val if is_overdue else 0
         if is_overdue:
-            total_overdue += flt(row.get("net_total"))
+            total_overdue += row["overdue_value"]
         if due_next_15_days_flag:
             total_due_next_15_days += flt(row.get("net_total"))
 
@@ -314,7 +324,9 @@ def get_dashboard_data(filters=None):
 
     summary = [
         {"label": _("Total Orders"), "value": len(unique_pos), "indicator": "blue", "fieldtype": "Int"},
-        {"label": _("Total Net Amount"), "value": total_amount, "indicator": "green", "fieldtype": "Currency"},
+        {"label": _("Total Net Amount"), "value": total_amount, "indicator": "blue", "fieldtype": "Currency"},
+        {"label": _("Delivered Amount"), "value": total_delivered, "indicator": "green", "fieldtype": "Currency"},
+        {"label": _("Pending Amount"), "value": total_pending, "indicator": "orange", "fieldtype": "Currency"},
         {"label": _("Overdue Amount"), "value": total_overdue, "indicator": "red", "fieldtype": "Currency"},
         {"label": _("Due Next 15 Days"), "value": total_due_next_15_days, "indicator": "orange", "fieldtype": "Currency"}
     ]
@@ -711,7 +723,7 @@ def _as_excel_date(val):
         return val
 
 
-def _order_row_values(row, serial_no, include_days_left=False):
+def _order_row_values(row, serial_no, include_days_left=False, include_overdue_amount=False):
     pending_qty = flt(row.get("pending_qty"))
     if not pending_qty and row.get("qty") is not None:
         pending_qty = max(0, flt(row.get("qty")) - flt(row.get("received_qty")))
@@ -745,6 +757,8 @@ def _order_row_values(row, serial_no, include_days_left=False):
         pending_qty,
         flt(row.get("net_total")) / 1000000,
     ])
+    if include_overdue_amount:
+        vals.append(flt(row.get("overdue_value", 0)) / 1000000)
     return vals
 
 
@@ -763,7 +777,7 @@ DUE_ORDER_HEADERS = [
 OVERDUE_ORDER_HEADERS = [
     "S.No.", "PO No", "Supplier", "Item Code", "Item Name", "Order Date",
     "Expected Delivery", "Actual Delivery", "Days Overdue", "Status", "% Received", "% Billed",
-    "Order Qty", "Received Qty", "Pending Qty", "Net Total (M)",
+    "Order Qty", "Received Qty", "Pending Qty", "Net Total (M)", "Overdue Amount (M)"
 ]
 
 
@@ -793,7 +807,7 @@ def _write_detailed_orders_table(ws, rows, styles, start_row=1):
     for i, row in enumerate(data_rows):
         r_idx = data_start + i
         _write_excel_row(
-            ws, r_idx, _order_row_values(row, i + 1), styles,
+            ws, r_idx, _order_row_values(row, i + 1, include_days_left=False, include_overdue_amount=False), styles,
             amount_col=len(DETAILED_ORDER_HEADERS),
             date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
         )
@@ -810,10 +824,9 @@ def _write_detailed_orders_sheet(ws, rows, styles):
     _write_detailed_orders_table(ws, rows, styles, start_row=1)
 
 
-def _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL DUE VALUE", headers=None):
-    if headers is None:
-        headers = DUE_ORDER_HEADERS
+def _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL DUE VALUE", headers=DUE_ORDER_HEADERS):
     _write_excel_headers(ws, headers, styles, row_idx=start_row)
+    is_overdue_table = (headers == OVERDUE_ORDER_HEADERS)
     if start_row == 1:
         _apply_header_column_widths(ws, headers, ORDER_SHEET_WIDTHS)
     date_cols, qty_cols, pct_cols = _order_sheet_col_sets(headers)
@@ -822,17 +835,33 @@ def _write_due_orders_table(ws, rows, styles, start_row=1, total_label="TOTAL DU
     for i, row in enumerate(data_rows):
         r_idx = data_start + i
         _write_excel_row(
-            ws, r_idx, _order_row_values(row, i + 1, include_days_left=True), styles,
-            amount_col=len(headers),
+            ws, r_idx, _order_row_values(row, i + 1, include_days_left=True, include_overdue_amount=is_overdue_table), styles,
+            amount_col=len(headers) - (1 if is_overdue_table else 0),
             date_cols=date_cols, qty_cols=qty_cols, pct_cols=pct_cols,
         )
+        if is_overdue_table:
+            # Format the extra Overdue Amount column as well
+            cell = ws.cell(row=r_idx, column=len(headers))
+            cell.number_format = "#,##0.00"
+            cell.alignment = Alignment(horizontal="right")
+    
     total_amount = sum(flt(r.get("net_total")) for r in data_rows) / 1000000
-    _write_excel_total_row(
-        ws, data_start + len(data_rows), total_label, len(headers), total_amount, styles,
-    )
+    total_row_idx = data_start + len(data_rows)
+    amount_col_idx = len(headers) - (1 if is_overdue_table else 0)
+    _write_excel_total_row(ws, total_row_idx, total_label, amount_col_idx, total_amount, styles)
+    
+    if is_overdue_table:
+        total_overdue = sum(flt(r.get("overdue_value", 0)) for r in data_rows) / 1000000
+        overdue_cell = ws.cell(row=total_row_idx, column=len(headers), value=total_overdue)
+        overdue_cell.number_format = "#,##0.00"
+        overdue_cell.alignment = Alignment(horizontal="right")
+        overdue_cell.font = Font(bold=True)
+        overdue_cell.fill = PatternFill(start_color="e2e8f0", fill_type="solid")
+        overdue_cell.border = styles["table_border"]
+
     if start_row == 1:
         _autofit_columns(ws, min_widths=_min_widths_for_headers(headers, ORDER_SHEET_WIDTHS))
-    return data_start + len(data_rows) + 1
+    return total_row_idx + 1
 
 
 def _write_due_orders_sheet(ws, rows, styles):

@@ -110,7 +110,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 	$(`<style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         .dashboard-content { padding: 20px; background: var(--bg-color); min-height: 100vh; font-family: 'Inter', sans-serif; color: var(--text-color); width: 100% !important; }
-        .summary-wrapper { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 16px; margin-bottom: 24px; }
+        .summary-wrapper { display: grid !important; grid-template-columns: repeat(6, 1fr) !important; gap: 16px; margin-bottom: 24px; }
         .summary-card { background: var(--card-bg) !important; border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; border-left: 5px solid #cbd5e1; }
         .summary-card.blue { border-left-color: #3b82f6; }
         .summary-card.green { border-left-color: #10b981; }
@@ -139,6 +139,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
             --ot-pct: 80px;
             --ot-qty: 98px;
             --ot-amt: 148px;
+            --ot-overdue: 148px;
             table-layout: fixed;
             min-width: 100%;
         }
@@ -192,11 +193,18 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
         .col-pct { width: 80px; min-width: 80px; max-width: 80px; text-align: center !important; }
         .col-qty { width: 98px; min-width: 98px; max-width: 98px; text-align: right !important; }
         .col-amt { width: 148px; min-width: 148px; max-width: 148px; text-align: right !important; }
-        th.col-qty, th.col-amt { text-align: right !important; }
+        .col-overdue { width: 148px; min-width: 148px; max-width: 148px; text-align: right !important; }
+        th.col-qty, th.col-amt, th.col-overdue { text-align: right !important; }
+        .dashboard-table.orders-table td.col-amt,
+        .dashboard-table.orders-table th.col-amt,
+        .dashboard-table.orders-table td.col-overdue,
+        .dashboard-table.orders-table th.col-overdue { overflow: visible; text-overflow: clip; white-space: nowrap; }
+        .dashboard-table th.col-sno, .dashboard-table td.col-sno { text-align: center; }
+        .dashboard-table th.sortable-header:hover { background: #f1f5f9; color: #0f172a; }
+        .dashboard-table th.sortable-header i { font-size: 10px; opacity: 0.5; transition: all 0.2s; }
+        .dashboard-table th.sortable-header.sorted-asc i, .dashboard-table th.sortable-header.sorted-desc i { opacity: 1; color: var(--primary-color) !important; }
         .dashboard-table.orders-table .col-status { overflow: visible; text-overflow: clip; }
         .dashboard-table.orders-table .col-status .indicator-pill { max-width: none; white-space: nowrap; overflow: visible; display: inline-block; vertical-align: middle; }
-        .dashboard-table.orders-table td.col-amt,
-        .dashboard-table.orders-table th.col-amt { overflow: visible; text-overflow: clip; white-space: nowrap; }
         .dashboard-table.orders-table tfoot td { overflow: visible; text-overflow: clip; }
         th.col-days, th.col-pct { text-align: center !important; }
         .dashboard-table tfoot { position: sticky; bottom: 0; z-index: 10; border-top: 2px solid var(--border-color); }
@@ -205,7 +213,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
         .orders-table tfoot td.col-id { position: sticky; left: var(--ot-sno); bottom: 0; z-index: 13; }
         .orders-table tfoot td.col-supplier { position: sticky; left: calc(var(--ot-sno) + var(--ot-id)); bottom: 0; z-index: 13; border-right: 2px solid var(--border-color); box-shadow: 2px 0 5px rgba(0,0,0,0.06); }
         .orders-table tfoot td.tfoot-label { text-align: right; white-space: nowrap; overflow: visible; text-overflow: clip; padding-right: 16px; }
-        .orders-table tfoot td.col-amt { text-align: right; z-index: 11; font-size: 14px; white-space: nowrap; }
+        .orders-table tfoot td.col-amt, .orders-table tfoot td.col-overdue { text-align: right; z-index: 11; font-size: 14px; white-space: nowrap; }
         .dashboard-table-scroll { overflow: auto; max-height: calc(42px + (48px * 20) + 46px); width: 100%; -webkit-overflow-scrolling: touch; }
         .delivery-actual { color: #166534; font-weight: 700; }
         .chart-body { display: flex; flex-direction: column; width: 100%; }
@@ -327,6 +335,17 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 			<col style="width:148px">
 		</colgroup>`;
 
+	const ORDERS_COLGROUP_17 = `
+		<colgroup>
+			<col style="width:52px"><col style="width:172px"><col style="width:228px">
+			<col style="width:142px"><col style="width:228px">
+			<col style="width:130px"><col style="width:130px"><col style="width:180px">
+			<col style="width:100px"><col style="width:200px">
+			<col style="width:80px"><col style="width:80px">
+			<col style="width:98px"><col style="width:98px"><col style="width:98px">
+			<col style="width:148px"><col style="width:148px">
+		</colgroup>`;
+
 	const ORDERS_COLGROUP_12 = `
 		<colgroup>
 			<col style="width:52px"><col style="width:172px"><col style="width:228px">
@@ -355,6 +374,29 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 				<td class="col-qty"></td>
 				<td class="col-qty"></td>
 				<td class="col-amt" id="${amount_cell_id}">₹ 0.00 M</td>
+			</tr>
+		</tfoot>`;
+
+	const build_orders_footer_17 = (label, amount_cell_id, overdue_cell_id) => `
+		<tfoot>
+			<tr>
+				<td class="col-sno"></td>
+				<td class="col-id"></td>
+				<td class="col-supplier tfoot-label">${label}</td>
+				<td class="col-item-code"></td>
+				<td class="col-item-name"></td>
+				<td class="col-date"></td>
+				<td class="col-date"></td>
+				<td class="col-date-actual"></td>
+				<td class="col-days"></td>
+				<td class="col-status"></td>
+				<td class="col-pct"></td>
+				<td class="col-pct"></td>
+				<td class="col-qty"></td>
+				<td class="col-qty"></td>
+				<td class="col-qty"></td>
+				<td class="col-amt" id="${amount_cell_id}">0.00 M</td>
+				<td class="col-overdue" id="${overdue_cell_id}">0.00 M</td>
 			</tr>
 		</tfoot>`;
 
@@ -558,6 +600,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 		"col-pct": "4%",
 		"col-qty": "4%",
 		"col-amt": "7%",
+		"col-overdue": "7%",
 	};
 
 	const clone_table_html_for_pdf = ($table) => {
@@ -741,8 +784,8 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 					</div>
 				</div>
                 <div class="dashboard-table-scroll">
-                    <table class="dashboard-table orders-table due-table" id="overdue_orders_table" style="width:1997px;">
-                        ${ORDERS_COLGROUP_16}
+                    <table class="dashboard-table orders-table due-table" id="overdue_orders_table" style="width:2340px;">
+                        ${ORDERS_COLGROUP_17}
                         <thead>
                             <tr>
                                 <th class="col-sno">S.No.</th>
@@ -761,10 +804,11 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
                                 <th class="col-qty sortable-header" data-table="overdue" data-field="received_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.received_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-qty sortable-header" data-table="overdue" data-field="pending_qty" style="cursor: pointer; user-select: none;">${ORDER_COL.pending_qty} <i class="fa fa-sort text-muted ml-1"></i></th>
                                 <th class="col-amt sortable-header" data-table="overdue" data-field="net_total" style="cursor: pointer; user-select: none;">${ORDER_COL.amount} <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-overdue sortable-header" data-table="overdue" data-field="overdue_value" style="cursor: pointer; user-select: none; font-weight: 800;">${__("Overdue Amount (M)")} <i class="fa fa-sort text-muted ml-1"></i></th>
                             </tr>
                         </thead>
                         <tbody id="overdue_body"></tbody>
-                        ${build_orders_footer_16(__("TOTAL OVERDUE VALUE"), "total_overdue_value")}
+                        ${build_orders_footer_17(__("TOTAL OVERDUE VALUE"), "total_overdue_value", "total_overdue_amount")}
                     </table>
                 </div>
             </div>
@@ -987,6 +1031,7 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 					}
 				}
 
+				let row_overdue_val = flt(row.overdue_value || 0);
 				overdue_tbody.append(`
 					<tr style="background: rgba(239,68,68,0.05);">
 						<td class="col-sno">${idx + 1}</td>
@@ -1005,10 +1050,14 @@ frappe.pages["supplier_performance_dashboard"].on_page_load = function (wrapper)
 						<td class="col-qty">${format_qty(row.received_qty)}</td>
 						<td class="col-qty" style="font-weight: 600;">${format_qty(pending_qty)}</td>
 						<td class="col-amt" style="font-weight: 700;">₹ ${(flt(row.net_total) / 1000000).toFixed(2)} M</td>
+						<td class="col-overdue" style="font-weight: 800; color: #ef4444;">₹ ${(row_overdue_val / 1000000).toFixed(2)} M</td>
 					</tr>
 				`);
 			});
+			
+			let total_overdue_val_computed = sorted_data.reduce((acc, row) => acc + flt(row.overdue_value || 0), 0);
 			overdue_table_card.find("#total_overdue_value").text(`₹ ${(overdue_total_val / 1000000).toFixed(2)} M`);
+			overdue_table_card.find("#total_overdue_amount").text(`₹ ${(total_overdue_val_computed / 1000000).toFixed(2)} M`);
 		};
 
 		const render_detailed_table = () => {
