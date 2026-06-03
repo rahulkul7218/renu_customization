@@ -22,10 +22,77 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 
 	let filter_parent = $('<div class="dashboard-filter-area"></div>').prependTo(page.main);
 
+	let is_updating_filters = false;
+	const updateFilterStates = () => {
+		if (is_updating_filters) return;
+		is_updating_filters = true;
+
+		let values = page.filter_group ? page.filter_group.get_values() : {};
+		let fiscal_year = values.fiscal_year;
+		let quarter = values.quarter;
+		let month = values.month;
+
+		const toggleFieldEditable = (fieldname, editable) => {
+			let field = page.filter_group.fields_dict[fieldname];
+			if (!field) return;
+			
+			if (field.$input) {
+				field.$input.prop('disabled', !editable);
+				field.$input.css('background-color', editable ? '#fff' : '#e2e8f0');
+				field.$input.css('cursor', editable ? 'default' : 'not-allowed');
+			}
+			
+			if (field.df.fieldtype === 'Link') {
+				let link_btn = field.$wrapper.find('.link-btn');
+				if (link_btn.length) {
+					link_btn.css('pointer-events', editable ? 'auto' : 'none');
+					link_btn.css('opacity', editable ? '1' : '0.5');
+				}
+			}
+		};
+
+		if (fiscal_year) {
+			// Fiscal Year applied -> From/To Dates are Non-Editable & cleared
+			if (values.from_date) page.filter_group.set_value("from_date", "");
+			if (values.to_date) page.filter_group.set_value("to_date", "");
+			toggleFieldEditable("from_date", false);
+			toggleFieldEditable("to_date", false);
+
+			if (quarter) {
+				// Quarter selected -> Month is Non-Editable & cleared
+				if (month) page.filter_group.set_value("month", "");
+				toggleFieldEditable("month", false);
+				toggleFieldEditable("quarter", true);
+			} else if (month) {
+				// Month selected -> Quarter is Non-Editable & cleared
+				if (quarter) page.filter_group.set_value("quarter", "");
+				toggleFieldEditable("quarter", false);
+				toggleFieldEditable("month", true);
+			} else {
+				// Neither selected -> Both Quarter & Month editable
+				toggleFieldEditable("quarter", true);
+				toggleFieldEditable("month", true);
+			}
+		} else {
+			// Fiscal Year Blank -> Quarter/Month are Non-Editable & cleared
+			if (quarter) page.filter_group.set_value("quarter", "");
+			if (month) page.filter_group.set_value("month", "");
+			toggleFieldEditable("quarter", false);
+			toggleFieldEditable("month", false);
+
+			// From/To Dates are Editable
+			toggleFieldEditable("from_date", true);
+			toggleFieldEditable("to_date", true);
+		}
+
+		is_updating_filters = false;
+	};
+
 	let refresh_timer = null;
 	page.refresh = function () {
 		if (refresh_timer) clearTimeout(refresh_timer);
 		refresh_timer = setTimeout(() => {
+			updateFilterStates();
 			loadData();
 		}, 50);
 	};
@@ -67,6 +134,11 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		fields: filter_fields,
 	});
 	page.filter_group.make();
+
+	// Initial filter state setup
+	setTimeout(() => {
+		updateFilterStates();
+	}, 100);
 
 	// Set default fiscal year to current fiscal year
 	frappe.call({
