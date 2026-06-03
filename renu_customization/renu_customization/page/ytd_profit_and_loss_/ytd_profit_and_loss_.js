@@ -106,7 +106,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			display: flex !important;
 			flex-wrap: nowrap !important;
 			gap: 10px !important;
-			align-items: flex-end !important;
+			align-items: flex-start !important;
 			width: 100% !important;
 		}
 		.dashboard-filter-area .frappe-control {
@@ -141,6 +141,25 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		.dashboard-filter-area .help-box,
 		.dashboard-filter-area .description {
 			display: none !important;
+		}
+		/* Fix: hide the duplicate text Frappe renders BELOW Link fields (control-value) */
+		.dashboard-filter-area .control-value,
+		.dashboard-filter-area .like-disabled-input,
+		.dashboard-filter-area .control-input-wrapper > .control-value {
+			display: none !important;
+		}
+		/* Fix: ensure the Link field input is properly visible and sized */
+		.dashboard-filter-area .input-with-feedback {
+			height: 30px !important;
+			line-height: 30px !important;
+			padding: 0 12px !important;
+			font-size: 13px !important;
+			color: #1e293b !important;
+			display: block !important;
+		}
+		/* Fix: ensure control-input-wrapper does not collapse for Link fields */
+		.dashboard-filter-area .control-input-wrapper {
+			display: block !important;
 		}
 	`,
 		)
@@ -518,16 +537,46 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		const wc_png = await get_chart_png('#chart-working-capital');
 
 		// Build KPI cards HTML
-		const kpi_html = Object.entries(data.summary_cards).map(([key, card]) => {
-			const label = key.replace(/_/g, ' ').toUpperCase();
+		const cardConfigs = {
+			'sales_growth': { title: '1. SALES GROWTH', theme: 'card-theme-blue' },
+			'gross_margin': { title: '2. GROSS MARGIN', theme: 'card-theme-green' },
+			'operating_margin': { title: '3. OPERATING MARGIN', theme: 'card-theme-purple' },
+			'working_capital': { title: '4. WORKING CAPITAL', theme: 'card-theme-orange' }
+		};
+
+		const kpi_html = Object.entries(data.summary_cards)
+			.filter(([key]) => Object.keys(cardConfigs).includes(key))
+			.map(([key, card]) => {
+			const config = cardConfigs[key];
 			const value = formatNumber(card.ytd);
+			const pyd = formatNumber(card.pyd);
 			const variance = card.variance.toFixed(2);
-			const varClass = card.variance < 0 ? 'color: #dc2626;' : 'color: #16a34a;';
-			return `<div class="kpi-card">
-			<div class="kpi-label">${label}</div>
-			<div class="kpi-value">${value}</div>
-			<div style="font-size: 11px; ${varClass} margin-top: 5px;">${variance}%</div>
-		</div>`;
+			const isNegativeVar = card.variance < 0;
+			const varColor = isNegativeVar ? '#dc2626' : '#16a34a';
+			const varArrow = isNegativeVar ? '&#8595;' : '&#8593;';
+
+			return `<div class="summary-card ${config.theme}">
+				<div class="card-header">
+					<div class="card-title">${config.title}</div>
+				</div>
+				<div class="card-body">
+					<div class="card-metrics">
+						<div class="metric-group text-center" style="width: 40%;">
+							<div class="metric-main">${value}</div>
+						</div>
+						<div class="metric-group text-center" style="width: 30%;">
+							<div class="metric-label">PYD</div>
+							<div class="metric-value">${pyd}</div>
+						</div>
+						<div class="metric-group text-center" style="width: 30%;">
+							<div class="metric-label">VPY%</div>
+							<div class="metric-value metric-var" style="color: ${varColor};">
+								${variance}% <span style="font-size:12px;">${varArrow}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>`;
 		}).join('');
 
 		// Build table rows
@@ -542,10 +591,9 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		const table_rows = data.table_data.map(group => {
 			const rowCount = group.sources.length;
 			return group.sources.map((src, i) => {
-				const ytdVal = formatNumber(src.ytd_val);
-				const ytdPct = src.ytd_pct ? formatPct(src.ytd_pct) : '-';
-				const pydVal = formatNumber(src.pyd_val);
-				const pydPct = src.pyd_pct ? formatPct(src.pyd_pct) : '-';
+				const isPercentageRow = src.name === '%';
+				const ytdVal = isPercentageRow ? Number(src.ytd_val).toFixed(2) + '%' : formatNumber(src.ytd_val);
+				const pydVal = isPercentageRow ? Number(src.pyd_val).toFixed(2) + '%' : formatNumber(src.pyd_val);
 
 				// Calculate variance percentage for all rows: (YTD-PYD)/PYD*100
 				let varVal = '-';
@@ -561,7 +609,8 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 					varVal = '0.00%';
 				}
 				
-				const varPct = src.var_pct ? formatPct(src.var_pct) : '-';
+				const isNegativeVar = parseFloat(varVal) < 0;
+				const varColor = isNegativeVar ? '#dc2626' : '#16a34a';
 
 				// Trend bar for PDF
 				let trendHtmlPdf = '-';
@@ -575,17 +624,16 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				}
 
 				const bucket_color = bucket_colors_pdf[group.bucket] || '#1e3a8a';
-				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: 900; font-size: 12px; color: ${bucket_color}; background: #f1f5f9;">${group.bucket}</td>` : '';
+				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: 900; font-size: 12px; color: ${bucket_color}; background: #f1f5f9; vertical-align: top;">${group.bucket}</td>` : '';
+
+				const paddingLeft = src.is_indented ? 'padding-left: 20px;' : (isPercentageRow ? 'padding-left: 20px; font-weight: bold;' : '');
 
 				return `<tr>
 				${bucket_cell}
-				<td>${src.name}</td>
-				<td style="text-align: right;">${ytdVal}</td>
-				<td style="text-align: right;">${ytdPct}</td>
-				<td style="text-align: right;">${pydVal}</td>
-				<td style="text-align: right;">${pydPct}</td>
-				<td style="text-align: right;">${varVal}</td>
-				<td style="text-align: right;">${varPct}</td>
+				<td style="${paddingLeft}">${src.name}</td>
+				<td style="text-align: center;">${ytdVal}</td>
+				<td style="text-align: center;">${pydVal}</td>
+				<td style="text-align: center; color: ${varColor}; font-weight: bold;">${varVal}</td>
 				<td style="text-align: center;">${trendHtmlPdf}</td>
 			</tr>`;
 			}).join('');
@@ -612,6 +660,33 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		</div>
 	`;
 
+		// Build insights HTML
+		const insights_html = data.insights && data.insights.length > 0 
+			? data.insights.map(i => `<li style="margin-bottom: 5px;">${i}</li>`).join('') 
+			: '<li>No insights available.</li>';
+
+		const footer_html = `
+		<div style="display: table; width: 100%; margin-top: 30px;">
+			<div style="display: table-cell; width: 60%; padding-right: 20px; vertical-align: top;">
+				<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px;">
+					<h4 style="margin: 0 0 10px 0; font-size: 12px; color: #166534; text-transform: uppercase;">KEY INSIGHTS</h4>
+					<ul style="margin: 0; padding-left: 20px; font-size: 11px; color: #14532d; line-height: 1.6;">
+						${insights_html}
+					</ul>
+				</div>
+			</div>
+			<div style="display: table-cell; width: 40%; vertical-align: top;">
+				<div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+					<h4 style="margin: 0 0 15px 0; font-size: 12px; color: #475569; text-transform: uppercase;">VARIANCE LEGEND</h4>
+					<div style="font-size: 11px; color: #334155; font-weight: 500;">
+						<div style="margin-bottom: 8px;"><span style="display:inline-block; width:12px; height:12px; background:#16a34a; margin-right:8px; vertical-align:middle; border-radius:2px;"></span> Favourable (Increase)</div>
+						<div style="margin-bottom: 8px;"><span style="display:inline-block; width:12px; height:12px; background:#dc2626; margin-right:8px; vertical-align:middle; border-radius:2px;"></span> Unfavourable (Decrease)</div>
+						<div><span style="display:inline-block; width:12px; height:12px; background:#94a3b8; margin-right:8px; vertical-align:middle; border-radius:2px;"></span> No Change</div>
+					</div>
+				</div>
+			</div>
+		</div>`;
+
 		const html = `
 		<html>
 		<head>
@@ -619,10 +694,20 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				body { font-family: 'Helvetica', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; }
 				@page { size: landscape; margin: 10mm; }
 				.header { text-align: center; border-bottom: 3px solid #ef4444; padding-bottom: 15px; margin-bottom: 25px; }
-				.kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 25px; table-layout: fixed; }
-				.kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; vertical-align: top; text-align: center; }
-				.kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-				.kpi-value { font-size: 18px; font-weight: 800; }
+				.summary-cards { display: table; width: 100%; border-collapse: separate; border-spacing: 15px; margin-bottom: 25px; table-layout: fixed; margin-left: -15px; margin-right: -15px; }
+				.summary-card { display: table-cell; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; overflow: hidden; vertical-align: top; }
+				.card-header { padding: 10px; color: white; font-weight: bold; font-size: 14px; text-align: center; }
+				.card-body { padding: 15px 10px; }
+				.card-metrics { display: table; width: 100%; table-layout: fixed; }
+				.metric-group { display: table-cell; text-align: center; vertical-align: middle; }
+				.metric-main { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 5px; }
+				.metric-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+				.metric-value { font-size: 14px; font-weight: 700; color: #334155; }
+				.card-theme-blue .card-header { background: #1d4ed8; }
+				.card-theme-green .card-header { background: #047857; }
+				.card-theme-purple .card-header { background: #6d28d9; }
+				.card-theme-orange .card-header { background: #c2410c; }
+				.card-theme-dark .card-header { background: #1e3a8a; }
 				table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; }
 				th, td { padding: 8px; border: 1px solid #cbd5e1; text-align: left; }
 				th { background: #1e3a8a; color: white; font-weight: 700; text-transform: uppercase; }
@@ -634,29 +719,27 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				<h1 style="margin: 0;">PROFIT & LOSS DASHBOARD</h1>
 				<p style="font-size: 10px; color: #999; margin: 5px 0 0;">Generated: ${report_date}</p>
 			</div>
-			<div class="kpi-wrapper">
+			<div class="summary-cards">
 				${kpi_html}
 			</div>
-			${charts_html}
 			<h3 style="color: #334155; text-transform: uppercase; font-size: 14px; margin: 30px 0 10px;">Detailed Analysis (Million INR)</h3>
 			<table>
 				<thead>
 					<tr>
-						<th>Bucket</th>
-						<th>Source</th>
-						<th>YTD Value</th>
-						<th>YTD %</th>
-						<th>PYD Value</th>
-						<th>PYD %</th>
-						<th>Δ Value</th>
-						<th>Δ %</th>
-						<th>Trend</th>
+						<th>BUCKET</th>
+						<th>SOURCES OF PROFIT & LOSS</th>
+						<th>YTD</th>
+						<th>PYD</th>
+						<th>VARIANCE (YTD vs PYD)</th>
+						<th>TREND (YTD vs PYD)</th>
 					</tr>
 				</thead>
 				<tbody>
 					${table_rows}
 				</tbody>
 			</table>
+			${charts_html}
+			${footer_html}
 		</body>
 		</html>
 	`;
