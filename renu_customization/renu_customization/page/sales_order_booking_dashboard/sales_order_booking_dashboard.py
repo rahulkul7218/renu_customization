@@ -252,18 +252,19 @@ def get_dashboard_data(filters=None):
         row["returned_val"] = flt(row.get("returned_qty", 0)) * flt(row.get("base_rate", 0))
         row["delivered_net_total_inr"] = flt(row.get("delivery_amount", 0))
         row["picked_net_total_inr"] = flt(row.get("picked_qty_val", 0)) * flt(row.get("base_rate", 0))
-        row["pending_value"] = max(0, net_booked - row["delivered_net_total_inr"] - row["returned_val"])
 
         # Explicitly set quantity fields for dashboard display
         row["short_close_qty"] = flt(row.get("short_close_qty") or 0)  # Ensure it's preserved
         row["delivered_qty"] = flt(row.get("delivered_qty") or 0)
         # Use same open-qty formula as sales_order_report: subtract delivered, custom_picked_but_not_delivered and short-close
         row["pending_qty"] = flt(row.get("order_quantity", 0)) - flt(row.get("delivered_qty", 0)) - flt(row.get("custom_picked_but_not_delivered", 0)) - flt(row.get("short_close_qty", 0))
+        
+        row["pending_value"] = max(0, row["pending_qty"] * flt(row.get("base_rate", 0)))
 
         # Overdue logic
         row["overdue_value"] = 0
         if row.get("delivery_date") and row["pending_value"] > 0:
-            if frappe.utils.getdate(row["delivery_date"]) < today:
+            if frappe.utils.getdate(row.get("delivery_date")) < today:
                 row["overdue_value"] = row["pending_value"]
 
         # Gross Total (with taxes/extras percentage if available)
