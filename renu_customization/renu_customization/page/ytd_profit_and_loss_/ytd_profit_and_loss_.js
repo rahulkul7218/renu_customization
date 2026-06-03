@@ -8,6 +8,15 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 	// Hide default header to use our custom dashboard header
 	page.wrapper.find('.page-head .title').hide();
 
+	// Initialize auto-refresh functionality
+	frappe.require('/assets/renu_customization/js/dashboard_auto_refresh.js', () => {
+		page.auto_refresh = new DashboardAutoRefresh(page, {
+			storage_key: 'ytd_profit_and_loss_dashboard',
+			default_interval: 300
+		});
+		page.auto_refresh.init();
+	});
+
 	// Load our HTML template
 	page.main.html(frappe.render_template('ytd_profit_and_loss_'));
 
@@ -95,13 +104,15 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		}
 		.dashboard-filter-area .form-column form {
 			display: flex !important;
-			flex-wrap: wrap !important;
-			gap: 15px !important;
-			align-items: flex-end !important;
+			flex-wrap: nowrap !important;
+			gap: 10px !important;
+			align-items: flex-start !important;
+			width: 100% !important;
 		}
 		.dashboard-filter-area .frappe-control {
 			margin-bottom: 10px !important;
-			width: calc(20% - 12px) !important;
+			flex: 1 !important;
+			min-width: 120px !important;
 		}
 		.dashboard-filter-area .frappe-control .form-group {
 			margin-bottom: 0 !important;
@@ -130,6 +141,25 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		.dashboard-filter-area .help-box,
 		.dashboard-filter-area .description {
 			display: none !important;
+		}
+		/* Fix: hide the duplicate text Frappe renders BELOW Link fields (control-value) */
+		.dashboard-filter-area .control-value,
+		.dashboard-filter-area .like-disabled-input,
+		.dashboard-filter-area .control-input-wrapper > .control-value {
+			display: none !important;
+		}
+		/* Fix: ensure the Link field input is properly visible and sized */
+		.dashboard-filter-area .input-with-feedback {
+			height: 30px !important;
+			line-height: 30px !important;
+			padding: 0 12px !important;
+			font-size: 13px !important;
+			color: #1e293b !important;
+			display: block !important;
+		}
+		/* Fix: ensure control-input-wrapper does not collapse for Link fields */
+		.dashboard-filter-area .control-input-wrapper {
+			display: block !important;
 		}
 	`,
 		)
@@ -231,16 +261,36 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		});
 	};
 
+	const renderInsights = (insights) => {
+		const container = $('#key-insights-list');
+		container.empty();
+		if (insights && insights.length > 0) {
+			insights.forEach(insight => {
+				container.append(`<li>${insight}</li>`);
+			});
+		} else {
+			container.append(`<li>No insights available.</li>`);
+		}
+	};
+
 	const renderTable = (tableData) => {
 		const tbody = $('#detailed-table-body');
 		tbody.empty();
 
 		const icons = {
-			'1. SALES GROWTH': 'fa-bar-chart text-blue-800',
-			'2. GROSS MARGIN': 'fa-pie-chart text-green-800',
-			'3. OPERATING MARGIN': 'fa-briefcase text-purple-800',
-			'4. WORKING CAPITAL': 'fa-university text-orange-800',
-			'OVERALL P&L': 'fa-line-chart text-blue-800'
+			'1. SALES GROWTH': 'fa-bar-chart',
+			'2. GROSS MARGIN': 'fa-pie-chart',
+			'3. OPERATING MARGIN': 'fa-briefcase',
+			'4. WORKING CAPITAL': 'fa-university',
+			'OVERALL P&L': 'fa-line-chart'
+		};
+
+		const bucket_colors = {
+			'1. SALES GROWTH': '#1d4ed8',
+			'2. GROSS MARGIN': '#047857',
+			'3. OPERATING MARGIN': '#6d28d9',
+			'4. WORKING CAPITAL': '#c2410c',
+			'OVERALL P&L': '#1e3a8a'
 		};
 
 		tableData.forEach((group, index) => {
@@ -251,7 +301,8 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				const tr = $('<tr></tr>');
 
 				if (sIndex === 0) {
-					tr.append(`<td rowspan="${rowCount}" class="row-bucket">
+					const color = bucket_colors[group.bucket] || '#1e3a8a';
+					tr.append(`<td rowspan="${rowCount}" class="row-bucket" style="color: ${color} !important; font-weight: 900 !important; font-size: 16px !important;">
 						<i class="fa ${icons[group.bucket]} bucket-icon"></i> ${group.bucket}
 					</td>`);
 				}
@@ -261,9 +312,13 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				const pydVal = formatNumber(source.pyd_val);
 				const pydPct = formatPct(source.pyd_pct);
 
-				let varVal = source.var_val !== null ? `(${Math.abs(source.var_val).toFixed(2)})` : '-';
-				if (source.var_val > 0) varVal = source.var_val.toFixed(2);
-				if (source.var_val === 0) varVal = '0.00';
+				let varVal = '-';
+				if (source.var_val !== null && source.var_val !== undefined) {
+					const varMil = parseFloat(source.var_val) / 1000000;
+					if (varMil > 0) varVal = varMil.toFixed(2);
+					else if (varMil === 0) varVal = '0.00';
+					else varVal = '(' + Math.abs(varMil).toFixed(2) + ')';
+				}
 
 				const varPct = formatPct(source.var_pct);
 
@@ -279,18 +334,52 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 					// For percentage rows, display the percentage values
 					tr.append(`<td class="text-center">${Number(source.ytd_val).toFixed(2)}%</td>`);
 					tr.append(`<td class="text-center">${Number(source.pyd_val).toFixed(2)}%</td>`);
-					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${source.var_val !== null ? Number(source.var_val).toFixed(2) + '%' : '-'}</td>`);
 				} else {
 					// For regular rows, display formatted numbers
 					tr.append(`<td class="text-center">${ytdVal}</td>`);
 					tr.append(`<td class="text-center">${pydVal}</td>`);
-					tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${varVal}</td>`);
 				}
 
-				// Trend column
-				if (sIndex === 0) {
-					tr.append(`<td rowspan="${rowCount}" class="text-center"><div class="trend-bar-container"><div class="trend-bar-pos" style="width: 50%"></div></div></td>`);
+				// Calculate variance percentage for all rows: (YTD-PYD)/PYD*100
+				let displayVar = '-';
+				const yVal = parseFloat(source.ytd_val) || 0;
+				const pVal = parseFloat(source.pyd_val) || 0;
+				
+				if (pVal !== 0) {
+					const vPct = ((yVal - pVal) / Math.abs(pVal)) * 100;
+					displayVar = vPct.toFixed(2) + '%';
+				} else if (yVal !== 0) {
+					displayVar = '100.00%';
+				} else {
+					displayVar = '0.00%';
 				}
+				
+				tr.append(`<td class="text-center ${getVarClass(source.var_val)}">${displayVar}</td>`);
+
+				// Trend column - Dynamic based on YTD vs PYD variance (Bi-directional)
+				let trendHtml = '-';
+				if (source.var_pct !== null && source.var_pct !== undefined) {
+					const vPct = parseFloat(source.var_pct);
+					const trendWidth = Math.min(Math.abs(vPct), 100);
+					if (vPct >= 0) {
+						trendHtml = `<div class="trend-bar-container">
+							<div class="trend-bar-half left-half">
+								<div class="trend-bar-fill pos" style="width: ${trendWidth}%;"></div>
+							</div>
+							<div class="trend-bar-divider"></div>
+							<div class="trend-bar-half right-half"></div>
+						</div>`;
+					} else {
+						trendHtml = `<div class="trend-bar-container">
+							<div class="trend-bar-half left-half"></div>
+							<div class="trend-bar-divider"></div>
+							<div class="trend-bar-half right-half">
+								<div class="trend-bar-fill neg" style="width: ${trendWidth}%;"></div>
+							</div>
+						</div>`;
+					}
+				}
+				tr.append(`<td class="text-center">${trendHtml}</td>`);
 
 				tbody.append(tr);
 			});
@@ -303,8 +392,22 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			return;
 		}
 
+		// Destroy existing chart instances to prevent overlap
+		if (page._charts) {
+			page._charts.forEach(c => {
+				try { c.destroy(); } catch (e) { /* ignore */ }
+			});
+		}
+		page._charts = [];
+
+		// Clear chart containers
+		['#chart-revenue-trend', '#chart-gross-margin', '#chart-working-capital'].forEach(sel => {
+			const el = document.querySelector(sel);
+			if (el) el.innerHTML = '';
+		});
+
 		// Revenue Trend Chart
-		new ApexCharts(document.querySelector("#chart-revenue-trend"), {
+		const revenueChart = new ApexCharts(document.querySelector("#chart-revenue-trend"), {
 			series: [
 				{ name: 'YTD', data: chartsData.revenue_trend.ytd.map(v => v / 1000000) },
 				{ name: 'PYD', data: chartsData.revenue_trend.pyd.map(v => v / 1000000) }
@@ -314,34 +417,68 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			dataLabels: { enabled: false },
 			stroke: { show: true, width: 2, colors: ['transparent'] },
 			xaxis: { categories: chartsData.revenue_trend.labels },
+			yaxis: {
+				labels: {
+					formatter: function (val) {
+						return val.toFixed(2);
+					}
+				}
+			},
+			tooltip: {
+				y: {
+					formatter: function (val) {
+						return val.toFixed(2);
+					}
+				}
+			},
 			fill: { opacity: 1 },
 			colors: ['#1d4ed8', '#94a3b8'],
 			legend: { position: 'top', horizontalAlign: 'right' }
-		}).render();
+		});
+		revenueChart.render();
+		page._charts.push(revenueChart);
 
 		// Gross Margin Trend Chart
-		new ApexCharts(document.querySelector("#chart-gross-margin"), {
+		const gmChart = new ApexCharts(document.querySelector("#chart-gross-margin"), {
 			series: [{ name: 'YTD GM %', data: chartsData.gross_margin_trend.ytd_gm }, { name: 'PYD GM %', data: chartsData.gross_margin_trend.pyd_gm }],
 			chart: { type: 'line', height: 180, toolbar: { show: false } },
 			stroke: { width: [3, 3], curve: 'straight' },
 			xaxis: { categories: chartsData.gross_margin_trend.labels },
+			yaxis: {
+				labels: {
+					formatter: function (val) {
+						return val.toFixed(2) + '%';
+					}
+				}
+			},
+			tooltip: {
+				y: {
+					formatter: function (val) {
+						return val.toFixed(2) + '%';
+					}
+				}
+			},
 			colors: ['#10b981', '#64748b'],
 			markers: { size: 4 },
 			legend: { position: 'top', horizontalAlign: 'left' }
-		}).render();
+		});
+		gmChart.render();
+		page._charts.push(gmChart);
 
 		// Hidden for now - uncomment to re-enable
 		// Waterfall Chart
-		// new ApexCharts(document.querySelector("#chart-waterfall"), {
+		// const waterfallChart = new ApexCharts(document.querySelector("#chart-waterfall"), {
 		// 	series: [{ name: 'Waterfall', data: chartsData.waterfall.values.map((v, i) => ({ x: chartsData.waterfall.labels[i], y: v / 1000000 })) }],
 		// 	chart: { type: 'bar', height: 180, toolbar: { show: false } },
 		// 	plotOptions: { bar: { colors: { ranges: [{ from: -1000, to: -0.01, color: '#dc2626' }, { from: 0.01, to: 1000, color: '#1d4ed8' }] } } },
 		// 	dataLabels: { enabled: true, formatter: function (val) { return parseFloat(val).toFixed(2); }, offsetY: -20, style: { fontSize: '10px', colors: ["#304758"] } },
 		// 	xaxis: { type: 'category' },
-		// }).render();
+		// });
+		// waterfallChart.render();
+		// page._charts.push(waterfallChart);
 
 		// Working Capital Chart
-		new ApexCharts(document.querySelector("#chart-working-capital"), {
+		const wcChart = new ApexCharts(document.querySelector("#chart-working-capital"), {
 			series: [
 				{ name: 'YTD', data: chartsData.working_capital.ytd.map(v => v / 1000000) },
 				{ name: 'PYD', data: chartsData.working_capital.pyd.map(v => v / 1000000) }
@@ -350,9 +487,25 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			plotOptions: { bar: { horizontal: false, columnWidth: '50%' } },
 			dataLabels: { enabled: false },
 			xaxis: { categories: chartsData.working_capital.labels },
+			yaxis: {
+				labels: {
+					formatter: function (val) {
+						return val.toFixed(2);
+					}
+				}
+			},
+			tooltip: {
+				y: {
+					formatter: function (val) {
+						return val.toFixed(2);
+					}
+				}
+			},
 			colors: ['#f97316', '#94a3b8'],
 			legend: { position: 'top', horizontalAlign: 'right' }
-		}).render();
+		});
+		wcChart.render();
+		page._charts.push(wcChart);
 	};
 
 	// Export to PDF Function
@@ -399,44 +552,117 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		const wc_png = await get_chart_png('#chart-working-capital');
 
 		// Build KPI cards HTML
-		const kpi_html = Object.entries(data.summary_cards).map(([key, card]) => {
-			const label = key.replace(/_/g, ' ').toUpperCase();
+		const cardConfigs = {
+			'sales_growth': { title: '1. SALES GROWTH', theme: 'card-theme-blue' },
+			'gross_margin': { title: '2. GROSS MARGIN', theme: 'card-theme-green' },
+			'operating_margin': { title: '3. OPERATING MARGIN', theme: 'card-theme-purple' },
+			'working_capital': { title: '4. WORKING CAPITAL', theme: 'card-theme-orange' }
+		};
+
+		const kpi_html = Object.entries(data.summary_cards)
+			.filter(([key]) => Object.keys(cardConfigs).includes(key))
+			.map(([key, card]) => {
+			const config = cardConfigs[key];
 			const value = formatNumber(card.ytd);
+			const pyd = formatNumber(card.pyd);
 			const variance = card.variance.toFixed(2);
-			const varClass = card.variance < 0 ? 'color: #dc2626;' : 'color: #16a34a;';
-			return `<div class="kpi-card">
-			<div class="kpi-label">${label}</div>
-			<div class="kpi-value">${value}</div>
-			<div style="font-size: 11px; ${varClass} margin-top: 5px;">${variance}%</div>
-		</div>`;
+			const isNegativeVar = card.variance < 0;
+			const varColor = isNegativeVar ? '#dc2626' : '#16a34a';
+			const varArrow = isNegativeVar ? '&#8595;' : '&#8593;';
+
+			return `<div class="summary-card ${config.theme}">
+				<div class="card-header">
+					<div class="card-title">${config.title}</div>
+				</div>
+				<div class="card-body">
+					<div class="card-metrics">
+						<div class="metric-group text-center" style="width: 40%;">
+							<div class="metric-main">${value}</div>
+						</div>
+						<div class="metric-group text-center" style="width: 30%;">
+							<div class="metric-label">PYD</div>
+							<div class="metric-value">${pyd}</div>
+						</div>
+						<div class="metric-group text-center" style="width: 30%;">
+							<div class="metric-label">VPY%</div>
+							<div class="metric-value metric-var" style="color: ${varColor};">
+								${variance}% <span style="font-size:12px;">${varArrow}</span>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>`;
 		}).join('');
 
 		// Build table rows
+		const bucket_colors_pdf = {
+			'1. SALES GROWTH': '#1d4ed8',
+			'2. GROSS MARGIN': '#047857',
+			'3. OPERATING MARGIN': '#6d28d9',
+			'4. WORKING CAPITAL': '#c2410c',
+			'OVERALL P&L': '#1e3a8a'
+		};
+
 		const table_rows = data.table_data.map(group => {
 			const rowCount = group.sources.length;
 			return group.sources.map((src, i) => {
-				const ytdVal = formatNumber(src.ytd_val);
-				const ytdPct = src.ytd_pct ? formatPct(src.ytd_pct) : '-';
-				const pydVal = formatNumber(src.pyd_val);
-				const pydPct = src.pyd_pct ? formatPct(src.pyd_pct) : '-';
+				const isPercentageRow = src.name === '%';
+				const ytdVal = isPercentageRow ? Number(src.ytd_val).toFixed(2) + '%' : formatNumber(src.ytd_val);
+				const pydVal = isPercentageRow ? Number(src.pyd_val).toFixed(2) + '%' : formatNumber(src.pyd_val);
 
+				// Calculate variance percentage for all rows: (YTD-PYD)/PYD*100
 				let varVal = '-';
-				if (src.var_val !== null) {
-					varVal = src.var_val > 0 ? src.var_val.toFixed(2) : src.var_val === 0 ? '0.00' : `(${Math.abs(src.var_val).toFixed(2)})`;
+				const yValPdf = parseFloat(src.ytd_val) || 0;
+				const pValPdf = parseFloat(src.pyd_val) || 0;
+				
+				if (pValPdf !== 0) {
+					const vPctPdf = ((yValPdf - pValPdf) / Math.abs(pValPdf)) * 100;
+					varVal = vPctPdf.toFixed(2) + '%';
+				} else if (yValPdf !== 0) {
+					varVal = '100.00%';
+				} else {
+					varVal = '0.00%';
 				}
-				const varPct = src.var_pct ? formatPct(src.var_pct) : '-';
+				
+				const isNegativeVar = parseFloat(varVal) < 0;
+				const varColor = isNegativeVar ? '#dc2626' : '#16a34a';
 
-				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: bold; background: #f1f5f9;">${group.bucket}</td>` : '';
+				// Trend bar for PDF (Bi-directional)
+				let trendHtmlPdf = '-';
+				if (src.var_pct !== null && src.var_pct !== undefined) {
+					const vPct = parseFloat(src.var_pct);
+					const trendWidth = Math.min(Math.abs(vPct), 100);
+					if (vPct >= 0) {
+						trendHtmlPdf = `<div style="width: 60px; height: 10px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin: 0 auto; display: flex; position: relative;">
+							<div style="width: 50%; height: 100%; display: flex; justify-content: flex-end;">
+								<div style="width: ${trendWidth}%; height: 100%; background: #16a34a; border-radius: 2px 0 0 2px;"></div>
+							</div>
+							<div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #94a3b8; z-index: 2; transform: translateX(-50%);"></div>
+							<div style="width: 50%; height: 100%;"></div>
+						</div>`;
+					} else {
+						trendHtmlPdf = `<div style="width: 60px; height: 10px; background: #f1f5f9; border-radius: 3px; overflow: hidden; margin: 0 auto; display: flex; position: relative;">
+							<div style="width: 50%; height: 100%;"></div>
+							<div style="position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #94a3b8; z-index: 2; transform: translateX(-50%);"></div>
+							<div style="width: 50%; height: 100%; display: flex; justify-content: flex-start;">
+								<div style="width: ${trendWidth}%; height: 100%; background: #dc2626; border-radius: 0 2px 2px 0;"></div>
+							</div>
+						</div>`;
+					}
+				}
+
+				const bucket_color = bucket_colors_pdf[group.bucket] || '#1e3a8a';
+				const bucket_cell = i === 0 ? `<td rowspan="${rowCount}" style="font-weight: 900; font-size: 12px; color: ${bucket_color}; background: #f1f5f9; vertical-align: top;">${group.bucket}</td>` : '';
+
+				const paddingLeft = src.is_indented ? 'padding-left: 20px;' : (isPercentageRow ? 'padding-left: 20px; font-weight: bold;' : '');
 
 				return `<tr>
 				${bucket_cell}
-				<td>${src.name}</td>
-				<td style="text-align: right;">${ytdVal}</td>
-				<td style="text-align: right;">${ytdPct}</td>
-				<td style="text-align: right;">${pydVal}</td>
-				<td style="text-align: right;">${pydPct}</td>
-				<td style="text-align: right;">${varVal}</td>
-				<td style="text-align: right;">${varPct}</td>
+				<td style="${paddingLeft}">${src.name}</td>
+				<td style="text-align: center;">${ytdVal}</td>
+				<td style="text-align: center;">${pydVal}</td>
+				<td style="text-align: center; color: ${varColor}; font-weight: bold;">${varVal}</td>
+				<td style="text-align: center;">${trendHtmlPdf}</td>
 			</tr>`;
 			}).join('');
 		}).join('');
@@ -462,6 +688,33 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		</div>
 	`;
 
+		// Build insights HTML
+		const insights_html = data.insights && data.insights.length > 0 
+			? data.insights.map(i => `<li style="margin-bottom: 5px;">${i}</li>`).join('') 
+			: '<li>No insights available.</li>';
+
+		const footer_html = `
+		<div style="display: table; width: 100%; margin-top: 30px;">
+			<div style="display: table-cell; width: 60%; padding-right: 20px; vertical-align: top;">
+				<div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px;">
+					<h4 style="margin: 0 0 10px 0; font-size: 12px; color: #166534; text-transform: uppercase;">KEY INSIGHTS</h4>
+					<ul style="margin: 0; padding-left: 20px; font-size: 11px; color: #14532d; line-height: 1.6;">
+						${insights_html}
+					</ul>
+				</div>
+			</div>
+			<div style="display: table-cell; width: 40%; vertical-align: top;">
+				<div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px;">
+					<h4 style="margin: 0 0 15px 0; font-size: 12px; color: #475569; text-transform: uppercase;">VARIANCE LEGEND</h4>
+					<div style="font-size: 11px; color: #334155; font-weight: 500;">
+						<div style="margin-bottom: 8px;"><span style="display:inline-block; width:12px; height:12px; background:#16a34a; margin-right:8px; vertical-align:middle; border-radius:2px;"></span> Favourable (Increase)</div>
+						<div style="margin-bottom: 8px;"><span style="display:inline-block; width:12px; height:12px; background:#dc2626; margin-right:8px; vertical-align:middle; border-radius:2px;"></span> Unfavourable (Decrease)</div>
+						<div><span style="display:inline-block; width:12px; height:12px; background:#94a3b8; margin-right:8px; vertical-align:middle; border-radius:2px;"></span> No Change</div>
+					</div>
+				</div>
+			</div>
+		</div>`;
+
 		const html = `
 		<html>
 		<head>
@@ -469,12 +722,22 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				body { font-family: 'Helvetica', sans-serif; padding: 0; margin: 0; color: #1e293b; background: #fff; }
 				@page { size: landscape; margin: 10mm; }
 				.header { text-align: center; border-bottom: 3px solid #ef4444; padding-bottom: 15px; margin-bottom: 25px; }
-				.kpi-wrapper { display: table; width: 100%; border-collapse: separate; border-spacing: 10px; margin-bottom: 25px; table-layout: fixed; }
-				.kpi-card { display: table-cell; border: 1px solid #e2e8f0; padding: 12px; border-radius: 10px; background: #f8fafc; vertical-align: top; text-align: center; }
-				.kpi-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 5px; }
-				.kpi-value { font-size: 18px; font-weight: 800; }
+				.summary-cards { display: table; width: 100%; border-collapse: separate; border-spacing: 15px; margin-bottom: 25px; table-layout: fixed; margin-left: -15px; margin-right: -15px; }
+				.summary-card { display: table-cell; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff; overflow: hidden; vertical-align: top; }
+				.card-header { padding: 10px; color: white; font-weight: bold; font-size: 14px; text-align: center; }
+				.card-body { padding: 15px 10px; }
+				.card-metrics { display: table; width: 100%; table-layout: fixed; }
+				.metric-group { display: table-cell; text-align: center; vertical-align: middle; }
+				.metric-main { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 5px; }
+				.metric-label { font-size: 10px; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 3px; }
+				.metric-value { font-size: 14px; font-weight: 700; color: #334155; }
+				.card-theme-blue .card-header { background: #1d4ed8; }
+				.card-theme-green .card-header { background: #047857; }
+				.card-theme-purple .card-header { background: #6d28d9; }
+				.card-theme-orange .card-header { background: #c2410c; }
+				.card-theme-dark .card-header { background: #1e3a8a; }
 				table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 20px; }
-				th, td { padding: 8px; border: 2px solid #334155; text-align: left; }
+				th, td { padding: 8px; border: 1px solid #cbd5e1; text-align: left; }
 				th { background: #1e3a8a; color: white; font-weight: 700; text-transform: uppercase; }
 				h4 { margin: 0; font-size: 12px; font-weight: 700; }
 			</style>
@@ -484,28 +747,27 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 				<h1 style="margin: 0;">PROFIT & LOSS DASHBOARD</h1>
 				<p style="font-size: 10px; color: #999; margin: 5px 0 0;">Generated: ${report_date}</p>
 			</div>
-			<div class="kpi-wrapper">
+			<div class="summary-cards">
 				${kpi_html}
 			</div>
-			${charts_html}
 			<h3 style="color: #334155; text-transform: uppercase; font-size: 14px; margin: 30px 0 10px;">Detailed Analysis (Million INR)</h3>
 			<table>
 				<thead>
 					<tr>
-						<th>Bucket</th>
-						<th>Source</th>
-						<th>YTD Value</th>
-						<th>YTD %</th>
-						<th>PYD Value</th>
-						<th>PYD %</th>
-						<th>Δ Value</th>
-						<th>Δ %</th>
+						<th>BUCKET</th>
+						<th>SOURCES OF PROFIT & LOSS</th>
+						<th>YTD</th>
+						<th>PYD</th>
+						<th>VARIANCE (YTD vs PYD)</th>
+						<th>TREND (YTD vs PYD)</th>
 					</tr>
 				</thead>
 				<tbody>
 					${table_rows}
 				</tbody>
 			</table>
+			${charts_html}
+			${footer_html}
 		</body>
 		</html>
 	`;
@@ -543,6 +805,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 
 					renderCards(r.message.summary_cards);
 					renderTable(r.message.table_data);
+					renderInsights(r.message.insights);
 
 					// Load apex charts script if not loaded
 					if (typeof ApexCharts === 'undefined') {

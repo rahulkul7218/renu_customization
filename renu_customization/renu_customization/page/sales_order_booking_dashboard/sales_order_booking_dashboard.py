@@ -399,7 +399,9 @@ def get_dashboard_data(filters=None):
 
 
     def get_chart_def(title, data_dict, limit=10):
-        sorted_items = sorted(data_dict.items(), key=lambda x: x[1], reverse=True)
+        # Filter out zero/negative values to ensure meaningful charts
+        filtered_data = {k: v for k, v in data_dict.items() if flt(v) > 0.001}
+        sorted_items = sorted(filtered_data.items(), key=lambda x: x[1], reverse=True)
         top_items = sorted_items[:limit]
         return {
             "title": title,

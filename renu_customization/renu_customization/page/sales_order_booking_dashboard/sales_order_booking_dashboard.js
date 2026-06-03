@@ -232,7 +232,10 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	Object.keys(page.filter_group.fields_dict).forEach((key) => {
 		let field = page.filter_group.fields_dict[key];
-		field.on_change = () => page.refresh();
+		// Skip generic on_change for fields that already have specific logic
+		if (!["fiscal_year", "from_date", "to_date", "item_group"].includes(key)) {
+			field.on_change = () => page.refresh();
+		}
 		if (field.$input) {
 			field.$input.on("change input blur", () => {
 				setTimeout(() => page.refresh(), 50);
@@ -858,6 +861,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				// Render Custom Legend
 				let legend_container = page.container.find(`#legend_${chart_id}`);
 				let total_val = chart_obj.data.datasets[0].values.reduce((a, b) => a + b, 0);
+				let legend_html = "";
 
 				chart_obj.data.labels.forEach((label, idx) => {
 					let val = chart_obj.data.datasets[0].values[idx];
@@ -871,7 +875,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 						if (parts[0] === parts[1]) display_label = parts[0];
 					}
 
-					legend_container.append(`
+					legend_html += `
                         <div class="legend-item">
                             <span class="dot" style="background: ${color}"></span>
                             <div class="info">
@@ -879,8 +883,9 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
                                 <span class="val">${format_currency_short(val)} (${share})</span>
                             </div>
                         </div>
-                    `);
+                    `;
 				});
+				legend_container.html(legend_html);
 			}, 100);
 		});
 
