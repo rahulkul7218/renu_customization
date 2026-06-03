@@ -106,7 +106,7 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 			display: flex !important;
 			flex-wrap: nowrap !important;
 			gap: 10px !important;
-			align-items: flex-end !important;
+			align-items: flex-start !important;
 			width: 100% !important;
 		}
 		.dashboard-filter-area .frappe-control {
@@ -141,6 +141,25 @@ frappe.pages['ytd-profit-and-loss-'].on_page_load = function (wrapper) {
 		.dashboard-filter-area .help-box,
 		.dashboard-filter-area .description {
 			display: none !important;
+		}
+		/* Fix: hide the duplicate text Frappe renders BELOW Link fields (control-value) */
+		.dashboard-filter-area .control-value,
+		.dashboard-filter-area .like-disabled-input,
+		.dashboard-filter-area .control-input-wrapper > .control-value {
+			display: none !important;
+		}
+		/* Fix: ensure the Link field input is properly visible and sized */
+		.dashboard-filter-area .input-with-feedback {
+			height: 30px !important;
+			line-height: 30px !important;
+			padding: 0 12px !important;
+			font-size: 13px !important;
+			color: #1e293b !important;
+			display: block !important;
+		}
+		/* Fix: ensure control-input-wrapper does not collapse for Link fields */
+		.dashboard-filter-area .control-input-wrapper {
+			display: block !important;
 		}
 	`,
 		)
