@@ -660,7 +660,7 @@ def get_dashboard_data(company, filters=None):
 				"sources": [
 					{"name": "SGM (Standard GM)", "ytd_val": sgm_ytd * 1000000, "ytd_pct": 30.00, "pyd_val": sgm_pyd * 1000000, "pyd_pct": 30.00, "var_val": sgm_var_val, "var_pct": sgm_var_pct},
 					{"name": "%", "ytd_val": 30.00, "ytd_pct": None, "pyd_val": 30.00, "pyd_pct": None, "var_val": None, "var_pct": None},
-					{"name": "COST OF GOODS (Add Freight)", "ytd_val": cogs_ytd_millions * 1000000, "ytd_pct": cogs_ytd_pct, "pyd_val": cogs_pyd_millions * 1000000, "pyd_pct": cogs_pyd_pct, "var_val": cogs_var_val, "var_pct": cogs_var_pct},
+					{"name": "Cost of Goods (Add Freight)", "ytd_val": cogs_ytd_millions * 1000000, "ytd_pct": cogs_ytd_pct, "pyd_val": cogs_pyd_millions * 1000000, "pyd_pct": cogs_pyd_pct, "var_val": cogs_var_val, "var_pct": cogs_var_pct},
 					{"name": "%", "ytd_val": (cogs_ytd_millions / ytd_millions) * 100 if ytd_millions else 0, "ytd_pct": None, "pyd_val": (cogs_pyd_millions / pyd_millions) * 100 if pyd_millions else 0, "pyd_pct": None, "var_val": None, "var_pct": None},
 					{"name": "AGM (Actual GM)", "ytd_val": agm_ytd_millions * 1000000, "ytd_pct": agm_ytd_pct, "pyd_val": agm_pyd_millions * 1000000, "pyd_pct": agm_pyd_pct, "var_val": agm_var_val, "var_pct": agm_var_pct},
 					{"name": "%", "ytd_val": agm_ytd_pct, "ytd_pct": None, "pyd_val": agm_pyd_pct, "pyd_pct": None, "var_val": round(agm_ytd_pct - agm_pyd_pct, 2), "var_pct": round(agm_ytd_pct - agm_pyd_pct, 2)}
@@ -672,7 +672,7 @@ def get_dashboard_data(company, filters=None):
 					{"name": "Cost of Sales", "ytd_val": cos_ytd_millions * 1000000, "ytd_pct": cos_ytd_pct, "pyd_val": cos_pyd_millions * 1000000, "pyd_pct": cos_pyd_pct, "var_val": cos_var_val, "var_pct": cos_var_pct, "is_indented": True},
 					{"name": "Cost of Engineering", "ytd_val": coe_ytd_millions * 1000000, "ytd_pct": coe_ytd_pct, "pyd_val": coe_pyd_millions * 1000000, "pyd_pct": coe_pyd_pct, "var_val": coe_var_val, "var_pct": coe_var_pct, "is_indented": True},
 					{"name": "Cost of G&A", "ytd_val": coga_ytd_millions * 1000000, "ytd_pct": coga_ytd_pct, "pyd_val": coga_pyd_millions * 1000000, "pyd_pct": coga_pyd_pct, "var_val": coga_var_val, "var_pct": coga_var_pct, "is_indented": True},
-					{"name": "Total SG&A (Total of 3)", "ytd_val": sga_ytd_millions * 1000000, "ytd_pct": sga_ytd_pct, "pyd_val": sga_pyd_millions * 1000000, "pyd_pct": sga_pyd_pct, "var_val": sga_var_val, "var_pct": sga_var_pct, "is_indented": True},
+					{"name": "Total SG&A", "ytd_val": sga_ytd_millions * 1000000, "ytd_pct": sga_ytd_pct, "pyd_val": sga_pyd_millions * 1000000, "pyd_pct": sga_pyd_pct, "var_val": sga_var_val, "var_pct": sga_var_pct, "is_indented": True},
 					{"name": "OM (Operating Margin)", "ytd_val": om_ytd_millions * 1000000, "ytd_pct": om_ytd_pct, "pyd_val": om_pyd_millions * 1000000, "pyd_pct": om_pyd_pct, "var_val": om_var_val, "var_pct": om_var_pct, "is_indented": True}
 				]
 			},
