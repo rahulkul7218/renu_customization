@@ -921,8 +921,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			let overdue = flt(row.overdue_value || 0);
 			let pending = flt(row.pending_value || 0);
 
-			if (overdue > 0 && row.so_date) {
-				let so_m = moment(row.so_date);
+			if (overdue > 0 && row.delivery_date) {
+				let so_m = moment(row.delivery_date);
 				let m_key = so_m.format("MMM YYYY");
 				let m_sort = so_m.format("YYYYMM");
 				if (!global_past_overdue[m_key]) global_past_overdue[m_key] = m_sort;
@@ -1128,7 +1128,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			lifecycle_buckets["Overdue"].color = "#8b5cf6";
 
 			filtered_data.forEach((row) => {
-				let m_key = moment(row.so_date).format("MMM YYYY");
+				let so_m_key = row.so_date ? moment(row.so_date).format("MMM YYYY") : null;
+				let del_m_key = row.delivery_date ? moment(row.delivery_date).format("MMM YYYY") : null;
 
 				// Use pre-calculated fields from Python get_dashboard_data
 				let tbv = flt(row.total_booked_value || 0);
@@ -1136,10 +1137,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let pending = flt(row.pending_value || 0);
 				let overdue = flt(row.overdue_value || 0);
 
-				lifecycle_buckets["Total Booked Value"].data[m_key] = (lifecycle_buckets["Total Booked Value"].data[m_key] || 0) + tbv;
-				lifecycle_buckets["Delivered"].data[m_key] = (lifecycle_buckets["Delivered"].data[m_key] || 0) + deliv;
-				lifecycle_buckets["Pending"].data[m_key] = (lifecycle_buckets["Pending"].data[m_key] || 0) + pending;
-				lifecycle_buckets["Overdue"].data[m_key] = (lifecycle_buckets["Overdue"].data[m_key] || 0) + overdue;
+				if (so_m_key) {
+					lifecycle_buckets["Total Booked Value"].data[so_m_key] = (lifecycle_buckets["Total Booked Value"].data[so_m_key] || 0) + tbv;
+					lifecycle_buckets["Delivered"].data[so_m_key] = (lifecycle_buckets["Delivered"].data[so_m_key] || 0) + deliv;
+					lifecycle_buckets["Pending"].data[so_m_key] = (lifecycle_buckets["Pending"].data[so_m_key] || 0) + pending;
+					lifecycle_buckets["Overdue"].data[so_m_key] = (lifecycle_buckets["Overdue"].data[so_m_key] || 0) + overdue;
+				}
 			});
 
 
@@ -1173,7 +1176,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			});
 
 			// Process Overdue Month-wise Breakdown
-			// Past Overdue: bucketed by so_date using overdue_value (to match Lifecycle Summary)
+			// Past Overdue: bucketed by delivery_date using overdue_value (to match Lifecycle Summary)
 			// Future Pending: bucketed by delivery_date using pending_value (for >= today)
 			const today_str = moment().startOf("day");
 			let past_overdue_by_month = {};
@@ -1183,8 +1186,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let overdue = flt(row.overdue_value || 0);
 				let pending = flt(row.pending_value || 0);
 
-				if (overdue > 0 && row.so_date) {
-					let so_m = moment(row.so_date);
+				if (overdue > 0 && row.delivery_date) {
+					let so_m = moment(row.delivery_date);
 					let m_key = so_m.format("MMM YYYY");
 					let m_sort = so_m.format("YYYYMM");
 
@@ -1299,8 +1302,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					overdue_merged_data[key].total += amt;
 				};
 
-				if (overdue > 0 && row.so_date) {
-					process_entry(overdue, moment(row.so_date).format("MMM YYYY"));
+				if (overdue > 0 && row.delivery_date) {
+					process_entry(overdue, moment(row.delivery_date).format("MMM YYYY"));
 				}
 				if (pending > 0 && row.delivery_date) {
 					let d_m = moment(row.delivery_date);

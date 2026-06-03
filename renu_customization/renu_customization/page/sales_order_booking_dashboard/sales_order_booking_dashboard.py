@@ -681,7 +681,7 @@ def export_to_excel(filters=None, export_type="all"):
             if overdue > 0:
                 sp, cust, prod = row.get("sales_person") or "-", row.get("customer_name") or "-", row.get("item_name") or row.get("item_code") or "-"
                 try:
-                    d = frappe.utils.getdate(row.get("so_date"))
+                    d = frappe.utils.getdate(row.get("delivery_date"))
                     m_key, m_sort = d.strftime("%b %Y"), d.strftime("%Y%m")
                 except: m_key, m_sort = "Unknown", "000000"
                 overdue_months_set.add((m_sort, m_key))
@@ -764,11 +764,14 @@ def export_to_excel(filters=None, export_type="all"):
 
         for row in data:
             try:
-                m_key = frappe.utils.getdate(row.get("so_date")).strftime("%b %Y")
+                so_m_key = frappe.utils.getdate(row.get("so_date")).strftime("%b %Y")
             except:
-                continue
-            if m_key not in sorted_months:
-                continue
+                so_m_key = None
+                
+            try:
+                del_m_key = frappe.utils.getdate(row.get("delivery_date")).strftime("%b %Y")
+            except:
+                del_m_key = None
 
             # Use pre-calculated fields from get_dashboard_data for perfect consistency
             tbv = flt(row.get("total_booked_value") or 0)
@@ -776,10 +779,11 @@ def export_to_excel(filters=None, export_type="all"):
             pending = flt(row.get("pending_value") or 0)
             overdue = flt(row.get("overdue_value") or 0)
 
-            lifecycle_summary_data["Total Booked Value"][m_key] += tbv
-            lifecycle_summary_data["Delivered"][m_key] += deliv
-            lifecycle_summary_data["Pending"][m_key] += pending
-            lifecycle_summary_data["Overdue"][m_key] += overdue
+            if so_m_key and so_m_key in sorted_months:
+                lifecycle_summary_data["Total Booked Value"][so_m_key] += tbv
+                lifecycle_summary_data["Delivered"][so_m_key] += deliv
+                lifecycle_summary_data["Pending"][so_m_key] += pending
+                lifecycle_summary_data["Overdue"][so_m_key] += overdue
 
         headers_l = ["Category"] + sorted_months + ["Total"]
         for idx, h in enumerate(headers_l, start=1):
