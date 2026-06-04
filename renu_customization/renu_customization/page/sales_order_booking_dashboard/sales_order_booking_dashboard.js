@@ -901,7 +901,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		// Prepare unique sorted months
 		let months = [];
 		let months_map = {};
-		
+
 		// Prepare unique sorted overdue months (past overdue + future pending)
 		const today_str_global = moment().startOf("day");
 		let global_past_overdue = {};
@@ -927,7 +927,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let m_sort = so_m.format("YYYYMM");
 				if (!global_past_overdue[m_key]) global_past_overdue[m_key] = m_sort;
 			}
-			
+
 			if (pending > 0 && row.delivery_date) {
 				let d_m = moment(row.delivery_date);
 				if (d_m.isSameOrAfter(today_str_global)) {
