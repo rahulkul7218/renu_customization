@@ -447,7 +447,6 @@ def get_dashboard_data(company, filters=None):
 		
 		# Cost of G&A from specific Cost Centers
 		coga_cost_centers = [
-			'Main - RFAPL',
 			'10009 - Administration Cost - RFAPL'
 		]
 		coga_ytd_total = get_cost_centers_balance(company, coga_cost_centers, start_date, end_date)
