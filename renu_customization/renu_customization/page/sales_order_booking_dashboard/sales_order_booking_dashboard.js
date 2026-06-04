@@ -4,7 +4,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		title: __("Sales Order Booking Dashboard"),
 		single_column: true,
 	});
-
+//the
 	window.cur_page = page;
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
