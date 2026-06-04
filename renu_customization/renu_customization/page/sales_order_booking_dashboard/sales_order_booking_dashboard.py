@@ -252,18 +252,19 @@ def get_dashboard_data(filters=None):
         row["returned_val"] = flt(row.get("returned_qty", 0)) * flt(row.get("base_rate", 0))
         row["delivered_net_total_inr"] = flt(row.get("delivery_amount", 0))
         row["picked_net_total_inr"] = flt(row.get("picked_qty_val", 0)) * flt(row.get("base_rate", 0))
-        row["pending_value"] = max(0, net_booked - row["delivered_net_total_inr"] - row["returned_val"])
 
         # Explicitly set quantity fields for dashboard display
         row["short_close_qty"] = flt(row.get("short_close_qty") or 0)  # Ensure it's preserved
         row["delivered_qty"] = flt(row.get("delivered_qty") or 0)
         # Use same open-qty formula as sales_order_report: subtract delivered, custom_picked_but_not_delivered and short-close
         row["pending_qty"] = flt(row.get("order_quantity", 0)) - flt(row.get("delivered_qty", 0)) - flt(row.get("custom_picked_but_not_delivered", 0)) - flt(row.get("short_close_qty", 0))
+        
+        row["pending_value"] = max(0, row["pending_qty"] * flt(row.get("base_rate", 0)))
 
         # Overdue logic
         row["overdue_value"] = 0
         if row.get("delivery_date") and row["pending_value"] > 0:
-            if frappe.utils.getdate(row["delivery_date"]) < today:
+            if frappe.utils.getdate(row.get("delivery_date")) < today:
                 row["overdue_value"] = row["pending_value"]
 
         # Gross Total (with taxes/extras percentage if available)
@@ -444,6 +445,7 @@ def export_to_excel(filters=None, export_type="all"):
         ws_overview = wb.active
         ws_overview.title = "Dashboard Overview"
         ws_months = wb.create_sheet("Month-Wise Booking")
+        ws_overdue_detailed = wb.create_sheet("Month-Wise Overdue Breakdown")
         ws_lifecycle = wb.create_sheet("Monthly Lifecycle Summary")
         ws_list = wb.create_sheet("Sales Orders List")
     elif export_type == "summary":
@@ -451,13 +453,22 @@ def export_to_excel(filters=None, export_type="all"):
         ws_months.title = "Month-Wise Booking"
         ws_lifecycle = wb.create_sheet("Monthly Lifecycle Summary")
         ws_overview = wb.create_sheet("Dummy1")
-        ws_list = wb.create_sheet("Dummy2")
+        ws_overdue_detailed = wb.create_sheet("Dummy2")
+        ws_list = wb.create_sheet("Dummy3")
     elif export_type == "detail":
         ws_list = wb.active
         ws_list.title = "Sales Orders List"
         ws_overview = wb.create_sheet("Dummy1")
         ws_months = wb.create_sheet("Dummy2")
-        ws_lifecycle = wb.create_sheet("Dummy3")
+        ws_overdue_detailed = wb.create_sheet("Dummy3")
+        ws_lifecycle = wb.create_sheet("Dummy4")
+    elif export_type == "overdue_detailed":
+        ws_overdue_detailed = wb.active
+        ws_overdue_detailed.title = "Month-Wise Overdue Breakdown"
+        ws_overview = wb.create_sheet("Dummy1")
+        ws_months = wb.create_sheet("Dummy2")
+        ws_list = wb.create_sheet("Dummy3")
+        ws_lifecycle = wb.create_sheet("Dummy4")
 
     # Premium Styling
     header_fill = PatternFill(start_color="2c3e50", fill_type="solid")
@@ -657,6 +668,85 @@ def export_to_excel(filters=None, export_type="all"):
         c_gg.alignment = Alignment(horizontal="right")
         row_idx += 3
 
+    if export_type in ["all", "overdue_detailed"]:
+        # 2.0.1 Month-Wise Overdue Breakdown Sheet
+        row_idx = 1
+        ws_overdue_detailed.cell(row=row_idx, column=1, value="Month-Wise Overdue Breakdown (Million INR)").font = section_font
+        row_idx += 2
+
+        overdue_merged_data = {}
+        overdue_months_set = set()
+        for row in data:
+            overdue = flt(row.get("overdue_value") or 0)
+            if overdue > 0:
+                sp, cust, prod = row.get("sales_person") or "-", row.get("customer_name") or "-", row.get("item_name") or row.get("item_code") or "-"
+                try:
+                    d = frappe.utils.getdate(row.get("delivery_date"))
+                    m_key, m_sort = d.strftime("%b %Y"), d.strftime("%Y%m")
+                except: m_key, m_sort = "Unknown", "000000"
+                overdue_months_set.add((m_sort, m_key))
+                key = f"{sp}|{cust}|{prod}"
+                if key not in overdue_merged_data: overdue_merged_data[key] = {"sp": sp, "cust": cust, "prod": prod, "months": {}, "total": 0}
+                overdue_merged_data[key]["months"][m_key] = overdue_merged_data[key]["months"].get(m_key, 0) + overdue
+                overdue_merged_data[key]["total"] += overdue
+
+        sorted_overdue_months_cols = [x[1] for x in sorted(list(overdue_months_set), key=lambda x: x[0])]
+        headers = ["S.No.", "Customer", "Sales Person", "Product"] + sorted_overdue_months_cols + ["Total Overdue (M)"]
+        for idx, h in enumerate(headers, start=1):
+            cell = ws_overdue_detailed.cell(row=row_idx, column=idx, value=h)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center")
+            cell.border = table_border
+        row_idx += 1
+
+        for r_idx, row in enumerate(sorted(overdue_merged_data.values(), key=lambda x: x["total"], reverse=True)):
+            fill = zebra_fill if r_idx % 2 == 0 else None
+            ws_overdue_detailed.cell(row=row_idx, column=1, value=r_idx + 1).border = table_border
+            ws_overdue_detailed.cell(row=row_idx, column=2, value=row["cust"]).border = table_border
+            ws_overdue_detailed.cell(row=row_idx, column=3, value=row["sp"]).border = table_border
+            ws_overdue_detailed.cell(row=row_idx, column=4, value=row["prod"]).border = table_border
+            col_idx = 5
+            for m_key in sorted_overdue_months_cols:
+                val = row["months"].get(m_key, 0)
+                c = ws_overdue_detailed.cell(row=row_idx, column=col_idx, value=flt(val)/1000000 if val else None)
+                c.number_format, c.border = '"₹ "#,##0.00" M"', table_border
+                if val: c.font = Font(color="dc2626")
+                col_idx += 1
+            c_n = ws_overdue_detailed.cell(row=row_idx, column=col_idx, value=flt(row["total"])/1000000)
+            c_n.number_format = '"₹ "#,##0.00" M"'
+            c_n.font = Font(bold=True, color="dc2626")
+            c_n.fill = PatternFill(start_color="ecf0f1", fill_type="solid")
+            c_n.border = table_border
+            row_idx += 1
+
+        # Add Footer Rows in Excel
+        ws_overdue_detailed.cell(row=row_idx, column=1, value="GRAND TOTAL OVERDUE").font = header_font
+        ws_overdue_detailed.merge_cells(start_row=row_idx, start_column=1, end_row=row_idx, end_column=4)
+        for c in range(1, 5):
+            ws_overdue_detailed.cell(row=row_idx, column=c).fill = header_fill
+            ws_overdue_detailed.cell(row=row_idx, column=c).border = table_border
+        o_totals_net, o_g_total = {}, sum(r["total"] for r in overdue_merged_data.values())
+
+        for r in overdue_merged_data.values():
+            for mk, mv in r["months"].items(): o_totals_net[mk] = o_totals_net.get(mk, 0) + mv
+
+        col_idx = 5
+        for m_key in sorted_overdue_months_cols:
+            val = o_totals_net.get(m_key, 0)
+            c = ws_overdue_detailed.cell(row=row_idx, column=col_idx, value=flt(val)/1000000 if val else None)
+            c.number_format = '"₹ "#,##0.00" M"'
+            c.font, c.fill, c.border = header_font, header_fill, table_border
+            if val: c.font = Font(bold=True, color="FFFFFF")
+            c.alignment = Alignment(horizontal="right")
+            col_idx += 1
+
+        c_gn = ws_overdue_detailed.cell(row=row_idx, column=col_idx, value=o_g_total / 1000000)
+        c_gn.number_format = '"₹ "#,##0.00" M"'
+        c_gn.font, c_gn.fill, c_gn.border = Font(bold=True, color="FFFFFF"), header_fill, table_border
+        c_gn.alignment = Alignment(horizontal="right")
+        row_idx += 3
+
     if export_type in ["all", "summary"]:
         # 2.1 Monthly Lifecycle Summary (Excel - Separate Sheet)
         row_idx_l = 1
@@ -674,11 +764,14 @@ def export_to_excel(filters=None, export_type="all"):
 
         for row in data:
             try:
-                m_key = frappe.utils.getdate(row.get("so_date")).strftime("%b %Y")
+                so_m_key = frappe.utils.getdate(row.get("so_date")).strftime("%b %Y")
             except:
-                continue
-            if m_key not in sorted_months:
-                continue
+                so_m_key = None
+                
+            try:
+                del_m_key = frappe.utils.getdate(row.get("delivery_date")).strftime("%b %Y")
+            except:
+                del_m_key = None
 
             # Use pre-calculated fields from get_dashboard_data for perfect consistency
             tbv = flt(row.get("total_booked_value") or 0)
@@ -686,10 +779,11 @@ def export_to_excel(filters=None, export_type="all"):
             pending = flt(row.get("pending_value") or 0)
             overdue = flt(row.get("overdue_value") or 0)
 
-            lifecycle_summary_data["Total Booked Value"][m_key] += tbv
-            lifecycle_summary_data["Delivered"][m_key] += deliv
-            lifecycle_summary_data["Pending"][m_key] += pending
-            lifecycle_summary_data["Overdue"][m_key] += overdue
+            if so_m_key and so_m_key in sorted_months:
+                lifecycle_summary_data["Total Booked Value"][so_m_key] += tbv
+                lifecycle_summary_data["Delivered"][so_m_key] += deliv
+                lifecycle_summary_data["Pending"][so_m_key] += pending
+                lifecycle_summary_data["Overdue"][so_m_key] += overdue
 
         headers_l = ["Category"] + sorted_months + ["Total"]
         for idx, h in enumerate(headers_l, start=1):
@@ -730,7 +824,7 @@ def export_to_excel(filters=None, export_type="all"):
         # Overdue Month-wise Breakdown (Past Overdue + Future Pending)
         row_idx_l += 3
         ws_lifecycle.cell(
-            row=row_idx_l, column=1, value="Overdue Month-wise Breakdown (Million INR)"
+            row=row_idx_l, column=1, value="Consolidated Overdue Month-wise Breakdown (Million INR)"
         ).font = section_font
         row_idx_l += 2
 
@@ -739,21 +833,29 @@ def export_to_excel(filters=None, export_type="all"):
         future_pending_by_month = {}
 
         for r_item in data:
+            overdue_val = flt(r_item.get("overdue_value") or 0)
             pending_val = flt(r_item.get("pending_value") or 0)
+            
+            if overdue_val > 0 and r_item.get("so_date"):
+                try:
+                    so_obj = frappe.utils.getdate(r_item.get("so_date"))
+                    m_k, m_s = so_obj.strftime("%b %Y"), so_obj.strftime("%Y%m")
+                    if m_k not in past_overdue_by_month:
+                        past_overdue_by_month[m_k] = {"sort": m_s, "val": 0}
+                    past_overdue_by_month[m_k]["val"] += overdue_val
+                except:
+                    pass
+
             if pending_val > 0 and r_item.get("delivery_date"):
                 try:
                     d_obj = frappe.utils.getdate(r_item.get("delivery_date"))
-                    m_k, m_s = d_obj.strftime("%b %Y"), d_obj.strftime("%Y%m")
+                    if d_obj >= today_date:
+                        m_k, m_s = d_obj.strftime("%b %Y"), d_obj.strftime("%Y%m")
+                        if m_k not in future_pending_by_month:
+                            future_pending_by_month[m_k] = {"sort": m_s, "val": 0}
+                        future_pending_by_month[m_k]["val"] += pending_val
                 except:
-                    continue
-                if d_obj < today_date:
-                    if m_k not in past_overdue_by_month:
-                        past_overdue_by_month[m_k] = {"sort": m_s, "val": 0}
-                    past_overdue_by_month[m_k]["val"] += pending_val
-                else:
-                    if m_k not in future_pending_by_month:
-                        future_pending_by_month[m_k] = {"sort": m_s, "val": 0}
-                    future_pending_by_month[m_k]["val"] += pending_val
+                    pass
 
         all_month_keys = set(list(past_overdue_by_month.keys()) + list(future_pending_by_month.keys()))
         sorted_overdue_months = sorted(
@@ -922,7 +1024,7 @@ def export_to_excel(filters=None, export_type="all"):
             c_f.border = table_border
 
     # Remove dummy sheets if created
-    for dummy_name in ["Dummy1", "Dummy2", "Dummy3"]:
+    for dummy_name in ["Dummy1", "Dummy2", "Dummy3", "Dummy4"]:
         if dummy_name in wb.sheetnames:
             wb.remove(wb[dummy_name])
 
@@ -942,6 +1044,8 @@ def export_to_excel(filters=None, export_type="all"):
         filename = f"Month_Wise_Consolidated_Booking_{frappe.utils.nowdate()}.xlsx"
     elif export_type == "detail":
         filename = f"Sales_Orders_List_{frappe.utils.nowdate()}.xlsx"
+    elif export_type == "overdue_detailed":
+        filename = f"Month_Wise_Overdue_Breakdown_{frappe.utils.nowdate()}.xlsx"
 
     return {
         "filename": filename,
