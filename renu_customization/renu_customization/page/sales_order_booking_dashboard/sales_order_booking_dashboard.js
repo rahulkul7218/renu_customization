@@ -4,7 +4,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		title: __("Sales Order Booking Dashboard"),
 		single_column: true,
 	});
-
+//the
 	window.cur_page = page;
 	page.set_primary_action(__("Refresh"), () => page.refresh());
 
@@ -13,10 +13,11 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
 	let refresh_timer = null;
 	page.refresh = function () {
+		if (page._setting_fy) return; // Wait for FY logic to complete
 		if (refresh_timer) clearTimeout(refresh_timer);
 		refresh_timer = setTimeout(() => {
 			perform_refresh();
-		}, 50);
+		}, 500); // Increased debounce to prevent rapid multiple fetches
 	};
 
 	function perform_refresh() {
@@ -335,6 +336,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 	fy_field.on_change = function () {
 		let fy = this.get_value();
 		if (fy) {
+			page._setting_fy = true;
 			frappe.db.get_doc("Fiscal Year", fy).then((doc) => {
 				fy_field._start_date = doc.year_start_date;
 				fy_field._end_date = doc.year_end_date;
@@ -343,14 +345,18 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let fd = from_field.get_value();
 				let td = to_field.get_value();
 
+				let promises = [];
 				if (fd && (fd < doc.year_start_date || fd > doc.year_end_date)) {
-					page.filter_group.set_value("from_date", doc.year_start_date);
+					promises.push(page.filter_group.set_value("from_date", doc.year_start_date));
 				}
 				if (td && (td < doc.year_start_date || td > doc.year_end_date)) {
-					page.filter_group.set_value("to_date", doc.year_end_date);
+					promises.push(page.filter_group.set_value("to_date", doc.year_end_date));
 				}
 
-				page.refresh();
+				Promise.all(promises).then(() => {
+					page._setting_fy = false;
+					page.refresh();
+				});
 			});
 		} else {
 			fy_field._start_date = null;
@@ -608,8 +614,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
         .col-deliv-date { width: 70px !important; min-width: 70px !important; }
 
         /* Table Sticky Columns - Table 1 (Booking Breakdown) */
-        .month-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 45px !important; text-align: center !important; background: #f8fafc !important; }
-        .month-table .col-customer { position: sticky !important; left: 45px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; width: 140px !important; min-width: 140px !important; }
+        .month-table .col-sno, .overdue-detailed-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 45px !important; text-align: center !important; background: #f8fafc !important; }
+        .month-table .col-customer, .overdue-detailed-table .col-customer { position: sticky !important; left: 45px; z-index: 1; background: #fff !important; border-right: 2px solid #e2e8f0; width: 140px !important; min-width: 140px !important; }
 
         /* Table Sticky Columns - Table 2 (Detailed List) */
         .detailed-list-table .col-sno { position: sticky !important; left: 0; z-index: 1; width: 45px !important; text-align: center !important; background: #f8fafc !important; }
@@ -895,16 +901,53 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		// Prepare unique sorted months
 		let months = [];
 		let months_map = {};
+
+		// Prepare unique sorted overdue months (past overdue + future pending)
+		const today_str_global = moment().startOf("day");
+		let global_past_overdue = {};
+		let global_future_pending = {};
+
 		data.results.forEach((row) => {
-			let d = moment(row.so_date);
-			let m_key = d.format("MMM YYYY");
-			let m_sort = d.format("YYYYMM");
-			if (!months_map[m_key]) {
-				months_map[m_key] = m_sort;
-				months.push({ key: m_key, sort: m_sort });
+			if (row.so_date) {
+				let d = moment(row.so_date);
+				let m_key = d.format("MMM YYYY");
+				let m_sort = d.format("YYYYMM");
+				if (!months_map[m_key]) {
+					months_map[m_key] = m_sort;
+					months.push({ key: m_key, sort: m_sort });
+				}
+			}
+
+			let overdue = flt(row.overdue_value || 0);
+			let pending = flt(row.pending_value || 0);
+
+			if (overdue > 0 && row.delivery_date) {
+				let so_m = moment(row.delivery_date);
+				let m_key = so_m.format("MMM YYYY");
+				let m_sort = so_m.format("YYYYMM");
+				if (!global_past_overdue[m_key]) global_past_overdue[m_key] = m_sort;
+			}
+
+			if (pending > 0 && row.delivery_date) {
+				let d_m = moment(row.delivery_date);
+				if (d_m.isSameOrAfter(today_str_global)) {
+					let m_key = d_m.format("MMM YYYY");
+					let m_sort = d_m.format("YYYYMM");
+					if (!global_future_pending[m_key]) global_future_pending[m_key] = m_sort;
+				}
 			}
 		});
 		months.sort((a, b) => a.sort - b.sort);
+
+		let all_overdue_keys = new Set([
+			...Object.keys(global_past_overdue),
+			...Object.keys(global_future_pending)
+		]);
+		let global_overdue_months = Array.from(all_overdue_keys).map(key => ({
+			key: key,
+			sort: global_past_overdue[key] || global_future_pending[key]
+		}));
+		global_overdue_months.sort((a, b) => a.sort.localeCompare(b.sort));
 
 		let tables_html = $(`
             <div class="table-card" style="margin-top: 24px; overflow: visible;">
@@ -963,9 +1006,39 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 
             <div class="table-card" style="margin-top: 32px; overflow: visible;">
                 <div class="header" style="overflow: visible;">
-                    <span style="font-size: 15px;">${__("Overdue Month-wise Breakdown")}</span>
+                    <span style="font-size: 15px;">${__("Consolidated Overdue Month-wise Breakdown")}</span>
                 </div>
                 <div class="table-container" id="overdue_breakdown_container">
+                </div>
+            </div>
+
+            <div class="table-card" style="margin-top: 32px; overflow: visible;">
+                <div class="header" style="overflow: visible;">
+                    <span style="font-size: 15px;">${__("Month-Wise Overdue Breakdown")}</span>
+                    <div class="table-actions" style="overflow: visible;">
+                        <div class="d-flex" style="gap: 8px; margin-left: 10px;">
+                            <span class="export-btn" id="export_overdue_detailed_table">
+                                <i class="fa fa-file-excel-o"></i>Export to Excel
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="dashboard-table overdue-detailed-table">
+                        <thead>
+                            <tr>
+                                <th class="col-sno">S.No.</th>
+                                <th class="col-customer sortable-header" data-field="cust">Customer <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-customer-group sortable-header" data-field="cust_group" style="min-width: 150px;">Customer Group <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-sp sortable-header" data-field="sp">Sales Person <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-prod sortable-header" data-field="item_code">Product <i class="fa fa-sort text-muted ml-1"></i></th>
+                                <th class="col-item-group sortable-header" data-field="item_group" style="min-width: 150px;">Item Group <i class="fa fa-sort text-muted ml-1"></i></th>
+                                ${global_overdue_months.map((m) => `<th class="col-amt sortable-header" data-field="${m.key}">${m.key} <i class="fa fa-sort text-muted ml-1"></i></th>`).join("")}
+                                <th class="total-net-col sortable-header" data-field="total">Total Overdue (M) <i class="fa fa-sort text-muted ml-1"></i></th>
+                            </tr>
+                        </thead>
+                        <tbody id="overdue_detailed_body"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -1017,16 +1090,19 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			// Initialize page-level sorting states if not already present
 			page.summary_sort = page.summary_sort || { field: "total", asc: false };
 			page.detail_sort = page.detail_sort || { field: "total_booked_value", asc: false };
+			page.overdue_detail_sort = page.overdue_detail_sort || { field: "total", asc: false };
 
 			let tbody_month = tables_container.find("#booking_month_body");
 			let tbody_lifecycle = tables_container.find("#lifecycle_summary_body");
 			let tbody_list = tables_container.find("#so_list_body");
 			let overdue_container = tables_container.find("#overdue_breakdown_container");
+			let overdue_detailed_body = tables_container.find("#overdue_detailed_body");
 
 			tbody_month.empty();
 			tbody_lifecycle.empty();
 			tbody_list.empty();
 			overdue_container.empty();
+			overdue_detailed_body.empty();
 
 			// 3.0 Process Monthly Lifecycle Summary
 			let lifecycle_buckets = {
@@ -1052,7 +1128,8 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			lifecycle_buckets["Overdue"].color = "#8b5cf6";
 
 			filtered_data.forEach((row) => {
-				let m_key = moment(row.so_date).format("MMM YYYY");
+				let so_m_key = row.so_date ? moment(row.so_date).format("MMM YYYY") : null;
+				let del_m_key = row.delivery_date ? moment(row.delivery_date).format("MMM YYYY") : null;
 
 				// Use pre-calculated fields from Python get_dashboard_data
 				let tbv = flt(row.total_booked_value || 0);
@@ -1060,10 +1137,12 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				let pending = flt(row.pending_value || 0);
 				let overdue = flt(row.overdue_value || 0);
 
-				lifecycle_buckets["Total Booked Value"].data[m_key] = (lifecycle_buckets["Total Booked Value"].data[m_key] || 0) + tbv;
-				lifecycle_buckets["Delivered"].data[m_key] = (lifecycle_buckets["Delivered"].data[m_key] || 0) + deliv;
-				lifecycle_buckets["Pending"].data[m_key] = (lifecycle_buckets["Pending"].data[m_key] || 0) + pending;
-				lifecycle_buckets["Overdue"].data[m_key] = (lifecycle_buckets["Overdue"].data[m_key] || 0) + overdue;
+				if (so_m_key) {
+					lifecycle_buckets["Total Booked Value"].data[so_m_key] = (lifecycle_buckets["Total Booked Value"].data[so_m_key] || 0) + tbv;
+					lifecycle_buckets["Delivered"].data[so_m_key] = (lifecycle_buckets["Delivered"].data[so_m_key] || 0) + deliv;
+					lifecycle_buckets["Pending"].data[so_m_key] = (lifecycle_buckets["Pending"].data[so_m_key] || 0) + pending;
+					lifecycle_buckets["Overdue"].data[so_m_key] = (lifecycle_buckets["Overdue"].data[so_m_key] || 0) + overdue;
+				}
 			});
 
 
@@ -1096,25 +1175,32 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				`);
 			});
 
-			// Process Overdue Month-wise Breakdown (by delivery date)
-			// Split into: past overdue (delivery_date < today) and future pending (delivery_date >= today)
+			// Process Overdue Month-wise Breakdown
+			// Past Overdue: bucketed by delivery_date using overdue_value (to match Lifecycle Summary)
+			// Future Pending: bucketed by delivery_date using pending_value (for >= today)
 			const today_str = moment().startOf("day");
 			let past_overdue_by_month = {};
 			let future_pending_by_month = {};
 
 			filtered_data.forEach((row) => {
+				let overdue = flt(row.overdue_value || 0);
 				let pending = flt(row.pending_value || 0);
+
+				if (overdue > 0 && row.delivery_date) {
+					let so_m = moment(row.delivery_date);
+					let m_key = so_m.format("MMM YYYY");
+					let m_sort = so_m.format("YYYYMM");
+
+					if (!past_overdue_by_month[m_key]) past_overdue_by_month[m_key] = { sort: m_sort, val: 0 };
+					past_overdue_by_month[m_key].val += overdue;
+				}
+
 				if (pending > 0 && row.delivery_date) {
 					let d_m = moment(row.delivery_date);
-					let m_key = d_m.format("MMM YYYY");
-					let m_sort = d_m.format("YYYYMM");
+					if (d_m.isSameOrAfter(today_str)) {
+						let m_key = d_m.format("MMM YYYY");
+						let m_sort = d_m.format("YYYYMM");
 
-					if (d_m.isBefore(today_str)) {
-						// Past - overdue
-						if (!past_overdue_by_month[m_key]) past_overdue_by_month[m_key] = { sort: m_sort, val: 0 };
-						past_overdue_by_month[m_key].val += pending;
-					} else {
-						// Future / current month - pending
 						if (!future_pending_by_month[m_key]) future_pending_by_month[m_key] = { sort: m_sort, val: 0 };
 						future_pending_by_month[m_key].val += pending;
 					}
@@ -1188,6 +1274,115 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 					</table>
 				`;
 				overdue_container.html(table_html);
+			}
+
+			// 3.1.5 Process Month-Wise Overdue Breakdown
+			page.overdue_detail_sort = page.overdue_detail_sort || { field: "total", asc: false };
+			let overdue_merged_data = {};
+			filtered_data.forEach((row) => {
+				let overdue = flt(row.overdue_value || 0);
+				let pending = flt(row.pending_value || 0);
+
+				let process_entry = (amt, m_key) => {
+					let sp = row.sales_person || "-";
+					let cust = row.customer_name || "-";
+					let cust_group = row.customer_group || "-";
+					let item_code = row.item_code || "-";
+					let item_name = row.item_name || "-";
+					let item_group = row.item_group || "-";
+					let key = sp + "|" + cust + "|" + item_code;
+
+					if (!overdue_merged_data[key]) {
+						overdue_merged_data[key] = {
+							sp, cust, cust_group, item_code, item_name, item_group,
+							months: {}, total: 0
+						};
+					}
+					overdue_merged_data[key].months[m_key] = (overdue_merged_data[key].months[m_key] || 0) + amt;
+					overdue_merged_data[key].total += amt;
+				};
+
+				if (overdue > 0 && row.delivery_date) {
+					process_entry(overdue, moment(row.delivery_date).format("MMM YYYY"));
+				}
+				if (pending > 0 && row.delivery_date) {
+					let d_m = moment(row.delivery_date);
+					if (d_m.isSameOrAfter(today_str)) {
+						process_entry(pending, d_m.format("MMM YYYY"));
+					}
+				}
+			});
+
+			let overdue_summary_list = Object.values(overdue_merged_data);
+			overdue_summary_list.sort((a, b) => {
+				let val_a, val_b;
+				let field = page.overdue_detail_sort.field;
+				let asc = page.overdue_detail_sort.asc;
+
+				if (field === "cust" || field === "sp" || field === "item_code") {
+					val_a = a[field] || "";
+					val_b = b[field] || "";
+					return asc ? val_a.localeCompare(val_b) : val_b.localeCompare(val_a);
+				} else if (field === "total") {
+					val_a = flt(a[field]);
+					val_b = flt(b[field]);
+					return asc ? val_a - val_b : val_b - val_a;
+				} else {
+					val_a = flt(a.months[field] || 0);
+					val_b = flt(b.months[field] || 0);
+					return asc ? val_a - val_b : val_b - val_a;
+				}
+			});
+
+			let overdue_total_month_amts = {};
+			let overdue_g_total = 0;
+
+			if (overdue_summary_list.length === 0) {
+				overdue_detailed_body.append(
+					`<tr><td colspan="${7 + global_overdue_months.length}" class="text-center text-muted" style="padding: 40px;">No overdue data found</td></tr>`
+				);
+			} else {
+				overdue_summary_list.forEach((row, idx) => {
+					overdue_g_total += row.total;
+					let cells = global_overdue_months
+						.map((m) => {
+							let val = row.months[m.key] || 0;
+							overdue_total_month_amts[m.key] = (overdue_total_month_amts[m.key] || 0) + val;
+							return `<td class="col-amt" style="color: #dc2626;">${val > 0 ? format_currency_short(val) : "-"}</td>`;
+						})
+						.join("");
+
+					overdue_detailed_body.append(`
+						<tr>
+							<td class="col-sno" style="color: #94a3b8; font-weight: 600;">${idx + 1}</td>
+							<td class="col-customer" style="font-weight: 600; color: #0f172a;">${row.cust}</td>
+							<td class="col-customer-group" style="min-width: 150px;">${row.cust_group}</td>
+							<td class="col-sp">${row.sp}</td>
+							<td class="col-prod">
+								<div style="line-height: 1.4;">
+									<div style="font-size: 11px; color: #64748b; font-weight: 500;">${row.item_code}</div>
+									<div style="font-weight: 600; color: #1e293b;">${row.item_name}</div>
+								</div>
+							</td>
+							<td class="col-item-group" style="min-width: 150px;">${row.item_group}</td>
+							${cells}
+							<td class="total-net-col" style="color: #dc2626;">${format_currency_short(row.total)}</td>
+						</tr>
+					`);
+				});
+
+				overdue_detailed_body.append(`
+					<tr class="sticky-total">
+						<td class="col-sno">-</td>
+						<td class="col-customer" style="text-align: right; padding-right: 20px; color: #1e293b; font-size: 11px; font-weight: 700;">GRAND TOTAL OVERDUE</td>
+						<td class="col-customer-group">-</td>
+						<td class="col-sp">-</td>
+						<td class="col-prod">-</td>
+						<td class="col-item-group">-</td>
+						${global_overdue_months.map((m) => `<td class="col-amt" style="color: #dc2626;">${overdue_total_month_amts[m.key] > 0 ? format_currency_short(overdue_total_month_amts[m.key]) : "-"}</td>`).join("")}
+						<td class="total-net-col" style="color: #dc2626;">${format_currency_short(overdue_g_total)}</td>
+					</tr>
+				`);
 			}
 
 			// 3.1 Process Month-Wise Booking Breakdown
@@ -1478,10 +1673,16 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 				if (th.length) {
 					tables_container.find(".detailed-list-table .sortable-header i")
 						.removeClass("fa-sort-asc fa-sort-desc")
-						.addClass("fa-sort text-muted");
-					th.find("i")
-						.removeClass("fa-sort text-muted")
-						.addClass(page.detail_sort.asc ? "fa-sort-asc" : "fa-sort-desc");
+						.addClass("fa-sort");
+					th.find("i").removeClass("fa-sort").addClass(page.detail_sort.asc ? "fa-sort-asc" : "fa-sort-desc");
+				}
+
+				let th_overdue = tables_container.find(`.overdue-detailed-table .sortable-header[data-field="${page.overdue_detail_sort.field}"]`);
+				if (th_overdue.length) {
+					tables_container.find(".overdue-detailed-table .sortable-header i")
+						.removeClass("fa-sort-asc fa-sort-desc")
+						.addClass("fa-sort");
+					th_overdue.find("i").removeClass("fa-sort").addClass(page.overdue_detail_sort.asc ? "fa-sort-asc" : "fa-sort-desc");
 				}
 			}
 		};
@@ -1780,6 +1981,7 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 		tables_container.on("click", "#export_month_table", () => export_to_excel("summary"));
 		tables_container.on("click", "#pdf_month_table", () => export_pdf());
 		tables_container.on("click", "#export_list_table", () => export_to_excel("detail"));
+		tables_container.on("click", "#export_overdue_detailed_table", () => export_to_excel("overdue_detailed"));
 
 		tables_container.off("click", ".month-table .sortable-header");
 		tables_container.on("click", ".month-table .sortable-header", function () {
@@ -1801,6 +2003,18 @@ frappe.pages["sales_order_booking_dashboard"].on_page_load = function (wrapper) 
 			} else {
 				page.detail_sort.field = field;
 				page.detail_sort.asc = false;
+			}
+			apply_local_filters();
+		});
+
+		tables_container.off("click", ".overdue-detailed-table .sortable-header");
+		tables_container.on("click", ".overdue-detailed-table .sortable-header", function () {
+			let field = $(this).attr("data-field");
+			if (page.overdue_detail_sort.field === field) {
+				page.overdue_detail_sort.asc = !page.overdue_detail_sort.asc;
+			} else {
+				page.overdue_detail_sort.field = field;
+				page.overdue_detail_sort.asc = false;
 			}
 			apply_local_filters();
 		});
